@@ -17,7 +17,14 @@ const CourseBuilder = ({ onSave, onCancel }) => {
   const totalPar = holes.reduce((a,h)=>a+(h.par||0),0);
   const valid    = name.trim() && holes.every(h => h.par >= 3 && h.par <= 6 && h.hdcp >= 1 && h.hdcp <= 18);
 
-  const handleSave = () => {
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState('');
+
+  const handleSave = async () => {
+    setSaveError('');
+    const internalHoles = holes.map(h => ({
+      num: h.num, par: h.par, yds: parseInt(h.yds)||0, hdcp: h.hdcp,
+    }));
     const course = {
       id:       'custom_' + Date.now(),
       name:     name.trim(),
@@ -25,12 +32,30 @@ const CourseBuilder = ({ onSave, onCancel }) => {
       rating:   parseFloat(rating) || 72.0,
       slope:    parseInt(slope)    || 113,
       custom:   true,
-      holes:    holes.map(h => ({...h, yds: parseInt(h.yds)||0})),
+      // Existing game logic reads {num, par, yds, hdcp}. Keep that and ALSO
+      // attach a spec-shaped mirror so external consumers / future readers
+      // can use {hole, par, handicap}. Both shapes describe the same data.
+      holes:    internalHoles,
+      holesSpec: internalHoles.map(h => ({ hole: h.num, par: h.par, handicap: h.hdcp })),
+      createdAt: Date.now(),
     };
-    // Persist
+
+    // 1) Local cache so subsequent loads on this device are instant + offline-friendly
     const saved = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
-    saved.push(course);
-    localStorage.setItem('pp_custom_courses', JSON.stringify(saved));
+    const deduped = saved.filter(c => c.id !== course.id).concat(course);
+    localStorage.setItem('pp_custom_courses', JSON.stringify(deduped));
+
+    // 2) Cloud — share permanently across devices (when configured)
+    if (window.PlayPalSync?.isEnabled?.()) {
+      setSaving(true);
+      const res = await window.PlayPalSync.pushCourse(course);
+      setSaving(false);
+      if (!res?.ok) {
+        setSaveError(`Saved locally, but cloud sync failed: ${res?.error || 'unknown error'}`);
+        // Still surface the course locally — don't block the round
+      }
+    }
+
     onSave(course);
   };
 
@@ -111,9 +136,16 @@ const CourseBuilder = ({ onSave, onCancel }) => {
         </div>
       </div>
 
+      {saveError && (
+        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#E5534B', background:'rgba(229,83,75,0.08)', border:'1px solid rgba(229,83,75,0.3)', borderRadius:8, padding:'8px 10px'}}>
+          {saveError}
+        </div>
+      )}
       <div style={{display:'flex', gap:10}}>
-        <Btn onClick={onCancel} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-        <Btn onClick={handleSave} variant="gold" disabled={!valid} style={{flex:2}}>SAVE COURSE</Btn>
+        <Btn onClick={onCancel} variant="ghost" style={{flex:1}} disabled={saving}>CANCEL</Btn>
+        <Btn onClick={handleSave} variant="gold" disabled={!valid || saving} style={{flex:2}}>
+          {saving ? 'SAVING…' : 'SAVE COURSE'}
+        </Btn>
       </div>
     </div>
   );
@@ -178,6 +210,32 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const [customCourses, setCustomCourses] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
   });
+  const [coursesLoading, setCoursesLoading] = React.useState(false);
+
+  // Pull every saved course from the cloud on mount and merge with local cache.
+  // The cloud is the source of truth — courses persist across devices forever.
+  React.useEffect(() => {
+    if (!window.PlayPalSync?.isEnabled?.()) return;
+    let cancelled = false;
+    setCoursesLoading(true);
+    window.PlayPalSync.listCourses().then((remote) => {
+      if (cancelled) return;
+      const local = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
+      // Merge by id, preferring the cloud copy (it's authoritative)
+      const byId = new Map();
+      local.forEach(c => byId.set(c.id, c));
+      remote.forEach(c => byId.set(c.id, { ...c, custom: true }));
+      const merged = Array.from(byId.values());
+      localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
+      setCustomCourses(merged);
+      setCoursesLoading(false);
+    }).catch(err => {
+      console.warn('[PlayPal] Failed to load cloud courses', err);
+      if (!cancelled) setCoursesLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const [formats, setFormats] = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
   const [stakes,  setStakes]  = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
 
@@ -200,7 +258,7 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const canStart      = selectedPlayers.length >= 2 && course && activeFormats.length > 0;
 
   const handleSaveCourse = (c) => {
-    setCustomCourses(prev => [...prev, c]);
+    setCustomCourses(prev => prev.filter(x => x.id !== c.id).concat(c));
     setCourse(c);
     setShowBuilder(false);
   };
@@ -299,7 +357,7 @@ const SetupScreen = ({ allPlayers, onStart }) => {
                     placeholder="Search courses…"
                     style={{flex:1, background:'#162950', border:'1px solid #1E3A6E', borderRadius:10, padding:'11px 14px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box'}}/>
                   <Btn onClick={()=>setShowBuilder(true)} variant="surface" style={{padding:'11px 14px', fontSize:13, whiteSpace:'nowrap', flexShrink:0}}>
-                    + ADD COURSE
+                    + ADD / IMPORT
                   </Btn>
                 </div>
 

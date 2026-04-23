@@ -1,70 +1,55 @@
 // Home.jsx — Dashboard / Landing Screen
 
-const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound }) => {
+const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, joinPrompt, onDismissJoinPrompt }) => {
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
   const [localPlayers,setLocalPlayers]  = React.useState(players);
   const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#3DCB6C' });
   const [joinCode,    setJoinCode]      = React.useState('');
   const [joinError,   setJoinError]     = React.useState('');
+  const [showJoin,    setShowJoin]      = React.useState(false);
+  const [joinBusy,    setJoinBusy]      = React.useState(false);
 
-  // Auto-open join modal when URL has ?join=CODE
-  const [showJoin, setShowJoin] = React.useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.has('join');
-  });
+  // App-level URL auto-join may hand us a prompt with a code + error to
+  // display (e.g. "round not found"). Open the join modal pre-filled so the
+  // user can correct / retry. App owns the URL parsing; we just react to it.
   React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code   = params.get('join');
-    if (code) setJoinCode(code.toUpperCase());
-  }, []);
+    if (joinPrompt?.code) {
+      setJoinCode(joinPrompt.code);
+      setJoinError(joinPrompt.error || '');
+      setShowJoin(true);
+    }
+  }, [joinPrompt]);
 
-  const [joinBusy, setJoinBusy] = React.useState(false);
-
-  const finishJoin = (round) => {
-    if (onJoinRound) onJoinRound(round);
+  const closeJoinModal = () => {
     setShowJoin(false);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('join');
-    window.history.replaceState({}, '', url.toString());
+    setJoinError('');
+    onDismissJoinPrompt?.();
   };
 
-  const handleJoin = async () => {
-    const code = joinCode.trim().toUpperCase();
+  // Single join entry point — same function used by the URL auto-join at
+  // App level. No duplicate logic, no separate localStorage/Firebase ladders
+  // here. This is a thin wrapper that turns the {ok, round, error} contract
+  // into modal state + navigation.
+  const handleJoin = async (explicitCode) => {
+    const code = (explicitCode ?? joinCode).trim().toUpperCase();
     if (!code || code.length < 4) { setJoinError('Enter a valid round code'); return; }
-
-    // 1) Try local storage first (same-device case)
-    const roundRaw = localStorage.getItem('pp_round');
-    if (roundRaw) {
-      try {
-        const round = JSON.parse(roundRaw);
-        if (round.syncCode === code) { finishJoin(round); return; }
-      } catch (err) {
-        console.error('[PlayPal] Failed to parse saved round while joining', err);
-      }
+    setJoinCode(code);
+    setJoinError('');
+    setJoinBusy(true);
+    const result = await window.PlayPalSync.joinRound(code);
+    setJoinBusy(false);
+    if (result.ok) {
+      onJoinRound?.(result.round);
+      closeJoinModal();
+      // Clean URL params so a refresh doesn't keep re-joining.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('code');
+      url.searchParams.delete('join');
+      window.history.replaceState({}, '', url.toString());
+    } else {
+      setJoinError(result.error || 'Could not join round');
     }
-
-    // 2) Fall back to the cloud (cross-device case)
-    if (window.PlayPalSync?.isEnabled?.()) {
-      setJoinBusy(true);
-      try {
-        const round = await window.PlayPalSync.pullRound(code);
-        if (round && round.syncCode === code) {
-          localStorage.setItem('pp_round', JSON.stringify(round));
-          finishJoin(round);
-          return;
-        }
-        setJoinError(`Round "${code}" not found. Double-check the code with the scorer.`);
-      } catch (err) {
-        console.error('[PlayPal] Cloud join failed', err);
-        setJoinError('Could not reach sync server. Try again.');
-      } finally {
-        setJoinBusy(false);
-      }
-      return;
-    }
-
-    setJoinError(`Round "${code}" not found on this device. Enable cloud sync (see README) to join from another device.`);
   };
 
   const colors = ['#3DCB6C','#E5534B','#C9A84C','#7B9FE0','#E07BE0','#E0A87B','#7BE0D4'];
@@ -156,7 +141,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       </div>
 
       {/* Join Round Modal */}
-      <Modal open={showJoin} onClose={()=>{ setShowJoin(false); setJoinError(''); }} title="Join a Round">
+      <Modal open={showJoin} onClose={closeJoinModal} title="Join a Round">
         <div style={{display:'flex', flexDirection:'column', gap:14}}>
           <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.6}}>
             Enter the 6-character code shown on the scorer's device, or scan their QR code.
@@ -177,8 +162,8 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             {joinError && <div style={{fontFamily:'DM Sans', fontSize:12, color:'#E5534B', marginTop:6}}>{joinError}</div>}
           </div>
           <div style={{display:'flex', gap:10}}>
-            <Btn onClick={()=>{ setShowJoin(false); setJoinError(''); }} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-            <Btn onClick={handleJoin} variant="green" style={{flex:1}} disabled={joinBusy}>{joinBusy ? 'JOINING…' : 'JOIN ROUND'}</Btn>
+            <Btn onClick={closeJoinModal} variant="ghost" style={{flex:1}}>CANCEL</Btn>
+            <Btn onClick={()=>handleJoin()} variant="green" style={{flex:1}} disabled={joinBusy}>{joinBusy ? 'JOINING…' : 'JOIN ROUND'}</Btn>
           </div>
         </div>
       </Modal>
