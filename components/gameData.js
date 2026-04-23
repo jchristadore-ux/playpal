@@ -363,3 +363,15 @@ function getHoleStrokes(handicap, holeHdcp) {
   const rem  = handicap % 18;
   return base + (holeHdcp <= rem ? 1 : 0);
 }
+
+// expose data/constants for non-module browser usage (GitHub Pages safe)
+if (typeof window !== 'undefined') {
+  Object.assign(window, {
+    FORMATS,
+    FORMAT_INFO,
+    COURSES,
+    DEFAULT_PLAYERS,
+    generateSyncCode,
+    getHoleStrokes,
+  });
+}
