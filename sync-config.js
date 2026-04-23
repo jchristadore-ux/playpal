@@ -20,7 +20,7 @@
 // ──────────────────────────────────────────────────────────────────────────
 
 window.PLAYPAL_SYNC = {
-  provider:    'none',   // 'none' | 'firebase'
-  databaseURL: '',
+  provider:    'firebase',
+  databaseURL: 'https://console.firebase.google.com/project/playpal-sync/database/playpal-sync-default-rtdb/data/~2F',
   authToken:   null,
 };
