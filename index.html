@@ -69,6 +69,16 @@ const App = () => {
       console.error(`[PlayPal] Failed to save localStorage key "${key}"`, err);
     }
   };
+  const safeLoadList = (key, fallback = []) => {
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : fallback;
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch (err) {
+      console.error(`[PlayPal] Failed to parse localStorage key "${key}"`, err);
+      return fallback;
+    }
+  };
 
   const [screen, setScreen] = React.useState(() => localStorage.getItem('pp_screen') || 'home');
   const [players, setPlayers] = React.useState(() => safeLoad('pp_players', DEFAULT_PLAYERS));
@@ -82,11 +92,10 @@ const App = () => {
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
 
   const recentRounds = React.useMemo(() => {
-    const saved = localStorage.getItem('pp_recent');
-    return saved ? JSON.parse(saved) : [
+    const fallback = [
     { courseName: 'Pebble Beach Golf Links', date: 'Apr 20, 2026', players: 4, formats: 'Wolf · Nassau' },
     { courseName: 'Torrey Pines South', date: 'Apr 14, 2026', players: 3, formats: 'Stableford · Skins' }];
-
+    return safeLoadList('pp_recent', fallback);
   }, []);
 
   React.useEffect(() => {localStorage.setItem('pp_screen', screen);}, [screen]);
@@ -133,7 +142,7 @@ const App = () => {
     setFinalScores(scores);setFinalWolf(wolfData);setFinalPutts(putts);
     setFinalPresses(presses);setFinalChips(chips);
     // Save to recent rounds
-    const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
+    const recent = safeLoadList('pp_recent', []);
     recent.unshift({ courseName: round.course.name, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), players: round.players.length, formats: round.formats.map((f) => FORMAT_INFO[f.type].label).join(' · ') });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
     setScreen('summary');
