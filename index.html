@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,11 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>PlayPal — Golf Companion</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
-<script src="./components/gameData.js?v=3"></script>
-<script src="./components/gameUtils.js?v=3"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="components/gameData.js?v=3"></script>
+<script src="components/gameUtils.js?v=3"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -25,13 +26,13 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" src="./components/Shared.jsx"></script>
-<script type="text/babel" src="./components/Home.jsx"></script>
-<script type="text/babel" src="./components/Setup.jsx"></script>
-<script type="text/babel" src="./components/PlayerCard.jsx"></script>
-<script type="text/babel" src="./components/Trackers.jsx"></script>
-<script type="text/babel" src="./components/ScoreEntry.jsx"></script>
-<script type="text/babel" src="./components/Summary.jsx"></script>
+<script type="text/babel" src="components/Shared.jsx"></script>
+<script type="text/babel" src="components/Home.jsx"></script>
+<script type="text/babel" src="components/Setup.jsx"></script>
+<script type="text/babel" src="components/PlayerCard.jsx"></script>
+<script type="text/babel" src="components/Trackers.jsx"></script>
+<script type="text/babel" src="components/ScoreEntry.jsx"></script>
+<script type="text/babel" src="components/Summary.jsx"></script>
 
 <script type="text/babel">
 
@@ -43,68 +44,33 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showSyncCode": true
 } /*EDITMODE-END*/;
 
-console.log('[PlayPal] Boot sequence start');
-window.addEventListener('error', (e) => {
-  console.error('[PlayPal] Unhandled error:', e.message, e.error);
-});
-window.addEventListener('unhandledrejection', (e) => {
-  console.error('[PlayPal] Unhandled promise rejection:', e.reason);
-});
-
 const App = () => {
-  const safeLoad = (key, fallback) => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (err) {
-      console.error(`[PlayPal] Failed to load localStorage key "${key}"`, err);
-      return fallback;
-    }
-  };
-  const safeSave = (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      console.log(`[PlayPal] Saved localStorage key "${key}"`);
-    } catch (err) {
-      console.error(`[PlayPal] Failed to save localStorage key "${key}"`, err);
-    }
-  };
-  const safeLoadList = (key, fallback = []) => {
-    try {
-      const raw = localStorage.getItem(key);
-      const parsed = raw ? JSON.parse(raw) : fallback;
-      return Array.isArray(parsed) ? parsed : fallback;
-    } catch (err) {
-      console.error(`[PlayPal] Failed to parse localStorage key "${key}"`, err);
-      return fallback;
-    }
-  };
-
   const [screen, setScreen] = React.useState(() => localStorage.getItem('pp_screen') || 'home');
-  const [players, setPlayers] = React.useState(() => safeLoad('pp_players', DEFAULT_PLAYERS));
-  const [round, setRound] = React.useState(() => safeLoad('pp_round', null));
-  const [finalScores, setFinalScores]   = React.useState(() => safeLoad('pp_finalScores', null));
-  const [finalWolf,   setFinalWolf]     = React.useState(() => safeLoad('pp_finalWolf', null));
-  const [finalPutts,  setFinalPutts]    = React.useState(() => safeLoad('pp_finalPutts', null));
-  const [finalPresses,setFinalPresses]  = React.useState(() => safeLoad('pp_finalPresses', []));
-  const [finalChips,  setFinalChips]    = React.useState(() => safeLoad('pp_finalChips', {}));
-  const [tweaks, setTweaks] = React.useState(() => safeLoad('pp_tweaks', TWEAK_DEFAULTS));
+  const [players, setPlayers] = React.useState(() => {
+    const saved = localStorage.getItem('pp_players');
+    return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
+  });
+  const [round, setRound] = React.useState(() => {
+    const saved = localStorage.getItem('pp_round');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [finalScores, setFinalScores]   = React.useState(null);
+  const [finalWolf,   setFinalWolf]     = React.useState(null);
+  const [finalPutts,  setFinalPutts]    = React.useState(null);
+  const [finalPresses,setFinalPresses]  = React.useState([]);
+  const [finalChips,  setFinalChips]    = React.useState({});
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
 
   const recentRounds = React.useMemo(() => {
-    const fallback = [
+    const saved = localStorage.getItem('pp_recent');
+    return saved ? JSON.parse(saved) : [
     { courseName: 'Pebble Beach Golf Links', date: 'Apr 20, 2026', players: 4, formats: 'Wolf · Nassau' },
     { courseName: 'Torrey Pines South', date: 'Apr 14, 2026', players: 3, formats: 'Stableford · Skins' }];
-    return safeLoadList('pp_recent', fallback);
+
   }, []);
 
   React.useEffect(() => {localStorage.setItem('pp_screen', screen);}, [screen]);
-  React.useEffect(() => {safeSave('pp_tweaks', tweaks);}, [tweaks]);
-  React.useEffect(() => {safeSave('pp_finalScores', finalScores);}, [finalScores]);
-  React.useEffect(() => {safeSave('pp_finalWolf', finalWolf);}, [finalWolf]);
-  React.useEffect(() => {safeSave('pp_finalPutts', finalPutts);}, [finalPutts]);
-  React.useEffect(() => {safeSave('pp_finalPresses', finalPresses);}, [finalPresses]);
-  React.useEffect(() => {safeSave('pp_finalChips', finalChips);}, [finalChips]);
 
   // Tweaks message handler
   React.useEffect(() => {
@@ -124,13 +90,11 @@ const App = () => {
   };
 
   const handleManagePlayers = (updated) => {
-    console.log('[PlayPal] Updating players', updated);
     setPlayers(updated);
     localStorage.setItem('pp_players', JSON.stringify(updated));
   };
 
   const handleStartRound = (config) => {
-    console.log('[PlayPal] Starting round', config);
     const r = { ...config, id: Date.now() };
     setRound(r);
     localStorage.setItem('pp_round', JSON.stringify(r));
@@ -138,26 +102,18 @@ const App = () => {
   };
 
   const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}) => {
-    console.log('[PlayPal] Saving round results');
     setFinalScores(scores);setFinalWolf(wolfData);setFinalPutts(putts);
     setFinalPresses(presses);setFinalChips(chips);
     // Save to recent rounds
-    const recent = safeLoadList('pp_recent', []);
+    const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
     recent.unshift({ courseName: round.course.name, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), players: round.players.length, formats: round.formats.map((f) => FORMAT_INFO[f.type].label).join(' · ') });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
     setScreen('summary');
   };
 
   const handleNewRound = () => {
-    console.log('[PlayPal] Resetting to new round');
     setRound(null);setFinalScores(null);
-    setFinalWolf(null);setFinalPutts(null);setFinalPresses([]);setFinalChips({});
     localStorage.removeItem('pp_round');
-    localStorage.removeItem('pp_finalScores');
-    localStorage.removeItem('pp_finalWolf');
-    localStorage.removeItem('pp_finalPutts');
-    localStorage.removeItem('pp_finalPresses');
-    localStorage.removeItem('pp_finalChips');
     setScreen('home');
   };
 
@@ -252,15 +208,8 @@ const App = () => {
 
 };
 
-try {
-  const mountNode = document.getElementById('root');
-  if (!mountNode) throw new Error('Missing #root mount node');
-  const root = ReactDOM.createRoot(mountNode);
-  root.render(<App />);
-  console.log('[PlayPal] App mounted successfully');
-} catch (err) {
-  console.error('[PlayPal] Failed to mount app', err);
-}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
 </script>
 </body>
 </html>
