@@ -8,64 +8,90 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const [joinCode,    setJoinCode]      = React.useState('');
   const [joinError,   setJoinError]     = React.useState('');
 
-  // Auto-open join modal when URL has ?join=CODE
-  const [showJoin, setShowJoin] = React.useState(() => {
+  // Read join code from the URL. Supports both the new ?code=CODE pattern
+  // (used by QR links and the /join?code=CODE redirect page) and the legacy
+  // ?join=CODE pattern from older shared links.
+  const readCodeFromURL = () => {
     const params = new URLSearchParams(window.location.search);
-    return params.has('join');
-  });
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code   = params.get('join');
-    if (code) setJoinCode(code.toUpperCase());
-  }, []);
+    return (params.get('code') || params.get('join') || '').toUpperCase().trim();
+  };
+  const initialURLCode = readCodeFromURL();
 
+  const [showJoin, setShowJoin] = React.useState(!!initialURLCode);
   const [joinBusy, setJoinBusy] = React.useState(false);
+  const autoJoinedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (initialURLCode) setJoinCode(initialURLCode);
+  }, []);
 
   const finishJoin = (round) => {
     if (onJoinRound) onJoinRound(round);
     setShowJoin(false);
+    // Clean both possible params from the URL so refreshing doesn't re-join
     const url = new URL(window.location.href);
+    url.searchParams.delete('code');
     url.searchParams.delete('join');
     window.history.replaceState({}, '', url.toString());
   };
 
-  const handleJoin = async () => {
-    const code = joinCode.trim().toUpperCase();
-    if (!code || code.length < 4) { setJoinError('Enter a valid round code'); return; }
-
-    // 1) Try local storage first (same-device case)
+  // Core lookup: cloud-first when available, then localStorage as a fallback
+  // for same-device scoring. Returns the round on success or throws.
+  const lookupRound = async (code) => {
+    // 1) Authoritative source: Firebase (when configured). The QR scenario
+    //    is always cross-device, so the cloud must be checked FIRST — local
+    //    storage on a guest phone never has the host's round.
+    if (window.PlayPalSync?.isEnabled?.()) {
+      const remote = await window.PlayPalSync.pullRound(code);
+      if (remote && remote.syncCode === code) return remote;
+    }
+    // 2) Same-device fallback: scorer reopening their own browser
     const roundRaw = localStorage.getItem('pp_round');
     if (roundRaw) {
       try {
         const round = JSON.parse(roundRaw);
-        if (round.syncCode === code) { finishJoin(round); return; }
+        if (round.syncCode === code) return round;
       } catch (err) {
         console.error('[PlayPal] Failed to parse saved round while joining', err);
       }
     }
-
-    // 2) Fall back to the cloud (cross-device case)
-    if (window.PlayPalSync?.isEnabled?.()) {
-      setJoinBusy(true);
-      try {
-        const round = await window.PlayPalSync.pullRound(code);
-        if (round && round.syncCode === code) {
-          localStorage.setItem('pp_round', JSON.stringify(round));
-          finishJoin(round);
-          return;
-        }
-        setJoinError(`Round "${code}" not found. Double-check the code with the scorer.`);
-      } catch (err) {
-        console.error('[PlayPal] Cloud join failed', err);
-        setJoinError('Could not reach sync server. Try again.');
-      } finally {
-        setJoinBusy(false);
-      }
-      return;
-    }
-
-    setJoinError(`Round "${code}" not found on this device. Enable cloud sync (see README) to join from another device.`);
+    return null;
   };
+
+  const handleJoin = async (explicitCode) => {
+    const code = (explicitCode ?? joinCode).trim().toUpperCase();
+    if (!code || code.length < 4) { setJoinError('Enter a valid round code'); return; }
+    setJoinCode(code);
+    setJoinError('');
+    setJoinBusy(true);
+    try {
+      const round = await lookupRound(code);
+      if (round) {
+        localStorage.setItem('pp_round', JSON.stringify(round));
+        finishJoin(round);
+        return;
+      }
+      // Distinguish "cloud disabled" vs "code genuinely not found"
+      if (!window.PlayPalSync?.isEnabled?.()) {
+        setJoinError(`Round "${code}" not found on this device. Enable cloud sync (see README) so guests can join from any device.`);
+      } else {
+        setJoinError(`Round "${code}" not found. Make sure the host has started the round and is online.`);
+      }
+    } catch (err) {
+      console.error('[PlayPal] Cloud join failed', err);
+      setJoinError('Could not reach sync server. Check your connection and try again.');
+    } finally {
+      setJoinBusy(false);
+    }
+  };
+
+  // QR / shared-link auto-join: if the URL provided a code, attempt the join
+  // immediately so the user doesn't have to tap anything after scanning.
+  React.useEffect(() => {
+    if (!initialURLCode || autoJoinedRef.current) return;
+    autoJoinedRef.current = true;
+    handleJoin(initialURLCode);
+  }, []);
 
   const colors = ['#3DCB6C','#E5534B','#C9A84C','#7B9FE0','#E07BE0','#E0A87B','#7BE0D4'];
 
@@ -178,7 +204,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
           <div style={{display:'flex', gap:10}}>
             <Btn onClick={()=>{ setShowJoin(false); setJoinError(''); }} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-            <Btn onClick={handleJoin} variant="green" style={{flex:1}} disabled={joinBusy}>{joinBusy ? 'JOINING…' : 'JOIN ROUND'}</Btn>
+            <Btn onClick={()=>handleJoin()} variant="green" style={{flex:1}} disabled={joinBusy}>{joinBusy ? 'JOINING…' : 'JOIN ROUND'}</Btn>
           </div>
         </div>
       </Modal>

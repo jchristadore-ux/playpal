@@ -100,8 +100,16 @@ const App = () => {
     const r = { ...config, id: Date.now() };
     setRound(r);
     localStorage.setItem('pp_round', JSON.stringify(r));
-    // Publish round to the cloud so other devices can join via sync code
-    window.PlayPalSync?.pushRound(r.syncCode, r);
+    // Publish round to the cloud so other devices can join via sync code.
+    // Surface failures so the host knows guests won't be able to join.
+    if (window.PlayPalSync?.isEnabled?.()) {
+      window.PlayPalSync.pushRound(r.syncCode, r).then((res) => {
+        if (!res?.ok) {
+          console.error('[PlayPal] Round publish failed:', res?.error);
+          alert('Heads up: this round was started locally but failed to publish to the cloud (' + (res?.error || 'unknown') + '). Other devices will not be able to join with the QR/sync code until this is resolved.');
+        }
+      });
+    }
     setScreen('score');
   };
 

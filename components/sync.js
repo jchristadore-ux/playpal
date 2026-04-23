@@ -2,11 +2,13 @@
 //
 // Provides a small async API used by the UI:
 //   PlayPalSync.isEnabled()
-//   PlayPalSync.pushRound(syncCode, round)
+//   PlayPalSync.pushRound(syncCode, round)   -> { ok, error? }
 //   PlayPalSync.pullRound(syncCode)          -> returns round or null
 //   PlayPalSync.pushState(syncCode, state)   -> { scores, wolfData, putts, presses, chips, holeIdx }
 //   PlayPalSync.pullState(syncCode)          -> same shape or null
 //   PlayPalSync.subscribe(syncCode, cb)      -> returns unsubscribe fn (polling under the hood)
+//   PlayPalSync.pushCourse(course)           -> { ok, error? }   stores at /courses/<id>
+//   PlayPalSync.listCourses()                -> array of course objects (may be empty)
 //
 // The current provider is "firebase" (Realtime Database via REST, no SDK).
 // If no provider is configured, every call is a silent no-op and the app
@@ -26,8 +28,14 @@
     return `${baseURL}/rounds/${code}/${leaf}.json${auth}`;
   };
 
+  const coursePath = (courseId) => {
+    const auth = token ? `?auth=${encodeURIComponent(token)}` : '';
+    const id   = courseId ? `/${encodeURIComponent(courseId)}` : '';
+    return `${baseURL}/courses${id}.json${auth}`;
+  };
+
   async function put(url, body) {
-    if (!enabled) return null;
+    if (!enabled) return { ok: false, error: 'disabled' };
     try {
       const res = await fetch(url, {
         method: 'PUT',
@@ -35,13 +43,15 @@
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        console.warn('[PlayPalSync] PUT failed', res.status, url);
-        return null;
+        const text = await res.text().catch(() => '');
+        console.warn('[PlayPalSync] PUT failed', res.status, url, text);
+        return { ok: false, error: `HTTP ${res.status} ${text}` };
       }
-      return await res.json();
+      const data = await res.json();
+      return { ok: true, data };
     } catch (err) {
       console.warn('[PlayPalSync] PUT error', err);
-      return null;
+      return { ok: false, error: err?.message || 'network' };
     }
   }
 
@@ -59,9 +69,12 @@
   }
 
   async function pushRound(syncCode, round) {
-    if (!enabled || !syncCode || !round) return;
-    await put(path(syncCode, 'round'), round);
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!syncCode || !round) return { ok: false, error: 'missing arguments' };
+    const r1 = await put(path(syncCode, 'round'), round);
+    if (!r1.ok) return r1;
     await put(path(syncCode, 'updatedAt'), Date.now());
+    return { ok: true };
   }
 
   async function pullRound(syncCode) {
@@ -70,11 +83,27 @@
   }
 
   async function pushState(syncCode, state) {
-    if (!enabled || !syncCode) return;
+    if (!enabled || !syncCode) return { ok: false, error: 'disabled-or-missing-code' };
     // Store writer id + timestamp so subscribers can ignore their own echoes.
     const payload = { ...state, writerId: getWriterId(), updatedAt: Date.now() };
-    await put(path(syncCode, 'state'), payload);
+    const r1 = await put(path(syncCode, 'state'), payload);
+    if (!r1.ok) return r1;
     await put(path(syncCode, 'updatedAt'), payload.updatedAt);
+    return { ok: true };
+  }
+
+  // ── Courses (persisted permanently, shared across all devices) ───────────
+  async function pushCourse(course) {
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!course || !course.id) return { ok: false, error: 'missing course id' };
+    return await put(coursePath(course.id), course);
+  }
+
+  async function listCourses() {
+    if (!enabled) return [];
+    const data = await get(coursePath());
+    if (!data || typeof data !== 'object') return [];
+    return Object.values(data).filter(Boolean);
   }
 
   async function pullState(syncCode) {
@@ -132,6 +161,8 @@
     pullState,
     pushStateDebounced,
     subscribe,
+    pushCourse,
+    listCourses,
     getWriterId,
   };
 

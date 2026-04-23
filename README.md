@@ -84,6 +84,18 @@ Commit and push — GitHub Pages will pick it up on its next deploy.
 No sign-in, no accounts — the sync code **is** the access key. Anyone who
 knows the code can read and write that round.
 
+### Firebase paths used
+
+| Path                              | Purpose                                            |
+| --------------------------------- | -------------------------------------------------- |
+| `rounds/<SYNCCODE>/round`         | Round config (players, course, formats, stakes)    |
+| `rounds/<SYNCCODE>/state`         | Live scoring state (scores, putts, wolf, presses…) |
+| `rounds/<SYNCCODE>/updatedAt`     | Last write timestamp — used for change detection   |
+| `courses/<courseId>`              | User-imported courses, persisted forever, shared   |
+
+When you click **+ ADD / IMPORT** on the course-selection step, the new
+course is written to `courses/<id>` so every device sees it on next load.
+
 ### Locking it down (optional)
 
 The default "test mode" rules expire after 30 days. A permanent

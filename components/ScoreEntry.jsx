@@ -1,8 +1,13 @@
 // ScoreEntry.jsx v2 — QR modal, portrait/landscape, all trackers
 
 const QRModal = ({ syncCode, onClose }) => {
-  const base = window.location.href.split('?')[0];
-  const url  = `${base}?join=${syncCode}`;
+  // Strip query/hash; keep the directory the app is served from so links work
+  // correctly on GitHub Pages subpaths (e.g. https://user.github.io/playpal/).
+  const here = window.location.href.split('?')[0].split('#')[0];
+  const dir  = here.endsWith('/') ? here : here.replace(/[^/]*$/, '');
+  // Bulletproof URL: hit index.html with ?code=… so the SPA handles auto-join.
+  // The spec's /join?code=… pattern also works via the join.html redirect.
+  const url  = `${dir}?code=${syncCode}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&color=3DCB6C&bgcolor=0A1628&margin=10`;
   return (
     <Modal open={true} onClose={onClose} title="Join This Round">
