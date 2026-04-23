@@ -22,6 +22,7 @@
     var code = (params.get('code') || params.get('join') || '').toUpperCase();
     var dir = location.pathname.replace(/[^/]*$/, '');  // strip "join.html" or "join"
     var target = dir + (code ? '?code=' + encodeURIComponent(code) : '');
+    console.info('[PlayPal/join.html] Code received from URL:', code, '→ redirecting to', target);
     location.replace(target);
   })();
 </script>

@@ -9,6 +9,12 @@
 //   PlayPalSync.subscribe(syncCode, cb)      -> returns unsubscribe fn (polling under the hood)
 //   PlayPalSync.pushCourse(course)           -> { ok, error? }   stores at /courses/<id>
 //   PlayPalSync.listCourses()                -> array of course objects (may be empty)
+//   PlayPalSync.joinRound(code)              -> { ok, round, error? }  SINGLE ENTRY POINT
+//
+// The "joinRound" function is the canonical way to attach a device to an
+// existing round. Both the QR-scan auto-join path and the manual "Join
+// Round" button must go through it — no other code should open a round
+// from a sync code.
 //
 // The current provider is "firebase" (Realtime Database via REST, no SDK).
 // If no provider is configured, every call is a silent no-op and the app
@@ -68,6 +74,27 @@
     }
   }
 
+  // Firebase RTDB serializes sparse arrays as objects with numeric string keys
+  // (e.g. [,,5] round-trips to {"2": 5}). That breaks any consumer that calls
+  // .reduce / .map / .length on the value. Re-hydrate by walking the tree and
+  // converting those objects back into arrays. Dense-keyed objects with keys
+  // "0".."N" become arrays of length N+1 with holes filled as 0/null.
+  function hydrate(value) {
+    if (value === null || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map(hydrate);
+    const keys = Object.keys(value);
+    const allNumeric = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+    if (allNumeric) {
+      const max = keys.reduce((m, k) => Math.max(m, parseInt(k, 10)), -1);
+      const arr = new Array(max + 1).fill(0);
+      keys.forEach(k => { arr[parseInt(k, 10)] = hydrate(value[k]); });
+      return arr;
+    }
+    const out = {};
+    for (const k of keys) out[k] = hydrate(value[k]);
+    return out;
+  }
+
   async function pushRound(syncCode, round) {
     if (!enabled) return { ok: false, error: 'disabled' };
     if (!syncCode || !round) return { ok: false, error: 'missing arguments' };
@@ -79,7 +106,16 @@
 
   async function pullRound(syncCode) {
     if (!enabled || !syncCode) return null;
-    return await get(path(syncCode, 'round'));
+    const url = path(syncCode, 'round');
+    console.info('[PlayPalSync] Firebase lookup:', url.replace(baseURL, ''));
+    const raw = await get(url);
+    if (!raw) {
+      console.warn('[PlayPalSync] Round not found in Firebase:', syncCode);
+      return null;
+    }
+    const round = hydrate(raw);
+    console.info('[PlayPalSync] Round found:', syncCode, '— players:', round.players?.length, 'course:', round.course?.name);
+    return round;
   }
 
   async function pushState(syncCode, state) {
@@ -108,7 +144,8 @@
 
   async function pullState(syncCode) {
     if (!enabled || !syncCode) return null;
-    return await get(path(syncCode, 'state'));
+    const raw = await get(path(syncCode, 'state'));
+    return raw ? hydrate(raw) : null;
   }
 
   // Simple debounced writer so rapid UI changes don't flood the network.
@@ -125,6 +162,7 @@
   // Lightweight polling subscription. Returns unsubscribe().
   function subscribe(syncCode, onChange, { intervalMs = 4000 } = {}) {
     if (!enabled || !syncCode) return () => {};
+    console.info('[PlayPalSync] Subscription active:', syncCode);
     let stopped = false;
     let lastStamp = 0;
     const tick = async () => {
@@ -132,7 +170,8 @@
       const stamp = await get(path(syncCode, 'updatedAt'));
       if (stamp && stamp !== lastStamp) {
         lastStamp = stamp;
-        const state = await get(path(syncCode, 'state'));
+        const raw = await get(path(syncCode, 'state'));
+        const state = raw ? hydrate(raw) : null;
         if (state && state.writerId !== getWriterId()) {
           try { onChange(state); } catch (err) { console.warn('[PlayPalSync] subscriber error', err); }
         }
@@ -140,7 +179,61 @@
       if (!stopped) setTimeout(tick, intervalMs);
     };
     tick();
-    return () => { stopped = true; };
+    return () => { stopped = true; console.info('[PlayPalSync] Subscription stopped:', syncCode); };
+  }
+
+  // ── joinRound: the ONE entry point for attaching a device to a round ─────
+  // Both the QR / URL auto-join flow and the manual "Join Round" button
+  // MUST call this. It encapsulates:
+  //   1. Normalize + validate the code
+  //   2. Cloud-first lookup (the QR flow is always cross-device)
+  //   3. localStorage fallback (same-device scorer re-opening the app)
+  //   4. Cache the found round locally so refresh reconnects instantly
+  //   5. Uniform {ok, round, error} return contract
+  async function joinRound(rawCode) {
+    const code = String(rawCode || '').trim().toUpperCase();
+    console.info('[PlayPal] Attempting to join round:', code);
+    if (!code || code.length < 4) {
+      return { ok: false, error: 'Enter a valid round code' };
+    }
+
+    // 1. Authoritative source: Firebase. Always check first — the QR scenario
+    //    is cross-device so localStorage on the guest never has the round.
+    if (enabled) {
+      try {
+        const remote = await pullRound(code);
+        if (remote && String(remote.syncCode || '').toUpperCase() === code) {
+          localStorage.setItem('pp_round', JSON.stringify(remote));
+          console.info('[PlayPal] Joined via Firebase:', code);
+          return { ok: true, round: remote };
+        }
+      } catch (err) {
+        console.error('[PlayPal] Firebase join failed:', err);
+        return { ok: false, error: 'Network error reaching sync server' };
+      }
+    } else {
+      console.warn('[PlayPal] Cloud sync disabled — joinRound will only find rounds saved on THIS device. See README.md to enable Firebase.');
+    }
+
+    // 2. Same-device fallback (scorer reopening their own browser)
+    try {
+      const raw = localStorage.getItem('pp_round');
+      if (raw) {
+        const local = JSON.parse(raw);
+        if (String(local.syncCode || '').toUpperCase() === code) {
+          console.info('[PlayPal] Joined via localStorage (same device):', code);
+          return { ok: true, round: local };
+        }
+      }
+    } catch (err) {
+      console.error('[PlayPal] localStorage parse error during join:', err);
+    }
+
+    // 3. Genuine miss — craft a precise error
+    if (!enabled) {
+      return { ok: false, error: `Round "${code}" not found on this device. Enable cloud sync (see README) so guests can join from any device.` };
+    }
+    return { ok: false, error: `Round "${code}" not found. Make sure the host has started the round and is online.` };
   }
 
   function getWriterId() {
@@ -163,6 +256,7 @@
     subscribe,
     pushCourse,
     listCourses,
+    joinRound,
     getWriterId,
   };
 

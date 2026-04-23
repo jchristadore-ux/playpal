@@ -46,16 +46,35 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showSyncCode": true
 } /*EDITMODE-END*/;
 
+// Read a sync code from the URL synchronously, BEFORE React's initial state
+// is computed. This matters because `pp_screen` from a previous session might
+// be "score" — if we let the app boot into the score screen first, the
+// HomeScreen's auto-join effect never runs and the URL code is lost.
+const INITIAL_URL_CODE = (() => {
+  const params = new URLSearchParams(window.location.search);
+  const code = (params.get('code') || params.get('join') || '').trim().toUpperCase();
+  if (code) console.info('[PlayPal] Code received from URL:', code);
+  return code || null;
+})();
+
 const App = () => {
-  const [screen, setScreen] = React.useState(() => localStorage.getItem('pp_screen') || 'home');
+  // If the URL carries a code, suppress any cached screen/round state on
+  // mount — we'll replace them with the joined round below.
+  const [screen, setScreen] = React.useState(() =>
+    INITIAL_URL_CODE ? 'home' : (localStorage.getItem('pp_screen') || 'home')
+  );
   const [players, setPlayers] = React.useState(() => {
     const saved = localStorage.getItem('pp_players');
     return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
   });
   const [round, setRound] = React.useState(() => {
+    if (INITIAL_URL_CODE) return null; // wait for joinRound to resolve
     const saved = localStorage.getItem('pp_round');
     return saved ? JSON.parse(saved) : null;
   });
+  const [joinPrompt, setJoinPrompt] = React.useState(() =>
+    INITIAL_URL_CODE ? { code: INITIAL_URL_CODE, status: 'pending', error: '' } : null
+  );
   const [finalScores, setFinalScores]   = React.useState(null);
   const [finalWolf,   setFinalWolf]     = React.useState(null);
   const [finalPutts,  setFinalPutts]    = React.useState(null);
@@ -73,6 +92,42 @@ const App = () => {
   }, []);
 
   React.useEffect(() => {localStorage.setItem('pp_screen', screen);}, [screen]);
+
+  // ── URL code → auto-join (runs once on mount) ────────────────────────────
+  // This is the ONLY place in the app that kicks off an auto-join from the
+  // URL. It lives at the App level (not HomeScreen) so it always runs, even
+  // when `pp_screen` was previously "score" or "summary". It delegates the
+  // entire lookup to PlayPalSync.joinRound — the same function the manual
+  // "Join Round" button uses. No duplicated logic.
+  React.useEffect(() => {
+    if (!INITIAL_URL_CODE) return;
+    let cancelled = false;
+    (async () => {
+      const result = await window.PlayPalSync.joinRound(INITIAL_URL_CODE);
+      if (cancelled) return;
+      if (result.ok) {
+        console.info('[PlayPal] Auto-join succeeded — switching to score screen');
+        setRound(result.round);
+        setScreen('score');
+        setJoinPrompt(null);
+        // Strip query params so a refresh doesn't re-attempt the join.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('code');
+        url.searchParams.delete('join');
+        window.history.replaceState({}, '', url.toString());
+      } else {
+        console.warn('[PlayPal] Auto-join failed:', result.error);
+        // Keep HomeScreen visible and surface the error in the Join modal.
+        setJoinPrompt({ code: INITIAL_URL_CODE, status: 'error', error: result.error });
+        // Fall back to the locally cached round if any, so the app is still usable.
+        const saved = localStorage.getItem('pp_round');
+        if (saved && !round) {
+          try { setRound(JSON.parse(saved)); } catch (e) { /* ignore */ }
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Tweaks message handler
   React.useEffect(() => {
@@ -96,19 +151,23 @@ const App = () => {
     localStorage.setItem('pp_players', JSON.stringify(updated));
   };
 
-  const handleStartRound = (config) => {
+  const handleStartRound = async (config) => {
     const r = { ...config, id: Date.now() };
     setRound(r);
     localStorage.setItem('pp_round', JSON.stringify(r));
-    // Publish round to the cloud so other devices can join via sync code.
-    // Surface failures so the host knows guests won't be able to join.
+    // Publish the round to the cloud BEFORE switching screens, so a guest
+    // scanning the QR the instant the host hits "Tee It Up" doesn't get a
+    // "round not found" race. The screen transition is fast enough that this
+    // isn't perceptible to the host.
     if (window.PlayPalSync?.isEnabled?.()) {
-      window.PlayPalSync.pushRound(r.syncCode, r).then((res) => {
-        if (!res?.ok) {
-          console.error('[PlayPal] Round publish failed:', res?.error);
-          alert('Heads up: this round was started locally but failed to publish to the cloud (' + (res?.error || 'unknown') + '). Other devices will not be able to join with the QR/sync code until this is resolved.');
-        }
-      });
+      console.info('[PlayPal] Publishing round to Firebase:', r.syncCode);
+      const res = await window.PlayPalSync.pushRound(r.syncCode, r);
+      if (!res?.ok) {
+        console.error('[PlayPal] Round publish failed:', res?.error);
+        alert('Heads up: this round was started locally but failed to publish to the cloud (' + (res?.error || 'unknown') + '). Other devices will not be able to join with the QR/sync code until this is resolved.');
+      } else {
+        console.info('[PlayPal] Round published OK:', r.syncCode);
+      }
     }
     setScreen('score');
   };
@@ -148,6 +207,8 @@ const App = () => {
           players={players}
           onManagePlayers={handleManagePlayers}
           recentRounds={recentRounds}
+          joinPrompt={joinPrompt}
+          onDismissJoinPrompt={() => setJoinPrompt(null)}
           onJoinRound={(savedRound) => {
             setRound(savedRound);
             setScreen('score');

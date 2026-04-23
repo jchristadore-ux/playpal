@@ -1,13 +1,16 @@
 // ScoreEntry.jsx v2 — QR modal, portrait/landscape, all trackers
 
 const QRModal = ({ syncCode, onClose }) => {
-  // Strip query/hash; keep the directory the app is served from so links work
-  // correctly on GitHub Pages subpaths (e.g. https://user.github.io/playpal/).
+  // Build the join URL relative to the directory the app is served from so
+  // it works on both user-site hosting (https://user.github.io/join?code=…)
+  // and project-site hosting (https://user.github.io/playpal/join?code=…).
+  //
+  // The `/join` path is served by join.html, a tiny static page that
+  // redirects to index.html?code=… — the SPA then runs the single
+  // joinRound() function. This matches the spec's required URL shape.
   const here = window.location.href.split('?')[0].split('#')[0];
   const dir  = here.endsWith('/') ? here : here.replace(/[^/]*$/, '');
-  // Bulletproof URL: hit index.html with ?code=… so the SPA handles auto-join.
-  // The spec's /join?code=… pattern also works via the join.html redirect.
-  const url  = `${dir}?code=${syncCode}`;
+  const url  = `${dir}join?code=${syncCode}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&color=3DCB6C&bgcolor=0A1628&margin=10`;
   return (
     <Modal open={true} onClose={onClose} title="Join This Round">
@@ -89,10 +92,15 @@ const ScoreEntry = ({ round, onSaveRound }) => {
 
   // Subscribe to remote updates from other devices joined on this sync code.
   React.useEffect(() => {
-    if (!window.PlayPalSync?.isEnabled?.()) return;
+    if (!window.PlayPalSync?.isEnabled?.()) {
+      console.info('[PlayPal] ScoreEntry mounted in local-only mode for round', syncCode);
+      return;
+    }
+    console.info('[PlayPal] ScoreEntry subscribing to round', syncCode);
     // Initial fetch — in case we joined mid-round, grab latest state from the cloud.
     window.PlayPalSync.pullState(syncCode).then((remote) => {
       if (!remote || remote.writerId === window.PlayPalSync.getWriterId()) return;
+      console.info('[PlayPal] Initial state hydrated from Firebase for', syncCode);
       if (remote.scores)  setScores(remote.scores);
       if (remote.wolfData)setWolfData(remote.wolfData);
       if (remote.putts)   setPutts(remote.putts);
