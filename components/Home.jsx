@@ -25,16 +25,20 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     // Look up round in localStorage by syncCode
     const roundRaw = localStorage.getItem('pp_round');
     if (roundRaw) {
-      const round = JSON.parse(roundRaw);
-      if (round.syncCode === code) {
-        // Found the active round — navigate directly to scoring
-        if (onJoinRound) onJoinRound(round);
-        setShowJoin(false);
-        // Clear the ?join param from the URL without reloading
-        const url = new URL(window.location.href);
-        url.searchParams.delete('join');
-        window.history.replaceState({}, '', url.toString());
-        return;
+      try {
+        const round = JSON.parse(roundRaw);
+        if (round.syncCode === code) {
+          // Found the active round — navigate directly to scoring
+          if (onJoinRound) onJoinRound(round);
+          setShowJoin(false);
+          // Clear the ?join param from the URL without reloading
+          const url = new URL(window.location.href);
+          url.searchParams.delete('join');
+          window.history.replaceState({}, '', url.toString());
+          return;
+        }
+      } catch (err) {
+        console.error('[PlayPal] Failed to parse saved round while joining', err);
       }
     }
     setJoinError(`Round "${code}" not found on this device. Make sure you're on the same device or network.`);
