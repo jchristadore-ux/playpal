@@ -19,29 +19,52 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     if (code) setJoinCode(code.toUpperCase());
   }, []);
 
-  const handleJoin = () => {
+  const [joinBusy, setJoinBusy] = React.useState(false);
+
+  const finishJoin = (round) => {
+    if (onJoinRound) onJoinRound(round);
+    setShowJoin(false);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('join');
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleJoin = async () => {
     const code = joinCode.trim().toUpperCase();
     if (!code || code.length < 4) { setJoinError('Enter a valid round code'); return; }
-    // Look up round in localStorage by syncCode
+
+    // 1) Try local storage first (same-device case)
     const roundRaw = localStorage.getItem('pp_round');
     if (roundRaw) {
       try {
         const round = JSON.parse(roundRaw);
-        if (round.syncCode === code) {
-          // Found the active round — navigate directly to scoring
-          if (onJoinRound) onJoinRound(round);
-          setShowJoin(false);
-          // Clear the ?join param from the URL without reloading
-          const url = new URL(window.location.href);
-          url.searchParams.delete('join');
-          window.history.replaceState({}, '', url.toString());
-          return;
-        }
+        if (round.syncCode === code) { finishJoin(round); return; }
       } catch (err) {
         console.error('[PlayPal] Failed to parse saved round while joining', err);
       }
     }
-    setJoinError(`Round "${code}" not found on this device. Make sure you're on the same device or network.`);
+
+    // 2) Fall back to the cloud (cross-device case)
+    if (window.PlayPalSync?.isEnabled?.()) {
+      setJoinBusy(true);
+      try {
+        const round = await window.PlayPalSync.pullRound(code);
+        if (round && round.syncCode === code) {
+          localStorage.setItem('pp_round', JSON.stringify(round));
+          finishJoin(round);
+          return;
+        }
+        setJoinError(`Round "${code}" not found. Double-check the code with the scorer.`);
+      } catch (err) {
+        console.error('[PlayPal] Cloud join failed', err);
+        setJoinError('Could not reach sync server. Try again.');
+      } finally {
+        setJoinBusy(false);
+      }
+      return;
+    }
+
+    setJoinError(`Round "${code}" not found on this device. Enable cloud sync (see README) to join from another device.`);
   };
 
   const colors = ['#3DCB6C','#E5534B','#C9A84C','#7B9FE0','#E07BE0','#E0A87B','#7BE0D4'];
@@ -155,7 +178,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
           <div style={{display:'flex', gap:10}}>
             <Btn onClick={()=>{ setShowJoin(false); setJoinError(''); }} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-            <Btn onClick={handleJoin} variant="green" style={{flex:1}}>JOIN ROUND</Btn>
+            <Btn onClick={handleJoin} variant="green" style={{flex:1}} disabled={joinBusy}>{joinBusy ? 'JOINING…' : 'JOIN ROUND'}</Btn>
           </div>
         </div>
       </Modal>

@@ -37,15 +37,23 @@ const ScoreEntry = ({ round, onSaveRound }) => {
     return () => { window.removeEventListener('resize', handler); screen?.orientation?.removeEventListener?.('change', handler); };
   }, []);
 
+  const readLS = (key, fallback) => {
+    try { const v = JSON.parse(localStorage.getItem(key)); return v === null ? fallback : v; }
+    catch(e) { return fallback; }
+  };
+  const emptyPutts   = () => Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));
+  const emptyChips   = () => Object.fromEntries(players.map(p=>[p.id,0]));
+
   const [holeIdx, setHoleIdx]     = React.useState(() => parseInt(localStorage.getItem('pp_hole_'+syncCode)||'0'));
-  const [scores,  setScores]      = React.useState(() => { try { return JSON.parse(localStorage.getItem('pp_scores_'+syncCode)) || Object.fromEntries(players.map(p=>[p.id,[]])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,[]])); }});
-  const [putts,   setPutts]       = React.useState(Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)])));
-  const [wolfData,setWolfData]    = React.useState(() => { try { return JSON.parse(localStorage.getItem('pp_wolf_'+syncCode)) || {}; } catch(e) { return {}; }});
-  const [manualChips,setManualChips] = React.useState(Object.fromEntries(players.map(p=>[p.id,0])));
-  const [nassauPresses,setNassauPresses] = React.useState([]);
+  const [scores,  setScores]      = React.useState(() => readLS('pp_scores_'+syncCode,  Object.fromEntries(players.map(p=>[p.id,[]]))));
+  const [putts,   setPutts]       = React.useState(() => readLS('pp_putts_'+syncCode,   emptyPutts()));
+  const [wolfData,setWolfData]    = React.useState(() => readLS('pp_wolf_'+syncCode,    {}));
+  const [manualChips,setManualChips] = React.useState(() => readLS('pp_chips_'+syncCode, emptyChips()));
+  const [nassauPresses,setNassauPresses] = React.useState(() => readLS('pp_presses_'+syncCode, []));
   const [showQR,  setShowQR]      = React.useState(false);
   const [saveModal,setSaveModal]  = React.useState(false);
   const [toast,   setToast]       = React.useState(null);
+  const [syncHint,setSyncHint]    = React.useState(false);
 
   const hole      = course.holes[holeIdx];
   const hasWolf   = formats.some(f=>f.type==='wolf');
@@ -55,11 +63,48 @@ const ScoreEntry = ({ round, onSaveRound }) => {
   const nassauFmt = formats.find(f=>f.type==='nassau');
   const ptmFmt    = formats.find(f=>f.type==='passmoney');
 
-  const persist = (s, w) => {
-    localStorage.setItem('pp_scores_'+syncCode, JSON.stringify(s));
-    localStorage.setItem('pp_wolf_'+syncCode, JSON.stringify(w));
-    localStorage.setItem('pp_hole_'+syncCode, String(holeIdx));
+  // Save all per-round state to localStorage + push a debounced copy to the cloud.
+  const persist = (next = {}) => {
+    const s  = next.scores   ?? scores;
+    const w  = next.wolfData ?? wolfData;
+    const pu = next.putts    ?? putts;
+    const pr = next.presses  ?? nassauPresses;
+    const ch = next.chips    ?? manualChips;
+    const hi = next.holeIdx  ?? holeIdx;
+    localStorage.setItem('pp_scores_'+syncCode,  JSON.stringify(s));
+    localStorage.setItem('pp_wolf_'+syncCode,    JSON.stringify(w));
+    localStorage.setItem('pp_putts_'+syncCode,   JSON.stringify(pu));
+    localStorage.setItem('pp_presses_'+syncCode, JSON.stringify(pr));
+    localStorage.setItem('pp_chips_'+syncCode,   JSON.stringify(ch));
+    localStorage.setItem('pp_hole_'+syncCode,    String(hi));
+    window.PlayPalSync?.pushStateDebounced?.(syncCode, () => ({
+      scores: s, wolfData: w, putts: pu, presses: pr, chips: ch, holeIdx: hi,
+    }));
   };
+
+  // Subscribe to remote updates from other devices joined on this sync code.
+  React.useEffect(() => {
+    if (!window.PlayPalSync?.isEnabled?.()) return;
+    // Initial fetch — in case we joined mid-round, grab latest state from the cloud.
+    window.PlayPalSync.pullState(syncCode).then((remote) => {
+      if (!remote || remote.writerId === window.PlayPalSync.getWriterId()) return;
+      if (remote.scores)  setScores(remote.scores);
+      if (remote.wolfData)setWolfData(remote.wolfData);
+      if (remote.putts)   setPutts(remote.putts);
+      if (remote.presses) setNassauPresses(remote.presses);
+      if (remote.chips)   setManualChips(remote.chips);
+      setSyncHint(true); setTimeout(()=>setSyncHint(false), 1500);
+    });
+    const unsub = window.PlayPalSync.subscribe(syncCode, (remote) => {
+      if (remote.scores)  setScores(remote.scores);
+      if (remote.wolfData)setWolfData(remote.wolfData);
+      if (remote.putts)   setPutts(remote.putts);
+      if (remote.presses) setNassauPresses(remote.presses);
+      if (remote.chips)   setManualChips(remote.chips);
+      setSyncHint(true); setTimeout(()=>setSyncHint(false), 1500);
+    });
+    return unsub;
+  }, [syncCode]);
 
   const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
@@ -67,38 +112,41 @@ const ScoreEntry = ({ round, onSaveRound }) => {
     if (val < 1) return;
     const next = {...scores, [playerId]:[...(scores[playerId]||[])]};
     next[playerId][holeIdx] = val;
-    setScores(next); persist(next, wolfData);
+    setScores(next); persist({ scores: next });
   };
 
   const setPuttCount = (playerId, val) => {
     const next = {...putts, [playerId]:[...(putts[playerId]||Array(18).fill(0))]};
-    next[playerId][holeIdx] = val; setPutts(next);
+    next[playerId][holeIdx] = val;
+    setPutts(next); persist({ putts: next });
   };
 
   const handleSetPartner = (partnerId, confirmed=true) => {
     const wolfPlayer = getWolfForHole(players, holeIdx);
     const next = {...wolfData, [holeIdx]: { wolfId:wolfPlayer.id, partnerId, confirmed, lone:false }};
-    setWolfData(next); persist(scores, next);
+    setWolfData(next); persist({ wolfData: next });
   };
 
   const handleLoneWolf = () => {
     const wolfPlayer = getWolfForHole(players, holeIdx);
     const next = {...wolfData, [holeIdx]: { wolfId:wolfPlayer.id, partnerId:null, confirmed:true, lone:true }};
-    setWolfData(next); persist(scores, next);
+    setWolfData(next); persist({ wolfData: next });
   };
 
   const handleManualChipAdjust = (playerId, delta) => {
-    setManualChips(prev => ({...prev, [playerId]: (prev[playerId]||0)+delta}));
+    const next = {...manualChips, [playerId]: (manualChips[playerId]||0)+delta};
+    setManualChips(next); persist({ chips: next });
   };
 
   const handlePress = (segment, startHole, stake) => {
-    setNassauPresses(prev => [...prev, {segment, startHole, stake}]);
+    const next = [...nassauPresses, {segment, startHole, stake}];
+    setNassauPresses(next); persist({ presses: next });
     showToast(`Nassau press added — ${segment.toUpperCase()} from H${startHole+1}`, 'info');
   };
 
   const goToHole = (i) => {
     setHoleIdx(i);
-    localStorage.setItem('pp_hole_'+syncCode, String(i));
+    persist({ holeIdx: i });
   };
 
   const allScoresThisHole = players.every(p => scores[p.id]?.[holeIdx]);
