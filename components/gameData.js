@@ -334,18 +334,6 @@ const COURSES = [
     ]
   },
 ];
-  {
-    id:'tpc', name:'TPC Sawgrass (Stadium)', location:'Ponte Vedra Beach, FL', rating:76.8, slope:144,
-    holes:[
-      {num:1,par:4,yds:423,hdcp:9},{num:2,par:5,yds:532,hdcp:11},{num:3,par:3,yds:177,hdcp:17},
-      {num:4,par:4,yds:384,hdcp:15},{num:5,par:4,yds:466,hdcp:3},{num:6,par:4,yds:393,hdcp:13},
-      {num:7,par:4,yds:442,hdcp:5},{num:8,par:3,yds:237,hdcp:7},{num:9,par:5,yds:583,hdcp:1},
-      {num:10,par:4,yds:424,hdcp:10},{num:11,par:5,yds:535,hdcp:12},{num:12,par:4,yds:358,hdcp:18},
-      {num:13,par:3,yds:181,hdcp:16},{num:14,par:4,yds:467,hdcp:2},{num:15,par:4,yds:448,hdcp:6},
-      {num:16,par:5,yds:523,hdcp:14},{num:17,par:3,yds:137,hdcp:8},{num:18,par:4,yds:462,hdcp:4}
-    ]
-  },
-];
 
 const DEFAULT_PLAYERS = [
   {id:'p1', name:'Thatch Adams', initials:'TA', ghin:'1234567', ghinLogin:'tadams@gmail.com', email:'tadams@gmail.com', venmo:'thatch-adams', handicap:8,  color:'#3DCB6C'},
