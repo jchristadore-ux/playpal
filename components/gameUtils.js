@@ -179,7 +179,7 @@ function computePTMState(scores, putts, players, course, initialHolderId) {
       // ── Holes 1–17: single pass check ──────────────────────────────
       const score = scores[holderId]?.[i];
       const putt  = (putts[holderId]?.[i]) || 0;
-      if (!score) continue;                          // hole not yet scored
+      if (!score) break;                             // hole not yet scored — stop here
       if (checkPTMPass(score, par, putt)) {
         const next   = ptmNextPlayer(players, holderId);
         const reason = score >= par + 2 ? 'Double+' : '3-Putt';
