@@ -263,6 +263,18 @@ const SetupScreen = ({ allPlayers, onStart }) => {
     setShowBuilder(false);
   };
 
+  const handleDeleteCourse = (courseId) => {
+    const updated = customCourses.filter(c => c.id !== courseId);
+    setCustomCourses(updated);
+    localStorage.setItem('pp_custom_courses', JSON.stringify(updated));
+    if (course?.id === courseId) setCourse(null);
+    if (window.PlayPalSync?.isEnabled?.()) {
+      window.PlayPalSync.deleteCourse(courseId).catch(err =>
+        console.warn('[PlayPal] Failed to delete course from cloud:', err)
+      );
+    }
+  };
+
   const handleStart = () => {
     const players = allPlayers.filter(p => selectedPlayers.includes(p.id));
     onStart({ players, course, formats: activeFormats, syncCode: generateSyncCode() });
@@ -278,9 +290,9 @@ const SetupScreen = ({ allPlayers, onStart }) => {
         {list.map(c => {
           const sel = course?.id === c.id;
           return (
-            <div key={c.id} onClick={()=>setCourse(c)}
+            <div key={c.id}
               style={{...setupS.courseCard, border: sel?'1px solid #C9A84C':'1px solid #1E3A6E', background: sel?'rgba(201,168,76,0.08)':'#0F2040'}}>
-              <div style={{flex:1}}>
+              <div onClick={()=>setCourse(c)} style={{flex:1}}>
                 <div style={{display:'flex', alignItems:'center', gap:8}}>
                   <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color: sel?'#C9A84C':'#fff'}}>{c.name}</div>
                   {c.custom && <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1, color:'#3DCB6C', background:'rgba(61,203,108,0.12)', border:'1px solid rgba(61,203,108,0.3)', padding:'1px 6px', borderRadius:4}}>CUSTOM</span>}
@@ -288,7 +300,16 @@ const SetupScreen = ({ allPlayers, onStart }) => {
                 <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
                 <div style={{fontSize:10, color:'#4A6890', marginTop:1}}>Rating {c.rating} · Slope {c.slope}</div>
               </div>
-              {sel && <span style={{color:'#C9A84C', fontSize:20, flexShrink:0}}>✓</span>}
+              <div style={{display:'flex', alignItems:'center', gap:8, flexShrink:0}}>
+                {c.custom && (
+                  <button
+                    onClick={e=>{ e.stopPropagation(); handleDeleteCourse(c.id); }}
+                    style={{background:'rgba(229,83,75,0.08)', border:'1px solid rgba(229,83,75,0.25)', borderRadius:6, padding:'4px 9px', color:'#E5534B', cursor:'pointer', fontSize:13, lineHeight:1, fontFamily:'DM Sans'}}>
+                    🗑
+                  </button>
+                )}
+                {sel && <span style={{color:'#C9A84C', fontSize:20}}>✓</span>}
+              </div>
             </div>
           );
         })}

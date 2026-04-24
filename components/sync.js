@@ -128,6 +128,11 @@
     return { ok: true };
   }
 
+  async function markCancelled(syncCode) {
+    if (!enabled || !syncCode) return { ok: false, error: 'disabled-or-missing' };
+    return await put(path(syncCode, 'cancelled'), true);
+  }
+
   // ── Courses (persisted permanently, shared across all devices) ───────────
   async function pushCourse(course) {
     if (!enabled) return { ok: false, error: 'disabled' };
@@ -140,6 +145,25 @@
     const data = await get(coursePath());
     if (!data || typeof data !== 'object') return [];
     return Object.values(data).filter(Boolean);
+  }
+
+  async function deleteCourse(courseId) {
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!courseId) return { ok: false, error: 'missing course id' };
+    try {
+      const auth = token ? `?auth=${encodeURIComponent(token)}` : '';
+      const url = `${baseURL}/courses/${encodeURIComponent(courseId)}.json${auth}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.warn('[PlayPalSync] DELETE course failed', res.status, text);
+        return { ok: false, error: `HTTP ${res.status} ${text}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      console.warn('[PlayPalSync] DELETE course error', err);
+      return { ok: false, error: err?.message || 'network' };
+    }
   }
 
   async function pullState(syncCode) {
@@ -256,6 +280,8 @@
     subscribe,
     pushCourse,
     listCourses,
+    deleteCourse,
+    markCancelled,
     joinRound,
     getWriterId,
   };

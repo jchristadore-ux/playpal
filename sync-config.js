@@ -21,6 +21,6 @@
 
 window.PLAYPAL_SYNC = {
   provider:    'firebase',
-  databaseURL: 'https://console.firebase.google.com/project/playpal-sync/database/playpal-sync-default-rtdb/data/~2F',
+  databaseURL: 'https://playpal-sync-default-rtdb.firebaseio.com',
   authToken:   null,
 };
