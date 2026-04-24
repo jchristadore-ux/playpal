@@ -40,6 +40,12 @@
     return `${baseURL}/courses${id}.json${auth}`;
   };
 
+  const playerPath = (playerId) => {
+    const auth = token ? `?auth=${encodeURIComponent(token)}` : '';
+    const id   = playerId ? `/${encodeURIComponent(playerId)}` : '';
+    return `${baseURL}/players${id}.json${auth}`;
+  };
+
   async function put(url, body) {
     if (!enabled) return { ok: false, error: 'disabled' };
     try {
@@ -274,6 +280,42 @@
     return { ok: false, error: `Round "${code}" not found. Make sure the host has started the round and is online.` };
   }
 
+  // ── Players (persisted permanently, shared across all devices) ──────────
+  async function pushPlayer(player) {
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!player || !player.id) return { ok: false, error: 'missing player id' };
+    return await put(playerPath(player.id), player);
+  }
+
+  async function listPlayers() {
+    if (!enabled) return [];
+    const raw = await get(playerPath());
+    if (!raw || typeof raw !== 'object') return [];
+    return Object.values(raw).filter(Boolean);
+  }
+
+  async function deletePlayer(playerId) {
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!playerId) return { ok: false, error: 'missing player id' };
+    try {
+      const auth = token ? `?auth=${encodeURIComponent(token)}` : '';
+      const url = `${baseURL}/players/${encodeURIComponent(playerId)}.json${auth}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.warn('[PlayPalSync] DELETE player failed', res.status, text);
+        if (res.status === 401 || res.status === 403) {
+          return { ok: false, error: 'Firebase permission denied. Update your database rules — see README.' };
+        }
+        return { ok: false, error: `HTTP ${res.status} ${text}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      console.warn('[PlayPalSync] DELETE player error', err);
+      return { ok: false, error: err?.message || 'network' };
+    }
+  }
+
   function getWriterId() {
     let id = localStorage.getItem('pp_writer_id');
     if (!id) {
@@ -296,6 +338,9 @@
     listCourses,
     deleteCourse,
     markCancelled,
+    pushPlayer,
+    listPlayers,
+    deletePlayer,
     joinRound,
     getWriterId,
   };

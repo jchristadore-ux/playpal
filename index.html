@@ -106,6 +106,7 @@ const App = () => {
     INITIAL_URL_CODE ? { code: INITIAL_URL_CODE, status: 'pending', error: '' } : null
   );
   const [isHost,      setIsHost]        = React.useState(false);
+  const [syncToast,   setSyncToast]     = React.useState(null);
   const [finalScores, setFinalScores]   = React.useState(null);
   const [finalWolf,   setFinalWolf]     = React.useState(null);
   const [finalPutts,  setFinalPutts]    = React.useState(null);
@@ -123,6 +124,34 @@ const App = () => {
   }, []);
 
   React.useEffect(() => {localStorage.setItem('pp_screen', screen);}, [screen]);
+
+  // ── Startup: load player roster from Firebase ────────────────────────────
+  // Players were previously local-only. On first run after this change, the
+  // app migrates any localStorage players up to Firebase. On all subsequent
+  // loads — and on every other device — Firebase is the source of truth.
+  React.useEffect(() => {
+    if (!window.PlayPalSync?.isEnabled?.()) return;
+    (async () => {
+      const remote = await window.PlayPalSync.listPlayers();
+      if (remote && remote.length > 0) {
+        // Firebase has players — merge them in (Firebase wins on conflict).
+        setPlayers(prev => {
+          const byId = new Map(prev.map(p => [p.id, p]));
+          remote.forEach(p => byId.set(p.id, p));
+          const merged = Array.from(byId.values());
+          localStorage.setItem('pp_players', JSON.stringify(merged));
+          return merged;
+        });
+      } else {
+        // Firebase has no players yet — push local roster up as the initial seed.
+        const local = JSON.parse(localStorage.getItem('pp_players') || '[]');
+        if (local.length > 0) {
+          console.info('[PlayPal] Migrating', local.length, 'local player(s) to Firebase');
+          await Promise.all(local.map(p => window.PlayPalSync.pushPlayer(p)));
+        }
+      }
+    })().catch(err => console.warn('[PlayPal] Startup player load failed:', err));
+  }, []);
 
   // ── URL code → auto-join (runs once on mount) ────────────────────────────
   // This is the ONLY place in the app that kicks off an auto-join from the
@@ -177,9 +206,37 @@ const App = () => {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
   };
 
-  const handleManagePlayers = (updated) => {
+  const handleManagePlayers = async (updated) => {
+    // Snapshot current list before the state update so we can diff.
+    const prev = players;
+    // Optimistic local write — UI responds immediately.
     setPlayers(updated);
     localStorage.setItem('pp_players', JSON.stringify(updated));
+
+    if (!window.PlayPalSync?.isEnabled?.()) return;
+
+    // Compute what changed relative to the previous list.
+    const prevMap = new Map(prev.map(p => [p.id, p]));
+    const nextMap = new Map(updated.map(p => [p.id, p]));
+    const deleted  = prev.filter(p => !nextMap.has(p.id));
+    const upserted = updated.filter(p => {
+      const old = prevMap.get(p.id);
+      return !old || JSON.stringify(old) !== JSON.stringify(p);
+    });
+
+    if (upserted.length === 0 && deleted.length === 0) return;
+
+    const results = await Promise.all([
+      ...upserted.map(p => window.PlayPalSync.pushPlayer(p)),
+      ...deleted.map(p  => window.PlayPalSync.deletePlayer(p.id)),
+    ]);
+
+    const failed = results.filter(r => !r?.ok && r?.error !== 'disabled');
+    if (failed.length > 0) {
+      console.error('[PlayPal] Player cloud sync failed:', failed.map(r => r.error));
+      setSyncToast({ msg: 'Failed to sync to cloud. Changes saved locally only.', type: 'error' });
+      setTimeout(() => setSyncToast(null), 5000);
+    }
   };
 
   const handleStartRound = async (config) => {
@@ -343,6 +400,9 @@ const App = () => {
           </div>
         </div>
       }
+
+      {/* Global sync-failure toast — shown whenever a Firebase write fails */}
+      {syncToast && <Toast message={syncToast.msg} type={syncToast.type}/>}
     </div>);
 
 };

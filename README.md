@@ -118,13 +118,17 @@ returns `HTTP 401 Permission denied` and no round can be started. The fix takes
     "courses": {
       ".read":  true,
       ".write": true
+    },
+    "players": {
+      ".read":  true,
+      ".write": true
     }
   }
 }
 ```
 
-`rounds` access is gated on a valid-length sync code. `courses` is open
-so all devices can share custom course imports.
+`rounds` access is gated on a valid-length sync code. `courses` and
+`players` are open so all devices share the same roster and custom courses.
 
 If you want to require a shared secret instead, set a token in
 `sync-config.js`:
