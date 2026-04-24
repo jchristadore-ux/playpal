@@ -1,6 +1,6 @@
 // Home.jsx — Dashboard / Landing Screen
 
-const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, joinPrompt, onDismissJoinPrompt }) => {
+const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, joinPrompt, onDismissJoinPrompt, onViewRound }) => {
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
   const [localPlayers,setLocalPlayers]  = React.useState(players);
@@ -104,14 +104,19 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           <Label>Recent Rounds</Label>
           <div style={homeS.roundList}>
             {recentRounds.map((r,i) => (
-              <div key={i} style={homeS.roundCard}>
+              <div key={i}
+                onClick={() => r.roundData && onViewRound?.(r)}
+                style={{...homeS.roundCard, cursor: r.roundData ? 'pointer' : 'default'}}>
                 <div>
                   <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{r.courseName}</div>
                   <div style={{fontSize:12, color:'#7A98BC', marginTop:2}}>{r.date} · {r.players} players</div>
                 </div>
                 <div style={{textAlign:'right'}}>
                   <div style={{fontFamily:'Barlow Condensed', fontSize:14, color:'#C9A84C'}}>{r.formats}</div>
-                  <div style={{fontSize:11, color:'#3DCB6C', marginTop:2}}>VIEW →</div>
+                  {r.roundData
+                    ? <div style={{fontSize:11, color:'#3DCB6C', marginTop:2}}>VIEW →</div>
+                    : <div style={{fontSize:11, color:'#4A6890', marginTop:2}}>NO DATA</div>
+                  }
                 </div>
               </div>
             ))}

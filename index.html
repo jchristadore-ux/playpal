@@ -9,10 +9,12 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="sync-config.js?v=1"></script>
+<script src="sync-config.js?v=2"></script>
 <script src="components/gameData.js?v=4"></script>
 <script src="components/gameUtils.js?v=4"></script>
-<script src="components/sync.js?v=1"></script>
+<script src="components/sync.js?v=2"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -57,6 +59,34 @@ const INITIAL_URL_CODE = (() => {
   return code || null;
 })();
 
+// ── Round creation — cloud-first architecture ────────────────────────────
+// A round CANNOT be considered started until it is successfully written to
+// Firebase. If Firebase is configured and the write fails, we surface the
+// real error and refuse to proceed. If Firebase is not configured at all
+// (local-only mode) we allow the round through with a clear warning banner
+// rather than silently failing.
+async function createAndPublishRound(roundData) {
+  if (!window.PlayPalSync?.isEnabled?.()) {
+    console.info('[PlayPal] Local-only mode — skipping cloud publish');
+    return { ok: true, round: roundData, localOnly: true };
+  }
+  console.info('[PlayPal] Publishing round to Firebase BEFORE switching screens:', roundData.syncCode);
+  try {
+    const res = await window.PlayPalSync.pushRound(roundData.syncCode, roundData);
+    if (!res?.ok) {
+      const msg = res?.error || 'unknown error';
+      console.error('[PlayPal] Round publish failed:', msg);
+      return { ok: false, error: msg };
+    }
+    console.info('[PlayPal] Round published OK:', roundData.syncCode);
+    return { ok: true, round: roundData };
+  } catch (err) {
+    const msg = err?.message || String(err);
+    console.error('[PlayPal] Round publish threw:', msg);
+    return { ok: false, error: msg };
+  }
+}
+
 const App = () => {
   // If the URL carries a code, suppress any cached screen/round state on
   // mount — we'll replace them with the joined round below.
@@ -75,6 +105,7 @@ const App = () => {
   const [joinPrompt, setJoinPrompt] = React.useState(() =>
     INITIAL_URL_CODE ? { code: INITIAL_URL_CODE, status: 'pending', error: '' } : null
   );
+  const [isHost,      setIsHost]        = React.useState(false);
   const [finalScores, setFinalScores]   = React.useState(null);
   const [finalWolf,   setFinalWolf]     = React.useState(null);
   const [finalPutts,  setFinalPutts]    = React.useState(null);
@@ -152,40 +183,72 @@ const App = () => {
   };
 
   const handleStartRound = async (config) => {
-    const r = { ...config, id: Date.now() };
-    setRound(r);
-    localStorage.setItem('pp_round', JSON.stringify(r));
-    // Publish the round to the cloud BEFORE switching screens, so a guest
-    // scanning the QR the instant the host hits "Tee It Up" doesn't get a
-    // "round not found" race. The screen transition is fast enough that this
-    // isn't perceptible to the host.
-    if (window.PlayPalSync?.isEnabled?.()) {
-      console.info('[PlayPal] Publishing round to Firebase:', r.syncCode);
-      const res = await window.PlayPalSync.pushRound(r.syncCode, r);
-      if (!res?.ok) {
-        console.error('[PlayPal] Round publish failed:', res?.error);
-        alert('Heads up: this round was started locally but failed to publish to the cloud (' + (res?.error || 'unknown') + '). Other devices will not be able to join with the QR/sync code until this is resolved.');
-      } else {
-        console.info('[PlayPal] Round published OK:', r.syncCode);
-      }
+    const roundData = { ...config, id: Date.now() };
+    const result = await createAndPublishRound(roundData);
+    if (!result.ok) {
+      // Firebase is configured but the write failed — hard stop.
+      // The round is NOT created. No silent local fallback.
+      alert(
+        'Cannot start round — failed to publish to Firebase:\n\n' +
+        result.error +
+        '\n\nCheck your internet connection and Firebase configuration in sync-config.js. ' +
+        'The round was NOT created.'
+      );
+      return;
     }
+    // Cloud write succeeded (or local-only mode confirmed).
+    // Initialize local state FROM the cloud-confirmed round object.
+    setRound(result.round);
+    setIsHost(true);
+    localStorage.setItem('pp_round', JSON.stringify(result.round));
     setScreen('score');
   };
 
   const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}) => {
-    setFinalScores(scores);setFinalWolf(wolfData);setFinalPutts(putts);
-    setFinalPresses(presses);setFinalChips(chips);
-    // Save to recent rounds
+    setFinalScores(scores); setFinalWolf(wolfData); setFinalPutts(putts);
+    setFinalPresses(presses); setFinalChips(chips);
     const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
-    recent.unshift({ courseName: round.course.name, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), players: round.players.length, formats: round.formats.map((f) => FORMAT_INFO[f.type].label).join(' · ') });
+    recent.unshift({
+      courseName: round.course.name,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      players: round.players.length,
+      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · '),
+      // Full data stored so VIEW can reconstruct the complete scorecard.
+      roundData: { round, scores, wolfData, putts, presses, chips },
+    });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
     setScreen('summary');
   };
 
   const handleNewRound = () => {
-    setRound(null);setFinalScores(null);
+    setRound(null); setFinalScores(null); setIsHost(false);
     localStorage.removeItem('pp_round');
     setScreen('home');
+  };
+
+  const handleCancelRound = () => {
+    // Unsubscribe happens automatically when ScoreEntry unmounts.
+    // If this device is the host, mark the round cancelled in Firebase
+    // so any guests still subscribed know the round is over.
+    if (isHost && round?.syncCode && window.PlayPalSync?.isEnabled?.()) {
+      window.PlayPalSync.markCancelled(round.syncCode).catch(err =>
+        console.warn('[PlayPal] markCancelled error:', err)
+      );
+    }
+    setRound(null); setFinalScores(null); setIsHost(false);
+    localStorage.removeItem('pp_round');
+    setScreen('home');
+  };
+
+  const handleViewRound = (recentEntry) => {
+    const { round: vRound, scores, wolfData, putts, presses, chips } = recentEntry.roundData;
+    setRound(vRound);
+    setFinalScores(scores);
+    setFinalWolf(wolfData);
+    setFinalPutts(putts);
+    setFinalPresses(presses || []);
+    setFinalChips(chips || {});
+    setScreen('summary');
   };
 
   // CSS variable injection for tweaks
@@ -209,6 +272,7 @@ const App = () => {
           recentRounds={recentRounds}
           joinPrompt={joinPrompt}
           onDismissJoinPrompt={() => setJoinPrompt(null)}
+          onViewRound={handleViewRound}
           onJoinRound={(savedRound) => {
             setRound(savedRound);
             setScreen('score');
@@ -223,7 +287,9 @@ const App = () => {
         {screen === 'score' && round &&
         <ScoreEntry
           round={round}
-          onSaveRound={handleSaveRound} />
+          onSaveRound={handleSaveRound}
+          onCancelRound={handleCancelRound}
+          isHost={isHost} />
 
         }
         {screen === 'summary' && round && finalScores &&

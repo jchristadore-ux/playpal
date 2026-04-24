@@ -128,13 +128,130 @@ authToken: 'your-long-random-token',
 
 ---
 
+---
+
+## Venmo integration
+
+Venmo requests are sent via **deep link + web fallback** — no API key or
+backend required.
+
+When a player clicks **💸 REQUEST** on the payouts screen:
+
+1. The app opens `venmo://paycharge?txn=pay&recipients=<handle>&amount=<amt>&note=<note>`.
+   If the Venmo app is installed, it opens directly to the pre-filled request.
+2. After 1.2 s, the app also opens `https://venmo.com/<handle>?txn=pay&…`
+   as a browser fallback for devices without the app.
+
+**What you need in each player profile:**
+
+- Fill in the **Venmo Handle** field (without the `@`). Example: `johndoe`
+
+**Limitations:**
+
+- Venmo's deep-link scheme is not an official public API; it may break if
+  Venmo changes their URI scheme.
+- Only works for payments. Charge requests (where you are asking *others*
+  to pay *you*) depend on whether the recipient has their Venmo privacy
+  set to accept requests from non-friends.
+- No receipt confirmation is returned to the app — once the user taps
+  "Request" in Venmo, the PlayPal button shows "✓ SENT" as a reminder.
+
+---
+
+## Email scorecards
+
+### Current behaviour (client-side `mailto:`)
+
+The **✉️ EMAIL SCORECARD** button opens the device's default email client
+(Mail, Gmail, Outlook…) pre-filled with:
+
+- **To:** all player email addresses from their profiles
+- **Subject:** `PlayPal Scorecard: <course name>`
+- **Body:** plain-text scorecard with strokes, totals, and settlement
+
+The user then taps **Send** in their email app. No backend is required.
+
+**What you need in each player profile:**
+
+- Fill in the **Email Address** field.
+
+### Upgrading to automatic server-side email
+
+If you want the app to email scorecards without opening the email client,
+you need a backend send step. The simplest approach is a **Firebase Cloud
+Function** + **SendGrid** (both free-tier available):
+
+#### 1. Install Firebase CLI and create a function
+
+```bash
+npm install -g firebase-tools
+firebase init functions    # choose JavaScript, install dependencies
+```
+
+#### 2. Add SendGrid
+
+```bash
+cd functions
+npm install @sendgrid/mail
+```
+
+Set your API key as a Firebase secret:
+
+```bash
+firebase functions:secrets:set SENDGRID_API_KEY
+```
+
+#### 3. Create `functions/index.js`
+
+```js
+const functions = require('firebase-functions');
+const sgMail    = require('@sendgrid/mail');
+
+exports.emailScorecard = functions.https.onCall(async (data) => {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  const { to, subject, body } = data;
+  await sgMail.send({ to, from: 'noreply@yourdomain.com', subject, text: body });
+  return { ok: true };
+});
+```
+
+```bash
+firebase deploy --only functions
+```
+
+#### 4. Call it from `Summary.jsx`
+
+Replace the `window.open('mailto:…')` call with:
+
+```js
+// Requires Firebase JS SDK loaded in index.html
+const fn = firebase.functions().httpsCallable('emailScorecard');
+await fn({ to: emails, subject, body: lines.join('\n') });
+```
+
+---
+
+## PDF scorecard
+
+Click **📄 PDF** in the post-round summary to download a landscape PDF
+scorecard (powered by [jsPDF](https://github.com/parallax/jsPDF) + AutoTable,
+loaded from unpkg CDN). The PDF includes strokes per hole, Wolf standings,
+PTM movement, and net settlement.
+
+---
+
 ## Troubleshooting
 
 - **Home page is blank** — make sure the CDN scripts (React, Babel) loaded.
   Open DevTools → Console; any red error usually identifies the file.
 - **JOIN says "not found"** but the code is correct — the round hasn't been
   published yet. Either the host device is offline, or `sync-config.js`
-  still says `provider: 'none'` on one of the devices.
+  points to the wrong Firebase URL (must be `https://<project>-default-rtdb.firebaseio.com`,
+  **not** the Firebase Console URL).
+- **"Cannot start round — failed to publish to Firebase"** — the app now
+  enforces cloud-first round creation. Verify `databaseURL` in
+  `sync-config.js`, check your internet connection, and confirm the
+  Firebase Realtime Database rules allow writes from your origin.
 - **Scores on Phone B not updating** — check the browser console for
   `[PlayPalSync] Enabled via firebase`. If you see `Local-only mode`, the
   config didn't load.

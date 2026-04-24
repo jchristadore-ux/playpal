@@ -32,7 +32,7 @@ const QRModal = ({ syncCode, onClose }) => {
   );
 };
 
-const ScoreEntry = ({ round, onSaveRound }) => {
+const ScoreEntry = ({ round, onSaveRound, onCancelRound, isHost }) => {
   const { getWolfForHole, getHoleStrokes, computePTMState } = window;
   const { players, course, formats, syncCode } = round;
 
@@ -58,10 +58,11 @@ const ScoreEntry = ({ round, onSaveRound }) => {
   const [wolfData,setWolfData]    = React.useState(() => readLS('pp_wolf_'+syncCode,    {}));
   const [manualChips,setManualChips] = React.useState(() => readLS('pp_chips_'+syncCode, emptyChips()));
   const [nassauPresses,setNassauPresses] = React.useState(() => readLS('pp_presses_'+syncCode, []));
-  const [showQR,  setShowQR]      = React.useState(false);
-  const [saveModal,setSaveModal]  = React.useState(false);
-  const [toast,   setToast]       = React.useState(null);
-  const [syncHint,setSyncHint]    = React.useState(false);
+  const [showQR,     setShowQR]     = React.useState(false);
+  const [showCancel, setShowCancel] = React.useState(false);
+  const [saveModal,  setSaveModal]  = React.useState(false);
+  const [toast,      setToast]      = React.useState(null);
+  const [syncHint,   setSyncHint]   = React.useState(false);
 
   const hole      = course.holes[holeIdx];
   const hasWolf   = formats.some(f=>f.type==='wolf');
@@ -177,6 +178,9 @@ const ScoreEntry = ({ round, onSaveRound }) => {
     <div style={seS.root}>
       {/* Hole Navigation */}
       <div style={seS.holeNav}>
+        <button onClick={()=>setShowCancel(true)} style={{flexShrink:0, background:'rgba(229,83,75,0.08)', border:'1px solid rgba(229,83,75,0.2)', borderRadius:8, padding:'0 10px', color:'#E5534B', cursor:'pointer', height:30, display:'flex', alignItems:'center', gap:4, marginLeft:12, fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, letterSpacing:1}}>
+          ✕ CANCEL
+        </button>
         <div style={seS.holeTabs}>
           {course.holes.map((h,i) => {
             const done = players.every(p=>scores[p.id]?.[i]);
@@ -332,6 +336,17 @@ const ScoreEntry = ({ round, onSaveRound }) => {
 
       {/* Modals */}
       {showQR && <QRModal syncCode={syncCode} onClose={()=>setShowQR(false)}/>}
+
+      <Modal open={showCancel} onClose={()=>setShowCancel(false)} title="Cancel Round?">
+        <div style={{fontFamily:'DM Sans', color:'#9BB4D4', fontSize:14, lineHeight:1.8, marginBottom:20}}>
+          Cancel this round? All unsaved progress will be lost.
+          {isHost && <div style={{marginTop:8, color:'#E5534B', fontSize:12}}>As the host, the round will be marked cancelled for all players.</div>}
+        </div>
+        <div style={{display:'flex', gap:10}}>
+          <Btn onClick={()=>setShowCancel(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>
+          <Btn onClick={()=>{ setShowCancel(false); onCancelRound?.(); }} variant="danger" style={{flex:1}}>CANCEL ROUND</Btn>
+        </div>
+      </Modal>
 
       <Modal open={saveModal} onClose={()=>setSaveModal(false)} title="Save & Finalize Round">
         <div style={{fontFamily:'DM Sans', color:'#9BB4D4', fontSize:14, lineHeight:1.8, marginBottom:20}}>
