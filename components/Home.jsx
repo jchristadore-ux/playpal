@@ -3,7 +3,8 @@
 const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, joinPrompt, onDismissJoinPrompt, onViewRound }) => {
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
-  const [localPlayers,setLocalPlayers]  = React.useState(players);
+  // No local copy of players — App state (from Firebase) is the single source.
+  const [saving,      setSaving]        = React.useState(false);
   const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#3DCB6C' });
   const [joinCode,    setJoinCode]      = React.useState('');
   const [joinError,   setJoinError]     = React.useState('');
@@ -59,21 +60,27 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     setForm(p ? {...p} : {name:'',initials:'',ghin:'',ghinLogin:'',email:'',venmo:'',handicap:'',color:'#3DCB6C'});
   };
 
-  const savePlayer = () => {
+  // Firebase-first: await the App-level handler. Only close modal on success.
+  const savePlayer = async () => {
     const updated = form.initials ? form : {...form, initials: form.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)};
+    let next;
     if (editPlayer) {
-      const next = localPlayers.map(p => p.id === editPlayer.id ? {...updated, id:editPlayer.id} : p);
-      setLocalPlayers(next); onManagePlayers(next);
+      next = players.map(p => p.id === editPlayer.id ? {...updated, id:editPlayer.id} : p);
     } else {
-      const next = [...localPlayers, {...updated, id:'p'+Date.now()}];
-      setLocalPlayers(next); onManagePlayers(next);
+      next = [...players, {...updated, id:'p'+Date.now()}];
     }
-    setEditPlayer(null); setShowPlayers(false);
+    setSaving(true);
+    const ok = await onManagePlayers(next);
+    setSaving(false);
+    if (ok !== false) { setEditPlayer(null); setShowPlayers(false); }
   };
 
-  const deletePlayer = (id) => {
-    const next = localPlayers.filter(p=>p.id!==id);
-    setLocalPlayers(next); onManagePlayers(next);
+  const deletePlayer = async (id) => {
+    const next = players.filter(p => p.id !== id);
+    setSaving(true);
+    const ok = await onManagePlayers(next);
+    setSaving(false);
+    if (ok !== false) setShowPlayers(false);
   };
 
   return (
@@ -131,7 +138,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           <Btn onClick={()=>{openEdit(null); setShowPlayers(true);}} variant="ghost" style={{padding:'6px 14px', fontSize:13}}>+ ADD PLAYER</Btn>
         </div>
         <div style={homeS.playerGrid}>
-          {localPlayers.map(p => (
+          {players.map(p => (
             <div key={p.id} style={homeS.playerCard} onClick={()=>{ openEdit(p); setShowPlayers(true); }}>
               <Avatar player={p} size={44} />
               <div style={{flex:1, minWidth:0}}>
@@ -193,8 +200,8 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             </div>
           </div>
           <div style={{display:'flex', gap:10, marginTop:8}}>
-            <Btn onClick={savePlayer} variant="green" style={{flex:1}}>SAVE PLAYER</Btn>
-            {editPlayer && <Btn onClick={()=>{deletePlayer(editPlayer.id); setShowPlayers(false);}} variant="danger" style={{padding:'12px 20px'}}>DELETE</Btn>}
+            <Btn onClick={savePlayer} variant="green" style={{flex:1}} disabled={saving}>{saving ? 'SAVING…' : 'SAVE PLAYER'}</Btn>
+            {editPlayer && <Btn onClick={()=>deletePlayer(editPlayer.id)} variant="danger" style={{padding:'12px 20px'}} disabled={saving}>DELETE</Btn>}
           </div>
         </div>
       </Modal>

@@ -40,20 +40,23 @@ const CourseBuilder = ({ onSave, onCancel }) => {
       createdAt: Date.now(),
     };
 
-    // 1) Local cache so subsequent loads on this device are instant + offline-friendly
-    const saved = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
-    const deduped = saved.filter(c => c.id !== course.id).concat(course);
-    localStorage.setItem('pp_custom_courses', JSON.stringify(deduped));
-
-    // 2) Cloud — share permanently across devices (when configured)
     if (window.PlayPalSync?.isEnabled?.()) {
+      // 1) Firebase-first: write to cloud before touching local storage.
+      //    If the cloud write fails, block the save — no silent local fallback.
       setSaving(true);
       const res = await window.PlayPalSync.pushCourse(course);
       setSaving(false);
       if (!res?.ok) {
-        setSaveError(`Saved locally, but cloud sync failed: ${res?.error || 'unknown error'}`);
-        // Still surface the course locally — don't block the round
+        setSaveError(`Cloud sync failed: ${res?.error || 'unknown error'}. Course was NOT saved.`);
+        return;
       }
+      // 2) Firebase confirmed — now update local cache as a read-through copy.
+      const saved = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
+      localStorage.setItem('pp_custom_courses', JSON.stringify(saved.filter(c => c.id !== course.id).concat(course)));
+    } else {
+      // Local-only mode (Firebase not configured) — save to localStorage.
+      const saved = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
+      localStorage.setItem('pp_custom_courses', JSON.stringify(saved.filter(c => c.id !== course.id).concat(course)));
     }
 
     onSave(course);
