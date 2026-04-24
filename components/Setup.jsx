@@ -215,32 +215,33 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   });
   const [coursesLoading, setCoursesLoading] = React.useState(false);
 
-  // Pull every saved course from the cloud on mount and merge with local cache.
-  // The cloud is the source of truth — courses persist across devices forever.
+  // Subscribe to cloud courses. subscribeCourses does an immediate first fetch
+  // (replaces the old one-shot listCourses call) AND re-checks every 8 s so
+  // courses created on another device appear without a page refresh.
   React.useEffect(() => {
     if (!window.PlayPalSync?.isEnabled?.()) return;
-    let cancelled = false;
     setCoursesLoading(true);
-    window.PlayPalSync.listCourses().then((remote) => {
-      if (cancelled) return;
-      const local = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
-      // Merge by id, preferring the cloud copy (it's authoritative)
-      const byId = new Map();
-      local.forEach(c => byId.set(c.id, c));
-      remote.forEach(c => byId.set(c.id, { ...c, custom: true }));
-      const merged = Array.from(byId.values());
-      localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
-      setCustomCourses(merged);
-      setCoursesLoading(false);
-    }).catch(err => {
-      console.warn('[PlayPal] Failed to load cloud courses', err);
-      if (!cancelled) setCoursesLoading(false);
+    let firstCallback = true;
+    const unsub = window.PlayPalSync.subscribeCourses((remote) => {
+      if (firstCallback) { firstCallback = false; setCoursesLoading(false); }
+      setCustomCourses(prev => {
+        // Merge: local courses kept, cloud copies are authoritative (overwrite by id)
+        const local = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]');
+        const byId = new Map();
+        local.forEach(c => byId.set(c.id, c));
+        remote.forEach(c => byId.set(c.id, { ...c, custom: true }));
+        const merged = Array.from(byId.values());
+        localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
+        return merged;
+      });
     });
-    return () => { cancelled = true; };
+    // Safety: clear spinner if Firebase never responds within 3 s
+    const t = setTimeout(() => setCoursesLoading(false), 3000);
+    return () => { unsub(); clearTimeout(t); };
   }, []);
 
-  const [formats, setFormats] = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
-  const [stakes,  setStakes]  = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
+  const [formats, setFormats] = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false, strokeplay:false });
+  const [stakes,  setStakes]  = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5, strokeplay:5 });
 
   const togglePlayer = (id) => {
     setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length < 6 ? [...prev,id] : prev);
@@ -430,7 +431,7 @@ const SetupScreen = ({ allPlayers, onStart }) => {
                     {on && (
                       <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
                         <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:8}}>
-                          STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet (3 bets total)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':key==='stableford'?'winner takes all':''})
+                          STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet (3 bets total)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':key==='stableford'?'winner takes all':key==='strokeplay'?'lowest net total wins from each player':''})
                         </div>
                         <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
                       </div>

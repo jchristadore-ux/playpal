@@ -207,6 +207,21 @@ const App = () => {
     return () => { cancelled = true; };
   }, []);
 
+  // ── Live player subscription — keeps all devices in sync ────────────────
+  // Starts polling Firebase for player changes every 5 s once the initial
+  // load completes (appReady). On each change, the App state and localStorage
+  // cache are updated atomically so every screen sees the latest players.
+  React.useEffect(() => {
+    if (!appReady || !window.PlayPalSync?.isEnabled?.()) return;
+    console.info('[SYNC] Starting live player subscription');
+    const unsub = window.PlayPalSync.subscribePlayers((remote) => {
+      console.info('[SYNC] Live player update:', remote.length, 'players');
+      localStorage.setItem('pp_players', JSON.stringify(remote));
+      setPlayers(remote);
+    });
+    return unsub;
+  }, [appReady]);
+
   // Tweaks message handler
   React.useEffect(() => {
     const handler = (e) => {

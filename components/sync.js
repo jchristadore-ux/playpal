@@ -228,6 +228,62 @@
     }, wait);
   }
 
+  // ── Live polling subscriptions for players and courses ───────────────────
+  // Both functions do an IMMEDIATE first fetch plus repeat every intervalMs.
+  // If Firebase returns an HTTP error or the request throws, onChange is NOT
+  // called — this prevents a transient network blip from clearing the UI.
+  // onChange is also skipped when the data hasn't changed (hash comparison).
+
+  function subscribePlayers(onChange, { intervalMs = 5000 } = {}) {
+    if (!enabled) return () => {};
+    console.info('[PlayPalSync] Player subscription active');
+    let stopped = false;
+    let lastHash = '';
+    const tick = async () => {
+      if (stopped) return;
+      try {
+        const res = await fetch(playerPath(), { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const players = (data && typeof data === 'object') ? Object.values(data).filter(Boolean) : [];
+          const hash = players.map(p => p.id).sort().join(',');
+          if (hash !== lastHash) {
+            lastHash = hash;
+            try { onChange(players); } catch (e) { console.warn('[PlayPalSync] subscribePlayers cb error', e); }
+          }
+        }
+      } catch (e) { /* network error — keep last known state */ }
+      if (!stopped) setTimeout(tick, intervalMs);
+    };
+    tick();
+    return () => { stopped = true; console.info('[PlayPalSync] Player subscription stopped'); };
+  }
+
+  function subscribeCourses(onChange, { intervalMs = 8000 } = {}) {
+    if (!enabled) return () => {};
+    console.info('[PlayPalSync] Course subscription active');
+    let stopped = false;
+    let lastHash = '';
+    const tick = async () => {
+      if (stopped) return;
+      try {
+        const res = await fetch(coursePath(), { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const courses = (data && typeof data === 'object') ? Object.values(data).filter(Boolean) : [];
+          const hash = courses.map(c => c.id).sort().join(',');
+          if (hash !== lastHash) {
+            lastHash = hash;
+            try { onChange(courses); } catch (e) { console.warn('[PlayPalSync] subscribeCourses cb error', e); }
+          }
+        }
+      } catch (e) { /* network error — keep last known state */ }
+      if (!stopped) setTimeout(tick, intervalMs);
+    };
+    tick();
+    return () => { stopped = true; console.info('[PlayPalSync] Course subscription stopped'); };
+  }
+
   // Lightweight polling subscription. Returns unsubscribe().
   function subscribe(syncCode, onChange, { intervalMs = 4000 } = {}) {
     if (!enabled || !syncCode) return () => {};
@@ -323,6 +379,8 @@
     pullState,
     pushStateDebounced,
     subscribe,
+    subscribePlayers,
+    subscribeCourses,
     pushPlayer,
     listPlayers,
     deletePlayer,

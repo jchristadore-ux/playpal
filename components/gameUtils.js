@@ -293,6 +293,36 @@ function calcSkins(scores, players, course, stakes) {
   return {skins,payouts:pay};
 }
 
+// ─── STROKE PLAY ─────────────────────────────────────────────────────────────
+
+/*
+  Stroke Play: lowest total net score wins the pot from each other player.
+  Missing holes are penalised at par+2 (max/double-bogey) so incomplete
+  rounds still resolve sensibly. Ties split the winnings.
+*/
+function calcStrokePlayPayouts(scores, players, course, stake) {
+  const pay = Object.fromEntries(players.map(p => [p.id, 0]));
+  if (players.length < 2) return pay;
+
+  const netTotals = Object.fromEntries(players.map(p => [
+    p.id,
+    course.holes.reduce((sum, hole, i) => {
+      const g = scores[p.id]?.[i];
+      return sum + (g > 0 ? calcNetScore(g, p.handicap, hole.hdcp) : hole.par + 2);
+    }, 0),
+  ]));
+
+  const minNet  = Math.min(...players.map(p => netTotals[p.id]));
+  const winners = players.filter(p => netTotals[p.id] === minNet);
+  const losers  = players.filter(p => netTotals[p.id] > minNet);
+
+  losers.forEach(l => {
+    pay[l.id] -= stake;
+    winners.forEach(w => { pay[w.id] += stake / winners.length; });
+  });
+  return pay;
+}
+
 // ─── TOTALS ──────────────────────────────────────────────────────────────────
 
 function totalScore(scores,pid){ return (scores[pid]||[]).reduce((a,b)=>a+(b||0),0); }
@@ -318,6 +348,8 @@ function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresse
         const my=course.holes.reduce((a,h,i)=>a+calcStablefordPoints(scores[p.id]?.[i]||0,h.par,p.handicap,h.hdcp),0);
         pay[p.id]=my===top?f.stakes*(players.length-1):-f.stakes;
       });
+    } else if (f.type==='strokeplay'){
+      pay=calcStrokePlayPayouts(scores,players,course,f.stakes);
     }
     players.forEach(p=>{ totals[p.id]+=(pay[p.id]||0); });
   });
@@ -331,6 +363,6 @@ if (typeof window !== 'undefined') {
     getWolfForHole, resolveWolfHole, calcWolfStandings, calcWolfPayouts,
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts,
-    calcSkins, totalScore, totalVsPar, calcAllPayouts,
+    calcSkins, totalScore, totalVsPar, calcStrokePlayPayouts, calcAllPayouts,
   });
 }
