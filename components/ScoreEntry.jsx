@@ -4,31 +4,62 @@ const QRModal = ({ syncCode, onClose }) => {
   // Build the join URL relative to the directory the app is served from so
   // it works on both user-site hosting (https://user.github.io/join?code=…)
   // and project-site hosting (https://user.github.io/playpal/join?code=…).
-  //
-  // The `/join` path is served by join.html, a tiny static page that
-  // redirects to index.html?code=… — the SPA then runs the single
-  // joinRound() function. This matches the spec's required URL shape.
   const here = window.location.href.split('?')[0].split('#')[0];
   const dir  = here.endsWith('/') ? here : here.replace(/[^/]*$/, '');
   const url  = `${dir}join?code=${syncCode}`;
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&color=3DCB6C&bgcolor=0A1628&margin=10`;
+
+  // Size the QR to fill the screen generously — min 280 px, max 340 px,
+  // never wider than 82 vw. Request double-res from the API for retina clarity.
+  const qrPx  = Math.min(340, Math.max(280, Math.round(window.innerWidth * 0.82)));
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${qrPx * 2}x${qrPx * 2}&data=${encodeURIComponent(url)}&color=3DCB6C&bgcolor=0A1628&margin=12`;
+
   return (
-    <Modal open={true} onClose={onClose} title="Join This Round">
-      <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:16, padding:'8px 0'}}>
-        <div style={{background:'#0A1628', border:'2px solid #3DCB6C', borderRadius:12, padding:12, display:'flex', alignItems:'center', justifyContent:'center'}}>
-          <img src={qrSrc} alt="QR Code" style={{width:200, height:200, display:'block'}} />
+    // Full-screen backdrop — tap outside panel to dismiss
+    <div
+      onClick={onClose}
+      style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:1000,
+              display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px'}}>
+
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:20,
+                padding:'20px 20px 24px', width:'100%', maxWidth:420,
+                display:'flex', flexDirection:'column', alignItems:'center', gap:18}}>
+
+        {/* Header */}
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%'}}>
+          <span style={{fontFamily:'Barlow Condensed', fontSize:22, fontWeight:800, color:'#fff', letterSpacing:1}}>JOIN THIS ROUND</span>
+          <button onClick={onClose} style={{background:'none', border:'none', color:'#7A98BC', fontSize:24, cursor:'pointer', padding:'4px 6px', lineHeight:1}}>✕</button>
         </div>
-        <div style={{textAlign:'center'}}>
-          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', marginBottom:8}}>Scan to join — opens PlayPal and pre-fills the round code</div>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:28, letterSpacing:6, color:'#3DCB6C'}}>{syncCode}</div>
-          <div style={{fontFamily:'DM Sans', fontSize:11, color:'#4A6890', marginTop:4}}>Or enter this code manually on the Home screen → JOIN</div>
+
+        {/* QR code — large and easily scannable on iPhone and iPad */}
+        <div style={{background:'#0A1628', border:'3px solid #3DCB6C', borderRadius:16,
+                     padding:14, display:'flex', alignItems:'center', justifyContent:'center',
+                     width: qrPx + 28, height: qrPx + 28, flexShrink:0}}>
+          <img src={qrSrc} alt="QR Code" style={{width:qrPx, height:qrPx, display:'block'}} />
         </div>
-        <div style={{display:'flex', gap:8, width:'100%'}}>
-          <Btn onClick={()=>{ navigator.clipboard?.writeText(syncCode); }} variant="surface" style={{flex:1, fontSize:13}}>📋 COPY CODE</Btn>
-          <Btn onClick={()=>{ navigator.share?.({title:'Join my PlayPal round', url}); }} variant="green" style={{flex:1, fontSize:13}}>📤 SHARE LINK</Btn>
+
+        {/* Code + instructions */}
+        <div style={{textAlign:'center', width:'100%'}}>
+          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', marginBottom:10}}>
+            Scan to join — opens PlayPal and pre-fills the round code
+          </div>
+          <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:38,
+                       letterSpacing:8, color:'#3DCB6C', lineHeight:1}}>
+            {syncCode}
+          </div>
+          <div style={{fontFamily:'DM Sans', fontSize:12, color:'#4A6890', marginTop:6}}>
+            Or enter this code manually on the Home screen → JOIN
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div style={{display:'flex', gap:10, width:'100%'}}>
+          <Btn onClick={()=>{ navigator.clipboard?.writeText(syncCode); }} variant="surface" style={{flex:1, fontSize:14}}>📋 COPY CODE</Btn>
+          <Btn onClick={()=>{ navigator.share?.({title:'Join my PlayPal round', url}); }} variant="green" style={{flex:1, fontSize:14}}>📤 SHARE LINK</Btn>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 

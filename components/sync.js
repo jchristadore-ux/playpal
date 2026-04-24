@@ -133,15 +133,60 @@
     return await put(path(syncCode, 'cancelled'), true);
   }
 
+  // ── Players (persisted permanently, shared across all devices) ──────────
+  const playerPath = (playerId) => {
+    const auth = token ? `?auth=${encodeURIComponent(token)}` : '';
+    const id   = playerId ? `/${encodeURIComponent(playerId)}` : '';
+    return `${baseURL}/players${id}.json${auth}`;
+  };
+
+  async function pushPlayer(player) {
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!player || !player.id) return { ok: false, error: 'missing player id' };
+    console.info('[SYNC] Writing player to Firebase:', player.id);
+    return await put(playerPath(player.id), player);
+  }
+
+  // Returns array of players, or throws on network error (empty DB path → [])
+  async function listPlayers() {
+    if (!enabled) return null;
+    console.info('[SYNC] Loading players from Firebase');
+    const url = playerPath();
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data || typeof data !== 'object') return [];
+    return Object.values(data).filter(Boolean);
+  }
+
+  async function deletePlayer(playerId) {
+    if (!enabled) return { ok: false, error: 'disabled' };
+    if (!playerId) return { ok: false, error: 'missing player id' };
+    console.info('[SYNC] Deleting player from Firebase:', playerId);
+    try {
+      const url = playerPath(playerId);
+      const res = await fetch(url, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        return { ok: false, error: `HTTP ${res.status} ${text}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'network' };
+    }
+  }
+
   // ── Courses (persisted permanently, shared across all devices) ───────────
   async function pushCourse(course) {
     if (!enabled) return { ok: false, error: 'disabled' };
     if (!course || !course.id) return { ok: false, error: 'missing course id' };
+    console.info('[SYNC] Writing course to Firebase:', course.id);
     return await put(coursePath(course.id), course);
   }
 
   async function listCourses() {
     if (!enabled) return [];
+    console.info('[SYNC] Loading courses from Firebase');
     const data = await get(coursePath());
     if (!data || typeof data !== 'object') return [];
     return Object.values(data).filter(Boolean);
@@ -278,6 +323,9 @@
     pullState,
     pushStateDebounced,
     subscribe,
+    pushPlayer,
+    listPlayers,
+    deletePlayer,
     pushCourse,
     listCourses,
     deleteCourse,

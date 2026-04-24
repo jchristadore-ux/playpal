@@ -93,10 +93,19 @@ const App = () => {
   const [screen, setScreen] = React.useState(() =>
     INITIAL_URL_CODE ? 'home' : (localStorage.getItem('pp_screen') || 'home')
   );
+
+  // Players — Firebase is the single source of truth.
+  // When Firebase is configured: start empty and hydrate from cloud on mount.
+  // When local-only (no Firebase): hydrate from localStorage immediately.
+  const _firebaseEnabled = window.PlayPalSync?.isEnabled?.();
   const [players, setPlayers] = React.useState(() => {
+    if (_firebaseEnabled) return []; // cloud-first: wait for useEffect below
     const saved = localStorage.getItem('pp_players');
     return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
   });
+  const [appReady, setAppReady]           = React.useState(!_firebaseEnabled);
+  const [syncUnavailable, setSyncUnavailable] = React.useState(false);
+
   const [round, setRound] = React.useState(() => {
     if (INITIAL_URL_CODE) return null; // wait for joinRound to resolve
     const saved = localStorage.getItem('pp_round');
@@ -160,6 +169,44 @@ const App = () => {
     return () => { cancelled = true; };
   }, []);
 
+  // ── Firebase-first player hydration (runs once on mount) ────────────────
+  // Cloud is authoritative. localStorage is only consulted when Firebase
+  // returns an empty result (brand-new user) so their local defaults seed
+  // the cloud. If Firebase is unreachable, we surface a visible banner rather
+  // than silently falling back to stale local data.
+  React.useEffect(() => {
+    if (!window.PlayPalSync?.isEnabled?.()) return; // local-only already set above
+    let cancelled = false;
+    window.PlayPalSync.listPlayers()
+      .then((remote) => {
+        if (cancelled) return;
+        if (remote && remote.length > 0) {
+          // Firebase has players — they are authoritative on every device.
+          console.info('[SYNC] Hydrating', remote.length, 'players from Firebase');
+          localStorage.setItem('pp_players', JSON.stringify(remote));
+          setPlayers(remote);
+        } else {
+          // Firebase is empty — brand-new account. Seed cloud with the local
+          // defaults so future devices also see them.
+          const seed = (() => { try { const s = localStorage.getItem('pp_players'); return s ? JSON.parse(s) : DEFAULT_PLAYERS; } catch(e) { return DEFAULT_PLAYERS; } })();
+          console.info('[SYNC] Firebase empty — seeding', seed.length, 'players');
+          setPlayers(seed);
+          seed.forEach(p => window.PlayPalSync.pushPlayer(p).catch(() => {}));
+        }
+        setAppReady(true);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('[PlayPal] Cannot reach Firebase for players:', err.message || err);
+        setSyncUnavailable(true);
+        // Show stale local data with the visible warning banner (not a silent fallback).
+        const stale = (() => { try { const s = localStorage.getItem('pp_players'); return s ? JSON.parse(s) : DEFAULT_PLAYERS; } catch(e) { return DEFAULT_PLAYERS; } })();
+        setPlayers(stale);
+        setAppReady(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   // Tweaks message handler
   React.useEffect(() => {
     const handler = (e) => {
@@ -177,9 +224,31 @@ const App = () => {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
   };
 
-  const handleManagePlayers = (updated) => {
-    setPlayers(updated);
+  // Firebase-first player persistence.
+  // Returns true on success, false if Firebase write failed (caller should keep modal open).
+  const handleManagePlayers = async (updated) => {
+    if (window.PlayPalSync?.isEnabled?.()) {
+      // Diff old vs new to detect deletions
+      const oldIds = new Set(players.map(p => p.id));
+      const newIds = new Set(updated.map(p => p.id));
+      const deletedIds = [...oldIds].filter(id => !newIds.has(id));
+
+      const results = await Promise.all([
+        ...updated.map(p => window.PlayPalSync.pushPlayer(p)),
+        ...deletedIds.map(id => window.PlayPalSync.deletePlayer(id)),
+      ]);
+
+      if (results.some(r => !r.ok)) {
+        const errors = results.filter(r => !r.ok).map(r => r.error).join(', ');
+        console.error('[PlayPal] Player Firebase write failed:', errors);
+        setSyncUnavailable(true);
+        return false; // Signal failure to caller
+      }
+    }
+    // Firebase confirmed (or disabled) — update cache and state
     localStorage.setItem('pp_players', JSON.stringify(updated));
+    setPlayers(updated);
+    return true;
   };
 
   const handleStartRound = async (config) => {
@@ -256,6 +325,24 @@ const App = () => {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: tweaks.bgColor, ...cssVars }}>
+
+      {/* Firebase loading overlay — shown briefly while players hydrate from cloud */}
+      {!appReady && (
+        <div style={{ position:'fixed', inset:0, background:'#0A1628', zIndex:9999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:18 }}>
+          <div style={{ fontFamily:'Barlow Condensed', fontSize:36, fontWeight:800, color:'#3DCB6C', letterSpacing:4 }}>PLAYPAL</div>
+          <div style={{ fontFamily:'DM Sans', fontSize:14, color:'#7A98BC' }}>Loading from Firebase…</div>
+        </div>
+      )}
+
+      {/* Sync unavailable banner — shown when Firebase is unreachable */}
+      {syncUnavailable && (
+        <div style={{ background:'rgba(229,83,75,0.12)', border:'1px solid rgba(229,83,75,0.35)', padding:'10px 16px', display:'flex', alignItems:'center', gap:10, flexShrink:0, zIndex:200 }}>
+          <span style={{ color:'#E5534B', fontSize:16, flexShrink:0 }}>⚠</span>
+          <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#E5534B', flex:1 }}>Cloud sync unavailable — data cannot be trusted. Check your connection.</span>
+          <button onClick={()=>setSyncUnavailable(false)} style={{ background:'none', border:'none', color:'#E5534B', cursor:'pointer', fontSize:20, lineHeight:1, padding:'0 4px' }}>✕</button>
+        </div>
+      )}
+
       <NavBar
         syncCode={tweaks.showSyncCode && round ? round.syncCode : null}
         onHome={() => setScreen(round ? 'score' : 'home')}
