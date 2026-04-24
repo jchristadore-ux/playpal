@@ -96,10 +96,15 @@ knows the code can read and write that round.
 When you click **+ ADD / IMPORT** on the course-selection step, the new
 course is written to `courses/<id>` so every device sees it on next load.
 
-### Locking it down (optional)
+### Fixing rules (required after 30 days)
 
-The default "test mode" rules expire after 30 days. A permanent
-minimal-risk rule set that still requires no auth is:
+Firebase test-mode rules **expire after 30 days**. After expiry every read/write
+returns `HTTP 401 Permission denied` and no round can be started. The fix takes
+30 seconds:
+
+1. Open [Firebase Console](https://console.firebase.google.com/) → your project
+   → **Realtime Database** → **Rules** tab.
+2. Replace the entire contents with the rules below and click **Publish**.
 
 ```json
 {
@@ -109,13 +114,17 @@ minimal-risk rule set that still requires no auth is:
         ".read":  "$code.length >= 4 && $code.length <= 12",
         ".write": "$code.length >= 4 && $code.length <= 12"
       }
+    },
+    "courses": {
+      ".read":  true,
+      ".write": true
     }
   }
 }
 ```
 
-This restricts access to well-formed sync codes. Paste it into
-**Realtime Database → Rules → Publish**.
+`rounds` access is gated on a valid-length sync code. `courses` is open
+so all devices can share custom course imports.
 
 If you want to require a shared secret instead, set a token in
 `sync-config.js`:
@@ -248,10 +257,15 @@ PTM movement, and net settlement.
   published yet. Either the host device is offline, or `sync-config.js`
   points to the wrong Firebase URL (must be `https://<project>-default-rtdb.firebaseio.com`,
   **not** the Firebase Console URL).
+- **"Firebase permission denied (HTTP 401)"** — the most common cause is
+  expired test-mode rules (they last only 30 days). Go to Firebase Console →
+  Realtime Database → Rules and paste the permanent rules from the
+  **Fixing rules** section above, then click Publish. You do not need to
+  change any code.
 - **"Cannot start round — failed to publish to Firebase"** — the app now
   enforces cloud-first round creation. Verify `databaseURL` in
   `sync-config.js`, check your internet connection, and confirm the
-  Firebase Realtime Database rules allow writes from your origin.
+  Firebase Realtime Database rules allow writes (see **Fixing rules** above).
 - **Scores on Phone B not updating** — check the browser console for
   `[PlayPalSync] Enabled via firebase`. If you see `Local-only mode`, the
   config didn't load.

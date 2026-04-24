@@ -51,6 +51,20 @@
       if (!res.ok) {
         const text = await res.text().catch(() => '');
         console.warn('[PlayPalSync] PUT failed', res.status, url, text);
+        // 401/403 = security rules blocking writes — give an actionable message
+        // instead of dumping the raw Firebase JSON at the user.
+        if (res.status === 401 || res.status === 403) {
+          return {
+            ok: false,
+            error:
+              'Firebase permission denied (HTTP ' + res.status + ').\n\n' +
+              'Your database security rules are blocking writes. This usually means ' +
+              'the 30-day test-mode window has expired.\n\n' +
+              'Fix: go to Firebase Console → Realtime Database → Rules and paste ' +
+              'the permanent rules from README.md (Cross-device sync → Fixing rules). ' +
+              'Then click Publish.',
+          };
+        }
         return { ok: false, error: `HTTP ${res.status} ${text}` };
       }
       const data = await res.json();
