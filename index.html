@@ -8,8 +8,14 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="components/gameData.js?v=3"></script>
-<script src="components/gameUtils.js?v=3"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
+
+<script src="components/gameData.js?v=2"></script>
+<script src="components/gameUtils.js?v=2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -20,9 +26,59 @@
   input::placeholder { color: #4A6890; }
   button { font-family: 'DM Sans', sans-serif; }
   * { -webkit-tap-highlight-color: transparent; }
+
+  /* Deep-link loading overlay */
+  #pp-join-overlay {
+    position: fixed; inset: 0; background: #0A1628; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; font-family: 'Barlow Condensed', sans-serif;
+  }
+  #pp-join-overlay .pp-join-logo {
+    font-size: 52px; line-height: 1;
+  }
+  #pp-join-overlay .pp-join-title {
+    font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff;
+  }
+  #pp-join-overlay .pp-join-code {
+    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #3DCB6C;
+    background: rgba(61,203,108,0.08); border: 1px solid rgba(61,203,108,0.3);
+    border-radius: 10px; padding: 10px 24px;
+  }
+  #pp-join-overlay .pp-join-status {
+    font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A98BC;
+    font-family: 'DM Sans', sans-serif;
+  }
+  #pp-join-overlay .pp-join-spinner {
+    width: 36px; height: 36px; border: 3px solid #1E3A6E;
+    border-top-color: #3DCB6C; border-radius: 50%;
+    animation: pp-spin 0.8s linear infinite;
+  }
+  #pp-join-overlay .pp-join-error {
+    font-size: 14px; color: #E5534B; text-align: center;
+    max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif;
+  }
+  #pp-join-overlay .pp-join-dismiss {
+    margin-top: 8px; background: transparent; border: 1px solid #1E3A6E;
+    color: #7A98BC; border-radius: 8px; padding: 10px 24px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px;
+    font-weight: 700; letter-spacing: 1px; cursor: pointer;
+  }
+  @keyframes pp-spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
+
+<!-- Deep-link join overlay — shown immediately if ?join= is in the URL, hidden after load -->
+<div id="pp-join-overlay" style="display:none;">
+  <div class="pp-join-logo">🏌️</div>
+  <div class="pp-join-title">JOINING ROUND</div>
+  <div class="pp-join-code" id="pp-join-code-display">------</div>
+  <div class="pp-join-spinner" id="pp-join-spinner"></div>
+  <div class="pp-join-status" id="pp-join-status">Connecting…</div>
+  <div class="pp-join-error" id="pp-join-error" style="display:none;"></div>
+  <button class="pp-join-dismiss" id="pp-join-dismiss" style="display:none;" onclick="dismissJoinOverlay()">GO TO HOME</button>
+</div>
+
 <div id="root"></div>
 
 <script type="text/babel" src="components/Shared.jsx"></script>
@@ -33,6 +89,204 @@
 <script type="text/babel" src="components/ScoreEntry.jsx"></script>
 <script type="text/babel" src="components/Summary.jsx"></script>
 
+<script>
+/* ============================================================
+   FIREBASE CONFIG — PlayPal Live Rounds
+   Replace these values with your Firebase project's config.
+   Firebase Console → Project Settings → Your Apps → Web App
+   ============================================================ */
+var PLAYPAL_FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBay-gT70Q-_APEBJUgY9CzO_4t42omXco",
+  authDomain:        "playpal-scorecard.firebaseapp.com",
+  projectId:         "playpal-scorecard",
+  storageBucket:     "playpal-scorecard.firebasestorage.app",
+  messagingSenderId: "1993034314",
+  appId:             "1:1993034314:web:18624ba9da9e766ca274b3"
+};
+
+/* ============================================================
+   ROUND SYNC SERVICE
+   Persists round objects to Firestore keyed by syncCode.
+   Works entirely with callbacks — no promises in global scope
+   so it is safe to call before React mounts.
+   ============================================================ */
+var RoundSyncService = (function() {
+  var COLLECTION = 'playpal_rounds';
+  var db = null;
+  var authReady = false;
+  var pendingOps = [];
+
+  function _configured() {
+    return !!(
+      PLAYPAL_FIREBASE_CONFIG &&
+      PLAYPAL_FIREBASE_CONFIG.apiKey &&
+      PLAYPAL_FIREBASE_CONFIG.apiKey.indexOf('REPLACE') === -1 &&
+      window.firebase && window.firebase.firestore
+    );
+  }
+
+  function _init(cb) {
+    if (!_configured()) { if (cb) cb(false, 'Firebase not configured'); return; }
+    if (db && authReady) { if (cb) cb(true); return; }
+    if (db && !authReady) {
+      pendingOps.push(cb); return;
+    }
+    try {
+      if (!window.firebase.apps || !window.firebase.apps.length) {
+        window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG);
+      }
+      db = window.firebase.firestore();
+      window.firebase.auth().signInAnonymously()
+        .then(function() {
+          authReady = true;
+          var ops = pendingOps.slice(); pendingOps = [];
+          ops.forEach(function(fn) { if (fn) fn(true); });
+          if (cb) cb(true);
+        })
+        .catch(function(err) {
+          var ops = pendingOps.slice(); pendingOps = [];
+          ops.forEach(function(fn) { if (fn) fn(false, err.message); });
+          if (cb) cb(false, 'Auth failed: ' + err.message);
+        });
+    } catch(e) {
+      if (cb) cb(false, 'Init failed: ' + e.message);
+    }
+  }
+
+  /* Save round to Firestore. roundObj must include syncCode. */
+  function saveRound(roundObj, cb) {
+    _init(function(ok, err) {
+      if (!ok) {
+        // Silently fall back — round still works locally
+        console.warn('[RoundSync] Firebase unavailable, skipping cloud save:', err);
+        if (cb) cb(false);
+        return;
+      }
+      var doc = {
+        syncCode:  roundObj.syncCode,
+        round:     roundObj,
+        savedAt:   Date.now()
+      };
+      db.collection(COLLECTION).doc(roundObj.syncCode).set(doc)
+        .then(function() { if (cb) cb(true); })
+        .catch(function(e) {
+          console.warn('[RoundSync] saveRound failed:', e);
+          if (cb) cb(false);
+        });
+    });
+  }
+
+  /* Fetch a round from Firestore by syncCode. */
+  function fetchRound(syncCode, cb) {
+    _init(function(ok, err) {
+      if (!ok) { if (cb) cb(null, 'Firebase unavailable'); return; }
+      db.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
+        .then(function(snap) {
+          if (!snap.exists) {
+            if (cb) cb(null, 'Round not found');
+          } else {
+            var data = snap.data();
+            if (cb) cb(data.round || null, null);
+          }
+        })
+        .catch(function(e) {
+          if (cb) cb(null, 'Fetch error: ' + e.message);
+        });
+    });
+  }
+
+  return { saveRound: saveRound, fetchRound: fetchRound };
+})();
+
+/* ============================================================
+   DEEP-LINK DETECTION
+   Runs synchronously before React mounts.
+   If ?join=CODE is present we show the overlay immediately
+   and kick off the Firebase fetch. When the fetch completes
+   we store the round in localStorage (same format as a locally
+   created round) then signal React to navigate to scoring.
+   ============================================================ */
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var rawCode = params.get('join') || params.get('code') || '';
+  var joinCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+
+  if (!joinCode || joinCode.length < 4) return; // No deep-link — normal load
+
+  // Show the overlay immediately so the user sees feedback before React boots
+  var overlay = document.getElementById('pp-join-overlay');
+  var codeEl  = document.getElementById('pp-join-code-display');
+  var statusEl = document.getElementById('pp-join-status');
+  var spinnerEl = document.getElementById('pp-join-spinner');
+  var errorEl  = document.getElementById('pp-join-error');
+  var dismissEl = document.getElementById('pp-join-dismiss');
+
+  overlay.style.display = 'flex';
+  codeEl.textContent = joinCode;
+
+  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+  function showError(msg) {
+    if (spinnerEl) spinnerEl.style.display = 'none';
+    if (errorEl)  { errorEl.style.display = 'block'; errorEl.textContent = msg; }
+    if (dismissEl) dismissEl.style.display = 'block';
+    setStatus('Could not join round');
+  }
+
+  setStatus('Connecting to Firebase…');
+
+  RoundSyncService.fetchRound(joinCode, function(round, err) {
+    if (!round) {
+      showError(
+        err === 'Round not found'
+          ? 'No active round found for code "' + joinCode + '".\n\nMake sure the host has started the round on their device.'
+          : 'Connection error: ' + (err || 'Unknown error') + '\n\nCheck your internet connection and try again.'
+      );
+      return;
+    }
+
+    setStatus('Round found! Loading…');
+
+    // Persist to localStorage exactly as the app expects
+    localStorage.setItem('pp_round', JSON.stringify(round));
+    localStorage.setItem('pp_screen', 'score');
+
+    // Clean the URL (remove ?join= so refreshes don't re-trigger)
+    try {
+      var cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('join');
+      cleanUrl.searchParams.delete('code');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    } catch(e) { /* ignore */ }
+
+    // Signal React (if already mounted) or let the initial state pick it up
+    setStatus('Opening scorecard…');
+    if (window.__pp_deeplink_ready) {
+      window.__pp_deeplink_ready(round);
+    } else {
+      // React hasn't mounted yet — set a flag it will check on mount
+      window.__pp_deeplink_round = round;
+    }
+
+    // Hide overlay — React render will take over
+    setTimeout(function() {
+      overlay.style.display = 'none';
+    }, 400);
+  });
+})();
+
+function dismissJoinOverlay() {
+  var overlay = document.getElementById('pp-join-overlay');
+  if (overlay) overlay.style.display = 'none';
+  // Clear the ?join= param so a refresh doesn't retry
+  try {
+    var u = new URL(window.location.href);
+    u.searchParams.delete('join');
+    u.searchParams.delete('code');
+    window.history.replaceState({}, '', u.toString());
+  } catch(e) { /* ignore */ }
+}
+</script>
+
 <script type="text/babel">
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -40,19 +294,33 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentGold": "#C9A84C",
   "bgColor": "#0A1628",
   "cardBg": "#0F2040",
-  "showSyncCode": false
-}/*EDITMODE-END*/;
+  "showSyncCode": true
+} /*EDITMODE-END*/;
 
 const App = () => {
-  const [screen, setScreen] = React.useState(() => localStorage.getItem('pp_screen') || 'home');
+  // ── Initial state: honour deep-link round if it arrived before React mounted
+  const [screen, setScreen] = React.useState(() => {
+    // If a deep-link round was pre-fetched and stored, go straight to scoring
+    if (window.__pp_deeplink_round) return 'score';
+    return localStorage.getItem('pp_screen') || 'home';
+  });
+
   const [players, setPlayers] = React.useState(() => {
     const saved = localStorage.getItem('pp_players');
     return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
   });
+
   const [round, setRound] = React.useState(() => {
+    // Prefer deep-link round, then persisted round
+    if (window.__pp_deeplink_round) {
+      const r = window.__pp_deeplink_round;
+      window.__pp_deeplink_round = null; // consume it
+      return r;
+    }
     const saved = localStorage.getItem('pp_round');
     return saved ? JSON.parse(saved) : null;
   });
+
   const [finalScores, setFinalScores]   = React.useState(null);
   const [finalWolf,   setFinalWolf]     = React.useState(null);
   const [finalPutts,  setFinalPutts]    = React.useState(null);
@@ -64,17 +332,29 @@ const App = () => {
   const recentRounds = React.useMemo(() => {
     const saved = localStorage.getItem('pp_recent');
     return saved ? JSON.parse(saved) : [
-    { courseName: 'Pebble Beach Golf Links', date: 'Apr 20, 2026', players: 4, formats: 'Wolf · Nassau' },
-    { courseName: 'Torrey Pines South', date: 'Apr 14, 2026', players: 3, formats: 'Stableford · Skins' }];
-
+      { courseName: 'Pebble Beach Golf Links', date: 'Apr 20, 2026', players: 4, formats: 'Wolf · Nassau' },
+      { courseName: 'Torrey Pines South',       date: 'Apr 14, 2026', players: 3, formats: 'Stableford · Skins' }
+    ];
   }, []);
 
-  React.useEffect(() => {localStorage.setItem('pp_screen', screen);}, [screen]);
+  // ── Register the deep-link callback for when Firebase resolves AFTER React mounts
+  React.useEffect(() => {
+    window.__pp_deeplink_ready = (incomingRound) => {
+      setRound(incomingRound);
+      setScreen('score');
+      // Hide overlay (may still be visible if fetch was slow)
+      const overlay = document.getElementById('pp-join-overlay');
+      if (overlay) overlay.style.display = 'none';
+    };
+    return () => { window.__pp_deeplink_ready = null; };
+  }, []);
+
+  React.useEffect(() => { localStorage.setItem('pp_screen', screen); }, [screen]);
 
   // Tweaks message handler
   React.useEffect(() => {
     const handler = (e) => {
-      if (e.data?.type === '__activate_edit_mode') setTweaksOpen(true);
+      if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
       if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
     };
     window.addEventListener('message', handler);
@@ -98,115 +378,130 @@ const App = () => {
     setRound(r);
     localStorage.setItem('pp_round', JSON.stringify(r));
     setScreen('score');
+
+    // ── Push round to Firebase so other devices can join via QR
+    RoundSyncService.saveRound(r, function(ok) {
+      if (ok) {
+        console.log('[PlayPal] Round saved to cloud:', r.syncCode);
+      } else {
+        console.warn('[PlayPal] Cloud save failed — round still works locally');
+      }
+    });
   };
 
   const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}) => {
-    setFinalScores(scores);setFinalWolf(wolfData);setFinalPutts(putts);
-    setFinalPresses(presses);setFinalChips(chips);
-    // Save to recent rounds
+    setFinalScores(scores); setFinalWolf(wolfData); setFinalPutts(putts);
+    setFinalPresses(presses); setFinalChips(chips);
     const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
-    recent.unshift({ courseName: round.course.name, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), players: round.players.length, formats: round.formats.map((f) => FORMAT_INFO[f.type].label).join(' · ') });
+    recent.unshift({
+      courseName: round.course.name,
+      date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+      players: round.players.length,
+      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · ')
+    });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
     setScreen('summary');
   };
 
   const handleNewRound = () => {
-    setRound(null);setFinalScores(null);
+    setRound(null); setFinalScores(null);
     localStorage.removeItem('pp_round');
     setScreen('home');
   };
 
-  // CSS variable injection for tweaks
-  const cssVars = { '--green': tweaks.accentGreen, '--gold': tweaks.accentGold, '--bg': tweaks.bgColor, '--card': tweaks.cardBg };
+  // ── Updated join handler — tries Firebase first, falls back to localStorage
+  const handleJoinRound = (savedRound) => {
+    setRound(savedRound);
+    setScreen('score');
+  };
+
+  const cssVars = {
+    '--green': tweaks.accentGreen,
+    '--gold':  tweaks.accentGold,
+    '--bg':    tweaks.bgColor,
+    '--card':  tweaks.cardBg
+  };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: tweaks.bgColor, ...cssVars }}>
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
       <NavBar
         syncCode={tweaks.showSyncCode && round ? round.syncCode : null}
         onHome={() => setScreen(round ? 'score' : 'home')}
         currentScreen={screen} />
-      
 
-      {/* Screen Router */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
         {screen === 'home' &&
-        <HomeScreen
-          onStartRound={() => setScreen('setup')}
-          players={players}
-          onManagePlayers={handleManagePlayers}
-          recentRounds={recentRounds}
-          onJoinRound={(savedRound) => {
-            setRound(savedRound);
-            setScreen('score');
-          }} />
+          <HomeScreen
+            onStartRound={() => setScreen('setup')}
+            players={players}
+            onManagePlayers={handleManagePlayers}
+            recentRounds={recentRounds}
+            onJoinRound={handleJoinRound} />
         }
         {screen === 'setup' &&
-        <SetupScreen
-          allPlayers={players}
-          onStart={handleStartRound} />
-
+          <SetupScreen
+            allPlayers={players}
+            onStart={handleStartRound} />
         }
         {screen === 'score' && round &&
-        <ScoreEntry
-          round={round}
-          onSaveRound={handleSaveRound} />
-
+          <ScoreEntry
+            round={round}
+            onSaveRound={handleSaveRound} />
         }
         {screen === 'summary' && round && finalScores &&
-        <SummaryScreen
-          round={round}
-          scores={finalScores}
-          wolfData={finalWolf}
-          putts={finalPutts}
-          nassauPresses={finalPresses}
-          manualChips={finalChips}
-          onNewRound={handleNewRound} />
-
+          <SummaryScreen
+            round={round}
+            scores={finalScores}
+            wolfData={finalWolf}
+            putts={finalPutts}
+            nassauPresses={finalPresses}
+            manualChips={finalChips}
+            onNewRound={handleNewRound} />
         }
       </div>
 
       {/* Bottom Tab Nav */}
       {screen !== 'score' &&
-      <div style={{ display: 'flex', borderTop: '1px solid #1E3A6E', background: '#050E1C', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
           {[
-        { id: 'home', icon: '🏠', label: 'HOME' },
-        { id: 'setup', icon: '⛳', label: 'NEW ROUND' },
-        ...(round ? [{ id: 'score', icon: '🏌️', label: 'SCORING' }] : []),
-        ...(finalScores ? [{ id: 'summary', icon: '📊', label: 'RESULTS' }] : [])].
-        map((tab) =>
-        <div key={tab.id} onClick={() => setScreen(tab.id)}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          minHeight: 56, padding: '10px 4px', cursor: 'pointer',
-          color: screen === tab.id ? tweaks.accentGold : '#4A6890',
-          borderTop: screen === tab.id ? `2px solid ${tweaks.accentGold}` : '2px solid transparent'
-        }}>
-              <span style={{ fontSize: 22 }}>{tab.icon}</span>
-              <span style={{ fontFamily: 'Barlow Condensed', fontSize: 11, letterSpacing: 1.5, fontWeight: 700, marginTop: 3 }}>{tab.label}</span>
+            { id:'home',    icon:'🏠', label:'HOME' },
+            { id:'setup',   icon:'⛳', label:'NEW ROUND' },
+            ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }]  : []),
+            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }]  : [])
+          ].map(tab =>
+            <div key={tab.id} onClick={() => setScreen(tab.id)} style={{
+              flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+              justifyContent:'center', padding:'10px 4px', cursor:'pointer',
+              color: screen === tab.id ? tweaks.accentGold : '#4A6890',
+              borderTop: screen === tab.id ? `2px solid ${tweaks.accentGold}` : '2px solid transparent'
+            }}>
+              <span style={{ fontSize:18 }}>{tab.icon}</span>
+              <span style={{ fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:1.5, fontWeight:700, marginTop:2 }}>{tab.label}</span>
             </div>
-        )}
+          )}
         </div>
       }
 
       {/* Tweaks Panel */}
       {tweaksOpen &&
-      <div style={{ position: 'fixed', bottom: 80, right: 16, background: '#0F2040', border: '1px solid #1E3A6E', borderRadius: 14, padding: 16, zIndex: 500, width: 260, boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-          <div style={{ fontFamily: 'Barlow Condensed', fontWeight: 800, fontSize: 16, color: '#fff', letterSpacing: 1, marginBottom: 14 }}>TWEAKS</div>
-          {[['accentGreen', 'Green Accent'], ['accentGold', 'Gold Accent'], ['bgColor', 'Background']].map(([k, label]) =>
-        <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#9BB4D4' }}>{label}</span>
-              <input type="color" value={tweaks[k]} onChange={(e) => saveTweakKey(k, e.target.value)} style={{ border: 'none', background: 'none', cursor: 'pointer', width: 36, height: 28, opacity: "20", padding: "5px" }} />
+        <div style={{ position:'fixed', bottom:80, right:16, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:14, padding:16, zIndex:500, width:260, boxShadow:'0 8px 32px rgba(0,0,0,0.6)' }}>
+          <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:16, color:'#fff', letterSpacing:1, marginBottom:14 }}>TWEAKS</div>
+          {[['accentGreen','Green Accent'],['accentGold','Gold Accent'],['bgColor','Background']].map(([k,label]) =>
+            <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+              <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>{label}</span>
+              <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, opacity:"20", padding:"5px" }} />
             </div>
-        )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-            <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#9BB4D4' }}>Show Sync Code</span>
-            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width: 40, height: 22, borderRadius: 11, background: tweaks.showSyncCode ? tweaks.accentGreen : '#1E3A6E', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2, transition: 'background 0.2s' }}>
-              <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', transform: tweaks.showSyncCode ? 'translateX(18px)' : 'translateX(0)', transition: 'transform 0.2s' }} />
+          )}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
+            <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>Show Sync Code</span>
+            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width:40, height:22, borderRadius:11, background:tweaks.showSyncCode ? tweaks.accentGreen : '#1E3A6E', cursor:'pointer', display:'flex', alignItems:'center', padding:2, transition:'background 0.2s' }}>
+              <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', transform:tweaks.showSyncCode ? 'translateX(18px)' : 'translateX(0)', transition:'transform 0.2s' }} />
             </div>
           </div>
         </div>
       }
-    </div>);
-
+    </div>
+  );
 };
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
