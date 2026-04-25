@@ -12,6 +12,7 @@
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
 
 <script src="components/gameData.js?v=2"></script>
@@ -33,30 +34,20 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 20px; font-family: 'Barlow Condensed', sans-serif;
   }
-  #pp-join-overlay .pp-join-logo {
-    font-size: 52px; line-height: 1;
-  }
-  #pp-join-overlay .pp-join-title {
-    font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff;
-  }
+  #pp-join-overlay .pp-join-logo { font-size: 52px; line-height: 1; }
+  #pp-join-overlay .pp-join-title { font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff; }
   #pp-join-overlay .pp-join-code {
     font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #3DCB6C;
     background: rgba(61,203,108,0.08); border: 1px solid rgba(61,203,108,0.3);
     border-radius: 10px; padding: 10px 24px;
   }
-  #pp-join-overlay .pp-join-status {
-    font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A98BC;
-    font-family: 'DM Sans', sans-serif;
-  }
+  #pp-join-overlay .pp-join-status { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A98BC; font-family: 'DM Sans', sans-serif; }
   #pp-join-overlay .pp-join-spinner {
     width: 36px; height: 36px; border: 3px solid #1E3A6E;
     border-top-color: #3DCB6C; border-radius: 50%;
     animation: pp-spin 0.8s linear infinite;
   }
-  #pp-join-overlay .pp-join-error {
-    font-size: 14px; color: #E5534B; text-align: center;
-    max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif;
-  }
+  #pp-join-overlay .pp-join-error { font-size: 14px; color: #E5534B; text-align: center; max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
   #pp-join-overlay .pp-join-dismiss {
     margin-top: 8px; background: transparent; border: 1px solid #1E3A6E;
     color: #7A98BC; border-radius: 8px; padding: 10px 24px;
@@ -68,7 +59,7 @@
 </head>
 <body>
 
-<!-- Deep-link join overlay — shown immediately if ?join= is in the URL, hidden after load -->
+<!-- Deep-link join overlay -->
 <div id="pp-join-overlay" style="display:none;">
   <div class="pp-join-logo">🏌️</div>
   <div class="pp-join-title">JOINING ROUND</div>
@@ -91,13 +82,12 @@
 
 <script>
 /* ============================================================
-   FIREBASE CONFIG — PlayPal Live Rounds
-   Replace these values with your Firebase project's config.
-   Firebase Console → Project Settings → Your Apps → Web App
+   FIREBASE CONFIG
    ============================================================ */
 var PLAYPAL_FIREBASE_CONFIG = {
   apiKey:            "AIzaSyBay-gT70Q-_APEBJUgY9CzO_4t42omXco",
   authDomain:        "playpal-scorecard.firebaseapp.com",
+  databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
   projectId:         "playpal-scorecard",
   storageBucket:     "playpal-scorecard.firebasestorage.app",
   messagingSenderId: "1993034314",
@@ -105,120 +95,173 @@ var PLAYPAL_FIREBASE_CONFIG = {
 };
 
 /* ============================================================
-   ROUND SYNC SERVICE
-   Persists round objects to Firestore keyed by syncCode.
-   Works entirely with callbacks — no promises in global scope
-   so it is safe to call before React mounts.
+   FIREBASE INIT (single init, shared by all services)
    ============================================================ */
-var RoundSyncService = (function() {
-  var COLLECTION = 'playpal_rounds';
-  var db = null;
-  var authReady = false;
-  var pendingOps = [];
+var _fbApp = null;
+var _fbDb  = null;   // Realtime Database — players, custom courses
+var _fbFs  = null;   // Firestore — round sync by syncCode
+var _fbAuthReady = false;
+var _fbPending   = [];
 
-  function _configured() {
-    return !!(
-      PLAYPAL_FIREBASE_CONFIG &&
-      PLAYPAL_FIREBASE_CONFIG.apiKey &&
-      PLAYPAL_FIREBASE_CONFIG.apiKey.indexOf('REPLACE') === -1 &&
-      window.firebase && window.firebase.firestore
-    );
+function _fbInit(cb) {
+  if (_fbAuthReady) { cb && cb(true); return; }
+  if (_fbApp) { _fbPending.push(cb); return; }
+  try {
+    _fbApp = !window.firebase.apps.length
+      ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
+      : window.firebase.apps[0];
+    _fbDb = window.firebase.database();
+    _fbFs = window.firebase.firestore();
+    window.firebase.auth().signInAnonymously()
+      .then(function() {
+        _fbAuthReady = true;
+        var q = _fbPending.slice(); _fbPending = [];
+        q.forEach(function(fn) { fn && fn(true); });
+        cb && cb(true);
+      })
+      .catch(function(err) {
+        console.warn('[PlayPal] Firebase auth failed:', err.message);
+        var q = _fbPending.slice(); _fbPending = [];
+        q.forEach(function(fn) { fn && fn(false); });
+        cb && cb(false);
+      });
+  } catch(e) {
+    console.warn('[PlayPal] Firebase init failed:', e.message);
+    cb && cb(false);
   }
+}
 
-  function _init(cb) {
-    if (!_configured()) { if (cb) cb(false, 'Firebase not configured'); return; }
-    if (db && authReady) { if (cb) cb(true); return; }
-    if (db && !authReady) {
-      pendingOps.push(cb); return;
-    }
-    try {
-      if (!window.firebase.apps || !window.firebase.apps.length) {
-        window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG);
-      }
-      db = window.firebase.firestore();
-      window.firebase.auth().signInAnonymously()
-        .then(function() {
-          authReady = true;
-          var ops = pendingOps.slice(); pendingOps = [];
-          ops.forEach(function(fn) { if (fn) fn(true); });
-          if (cb) cb(true);
-        })
-        .catch(function(err) {
-          var ops = pendingOps.slice(); pendingOps = [];
-          ops.forEach(function(fn) { if (fn) fn(false, err.message); });
-          if (cb) cb(false, 'Auth failed: ' + err.message);
-        });
-    } catch(e) {
-      if (cb) cb(false, 'Init failed: ' + e.message);
-    }
-  }
-
-  /* Save round to Firestore. roundObj must include syncCode. */
-  function saveRound(roundObj, cb) {
-    _init(function(ok, err) {
-      if (!ok) {
-        // Silently fall back — round still works locally
-        console.warn('[RoundSync] Firebase unavailable, skipping cloud save:', err);
-        if (cb) cb(false);
-        return;
-      }
-      var doc = {
-        syncCode:  roundObj.syncCode,
-        round:     roundObj,
-        savedAt:   Date.now()
-      };
-      db.collection(COLLECTION).doc(roundObj.syncCode).set(doc)
-        .then(function() { if (cb) cb(true); })
-        .catch(function(e) {
-          console.warn('[RoundSync] saveRound failed:', e);
-          if (cb) cb(false);
-        });
+/* ============================================================
+   PLAYER SYNC SERVICE (Realtime Database → /players)
+   ============================================================ */
+var PlayerSyncService = (function() {
+  function save(players, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      // Keyed object so merges are clean
+      var obj = {};
+      players.forEach(function(p) { obj[p.id] = p; });
+      _fbDb.ref('players').set(obj)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
     });
   }
 
-  /* Fetch a round from Firestore by syncCode. */
-  function fetchRound(syncCode, cb) {
-    _init(function(ok, err) {
-      if (!ok) { if (cb) cb(null, 'Firebase unavailable'); return; }
-      db.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
+  function load(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null); return; }
+      _fbDb.ref('players').once('value')
         .then(function(snap) {
-          if (!snap.exists) {
-            if (cb) cb(null, 'Round not found');
-          } else {
-            var data = snap.data();
-            if (cb) cb(data.round || null, null);
-          }
+          var val = snap.val();
+          if (!val) { cb(null); return; }
+          // Convert keyed object back to array, preserve order by id
+          var arr = Object.values(val);
+          cb(arr);
         })
-        .catch(function(e) {
-          if (cb) cb(null, 'Fetch error: ' + e.message);
-        });
+        .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
+    });
+  }
+
+  // Subscribe to live changes from other devices
+  function subscribe(cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      _fbDb.ref('players').on('value', function(snap) {
+        var val = snap.val();
+        if (val) cb(Object.values(val));
+      });
+    });
+  }
+
+  function unsubscribe() {
+    if (_fbDb) _fbDb.ref('players').off('value');
+  }
+
+  return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
+})();
+
+/* ============================================================
+   CUSTOM COURSE SYNC SERVICE (Realtime Database → /courses)
+   ============================================================ */
+var CourseSyncService = (function() {
+  function save(courses, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      var obj = {};
+      courses.forEach(function(c) { obj[c.id] = c; });
+      _fbDb.ref('courses').set(obj)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
+    });
+  }
+
+  function load(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null); return; }
+      _fbDb.ref('courses').once('value')
+        .then(function(snap) {
+          var val = snap.val();
+          cb(val ? Object.values(val) : []);
+        })
+        .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
+    });
+  }
+
+  return { save: save, load: load };
+})();
+
+/* ============================================================
+   ROUND SYNC SERVICE (Firestore — keyed by syncCode)
+   ============================================================ */
+var RoundSyncService = (function() {
+  var COLLECTION = 'playpal_rounds';
+
+  function saveRound(roundObj, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
+      _fbFs.collection(COLLECTION).doc(roundObj.syncCode).set({
+        syncCode: roundObj.syncCode,
+        round:    roundObj,
+        savedAt:  Date.now()
+      })
+      .then(function() { cb && cb(true); })
+      .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
+    });
+  }
+
+  function fetchRound(syncCode, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null, 'Firebase unavailable'); return; }
+      _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
+        .then(function(snap) {
+          if (!snap.exists) { cb(null, 'Round not found'); }
+          else { var d = snap.data(); cb(d.round || null, null); }
+        })
+        .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
     });
   }
 
   return { saveRound: saveRound, fetchRound: fetchRound };
 })();
 
+window.PlayerSyncService  = PlayerSyncService;
+window.CourseSyncService  = CourseSyncService;
+window.RoundSyncService   = RoundSyncService;
+
 /* ============================================================
    DEEP-LINK DETECTION
-   Runs synchronously before React mounts.
-   If ?join=CODE is present we show the overlay immediately
-   and kick off the Firebase fetch. When the fetch completes
-   we store the round in localStorage (same format as a locally
-   created round) then signal React to navigate to scoring.
    ============================================================ */
 (function() {
-  var params = new URLSearchParams(window.location.search);
-  var rawCode = params.get('join') || params.get('code') || '';
+  var params   = new URLSearchParams(window.location.search);
+  var rawCode  = params.get('join') || params.get('code') || '';
   var joinCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (!joinCode || joinCode.length < 4) return;
 
-  if (!joinCode || joinCode.length < 4) return; // No deep-link — normal load
-
-  // Show the overlay immediately so the user sees feedback before React boots
-  var overlay = document.getElementById('pp-join-overlay');
-  var codeEl  = document.getElementById('pp-join-code-display');
-  var statusEl = document.getElementById('pp-join-status');
+  var overlay   = document.getElementById('pp-join-overlay');
+  var codeEl    = document.getElementById('pp-join-code-display');
+  var statusEl  = document.getElementById('pp-join-status');
   var spinnerEl = document.getElementById('pp-join-spinner');
-  var errorEl  = document.getElementById('pp-join-error');
+  var errorEl   = document.getElementById('pp-join-error');
   var dismissEl = document.getElementById('pp-join-dismiss');
 
   overlay.style.display = 'flex';
@@ -226,64 +269,70 @@ var RoundSyncService = (function() {
 
   function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
   function showError(msg) {
-    if (spinnerEl) spinnerEl.style.display = 'none';
-    if (errorEl)  { errorEl.style.display = 'block'; errorEl.textContent = msg; }
-    if (dismissEl) dismissEl.style.display = 'block';
+    if (spinnerEl)  spinnerEl.style.display  = 'none';
+    if (errorEl)  { errorEl.style.display   = 'block'; errorEl.textContent = msg; }
+    if (dismissEl)  dismissEl.style.display  = 'block';
     setStatus('Could not join round');
   }
 
   setStatus('Connecting to Firebase…');
 
+  // Check localStorage first (same-device fast path)
+  try {
+    var local = localStorage.getItem('pp_round');
+    if (local) {
+      var r = JSON.parse(local);
+      if (r.syncCode === joinCode) {
+        setStatus('Round found! Loading…');
+        sessionStorage.setItem('pp_screen', 'score');
+        window.__pp_deeplink_round = r;
+        _clearJoinParam();
+        setTimeout(function() { overlay.style.display = 'none'; }, 300);
+        return;
+      }
+    }
+  } catch(e) { /* fall through */ }
+
   RoundSyncService.fetchRound(joinCode, function(round, err) {
     if (!round) {
       showError(
         err === 'Round not found'
-          ? 'No active round found for code "' + joinCode + '".\n\nMake sure the host has started the round on their device.'
-          : 'Connection error: ' + (err || 'Unknown error') + '\n\nCheck your internet connection and try again.'
+          ? 'No active round found for code "' + joinCode + '".\nMake sure the host has started the round.'
+          : 'Connection error: ' + (err || 'Unknown') + '\nCheck your internet and try again.'
       );
       return;
     }
-
     setStatus('Round found! Loading…');
-
-    // Persist to localStorage exactly as the app expects
     localStorage.setItem('pp_round', JSON.stringify(round));
-    localStorage.setItem('pp_screen', 'score');
-
-    // Clean the URL (remove ?join= so refreshes don't re-trigger)
-    try {
-      var cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.delete('join');
-      cleanUrl.searchParams.delete('code');
-      window.history.replaceState({}, '', cleanUrl.toString());
-    } catch(e) { /* ignore */ }
-
-    // Signal React (if already mounted) or let the initial state pick it up
-    setStatus('Opening scorecard…');
+    sessionStorage.setItem('pp_screen', 'score');
+    _clearJoinParam();
     if (window.__pp_deeplink_ready) {
       window.__pp_deeplink_ready(round);
     } else {
-      // React hasn't mounted yet — set a flag it will check on mount
       window.__pp_deeplink_round = round;
     }
-
-    // Hide overlay — React render will take over
-    setTimeout(function() {
-      overlay.style.display = 'none';
-    }, 400);
+    setTimeout(function() { overlay.style.display = 'none'; }, 400);
   });
+
+  function _clearJoinParam() {
+    try {
+      var u = new URL(window.location.href);
+      u.searchParams.delete('join');
+      u.searchParams.delete('code');
+      window.history.replaceState({}, '', u.toString());
+    } catch(e) {}
+  }
 })();
 
 function dismissJoinOverlay() {
   var overlay = document.getElementById('pp-join-overlay');
   if (overlay) overlay.style.display = 'none';
-  // Clear the ?join= param so a refresh doesn't retry
   try {
     var u = new URL(window.location.href);
     u.searchParams.delete('join');
     u.searchParams.delete('code');
     window.history.replaceState({}, '', u.toString());
-  } catch(e) { /* ignore */ }
+  } catch(e) {}
 }
 </script>
 
@@ -298,11 +347,14 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 } /*EDITMODE-END*/;
 
 const App = () => {
-  // ── Initial state: honour deep-link round if it arrived before React mounted
+  // ── ROUTING FIX ──────────────────────────────────────────────────────────
+  // sessionStorage is cleared when the tab/browser closes.
+  // A fresh open always lands on 'home'.
+  // Mid-round page refreshes correctly resume the scoring screen.
+  // Deep-link joins write 'score' to sessionStorage before React mounts.
   const [screen, setScreen] = React.useState(() => {
-    // If a deep-link round was pre-fetched and stored, go straight to scoring
     if (window.__pp_deeplink_round) return 'score';
-    return localStorage.getItem('pp_screen') || 'home';
+    return sessionStorage.getItem('pp_screen') || 'home';
   });
 
   const [players, setPlayers] = React.useState(() => {
@@ -311,47 +363,68 @@ const App = () => {
   });
 
   const [round, setRound] = React.useState(() => {
-    // Prefer deep-link round, then persisted round
     if (window.__pp_deeplink_round) {
       const r = window.__pp_deeplink_round;
-      window.__pp_deeplink_round = null; // consume it
+      window.__pp_deeplink_round = null;
       return r;
     }
-    const saved = localStorage.getItem('pp_round');
-    return saved ? JSON.parse(saved) : null;
+    // Only restore in-progress round if the session was already on scoring
+    const savedScreen = sessionStorage.getItem('pp_screen');
+    if (savedScreen === 'score') {
+      const saved = localStorage.getItem('pp_round');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
   });
 
-  const [finalScores, setFinalScores]   = React.useState(null);
-  const [finalWolf,   setFinalWolf]     = React.useState(null);
-  const [finalPutts,  setFinalPutts]    = React.useState(null);
-  const [finalPresses,setFinalPresses]  = React.useState([]);
-  const [finalChips,  setFinalChips]    = React.useState({});
-  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
-  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+  const [finalScores,  setFinalScores]  = React.useState(null);
+  const [finalWolf,    setFinalWolf]    = React.useState(null);
+  const [finalPutts,   setFinalPutts]   = React.useState(null);
+  const [finalPresses, setFinalPresses] = React.useState([]);
+  const [finalChips,   setFinalChips]   = React.useState({});
+  const [tweaks,       setTweaks]       = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen,   setTweaksOpen]   = React.useState(false);
 
   const recentRounds = React.useMemo(() => {
     const saved = localStorage.getItem('pp_recent');
     return saved ? JSON.parse(saved) : [
-      { courseName: 'Pebble Beach Golf Links', date: 'Apr 20, 2026', players: 4, formats: 'Wolf · Nassau' },
-      { courseName: 'Torrey Pines South',       date: 'Apr 14, 2026', players: 3, formats: 'Stableford · Skins' }
+      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Stableford' },
+      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Wolf · Pass the Money' },
     ];
   }, []);
 
-  // ── Register the deep-link callback for when Firebase resolves AFTER React mounts
+  // ── Persist screen to sessionStorage (not localStorage) ──────────────────
+  React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
+
+  // ── Deep-link callback registration ──────────────────────────────────────
   React.useEffect(() => {
     window.__pp_deeplink_ready = (incomingRound) => {
       setRound(incomingRound);
       setScreen('score');
-      // Hide overlay (may still be visible if fetch was slow)
       const overlay = document.getElementById('pp-join-overlay');
       if (overlay) overlay.style.display = 'none';
     };
     return () => { window.__pp_deeplink_ready = null; };
   }, []);
 
-  React.useEffect(() => { localStorage.setItem('pp_screen', screen); }, [screen]);
+  // ── PLAYER SYNC: load from RTDB on mount, subscribe to live changes ───────
+  React.useEffect(() => {
+    PlayerSyncService.load(function(remotePlayers) {
+      if (remotePlayers && remotePlayers.length > 0) {
+        // Merge: remote is source of truth, but keep any local-only additions
+        setPlayers(remotePlayers);
+        localStorage.setItem('pp_players', JSON.stringify(remotePlayers));
+      }
+    });
+    // Live subscription — another device saves players → this device updates
+    PlayerSyncService.subscribe(function(remoteP) {
+      setPlayers(remoteP);
+      localStorage.setItem('pp_players', JSON.stringify(remoteP));
+    });
+    return () => { PlayerSyncService.unsubscribe(); };
+  }, []);
 
-  // Tweaks message handler
+  // ── Tweaks message handler ────────────────────────────────────────────────
   React.useEffect(() => {
     const handler = (e) => {
       if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
@@ -368,24 +441,25 @@ const App = () => {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
   };
 
+  // ── Player management — save to localStorage + RTDB ──────────────────────
   const handleManagePlayers = (updated) => {
     setPlayers(updated);
     localStorage.setItem('pp_players', JSON.stringify(updated));
+    PlayerSyncService.save(updated, function(ok) {
+      if (!ok) console.warn('[PlayPal] Player sync to RTDB failed — saved locally');
+    });
   };
 
+  // ── Round start — save round to Firestore for QR/code joining ────────────
   const handleStartRound = (config) => {
     const r = { ...config, id: Date.now() };
     setRound(r);
     localStorage.setItem('pp_round', JSON.stringify(r));
+    sessionStorage.setItem('pp_screen', 'score');
     setScreen('score');
-
-    // ── Push round to Firebase so other devices can join via QR
     RoundSyncService.saveRound(r, function(ok) {
-      if (ok) {
-        console.log('[PlayPal] Round saved to cloud:', r.syncCode);
-      } else {
-        console.warn('[PlayPal] Cloud save failed — round still works locally');
-      }
+      if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
+      else    console.warn('[PlayPal] Cloud round save failed — works locally');
     });
   };
 
@@ -406,12 +480,13 @@ const App = () => {
   const handleNewRound = () => {
     setRound(null); setFinalScores(null);
     localStorage.removeItem('pp_round');
+    sessionStorage.removeItem('pp_screen');
     setScreen('home');
   };
 
-  // ── Updated join handler — tries Firebase first, falls back to localStorage
   const handleJoinRound = (savedRound) => {
     setRound(savedRound);
+    sessionStorage.setItem('pp_screen', 'score');
     setScreen('score');
   };
 
@@ -467,7 +542,7 @@ const App = () => {
             { id:'home',    icon:'🏠', label:'HOME' },
             { id:'setup',   icon:'⛳', label:'NEW ROUND' },
             ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }]  : []),
-            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }]  : [])
+            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : [])
           ].map(tab =>
             <div key={tab.id} onClick={() => setScreen(tab.id)} style={{
               flex:1, display:'flex', flexDirection:'column', alignItems:'center',
@@ -489,7 +564,7 @@ const App = () => {
           {[['accentGreen','Green Accent'],['accentGold','Gold Accent'],['bgColor','Background']].map(([k,label]) =>
             <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
               <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>{label}</span>
-              <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, opacity:"20", padding:"5px" }} />
+              <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, padding:'5px' }} />
             </div>
           )}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
