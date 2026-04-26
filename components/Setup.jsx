@@ -246,6 +246,10 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
     padding:'10px 12px', color:'#fff', fontFamily:'DM Sans', fontSize:14,
     outline:'none', boxSizing:'border-box', width:'100%',
   };
+  const holeInputStyle = {
+    background:'#162950', border:'1px solid #1E3A6E', color:'#fff', borderRadius:5,
+    padding:'5px 4px', fontFamily:'DM Sans', fontSize:13, width:'100%', outline:'none', textAlign:'center'
+  };
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
@@ -303,21 +307,34 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
                 <tr key={i} style={{background: i%2===0 ? '#0A1628' : '#0F2040'}}>
                   <td style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color: i<9 ? '#7A98BC' : '#9BB4D4', textAlign:'center'}}>{h.num}</td>
                   <td style={{padding:'3px 4px'}}>
-                    <select value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)}
-                      style={{background:'#162950', border:'1px solid #1E3A6E', color:'#fff', borderRadius:5, padding:'5px 4px', fontFamily:'Barlow Condensed', fontSize:14, width:'100%', outline:'none'}}>
-                      {[3,4,5].map(v=><option key={v} value={v}>{v}</option>)}
-                    </select>
+                    <input
+                      value={h.par}
+                      onChange={e=>setHoleField(i,'par',e.target.value)}
+                      type="number"
+                      inputMode="numeric"
+                      min="3"
+                      max="5"
+                      tabIndex={i * 3 + 1}
+                      style={holeInputStyle}
+                    />
                   </td>
                   <td style={{padding:'3px 4px'}}>
                     <input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)}
                       placeholder="—" type="number" min="50" max="700"
-                      style={{background:'#162950', border:'1px solid #1E3A6E', color:'#fff', borderRadius:5, padding:'5px 4px', fontFamily:'DM Sans', fontSize:13, width:'100%', outline:'none', textAlign:'center'}}/>
+                      tabIndex={i * 3 + 2}
+                      style={holeInputStyle}/>
                   </td>
                   <td style={{padding:'3px 4px'}}>
-                    <select value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)}
-                      style={{background:'#162950', border:'1px solid #1E3A6E', color:'#fff', borderRadius:5, padding:'5px 4px', fontFamily:'Barlow Condensed', fontSize:14, width:'100%', outline:'none'}}>
-                      {Array.from({length:18},(_,j)=>j+1).map(v=><option key={v} value={v}>{v}</option>)}
-                    </select>
+                    <input
+                      value={h.hdcp}
+                      onChange={e=>setHoleField(i,'hdcp',e.target.value)}
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      max="18"
+                      tabIndex={i * 3 + 3}
+                      style={holeInputStyle}
+                    />
                   </td>
                 </tr>
               ))}
@@ -659,4 +676,4 @@ const setupS = {
   check:      { width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
 };
 
-Object.assign(window, { SetupScreen });
+Object.assign(window, { SetupScreen, CourseBuilder, ScorecardScanner });
