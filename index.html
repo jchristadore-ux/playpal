@@ -9,9 +9,8 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<!-- Firebase SDKs -->
+<!-- Firebase SDKs — auth-compat intentionally removed; rules set to open -->
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
 
@@ -95,39 +94,34 @@ var PLAYPAL_FIREBASE_CONFIG = {
 };
 
 /* ============================================================
-   FIREBASE INIT (single init, shared by all services)
+   FIREBASE INIT — NO AUTH REQUIRED
+   Both RTDB and Firestore rules are set to allow read/write: true.
+   Anonymous auth was the root cause of cross-device failure on iPhone
+   Safari (ITP blocks the auth iframe). This init is synchronous after
+   the first call and has no queue-flush-once bug.
    ============================================================ */
-var _fbApp = null;
-var _fbDb  = null;   // Realtime Database — players, custom courses
-var _fbFs  = null;   // Firestore — round sync by syncCode
-var _fbAuthReady = false;
-var _fbPending   = [];
+var _fbApp  = null;
+var _fbDb   = null;   // Realtime Database — players, custom courses
+var _fbFs   = null;   // Firestore — round sync by syncCode
+var _fbReady = false;
 
 function _fbInit(cb) {
-  if (_fbAuthReady) { cb && cb(true); return; }
-  if (_fbApp) { _fbPending.push(cb); return; }
+  // Already initialized — call back immediately on the next tick so callers
+  // that call _fbInit before any async work still behave consistently.
+  if (_fbReady) { setTimeout(function() { cb(true); }, 0); return; }
+
   try {
     _fbApp = !window.firebase.apps.length
       ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
       : window.firebase.apps[0];
-    _fbDb = window.firebase.database();
-    _fbFs = window.firebase.firestore();
-    window.firebase.auth().signInAnonymously()
-      .then(function() {
-        _fbAuthReady = true;
-        var q = _fbPending.slice(); _fbPending = [];
-        q.forEach(function(fn) { fn && fn(true); });
-        cb && cb(true);
-      })
-      .catch(function(err) {
-        console.warn('[PlayPal] Firebase auth failed:', err.message);
-        var q = _fbPending.slice(); _fbPending = [];
-        q.forEach(function(fn) { fn && fn(false); });
-        cb && cb(false);
-      });
+    _fbDb  = window.firebase.database();
+    _fbFs  = window.firebase.firestore();
+    _fbReady = true;
+    console.log('[PlayPal] Firebase initialized (no-auth mode)');
+    setTimeout(function() { cb(true); }, 0);
   } catch(e) {
     console.warn('[PlayPal] Firebase init failed:', e.message);
-    cb && cb(false);
+    setTimeout(function() { cb(false); }, 0);
   }
 }
 
@@ -138,7 +132,6 @@ var PlayerSyncService = (function() {
   function save(players, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
-      // Keyed object so merges are clean
       var obj = {};
       players.forEach(function(p) { obj[p.id] = p; });
       _fbDb.ref('players').set(obj)
@@ -154,7 +147,6 @@ var PlayerSyncService = (function() {
         .then(function(snap) {
           var val = snap.val();
           if (!val) { cb(null); return; }
-          // Convert keyed object back to array, preserve order by id
           var arr = Object.values(val);
           cb(arr);
         })
