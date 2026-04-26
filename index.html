@@ -27,39 +27,42 @@
   input::placeholder { color: #4A6890; }
   button { font-family: 'DM Sans', sans-serif; }
   * { -webkit-tap-highlight-color: transparent; }
-  .pp-join-overlay {
-    display: none; position: fixed; inset: 0; z-index: 9999;
-    background: rgba(10,22,40,0.97);
-    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+
+  #pp-join-overlay {
+    position: fixed; inset: 0; background: #0A1628; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; font-family: 'Barlow Condensed', sans-serif;
   }
-  .pp-join-code {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
-    font-size: 48px; letter-spacing: 8px; color: #C9A84C;
+  #pp-join-overlay .pp-join-logo { font-size: 52px; line-height: 1; }
+  #pp-join-overlay .pp-join-title { font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff; }
+  #pp-join-overlay .pp-join-code {
+    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #3DCB6C;
+    background: rgba(61,203,108,0.08); border: 1px solid rgba(61,203,108,0.3);
+    border-radius: 10px; padding: 10px 24px;
   }
-  .pp-join-spinner {
-    width: 36px; height: 36px;
-    border: 3px solid #1E3A6E; border-top-color: #3DCB6C;
-    border-radius: 50%; animation: ppSpin 0.8s linear infinite;
+  #pp-join-overlay .pp-join-status { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A98BC; font-family: 'DM Sans', sans-serif; }
+  #pp-join-overlay .pp-join-spinner {
+    width: 36px; height: 36px; border: 3px solid #1E3A6E;
+    border-top-color: #3DCB6C; border-radius: 50%;
+    animation: pp-spin 0.8s linear infinite;
   }
-  .pp-join-status { font-family: 'DM Sans', sans-serif; font-size: 15px; color: #7A98BC; }
-  .pp-join-error {
-    font-family: 'DM Sans', sans-serif; font-size: 14px; color: #E5534B;
-    text-align: center; max-width: 300px; white-space: pre-line;
+  #pp-join-overlay .pp-join-error { font-size: 14px; color: #E5534B; text-align: center; max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+  #pp-join-overlay .pp-join-dismiss {
+    margin-top: 8px; background: transparent; border: 1px solid #1E3A6E;
+    color: #7A98BC; border-radius: 8px; padding: 10px 24px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px;
+    font-weight: 700; letter-spacing: 1px; cursor: pointer;
   }
-  .pp-join-dismiss {
-    margin-top: 8px; padding: 10px 28px;
-    background: #1E3A6E; color: #fff; border: none; border-radius: 8px;
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
-    font-size: 15px; letter-spacing: 1px; cursor: pointer;
-  }
-  @keyframes ppSpin { to { transform: rotate(360deg); } }
+  @keyframes pp-spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<div class="pp-join-overlay" id="pp-join-overlay" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;letter-spacing:3px;color:#7A98BC;">JOINING ROUND</div>
-  <div class="pp-join-code" id="pp-join-code-display"></div>
+<!-- Deep-link join overlay -->
+<div id="pp-join-overlay" style="display:none;">
+  <div class="pp-join-logo">🏌️</div>
+  <div class="pp-join-title">JOINING ROUND</div>
+  <div class="pp-join-code" id="pp-join-code-display">------</div>
   <div class="pp-join-spinner" id="pp-join-spinner"></div>
   <div class="pp-join-status" id="pp-join-status">Connecting…</div>
   <div class="pp-join-error" id="pp-join-error" style="display:none;"></div>
@@ -79,8 +82,8 @@
 <script>
 /* ============================================================
    FIREBASE CONFIG — playpal-sync project
-   RTDB:      players, courses  → https://playpal-sync-default-rtdb.firebaseio.com
-   Firestore: rounds            → playpal_rounds/{syncCode}
+   RTDB:      /players, /courses  (open rules: true/true)
+   Firestore: /playpal_rounds     (open rules: if true)
    Auth:      Anonymous
    ============================================================ */
 var PLAYPAL_FIREBASE_CONFIG = {
@@ -95,15 +98,13 @@ var PLAYPAL_FIREBASE_CONFIG = {
 
 /* ============================================================
    FIREBASE INIT
-   Single init, shared by all services.
-   Auth is required — Firestore rules check request.auth != null
-   for playpal_rounds. RTDB rules are open (true/true).
-   _fbInit queues callbacks while auth is resolving so no call
-   is dropped during the async sign-in window.
+   Single init, shared by all three services.
+   Queues callbacks while anonymous auth is resolving so no
+   call is ever dropped during the async sign-in window.
    ============================================================ */
 var _fbApp       = null;
-var _fbDb        = null;   // Realtime Database — players, courses
-var _fbFs        = null;   // Firestore — round sync by syncCode
+var _fbDb        = null;
+var _fbFs        = null;
 var _fbAuthReady = false;
 var _fbPending   = [];
 
@@ -125,8 +126,7 @@ function _fbInit(cb) {
       })
       .catch(function(err) {
         console.warn('[PlayPal] Firebase auth failed:', err.message);
-        // Auth failed — still allow RTDB (rules are open) but flag failure
-        _fbAuthReady = true; // unblock queue so app doesn't hang
+        _fbAuthReady = true;
         var q = _fbPending.slice(); _fbPending = [];
         q.forEach(function(fn) { fn && fn(false); });
         cb && cb(false);
@@ -141,6 +141,7 @@ function _fbInit(cb) {
    PLAYER SYNC SERVICE  (Realtime Database → /players)
    ============================================================ */
 var PlayerSyncService = (function() {
+
   function save(players, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -184,8 +185,10 @@ var PlayerSyncService = (function() {
 
 /* ============================================================
    CUSTOM COURSE SYNC SERVICE  (Realtime Database → /courses)
+   Now includes subscribe/unsubscribe for realtime updates.
    ============================================================ */
 var CourseSyncService = (function() {
+
   function save(courses, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -209,11 +212,25 @@ var CourseSyncService = (function() {
     });
   }
 
-  return { save: save, load: load };
+  function subscribe(cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      _fbDb.ref('courses').on('value', function(snap) {
+        var val = snap.val();
+        if (val) cb(Object.values(val));
+      });
+    });
+  }
+
+  function unsubscribe() {
+    if (_fbDb) _fbDb.ref('courses').off('value');
+  }
+
+  return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
 /* ============================================================
-   ROUND SYNC SERVICE  (Firestore → playpal_rounds/{syncCode})
+   ROUND SYNC SERVICE  (Firestore → /playpal_rounds/{syncCode})
    ============================================================ */
 var RoundSyncService = (function() {
   var COLLECTION = 'playpal_rounds';
@@ -252,9 +269,8 @@ window.RoundSyncService  = RoundSyncService;
 
 /* ============================================================
    DEEP-LINK DETECTION
-   Runs before React mounts. If ?join= or ?code= is in the URL,
-   show the overlay immediately, fetch the round, then hand off
-   to React via window.__pp_deeplink_ready or __pp_deeplink_round.
+   Runs before React mounts. Shows overlay immediately on ?join=
+   or ?code=, fetches round, hands off to React.
    ============================================================ */
 (function() {
   var params   = new URLSearchParams(window.location.search);
@@ -353,8 +369,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
 const App = () => {
   // ── ROUTING ───────────────────────────────────────────────────────────────
-  // sessionStorage clears when browser/tab closes → fresh open always = 'home'
-  // Mid-round refreshes resume correctly. Deep-link sets 'score' before mount.
+  // sessionStorage clears on browser/tab close → fresh open always lands on home.
+  // Mid-round page refreshes correctly resume scoring.
+  // Deep-link sets sessionStorage before React mounts.
   const [screen, setScreen] = React.useState(() => {
     if (window.__pp_deeplink_round) return 'score';
     return sessionStorage.getItem('pp_screen') || 'home';
@@ -501,42 +518,63 @@ const App = () => {
     <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
       <NavBar
         syncCode={tweaks.showSyncCode && round ? round.syncCode : null}
-        screen={screen}
-        onHome={screen !== 'home' ? handleNewRound : null}
-      />
-      {screen === 'home' && (
-        <HomeScreen
-          players={players}
-          onStartRound={() => setScreen('setup')}
-          onManagePlayers={handleManagePlayers}
-          recentRounds={recentRounds}
-          onJoinRound={handleJoinRound}
-        />
-      )}
-      {screen === 'setup' && (
-        <SetupScreen
-          allPlayers={players}
-          onStart={handleStartRound}
-        />
-      )}
-      {screen === 'score' && round && (
-        <ScoreEntryScreen
-          round={round}
-          onSave={handleSaveRound}
-          onHome={handleNewRound}
-        />
-      )}
-      {screen === 'summary' && (
-        <SummaryScreen
-          round={round}
-          scores={finalScores}
-          wolfData={finalWolf}
-          putts={finalPutts}
-          presses={finalPresses}
-          chips={finalChips}
-          onNewRound={handleNewRound}
-        />
-      )}
+        onHome={() => setScreen(round ? 'score' : 'home')}
+        currentScreen={screen} />
+
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
+        {screen === 'home' &&
+          <HomeScreen
+            onStartRound={() => setScreen('setup')}
+            players={players}
+            onManagePlayers={handleManagePlayers}
+            recentRounds={recentRounds}
+            onJoinRound={handleJoinRound} />
+        }
+        {screen === 'setup' &&
+          <SetupScreen
+            allPlayers={players}
+            onStart={handleStartRound} />
+        }
+        {screen === 'score' && round &&
+          <ScoreEntry
+            round={round}
+            onSaveRound={handleSaveRound} />
+        }
+        {screen === 'summary' && round && finalScores &&
+          <SummaryScreen
+            round={round}
+            scores={finalScores}
+            wolfData={finalWolf}
+            putts={finalPutts}
+            nassauPresses={finalPresses}
+            manualChips={finalChips}
+            onNewRound={handleNewRound} />
+        }
+      </div>
+
+      {/* Bottom Tab Nav */}
+      {screen !== 'score' &&
+        <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
+          {[
+            { id:'home',    icon:'🏠', label:'HOME' },
+            { id:'setup',   icon:'⛳', label:'NEW ROUND' },
+            ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }]  : []),
+            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : [])
+          ].map(tab =>
+            <div key={tab.id} onClick={() => setScreen(tab.id)} style={{
+              flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+              justifyContent:'center', padding:'10px 4px', cursor:'pointer',
+              color: screen === tab.id ? tweaks.accentGold : '#4A6890',
+              borderTop: screen === tab.id ? `2px solid ${tweaks.accentGold}` : '2px solid transparent',
+              transition: 'color 0.15s'
+            }}>
+              <div style={{ fontSize:20, lineHeight:1 }}>{tab.icon}</div>
+              <div style={{ fontFamily:'Barlow Condensed', fontSize:10, fontWeight:700, letterSpacing:1, marginTop:3 }}>{tab.label}</div>
+            </div>
+          )}
+        </div>
+      }
+
       {tweaksOpen && (
         <div style={{ position:'fixed', bottom:20, right:20, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:16, zIndex:9998, minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.5)' }}>
           <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, color:'#C9A84C', letterSpacing:2, marginBottom:12 }}>APPEARANCE</div>
