@@ -1,8 +1,6 @@
-// PlayerCard.jsx — Individual player score input card
+// PlayerCard.jsx — Individual player score input card (stroke-only, no net score)
 
-const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner, wolfPicked, holeIdx, par, holeHdcp, isLandscape }) => {
-  const strokes = getHoleStrokes(player.handicap, holeHdcp, 18);
-  const net = score ? score - strokes : null;
+const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner, wolfPicked, holeIdx, par, isLandscape }) => {
   const diff = score ? score - par : null;
 
   const relColor = diff === null ? '#7A98BC'
@@ -27,10 +25,7 @@ const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner,
         <Avatar player={player} size={32}/>
         <div style={{flex:1, minWidth:0}}>
           <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color:'#fff', letterSpacing:0.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{player.name}</div>
-          <div style={{fontSize:10, color:'#7A98BC'}}>
-            HCP {player.handicap}
-            {strokes > 0 && <span style={{color:'#C9A84C', marginLeft:4}}>+{strokes} stroke{strokes>1?'s':''}</span>}
-          </div>
+          <div style={{fontSize:10, color:'#7A98BC'}}>HCP {player.handicap}</div>
         </div>
         {isWolf && <div style={pcS.wolfBadge}>🐺 WOLF</div>}
         {isPartner && !isWolf && <div style={{...pcS.wolfBadge, background:'rgba(61,203,108,0.15)', color:'#3DCB6C', border:'1px solid rgba(61,203,108,0.3)'}}>⚑ PARTNER</div>}
@@ -46,9 +41,6 @@ const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner,
         <div style={pcS.scoreDisplay}>
           <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:64, lineHeight:1, color: score ? relColor : '#2A4A6E'}}>{score || '—'}</div>
           <div style={{fontFamily:'Barlow Condensed', fontSize:13, fontWeight:600, letterSpacing:1.5, color:relColor, marginTop:2}}>{relLabel}</div>
-          {net !== null && strokes > 0 && (
-            <div style={{fontSize:10, color:'#7A98BC'}}>NET {net}</div>
-          )}
         </div>
 
         <button
