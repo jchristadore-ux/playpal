@@ -78,6 +78,7 @@
 <script type="text/babel" src="components/Trackers.jsx"></script>
 <script type="text/babel" src="components/ScoreEntry.jsx"></script>
 <script type="text/babel" src="components/Summary.jsx"></script>
+<script type="text/babel" src="components/RoundViewer.jsx"></script>
 
 <script>
 /* ============================================================
@@ -375,6 +376,7 @@ const App = () => {
   const [finalPresses, setFinalPresses] = React.useState([]);
   const [finalChips,   setFinalChips]   = React.useState({});
   const [finalPopFlags,setFinalPopFlags]= React.useState(null);
+  const [viewSyncCode, setViewSyncCode] = React.useState(null);
   const [tweaks,       setTweaks]       = React.useState(TWEAK_DEFAULTS);
   const [tweaksOpen,   setTweaksOpen]   = React.useState(false);
 
@@ -467,10 +469,16 @@ const App = () => {
       courseName: round.course.name,
       date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
       players: round.players.length,
-      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · ')
+      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · '),
+      syncCode: round.syncCode || null,
     });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
     setScreen('summary');
+  };
+
+  const handleViewRound = (syncCode) => {
+    setViewSyncCode(syncCode);
+    setScreen('viewround');
   };
 
   const handleNewRound = () => {
@@ -513,7 +521,8 @@ const App = () => {
             players={players}
             onManagePlayers={handleManagePlayers}
             recentRounds={recentRounds}
-            onJoinRound={handleJoinRound} />
+            onJoinRound={handleJoinRound}
+            onViewRound={handleViewRound} />
         }
         {screen === 'setup' &&
           <SetupScreen
@@ -525,6 +534,11 @@ const App = () => {
             round={round}
             onSaveRound={handleSaveRound}
             onExitRound={handleExitRound} />
+        }
+        {screen === 'viewround' && viewSyncCode &&
+          <RoundViewer
+            syncCode={viewSyncCode}
+            onBack={() => setScreen('home')} />
         }
         {screen === 'summary' && round && finalScores &&
           <SummaryScreen
@@ -539,8 +553,8 @@ const App = () => {
         }
       </div>
 
-      {/* Bottom Tab Nav — hidden on score screen (ScoreEntry has its own exit button) */}
-      {screen !== 'score' &&
+      {/* Bottom Tab Nav — hidden on score and viewround screens */}
+      {screen !== 'score' && screen !== 'viewround' &&
         <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
           {[
             { id:'home',     icon:'🏠', label:'HOME' },
