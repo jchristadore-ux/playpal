@@ -327,8 +327,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
         }
       }
 
-      // Always show holes played
-      stats.push({ icon:'🏌️', label:'HOLES', value: String(holesPlayed), color: holesPlayed > 0 ? '#9BB4D4' : '#4A6890' });
+      // Always show running stroke total
+      if (holesPlayed > 0) {
+        const total = (scores[p.id]||[]).reduce((acc, s) => acc + (s || 0), 0);
+        stats.push({ icon:'⛳', label:'STROKES', value: String(total), color: '#9BB4D4' });
+      }
 
       if (hasSkins) {
         const { skins } = calcSkins(scores, players, course, skinsFmt?.stakes || 1);
