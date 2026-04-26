@@ -1,7 +1,7 @@
 // Summary.jsx v3 — Scorecard, per-format payouts, Venmo deep-links, GHIN flow
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, onNewRound }) => {
-  const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar } = window;
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, onNewRound }) => {
+  const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore } = window;
   const { players, course, formats, syncCode } = round;
   const [toast, setToast]       = React.useState(null);
   const [tab, setTab]           = React.useState('scorecard');
@@ -19,7 +19,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   []);
 
   const payouts = React.useMemo(() =>
-    calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses || [], ptmState.holderId),
+    calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses || [], ptmState.holderId, popFlags || {}),
   []);
 
   const wolfPts = React.useMemo(()=>
@@ -29,7 +29,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const stablefordPts = React.useMemo(() =>
     Object.fromEntries(players.map(p => [
       p.id,
-      course.holes.reduce((a, h, i) => a + calcStablefordPoints(scores[p.id]?.[i] || 0, h.par), 0)
+      course.holes.reduce((a, h, i) => a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags || {}, p.id, i), h.par), 0)
     ])),
   []);
 

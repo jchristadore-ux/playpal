@@ -266,12 +266,12 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
 };
 
 // ─── NASSAU TRACKER ──────────────────────────────────────────────────────────
-const NassauTracker = ({ players, scores, course, holeIdx, presses, onPress, format }) => {
+const NassauTracker = ({ players, scores, popFlags, course, holeIdx, presses, onPress, format }) => {
   const { nassauSegmentStatus } = window;
   const stake = format?.stakes || 5;
-  const front = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),   holeIdx);
-  const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9), holeIdx);
-  const full  = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),  holeIdx);
+  const front = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),   holeIdx, popFlags);
+  const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9), holeIdx, popFlags);
+  const full  = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),  holeIdx, popFlags);
 
   const canPressF9 = holeIdx < 9  && front !== 'EVEN';
   const canPressB9 = holeIdx >= 9 && back  !== 'EVEN';

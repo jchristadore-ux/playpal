@@ -374,6 +374,7 @@ const App = () => {
   const [finalPutts,   setFinalPutts]   = React.useState(null);
   const [finalPresses, setFinalPresses] = React.useState([]);
   const [finalChips,   setFinalChips]   = React.useState({});
+  const [finalPopFlags,setFinalPopFlags]= React.useState(null);
   const [tweaks,       setTweaks]       = React.useState(TWEAK_DEFAULTS);
   const [tweaksOpen,   setTweaksOpen]   = React.useState(false);
 
@@ -447,9 +448,20 @@ const App = () => {
     });
   };
 
-  const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}) => {
+  const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}, popFlags={}) => {
     setFinalScores(scores); setFinalWolf(wolfData); setFinalPutts(putts);
-    setFinalPresses(presses); setFinalChips(chips);
+    setFinalPresses(presses); setFinalChips(chips); setFinalPopFlags(popFlags);
+    const holeScores = {};
+    round.players.forEach(function(player) {
+      holeScores[player.id] = round.course.holes.map(function(_, i) {
+        return {
+          strokes: scores[player.id]?.[i] || null,
+          putts: (putts[player.id]?.[i]) || 0,
+          gettingPop: !!(popFlags[player.id]?.[i]),
+        };
+      });
+    });
+    RoundSyncService.saveRound({ ...round, holeScores }, function() {});
     const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
     recent.unshift({
       courseName: round.course.name,
@@ -522,6 +534,7 @@ const App = () => {
             putts={finalPutts}
             nassauPresses={finalPresses}
             manualChips={finalChips}
+            popFlags={finalPopFlags || {}}
             onNewRound={handleNewRound} />
         }
       </div>
