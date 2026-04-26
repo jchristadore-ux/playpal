@@ -9,10 +9,9 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<!-- Firebase SDKs — auth-compat intentionally removed; rules set to open -->
+<!-- Firebase: RTDB only. No auth. No Firestore. Single project: playpal-sync. -->
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
 
 <script src="components/gameData.js?v=2"></script>
 <script src="components/gameUtils.js?v=2"></script>
@@ -81,43 +80,40 @@
 
 <script>
 /* ============================================================
-   FIREBASE CONFIG
+   FIREBASE CONFIG — playpal-sync (correct project)
+   All data: https://playpal-sync-default-rtdb.firebaseio.com
+     /players/{id}      — player profiles
+     /courses/{id}      — custom courses
+     /rounds/{syncCode} — round data (was wrongly using Firestore)
+   Rules: { ".read": true, ".write": true }
+   No auth. No Firestore. Nothing from playpal-scorecard.
    ============================================================ */
 var PLAYPAL_FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyBay-gT70Q-_APEBJUgY9CzO_4t42omXco",
-  authDomain:        "playpal-scorecard.firebaseapp.com",
+  apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
+  authDomain:        "playpal-sync.firebaseapp.com",
   databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
-  projectId:         "playpal-scorecard",
-  storageBucket:     "playpal-scorecard.firebasestorage.app",
-  messagingSenderId: "1993034314",
-  appId:             "1:1993034314:web:18624ba9da9e766ca274b3"
+  projectId:         "playpal-sync",
+  storageBucket:     "playpal-sync.firebasestorage.app",
+  messagingSenderId: "97913885953",
+  appId:             "1:97913885953:web:0e42ee9dbca2c346c0f700"
 };
 
 /* ============================================================
-   FIREBASE INIT — NO AUTH REQUIRED
-   Both RTDB and Firestore rules are set to allow read/write: true.
-   Anonymous auth was the root cause of cross-device failure on iPhone
-   Safari (ITP blocks the auth iframe). This init is synchronous after
-   the first call and has no queue-flush-once bug.
+   FIREBASE INIT — synchronous after first call, no auth
    ============================================================ */
-var _fbApp  = null;
-var _fbDb   = null;   // Realtime Database — players, custom courses
-var _fbFs   = null;   // Firestore — round sync by syncCode
+var _fbApp   = null;
+var _fbDb    = null;
 var _fbReady = false;
 
 function _fbInit(cb) {
-  // Already initialized — call back immediately on the next tick so callers
-  // that call _fbInit before any async work still behave consistently.
   if (_fbReady) { setTimeout(function() { cb(true); }, 0); return; }
-
   try {
     _fbApp = !window.firebase.apps.length
       ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
       : window.firebase.apps[0];
-    _fbDb  = window.firebase.database();
-    _fbFs  = window.firebase.firestore();
+    _fbDb    = window.firebase.database();
     _fbReady = true;
-    console.log('[PlayPal] Firebase initialized (no-auth mode)');
+    console.log('[PlayPal] Firebase ready — playpal-sync RTDB');
     setTimeout(function() { cb(true); }, 0);
   } catch(e) {
     console.warn('[PlayPal] Firebase init failed:', e.message);
@@ -126,9 +122,10 @@ function _fbInit(cb) {
 }
 
 /* ============================================================
-   PLAYER SYNC SERVICE (Realtime Database → /players)
+   PLAYER SYNC SERVICE  →  RTDB /players/{id}
    ============================================================ */
 var PlayerSyncService = (function() {
+
   function save(players, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -147,14 +144,12 @@ var PlayerSyncService = (function() {
         .then(function(snap) {
           var val = snap.val();
           if (!val) { cb(null); return; }
-          var arr = Object.values(val);
-          cb(arr);
+          cb(Object.values(val));
         })
         .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
     });
   }
 
-  // Subscribe to live changes from other devices
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
@@ -173,9 +168,10 @@ var PlayerSyncService = (function() {
 })();
 
 /* ============================================================
-   CUSTOM COURSE SYNC SERVICE (Realtime Database → /courses)
+   COURSE SYNC SERVICE  →  RTDB /courses/{id}
    ============================================================ */
 var CourseSyncService = (function() {
+
   function save(courses, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -203,15 +199,16 @@ var CourseSyncService = (function() {
 })();
 
 /* ============================================================
-   ROUND SYNC SERVICE (Firestore — keyed by syncCode)
+   ROUND SYNC SERVICE  →  RTDB /rounds/{syncCode}
+   Previously used Firestore on the wrong project (playpal-scorecard).
+   Now correctly uses RTDB on playpal-sync, same as players/courses.
    ============================================================ */
 var RoundSyncService = (function() {
-  var COLLECTION = 'playpal_rounds';
 
   function saveRound(roundObj, cb) {
     _fbInit(function(ok) {
       if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
-      _fbFs.collection(COLLECTION).doc(roundObj.syncCode).set({
+      _fbDb.ref('rounds/' + roundObj.syncCode).set({
         syncCode: roundObj.syncCode,
         round:    roundObj,
         savedAt:  Date.now()
@@ -224,10 +221,11 @@ var RoundSyncService = (function() {
   function fetchRound(syncCode, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null, 'Firebase unavailable'); return; }
-      _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
+      _fbDb.ref('rounds/' + syncCode.trim().toUpperCase()).once('value')
         .then(function(snap) {
-          if (!snap.exists) { cb(null, 'Round not found'); }
-          else { var d = snap.data(); cb(d.round || null, null); }
+          if (!snap.exists()) { cb(null, 'Round not found'); return; }
+          var d = snap.val();
+          cb(d.round || null, null);
         })
         .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
     });
@@ -269,7 +267,7 @@ window.RoundSyncService   = RoundSyncService;
 
   setStatus('Connecting to Firebase…');
 
-  // Check localStorage first (same-device fast path)
+  // Same-device fast path
   try {
     var local = localStorage.getItem('pp_round');
     if (local) {
@@ -403,12 +401,12 @@ const App = () => {
   React.useEffect(() => {
     PlayerSyncService.load(function(remotePlayers) {
       if (remotePlayers && remotePlayers.length > 0) {
-        // Merge: remote is source of truth, but keep any local-only additions
+        // Remote is source of truth
         setPlayers(remotePlayers);
         localStorage.setItem('pp_players', JSON.stringify(remotePlayers));
       }
     });
-    // Live subscription — another device saves players → this device updates
+    // Live subscription — another device saves players → this device updates instantly
     PlayerSyncService.subscribe(function(remoteP) {
       setPlayers(remoteP);
       localStorage.setItem('pp_players', JSON.stringify(remoteP));
@@ -442,7 +440,7 @@ const App = () => {
     });
   };
 
-  // ── Round start — save round to Firestore for QR/code joining ────────────
+  // ── Round start — save to RTDB /rounds/{syncCode} ────────────────────────
   const handleStartRound = (config) => {
     const r = { ...config, id: Date.now() };
     setRound(r);
@@ -450,8 +448,8 @@ const App = () => {
     sessionStorage.setItem('pp_screen', 'score');
     setScreen('score');
     RoundSyncService.saveRound(r, function(ok) {
-      if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
-      else    console.warn('[PlayPal] Cloud round save failed — works locally');
+      if (ok) console.log('[PlayPal] Round saved to RTDB:', r.syncCode);
+      else    console.warn('[PlayPal] Round save failed — works locally only');
     });
   };
 
