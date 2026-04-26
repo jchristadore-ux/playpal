@@ -1,6 +1,6 @@
 // Home.jsx — Dashboard / Landing Screen
 
-const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound }) => {
+const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, onViewRound }) => {
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
   const [localPlayers,setLocalPlayers]  = React.useState(players);
@@ -13,7 +13,6 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
   });
 
-  // Auto-open join modal when URL has ?join=CODE
   const [showJoin, setShowJoin] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.has('join') || params.has('code');
@@ -25,8 +24,6 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     return raw.trim().toUpperCase();
   });
 
-  // If the deep-link was handled before React mounted (fast Firebase response),
-  // the overlay already called onJoinRound. Close any open modal.
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('join') && !params.has('code')) {
@@ -52,39 +49,26 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const handleJoin = () => {
     const code = joinCode.trim().toUpperCase();
     if (!code || code.length < 4) { setJoinError('Enter a valid round code'); return; }
-
-    // 1) Check localStorage first (same-device, instant)
     const roundRaw = localStorage.getItem('pp_round');
     if (roundRaw) {
       try {
         const round = JSON.parse(roundRaw);
         if (round.syncCode === code) {
-          onJoinRound(round);
-          setShowJoin(false);
-          _clearJoinParam();
-          return;
+          onJoinRound(round); setShowJoin(false); _clearJoinParam(); return;
         }
-      } catch(e) { /* corrupt data — fall through */ }
+      } catch(e) {}
     }
-
-    // 2) Try Firebase (cross-device)
     if (window.RoundSyncService) {
-      setJoining(true);
-      setJoinError('');
+      setJoining(true); setJoinError('');
       window.RoundSyncService.fetchRound(code, function(round, err) {
         setJoining(false);
         if (round) {
-          // Cache locally so same device can resume
           localStorage.setItem('pp_round', JSON.stringify(round));
-          onJoinRound(round);
-          setShowJoin(false);
-          _clearJoinParam();
+          onJoinRound(round); setShowJoin(false); _clearJoinParam();
         } else {
-          setJoinError(
-            err === 'Round not found'
-              ? `Round "${code}" not found. Make sure the host has started the round.`
-              : `Could not reach the server. Check your connection and try again.`
-          );
+          setJoinError(err === 'Round not found'
+            ? `Round "${code}" not found. Make sure the host has started the round.`
+            : `Could not reach the server. Check your connection and try again.`);
         }
       });
     } else {
@@ -95,10 +79,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   function _clearJoinParam() {
     try {
       const url = new URL(window.location.href);
-      url.searchParams.delete('join');
-      url.searchParams.delete('code');
+      url.searchParams.delete('join'); url.searchParams.delete('code');
       window.history.replaceState({}, '', url.toString());
-    } catch(e) { /* ignore */ }
+    } catch(e) {}
   }
 
   const colors = ['#3DCB6C','#E5534B','#C9A84C','#7B9FE0','#E07BE0','#E0A87B','#7BE0D4'];
@@ -126,9 +109,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   };
 
   const handleSaveCourse = (newCourse, allCourses) => {
-    setCustomCourses(allCourses);
-    setAddCourseOpen(false);
-    setShowCourses(true);
+    setCustomCourses(allCourses); setAddCourseOpen(false); setShowCourses(true);
   };
 
   const CourseBuilderComponent = window.CourseBuilder;
@@ -163,18 +144,23 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         <div style={homeS.section}>
           <Label>Recent Rounds</Label>
           <div style={homeS.roundList}>
-            {recentRounds.map((r,i) => (
-              <div key={i} style={homeS.roundCard}>
-                <div>
-                  <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{r.courseName}</div>
-                  <div style={{fontSize:12, color:'#7A98BC', marginTop:2}}>{r.date} · {r.players} players</div>
+            {recentRounds.map((r, i) => {
+              const tappable = !!(r.syncCode && onViewRound);
+              return (
+                <div key={i}
+                  onClick={() => tappable && onViewRound(r.syncCode)}
+                  style={{...homeS.roundCard, cursor: tappable ? 'pointer' : 'default'}}>
+                  <div>
+                    <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{r.courseName}</div>
+                    <div style={{fontSize:12, color:'#7A98BC', marginTop:2}}>{r.date} · {r.players} players</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontFamily:'Barlow Condensed', fontSize:14, color:'#C9A84C'}}>{r.formats}</div>
+                    {tappable && <div style={{fontSize:11, color:'#3DCB6C', marginTop:2}}>VIEW →</div>}
+                  </div>
                 </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontFamily:'Barlow Condensed', fontSize:14, color:'#C9A84C'}}>{r.formats}</div>
-                  <div style={{fontSize:11, color:'#3DCB6C', marginTop:2}}>VIEW →</div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -212,10 +198,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
               value={joinCode}
               onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
               onKeyDown={e => e.key === 'Enter' && !joining && handleJoin()}
-              maxLength={8}
-              placeholder="e.g. AB3X9K"
-              autoFocus
-              disabled={joining}
+              maxLength={8} placeholder="e.g. AB3X9K" autoFocus disabled={joining}
               style={{width:'100%', background:'#162950', border:`1px solid ${joinError?'#E5534B':'#1E3A6E'}`, borderRadius:8,
                 padding:'14px 16px', color:'#fff', fontFamily:'Barlow Condensed', fontWeight:800,
                 fontSize:28, letterSpacing:6, outline:'none', boxSizing:'border-box', textAlign:'center', textTransform:'uppercase',
@@ -264,9 +247,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.5}}>
             Add and manage custom courses before you start a round.
           </div>
-          <Btn onClick={()=>setAddCourseOpen(true)} variant="gold" style={{width:'100%'}}>
-            + ADD COURSE
-          </Btn>
+          <Btn onClick={()=>setAddCourseOpen(true)} variant="gold" style={{width:'100%'}}>+ ADD COURSE</Btn>
           <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:360, overflowY:'auto'}}>
             {customCourses.length === 0 && (
               <div style={{background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:10, padding:'14px 12px', color:'#7A98BC', fontSize:13}}>
@@ -287,11 +268,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       {/* Add Course Modal */}
       <Modal open={addCourseOpen} onClose={()=>setAddCourseOpen(false)} title="Add Course">
         {CourseBuilderComponent ? (
-          <CourseBuilderComponent
-            onSave={handleSaveCourse}
-            onCancel={()=>setAddCourseOpen(false)}
-            prefill={null}
-          />
+          <CourseBuilderComponent onSave={handleSaveCourse} onCancel={()=>setAddCourseOpen(false)} prefill={null}/>
         ) : (
           <div style={{fontFamily:'DM Sans', fontSize:13, color:'#E5534B'}}>Course builder unavailable. Reload and try again.</div>
         )}
@@ -310,7 +287,7 @@ const homeS = {
   tagline:    { fontFamily:'DM Sans', fontSize:16, color:'#7A98BC', textAlign:'center' },
   section:    { padding:'24px 20px', borderBottom:'1px solid #1E3A6E' },
   roundList:  { display:'flex', flexDirection:'column', gap:10, marginTop:12 },
-  roundCard:  { display:'flex', justifyContent:'space-between', alignItems:'center', background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'14px 16px', cursor:'pointer' },
+  roundCard:  { display:'flex', justifyContent:'space-between', alignItems:'center', background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'14px 16px' },
   playerGrid: { display:'flex', flexDirection:'column', gap:10 },
   playerCard: { display:'flex', alignItems:'center', gap:14, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'14px 16px', cursor:'pointer' },
 };
