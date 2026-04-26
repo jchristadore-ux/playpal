@@ -1,1116 +1,565 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="PlayPal" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#0f2318" />
-  <title>PlayPal Golf</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>PlayPal — Golf Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-  <!-- Firebase v9 compat (CDN — no build step needed) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-
-  <style>
-    :root {
-      --forest:      #0f2318;
-      --fairway:     #1e4030;
-      --rough:       #2d6a4f;
-      --sprout:      #52b788;
-      --mint:        #d8f3dc;
-      --parchment:   #faf7f0;
-      --card-bg:     #ffffff;
-      --gold:        #c9963a;
-      --red:         #c0392b;
-      --birdie-bg:   #d4edda;
-      --birdie-txt:  #1a5c2e;
-      --eagle-bg:    #fff3cd;
-      --eagle-txt:   #856404;
-      --bogey-bg:    #fde8d8;
-      --bogey-txt:   #8b3a0f;
-      --double-bg:   #fdecea;
-      --double-txt:  #7b1515;
-      --ink:         #1a1a1a;
-      --ink-soft:    #4a4a4a;
-      --ink-muted:   #888888;
-      --border:      #e0dbd0;
-      --border-dark: #c8c0b0;
-      --shadow-xs:   0 1px 2px rgba(0,0,0,0.06);
-      --shadow-sm:   0 2px 8px rgba(0,0,0,0.09);
-      --shadow-md:   0 6px 24px rgba(0,0,0,0.12);
-      --r:           14px;
-      --r-sm:        10px;
-      --r-xs:        6px;
-      --safe-t:      env(safe-area-inset-top, 0px);
-      --safe-b:      env(safe-area-inset-bottom, 0px);
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { height: 100%; background: var(--forest); -webkit-text-size-adjust: 100%; }
-    body {
-      min-height: 100dvh;
-      font-family: 'DM Sans', system-ui, sans-serif;
-      background: var(--forest); color: var(--ink);
-      overflow-x: hidden;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      overscroll-behavior: none;
-    }
-
-    /* Loading */
-    #loading {
-      position: fixed; inset: 0; z-index: 9999;
-      background: var(--forest);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 20px;
-      transition: opacity 0.5s ease;
-    }
-    #loading.fade { opacity: 0; pointer-events: none; }
-    .load-logo { font-family: 'DM Serif Display', serif; font-size: 3rem; color: var(--sprout); letter-spacing: -0.02em; }
-    .load-logo em { color: var(--gold); font-style: normal; }
-    .load-sub { color: rgba(255,255,255,0.45); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; }
-    .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.12); border-top-color: var(--sprout); border-radius: 50%; animation: spin 0.75s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* App shell */
-    #app { display: flex; flex-direction: column; min-height: 100dvh; padding-top: var(--safe-t); }
-
-    /* Header */
-    #header {
-      background: var(--forest); padding: 14px 20px 12px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      position: sticky; top: 0; z-index: 200;
-    }
-    .header-brand { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--sprout); }
-    .header-brand em { color: var(--gold); font-style: normal; }
-    #conn-dot {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 0.68rem; color: rgba(255,255,255,0.4);
-      letter-spacing: 0.06em; text-transform: uppercase;
-    }
-    #conn-dot::before {
-      content: ''; width: 7px; height: 7px; border-radius: 50%;
-      background: var(--sprout);
-      animation: pulse-dot 2.5s infinite;
-    }
-    #conn-dot.offline::before { background: #e74c3c; animation: none; }
-    #conn-dot.syncing::before { background: var(--gold); animation: spin 1s linear infinite; border-radius: 0; }
-    @keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(82,183,136,0.5); } 50% { box-shadow: 0 0 0 5px rgba(82,183,136,0); } }
-
-    /* Tab bar */
-    #tabs {
-      background: var(--forest); display: flex;
-      border-bottom: 1px solid rgba(255,255,255,0.08); padding: 0 4px;
-    }
-    .tab {
-      flex: 1; padding: 10px 4px 9px; border: none; background: none; cursor: pointer;
-      font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 500;
-      color: rgba(255,255,255,0.38); letter-spacing: 0.07em; text-transform: uppercase;
-      border-bottom: 2px solid transparent; transition: color 0.18s, border-color 0.18s;
-      position: relative; bottom: -1px;
-    }
-    .tab.active { color: var(--sprout); border-bottom-color: var(--sprout); }
-    .tab .tab-icon { display: block; font-size: 1.1rem; margin-bottom: 2px; }
-
-    /* Main content */
-    #main { flex: 1; background: var(--parchment); overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    .panel { display: none; padding: 16px; padding-bottom: calc(16px + var(--safe-b)); animation: fadeIn 0.2s ease; }
-    .panel.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
-
-    /* Section header */
-    .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .sec-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--forest); }
-
-    /* Cards */
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow-sm); }
-
-    /* Form fields */
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin-bottom: 6px; }
-    input[type=text], input[type=number], select {
-      width: 100%; padding: 12px 14px;
-      border: 1.5px solid var(--border-dark); border-radius: var(--r-sm);
-      font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--ink);
-      background: var(--card-bg); outline: none; -webkit-appearance: none;
-      transition: border-color 0.18s, box-shadow 0.18s;
-    }
-    input:focus, select:focus { border-color: var(--rough); box-shadow: 0 0 0 3px rgba(45,106,79,0.12); }
-    input[type=number] { text-align: center; }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 11px 20px; border: none; border-radius: var(--r-sm);
-      font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600;
-      cursor: pointer; -webkit-user-select: none; user-select: none;
-      transition: transform 0.1s, opacity 0.15s; white-space: nowrap;
-    }
-    .btn:active { transform: scale(0.96); }
-    .btn:disabled { opacity: 0.45; pointer-events: none; }
-    .btn-green  { background: var(--rough); color: #fff; }
-    .btn-gold   { background: var(--gold); color: #fff; }
-    .btn-ghost  { background: transparent; color: var(--rough); border: 1.5px solid var(--rough); }
-    .btn-danger { background: var(--red); color: #fff; }
-    .btn-sm     { padding: 7px 14px; font-size: 0.8rem; }
-    .btn-full   { width: 100%; }
-    .btn-row    { display: flex; gap: 10px; margin-top: 12px; }
-
-    /* Player item */
-    .player-item { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
-    .pi-left { display: flex; align-items: center; gap: 12px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--fairway); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 1.1rem; flex-shrink: 0; }
-    .pi-name { font-weight: 600; font-size: 0.95rem; color: var(--ink); }
-    .pi-sub  { font-size: 0.75rem; color: var(--ink-muted); margin-top: 1px; }
-    .pi-actions { display: flex; gap: 6px; }
-
-    /* Course item */
-    .course-item { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
-
-    /* Par grid */
-    .par-grid { display: grid; gap: 6px; margin-top: 10px; }
-    .par-cell { text-align: center; }
-    .par-cell-lbl { font-size: 0.6rem; color: var(--ink-muted); text-transform: uppercase; margin-bottom: 3px; }
-    .par-cell input { padding: 7px 2px; font-size: 0.9rem; border-radius: var(--r-xs); }
-
-    /* Empty state */
-    .empty { text-align: center; padding: 48px 20px; color: var(--ink-muted); }
-    .empty-icon { font-size: 2.8rem; display: block; margin-bottom: 10px; opacity: 0.6; }
-    .empty-title { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--ink-soft); }
-    .empty-sub { font-size: 0.85rem; margin-top: 6px; }
-
-    /* Modal */
-    .overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(15,35,24,0.7); align-items: flex-end; justify-content: center; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-    .overlay.open { display: flex; }
-    .modal { background: var(--card-bg); border-radius: var(--r) var(--r) 0 0; padding: 24px 20px calc(20px + var(--safe-b)); width: 100%; max-width: 540px; max-height: 88dvh; overflow-y: auto; animation: slideUp 0.22s cubic-bezier(0.32,0.72,0,1); }
-    @keyframes slideUp { from { transform: translateY(100%); } }
-    .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--forest); margin-bottom: 18px; }
-    .modal-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border-dark); margin: 0 auto 18px; }
-
-    /* Home CTA */
-    .home-cta { background: var(--forest); border-radius: var(--r); padding: 28px 20px; text-align: center; margin-bottom: 12px; position: relative; overflow: hidden; }
-    .home-cta::before { content: '⛳'; position: absolute; font-size: 9rem; opacity: 0.06; right: -20px; bottom: -20px; }
-    .home-cta-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: #fff; margin-bottom: 6px; }
-    .home-cta-sub { color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 20px; }
-
-    /* Active round header */
-    .round-header { background: var(--forest); border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
-    .rh-course { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #fff; }
-    .rh-sub { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top: 3px; }
-    .rh-code { font-family: 'DM Sans', monospace; font-size: 1rem; font-weight: 700; color: var(--gold); letter-spacing: 0.15em; background: rgba(255,255,255,0.08); padding: 6px 12px; border-radius: var(--r-xs); }
-    .rh-code-label { font-size: 0.6rem; color: rgba(255,255,255,0.35); text-align: right; margin-bottom: 3px; letter-spacing: 0.08em; text-transform: uppercase; }
-
-    /* Hole nav */
-    .hole-nav { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 16px; margin-bottom: 10px; box-shadow: var(--shadow-xs); }
-    .hn-arrow { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--rough); background: transparent; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--rough); cursor: pointer; transition: background 0.15s; font-family: inherit; }
-    .hn-arrow:active { background: var(--mint); }
-    .hn-arrow:disabled { opacity: 0.25; pointer-events: none; }
-    .hn-center { text-align: center; }
-    .hn-hole { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: var(--forest); line-height: 1; }
-    .hn-par { font-size: 0.75rem; color: var(--ink-muted); margin-top: 2px; }
-
-    /* Score steppers */
-    .score-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-    .score-row { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; box-shadow: var(--shadow-xs); gap: 12px; }
-    .sr-name { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--ink); }
-    .sr-badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
-    .badge-eagle  { background: var(--eagle-bg);  color: var(--eagle-txt); }
-    .badge-birdie { background: var(--birdie-bg); color: var(--birdie-txt); }
-    .badge-par    { background: var(--mint);      color: var(--rough); }
-    .badge-bogey  { background: var(--bogey-bg);  color: var(--bogey-txt); }
-    .badge-double { background: var(--double-bg); color: var(--double-txt); }
-    .badge-empty  { background: var(--border);    color: var(--ink-muted); }
-    .stepper { display: flex; align-items: center; gap: 10px; }
-    .step-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--rough); background: #fff; color: var(--rough); font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.13s; font-family: inherit; }
-    .step-btn:active { background: var(--mint); }
-    .step-val { font-family: 'DM Serif Display', serif; font-size: 1.6rem; min-width: 32px; text-align: center; color: var(--ink); line-height: 1; }
-
-    /* Leaderboard */
-    .lb-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
-    .lb-head { background: var(--forest); color: rgba(255,255,255,0.5); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; display: grid; grid-template-columns: 36px 1fr 50px 50px; padding: 8px 14px; font-weight: 600; }
-    .lb-row { display: grid; grid-template-columns: 36px 1fr 50px 50px; padding: 11px 14px; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    .lb-row:last-child { border-bottom: none; }
-    .lb-rank { font-weight: 700; color: var(--gold); font-size: 0.95rem; }
-    .lb-name { font-weight: 600; color: var(--ink); }
-    .lb-gross { text-align: center; color: var(--ink-soft); font-size: 0.85rem; }
-    .lb-diff { text-align: right; font-family: 'DM Serif Display', serif; font-size: 1rem; font-weight: 700; }
-    .lb-diff.under { color: var(--rough); }
-    .lb-diff.over  { color: var(--red); }
-    .lb-diff.even  { color: var(--ink-soft); }
-
-    /* Scorecard grid */
-    .sc-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
-    .sc-grid { border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--border); min-width: 300px; box-shadow: var(--shadow-sm); }
-    .sc-head-row { background: var(--forest); color: rgba(255,255,255,0.7); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-    .sc-data-row { background: var(--card-bg); border-top: 1px solid var(--border); }
-    .sc-data-row:nth-child(even) { background: var(--parchment); }
-    .sc-nine-row { background: var(--mint); border-top: 1px solid var(--rough); font-weight: 700; font-size: 0.72rem; color: var(--forest); }
-    .sc-total-row { background: var(--fairway); border-top: 2px solid var(--forest); color: #fff; font-weight: 700; }
-    .sc-cell { padding: 7px 5px; text-align: center; border-right: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem; }
-    .sc-cell:last-child { border-right: none; }
-    .s-eagle  { background: var(--eagle-bg)  !important; color: var(--eagle-txt)  !important; font-weight: 700; }
-    .s-birdie { background: var(--birdie-bg) !important; color: var(--birdie-txt) !important; }
-    .s-bogey  { background: var(--bogey-bg)  !important; color: var(--bogey-txt)  !important; }
-    .s-double { background: var(--double-bg) !important; color: var(--double-txt) !important; font-weight: 700; }
-
-    /* Player chips (round setup) */
-    .player-chips { display: flex; flex-direction: column; gap: 8px; }
-    .player-chip { display: flex; align-items: center; gap: 12px; background: var(--card-bg); border: 2px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-    .player-chip.selected { border-color: var(--rough); background: var(--mint); }
-    .chip-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.8rem; transition: all 0.15s; }
-    .player-chip.selected .chip-check { background: var(--rough); border-color: var(--rough); color: #fff; }
-
-    /* Toast */
-    #toast { position: fixed; bottom: calc(24px + var(--safe-b)); left: 50%; transform: translateX(-50%) translateY(8px); background: var(--forest); color: #fff; padding: 11px 24px; border-radius: 30px; font-size: 0.85rem; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 9000; white-space: nowrap; box-shadow: var(--shadow-md); }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    .divider { height: 1px; background: var(--border); margin: 16px 0; }
-
-    /* Round history */
-    .round-hist { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 13px 15px; margin-bottom: 8px; box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; }
-    .rh-icon { width: 38px; height: 38px; border-radius: var(--r-xs); background: var(--mint); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-    .rh-body { flex: 1; }
-    .rh-cname { font-weight: 600; font-size: 0.9rem; color: var(--ink); }
-    .rh-meta  { font-size: 0.72rem; color: var(--ink-muted); margin-top: 2px; }
-    .status-badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }
-    .status-active   { background: var(--mint); color: var(--rough); }
-    .status-complete { background: var(--border); color: var(--ink-muted); }
-
-    @media (min-width: 540px) {
-      #header, #tabs { max-width: 540px; margin-left: auto; margin-right: auto; }
-      #main { max-width: 540px; margin: 0 auto; }
-    }
-  </style>
+<script src="components/gameData.js?v=2"></script>
+<script src="components/gameUtils.js?v=2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  #root { height: 100%; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1E3A6E; border-radius: 4px; }
+  input::placeholder { color: #4A6890; }
+  button { font-family: 'DM Sans', sans-serif; }
+  * { -webkit-tap-highlight-color: transparent; }
+  .pp-join-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(10,22,40,0.97);
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  .pp-join-code {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 48px; letter-spacing: 8px; color: #C9A84C;
+  }
+  .pp-join-spinner {
+    width: 36px; height: 36px;
+    border: 3px solid #1E3A6E; border-top-color: #3DCB6C;
+    border-radius: 50%; animation: ppSpin 0.8s linear infinite;
+  }
+  .pp-join-status { font-family: 'DM Sans', sans-serif; font-size: 15px; color: #7A98BC; }
+  .pp-join-error {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: #E5534B;
+    text-align: center; max-width: 300px; white-space: pre-line;
+  }
+  .pp-join-dismiss {
+    margin-top: 8px; padding: 10px 28px;
+    background: #1E3A6E; color: #fff; border: none; border-radius: 8px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 15px; letter-spacing: 1px; cursor: pointer;
+  }
+  @keyframes ppSpin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="load-logo">Play<em>Pal</em></div>
-  <div class="load-sub">Golf Scorecard</div>
-  <div class="spinner"></div>
+<div class="pp-join-overlay" id="pp-join-overlay" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;letter-spacing:3px;color:#7A98BC;">JOINING ROUND</div>
+  <div class="pp-join-code" id="pp-join-code-display"></div>
+  <div class="pp-join-spinner" id="pp-join-spinner"></div>
+  <div class="pp-join-status" id="pp-join-status">Connecting…</div>
+  <div class="pp-join-error" id="pp-join-error" style="display:none;"></div>
+  <button class="pp-join-dismiss" id="pp-join-dismiss" style="display:none;" onclick="dismissJoinOverlay()">GO TO HOME</button>
 </div>
 
-<div id="toast"></div>
+<div id="root"></div>
 
-<!-- Modal: Add/Edit Player -->
-<div class="overlay" id="m-player">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="m-player-title">Add Player</div>
-    <div class="field">
-      <label>Full Name</label>
-      <input type="text" id="f-pname" placeholder="e.g. Tiger Woods" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label>Handicap Index</label>
-      <input type="number" id="f-phcp" placeholder="0" min="0" max="54" step="0.1" />
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('m-player')">Cancel</button>
-      <button class="btn btn-green btn-full" onclick="savePlayer()">Save Player</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Add/Edit Course -->
-<div class="overlay" id="m-course">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="m-course-title">Add Course</div>
-    <div class="field">
-      <label>Course Name</label>
-      <input type="text" id="f-cname" placeholder="e.g. Augusta National" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label>Number of Holes</label>
-      <select id="f-choles" onchange="buildParGrid(parseInt(this.value),[])">
-        <option value="9">9 Holes</option>
-        <option value="18" selected>18 Holes</option>
-      </select>
-    </div>
-    <div id="par-grid-wrap"></div>
-    <div class="btn-row">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('m-course')">Cancel</button>
-      <button class="btn btn-green btn-full" onclick="saveCourse()">Save Course</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Join Round -->
-<div class="overlay" id="m-join">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Join a Round</div>
-    <div class="field">
-      <label>6-Letter Sync Code</label>
-      <input type="text" id="f-joincode" placeholder="e.g. A1B2C3"
-        maxlength="6" autocomplete="off" autocapitalize="characters"
-        style="font-size:2rem;letter-spacing:0.25em;text-align:center;text-transform:uppercase;padding:14px;" />
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('m-join')">Cancel</button>
-      <button class="btn btn-gold btn-full" onclick="joinRound()">Join Round</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: New Round Setup -->
-<div class="overlay" id="m-newround">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">New Round</div>
-    <div class="field">
-      <label>Course</label>
-      <select id="f-rcourse"><option value="">— choose a course —</option></select>
-    </div>
-    <div class="field">
-      <label>Players (tap to select)</label>
-      <div class="player-chips" id="setup-players"></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('m-newround')">Cancel</button>
-      <button class="btn btn-green btn-full" onclick="startRound()">Start Round ⛳</button>
-    </div>
-  </div>
-</div>
-
-<!-- App -->
-<div id="app">
-  <div id="header">
-    <div class="header-brand">Play<em>Pal</em></div>
-    <div id="conn-dot">live</div>
-  </div>
-  <div id="tabs">
-    <button class="tab active" onclick="switchTab('scorecard')" id="tab-scorecard"><span class="tab-icon">⛳</span>Scorecard</button>
-    <button class="tab" onclick="switchTab('players')"   id="tab-players"><span class="tab-icon">👤</span>Players</button>
-    <button class="tab" onclick="switchTab('courses')"   id="tab-courses"><span class="tab-icon">🏌️</span>Courses</button>
-    <button class="tab" onclick="switchTab('rounds')"    id="tab-rounds"><span class="tab-icon">📋</span>History</button>
-  </div>
-  <div id="main">
-
-    <!-- SCORECARD -->
-    <div class="panel active" id="panel-scorecard">
-      <div id="sc-idle">
-        <div class="home-cta">
-          <div class="home-cta-title">Ready to play?</div>
-          <div class="home-cta-sub">Start a new round or join one in progress</div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <button class="btn btn-gold btn-full" onclick="openNewRound()">+ New Round</button>
-            <button class="btn btn-ghost btn-full" style="color:#fff;border-color:rgba(255,255,255,0.3);" onclick="openModal('m-join')">Join Round</button>
-          </div>
-        </div>
-      </div>
-      <div id="sc-active" style="display:none;">
-        <div class="round-header">
-          <div>
-            <div class="rh-course" id="active-course-name">—</div>
-            <div class="rh-sub" id="active-player-count">—</div>
-          </div>
-          <div>
-            <div class="rh-code-label">Code</div>
-            <div class="rh-code" id="active-code">—</div>
-          </div>
-        </div>
-        <div class="hole-nav">
-          <button class="hn-arrow" id="btn-prev" onclick="changeHole(-1)">‹</button>
-          <div class="hn-center">
-            <div class="hn-hole" id="hn-label">Hole 1</div>
-            <div class="hn-par"  id="hn-par">Par —</div>
-          </div>
-          <button class="hn-arrow" id="btn-next" onclick="changeHole(1)">›</button>
-        </div>
-        <div class="score-rows" id="score-rows"></div>
-        <div class="divider"></div>
-        <div class="sec-head">
-          <div class="sec-title">Leaderboard</div>
-          <button class="btn btn-danger btn-sm" onclick="endRound()">End Round</button>
-        </div>
-        <div id="leaderboard"></div>
-        <div class="divider"></div>
-        <div class="sec-head"><div class="sec-title">Full Scorecard</div></div>
-        <div class="sc-wrap"><div id="sc-grid"></div></div>
-      </div>
-    </div>
-
-    <!-- PLAYERS -->
-    <div class="panel" id="panel-players">
-      <div class="sec-head">
-        <div class="sec-title">Players</div>
-        <button class="btn btn-green btn-sm" onclick="openAddPlayer()">+ Add</button>
-      </div>
-      <div id="player-list"><div class="empty"><span class="empty-icon">👤</span><div class="empty-title">No players yet</div><div class="empty-sub">Tap + Add to create a player profile</div></div></div>
-    </div>
-
-    <!-- COURSES -->
-    <div class="panel" id="panel-courses">
-      <div class="sec-head">
-        <div class="sec-title">Courses</div>
-        <button class="btn btn-green btn-sm" onclick="openAddCourse()">+ Add</button>
-      </div>
-      <div id="course-list"><div class="empty"><span class="empty-icon">🏌️</span><div class="empty-title">No courses yet</div><div class="empty-sub">Tap + Add to save a course</div></div></div>
-    </div>
-
-    <!-- HISTORY -->
-    <div class="panel" id="panel-rounds">
-      <div class="sec-head"><div class="sec-title">Round History</div></div>
-      <div id="rounds-list"><div class="empty"><span class="empty-icon">📋</span><div class="empty-title">No rounds yet</div></div></div>
-    </div>
-
-  </div>
-</div>
+<script type="text/babel" src="components/Shared.jsx"></script>
+<script type="text/babel" src="components/Home.jsx"></script>
+<script type="text/babel" src="components/Setup.jsx"></script>
+<script type="text/babel" src="components/PlayerCard.jsx"></script>
+<script type="text/babel" src="components/Trackers.jsx"></script>
+<script type="text/babel" src="components/ScoreEntry.jsx"></script>
+<script type="text/babel" src="components/Summary.jsx"></script>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   FIREBASE CONFIG
-   Replace the 3 REPLACE_WITH_ values.
-   Everything else is confirmed from your Firebase screenshots.
-   Instructions at bottom of this file.
-═══════════════════════════════════════════════════════════════ */
-const FIREBASE_CONFIG = {
+/* ============================================================
+   FIREBASE CONFIG — playpal-sync project
+   RTDB:      players, courses  → https://playpal-sync-default-rtdb.firebaseio.com
+   Firestore: rounds            → playpal_rounds/{syncCode}
+   Auth:      Anonymous
+   ============================================================ */
+var PLAYPAL_FIREBASE_CONFIG = {
   apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
   authDomain:        "playpal-sync.firebaseapp.com",
+  databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
   projectId:         "playpal-sync",
   storageBucket:     "playpal-sync.firebasestorage.app",
   messagingSenderId: "97913885953",
   appId:             "1:97913885953:web:0e42ee9dbca2c346c0f700"
 };
 
-/* ─── STATE ─────────────────────────────────────────────────── */
-let FS = null, AUTH = null, UID = null;
+/* ============================================================
+   FIREBASE INIT
+   Single init, shared by all services.
+   Auth is required — Firestore rules check request.auth != null
+   for playpal_rounds. RTDB rules are open (true/true).
+   _fbInit queues callbacks while auth is resolving so no call
+   is dropped during the async sign-in window.
+   ============================================================ */
+var _fbApp       = null;
+var _fbDb        = null;   // Realtime Database — players, courses
+var _fbFs        = null;   // Firestore — round sync by syncCode
+var _fbAuthReady = false;
+var _fbPending   = [];
 
-const STATE = {
-  players:     {},
-  courses:     {},
-  activeRound: null
+function _fbInit(cb) {
+  if (_fbAuthReady) { cb && cb(true); return; }
+  if (_fbApp) { _fbPending.push(cb); return; }
+  try {
+    _fbApp = !window.firebase.apps.length
+      ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
+      : window.firebase.apps[0];
+    _fbDb = window.firebase.database();
+    _fbFs = window.firebase.firestore();
+    window.firebase.auth().signInAnonymously()
+      .then(function() {
+        _fbAuthReady = true;
+        var q = _fbPending.slice(); _fbPending = [];
+        q.forEach(function(fn) { fn && fn(true); });
+        cb && cb(true);
+      })
+      .catch(function(err) {
+        console.warn('[PlayPal] Firebase auth failed:', err.message);
+        // Auth failed — still allow RTDB (rules are open) but flag failure
+        _fbAuthReady = true; // unblock queue so app doesn't hang
+        var q = _fbPending.slice(); _fbPending = [];
+        q.forEach(function(fn) { fn && fn(false); });
+        cb && cb(false);
+      });
+  } catch(e) {
+    console.warn('[PlayPal] Firebase init failed:', e.message);
+    cb && cb(false);
+  }
+}
+
+/* ============================================================
+   PLAYER SYNC SERVICE  (Realtime Database → /players)
+   ============================================================ */
+var PlayerSyncService = (function() {
+  function save(players, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      var obj = {};
+      players.forEach(function(p) { obj[p.id] = p; });
+      _fbDb.ref('players').set(obj)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
+    });
+  }
+
+  function load(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null); return; }
+      _fbDb.ref('players').once('value')
+        .then(function(snap) {
+          var val = snap.val();
+          if (!val) { cb(null); return; }
+          cb(Object.values(val));
+        })
+        .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
+    });
+  }
+
+  function subscribe(cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      _fbDb.ref('players').on('value', function(snap) {
+        var val = snap.val();
+        if (val) cb(Object.values(val));
+      });
+    });
+  }
+
+  function unsubscribe() {
+    if (_fbDb) _fbDb.ref('players').off('value');
+  }
+
+  return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
+})();
+
+/* ============================================================
+   CUSTOM COURSE SYNC SERVICE  (Realtime Database → /courses)
+   ============================================================ */
+var CourseSyncService = (function() {
+  function save(courses, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      var obj = {};
+      courses.forEach(function(c) { obj[c.id] = c; });
+      _fbDb.ref('courses').set(obj)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
+    });
+  }
+
+  function load(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null); return; }
+      _fbDb.ref('courses').once('value')
+        .then(function(snap) {
+          var val = snap.val();
+          cb(val ? Object.values(val) : []);
+        })
+        .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
+    });
+  }
+
+  return { save: save, load: load };
+})();
+
+/* ============================================================
+   ROUND SYNC SERVICE  (Firestore → playpal_rounds/{syncCode})
+   ============================================================ */
+var RoundSyncService = (function() {
+  var COLLECTION = 'playpal_rounds';
+
+  function saveRound(roundObj, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
+      _fbFs.collection(COLLECTION).doc(roundObj.syncCode).set({
+        syncCode: roundObj.syncCode,
+        round:    roundObj,
+        savedAt:  Date.now()
+      })
+      .then(function() { cb && cb(true); })
+      .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
+    });
+  }
+
+  function fetchRound(syncCode, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null, 'Firebase unavailable'); return; }
+      _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
+        .then(function(snap) {
+          if (!snap.exists) { cb(null, 'Round not found'); }
+          else { var d = snap.data(); cb(d.round || null, null); }
+        })
+        .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
+    });
+  }
+
+  return { saveRound: saveRound, fetchRound: fetchRound };
+})();
+
+window.PlayerSyncService = PlayerSyncService;
+window.CourseSyncService = CourseSyncService;
+window.RoundSyncService  = RoundSyncService;
+
+/* ============================================================
+   DEEP-LINK DETECTION
+   Runs before React mounts. If ?join= or ?code= is in the URL,
+   show the overlay immediately, fetch the round, then hand off
+   to React via window.__pp_deeplink_ready or __pp_deeplink_round.
+   ============================================================ */
+(function() {
+  var params   = new URLSearchParams(window.location.search);
+  var rawCode  = params.get('join') || params.get('code') || '';
+  var joinCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (!joinCode || joinCode.length < 4) return;
+
+  var overlay   = document.getElementById('pp-join-overlay');
+  var codeEl    = document.getElementById('pp-join-code-display');
+  var statusEl  = document.getElementById('pp-join-status');
+  var spinnerEl = document.getElementById('pp-join-spinner');
+  var errorEl   = document.getElementById('pp-join-error');
+  var dismissEl = document.getElementById('pp-join-dismiss');
+
+  overlay.style.display = 'flex';
+  if (codeEl) codeEl.textContent = joinCode;
+
+  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+  function showError(msg) {
+    if (spinnerEl)  spinnerEl.style.display  = 'none';
+    if (errorEl)  { errorEl.style.display   = 'block'; errorEl.textContent = msg; }
+    if (dismissEl)  dismissEl.style.display  = 'block';
+    setStatus('Could not join round');
+  }
+
+  setStatus('Connecting to Firebase…');
+
+  // Fast path — same device
+  try {
+    var local = localStorage.getItem('pp_round');
+    if (local) {
+      var r = JSON.parse(local);
+      if (r.syncCode === joinCode) {
+        setStatus('Round found! Loading…');
+        sessionStorage.setItem('pp_screen', 'score');
+        window.__pp_deeplink_round = r;
+        _clearJoinParam();
+        setTimeout(function() { overlay.style.display = 'none'; }, 300);
+        return;
+      }
+    }
+  } catch(e) { /* fall through */ }
+
+  RoundSyncService.fetchRound(joinCode, function(round, err) {
+    if (!round) {
+      showError(
+        err === 'Round not found'
+          ? 'No active round found for code "' + joinCode + '".\nMake sure the host has started the round.'
+          : 'Connection error: ' + (err || 'Unknown') + '\nCheck your internet and try again.'
+      );
+      return;
+    }
+    setStatus('Round found! Loading…');
+    localStorage.setItem('pp_round', JSON.stringify(round));
+    sessionStorage.setItem('pp_screen', 'score');
+    _clearJoinParam();
+    if (window.__pp_deeplink_ready) {
+      window.__pp_deeplink_ready(round);
+    } else {
+      window.__pp_deeplink_round = round;
+    }
+    setTimeout(function() { overlay.style.display = 'none'; }, 400);
+  });
+
+  function _clearJoinParam() {
+    try {
+      var u = new URL(window.location.href);
+      u.searchParams.delete('join');
+      u.searchParams.delete('code');
+      window.history.replaceState({}, '', u.toString());
+    } catch(e) {}
+  }
+})();
+
+function dismissJoinOverlay() {
+  var overlay = document.getElementById('pp-join-overlay');
+  if (overlay) overlay.style.display = 'none';
+  try {
+    var u = new URL(window.location.href);
+    u.searchParams.delete('join');
+    u.searchParams.delete('code');
+    window.history.replaceState({}, '', u.toString());
+  } catch(e) {}
+}
+</script>
+
+<script type="text/babel">
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentGreen": "#3DCB6C",
+  "accentGold": "#C9A84C",
+  "bgColor": "#0A1628",
+  "cardBg": "#0F2040",
+  "showSyncCode": true
+} /*EDITMODE-END*/;
+
+const App = () => {
+  // ── ROUTING ───────────────────────────────────────────────────────────────
+  // sessionStorage clears when browser/tab closes → fresh open always = 'home'
+  // Mid-round refreshes resume correctly. Deep-link sets 'score' before mount.
+  const [screen, setScreen] = React.useState(() => {
+    if (window.__pp_deeplink_round) return 'score';
+    return sessionStorage.getItem('pp_screen') || 'home';
+  });
+
+  const [players, setPlayers] = React.useState(() => {
+    const saved = localStorage.getItem('pp_players');
+    return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
+  });
+
+  const [round, setRound] = React.useState(() => {
+    if (window.__pp_deeplink_round) {
+      const r = window.__pp_deeplink_round;
+      window.__pp_deeplink_round = null;
+      return r;
+    }
+    const savedScreen = sessionStorage.getItem('pp_screen');
+    if (savedScreen === 'score') {
+      const saved = localStorage.getItem('pp_round');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+
+  const [finalScores,  setFinalScores]  = React.useState(null);
+  const [finalWolf,    setFinalWolf]    = React.useState(null);
+  const [finalPutts,   setFinalPutts]   = React.useState(null);
+  const [finalPresses, setFinalPresses] = React.useState([]);
+  const [finalChips,   setFinalChips]   = React.useState({});
+  const [tweaks,       setTweaks]       = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen,   setTweaksOpen]   = React.useState(false);
+
+  const recentRounds = React.useMemo(() => {
+    const saved = localStorage.getItem('pp_recent');
+    return saved ? JSON.parse(saved) : [
+      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Stableford' },
+      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Wolf · Pass the Money' },
+    ];
+  }, []);
+
+  // Persist screen to sessionStorage (not localStorage — clears on browser close)
+  React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
+
+  // Deep-link callback — registered after React mounts for late Firebase responses
+  React.useEffect(() => {
+    window.__pp_deeplink_ready = (incomingRound) => {
+      setRound(incomingRound);
+      setScreen('score');
+      const overlay = document.getElementById('pp-join-overlay');
+      if (overlay) overlay.style.display = 'none';
+    };
+    return () => { window.__pp_deeplink_ready = null; };
+  }, []);
+
+  // Player sync — load from RTDB on mount, subscribe to live changes
+  React.useEffect(() => {
+    PlayerSyncService.load(function(remotePlayers) {
+      if (remotePlayers && remotePlayers.length > 0) {
+        setPlayers(remotePlayers);
+        localStorage.setItem('pp_players', JSON.stringify(remotePlayers));
+      }
+    });
+    PlayerSyncService.subscribe(function(remoteP) {
+      setPlayers(remoteP);
+      localStorage.setItem('pp_players', JSON.stringify(remoteP));
+    });
+    return () => { PlayerSyncService.unsubscribe(); };
+  }, []);
+
+  // Tweaks message handler (edit mode)
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const saveTweakKey = (key, val) => {
+    const next = { ...tweaks, [key]: val };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+  };
+
+  // Player management — save to localStorage + RTDB
+  const handleManagePlayers = (updated) => {
+    setPlayers(updated);
+    localStorage.setItem('pp_players', JSON.stringify(updated));
+    PlayerSyncService.save(updated, function(ok) {
+      if (!ok) console.warn('[PlayPal] Player sync to RTDB failed — saved locally');
+    });
+  };
+
+  // Round start — save to Firestore for QR/code joining
+  const handleStartRound = (config) => {
+    const r = { ...config, id: Date.now() };
+    setRound(r);
+    localStorage.setItem('pp_round', JSON.stringify(r));
+    sessionStorage.setItem('pp_screen', 'score');
+    setScreen('score');
+    RoundSyncService.saveRound(r, function(ok) {
+      if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
+      else    console.warn('[PlayPal] Cloud round save failed — works locally');
+    });
+  };
+
+  const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}) => {
+    setFinalScores(scores); setFinalWolf(wolfData); setFinalPutts(putts);
+    setFinalPresses(presses); setFinalChips(chips);
+    const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
+    recent.unshift({
+      courseName: round.course.name,
+      date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+      players: round.players.length,
+      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · ')
+    });
+    localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
+    setScreen('summary');
+  };
+
+  const handleNewRound = () => {
+    setRound(null); setFinalScores(null);
+    localStorage.removeItem('pp_round');
+    sessionStorage.removeItem('pp_screen');
+    setScreen('home');
+  };
+
+  const handleJoinRound = (savedRound) => {
+    setRound(savedRound);
+    sessionStorage.setItem('pp_screen', 'score');
+    setScreen('score');
+  };
+
+  const cssVars = {
+    '--green': tweaks.accentGreen,
+    '--gold':  tweaks.accentGold,
+    '--bg':    tweaks.bgColor,
+    '--card':  tweaks.cardBg
+  };
+
+  return (
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
+      <NavBar
+        syncCode={tweaks.showSyncCode && round ? round.syncCode : null}
+        screen={screen}
+        onHome={screen !== 'home' ? handleNewRound : null}
+      />
+      {screen === 'home' && (
+        <HomeScreen
+          players={players}
+          onStartRound={() => setScreen('setup')}
+          onManagePlayers={handleManagePlayers}
+          recentRounds={recentRounds}
+          onJoinRound={handleJoinRound}
+        />
+      )}
+      {screen === 'setup' && (
+        <SetupScreen
+          allPlayers={players}
+          onStart={handleStartRound}
+        />
+      )}
+      {screen === 'score' && round && (
+        <ScoreEntryScreen
+          round={round}
+          onSave={handleSaveRound}
+          onHome={handleNewRound}
+        />
+      )}
+      {screen === 'summary' && (
+        <SummaryScreen
+          round={round}
+          scores={finalScores}
+          wolfData={finalWolf}
+          putts={finalPutts}
+          presses={finalPresses}
+          chips={finalChips}
+          onNewRound={handleNewRound}
+        />
+      )}
+      {tweaksOpen && (
+        <div style={{ position:'fixed', bottom:20, right:20, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:16, zIndex:9998, minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.5)' }}>
+          <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, color:'#C9A84C', letterSpacing:2, marginBottom:12 }}>APPEARANCE</div>
+          {[['accentGreen','Green'],['accentGold','Gold'],['bgColor','Background'],['cardBg','Card']].map(([k,label]) =>
+            <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+              <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>{label}</span>
+              <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, padding:'5px' }} />
+            </div>
+          )}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
+            <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>Show Sync Code</span>
+            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width:40, height:22, borderRadius:11, background:tweaks.showSyncCode ? tweaks.accentGreen : '#1E3A6E', cursor:'pointer', display:'flex', alignItems:'center', padding:2, transition:'background 0.2s' }}>
+              <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', transform:tweaks.showSyncCode ? 'translateX(18px)' : 'translateX(0)', transition:'transform 0.2s' }} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
-const UNSUB = { players: null, courses: null, round: null };
-
-let currentHole  = 0;
-let selectedPIDs = new Set();
-let editingPID   = null;
-let editingCID   = null;
-
-/* ─── UTILS ─────────────────────────────────────────────────── */
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function genCode(n=6) {
-  const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  return Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('');
-}
-function toast(msg, ms=2800) {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.classList.add('show');
-  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),ms);
-}
-function setConn(s) {
-  const el=document.getElementById('conn-dot');
-  el.textContent=s; el.className=s==='offline'?'offline':s==='syncing'?'syncing':'';
-}
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function switchTab(name) {
-  ['scorecard','players','courses','rounds'].forEach(n=>{
-    document.getElementById('tab-'+n).classList.toggle('active',n===name);
-    document.getElementById('panel-'+n).classList.toggle('active',n===name);
-  });
-}
-
-/* ─── AUTH ──────────────────────────────────────────────────── */
-function initAuth() {
-  return AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-    .catch(()=>{})
-    .then(()=>new Promise((res,rej)=>{
-      const u=AUTH.onAuthStateChanged(user=>{
-        u();
-        if(user){UID=user.uid;res(user);}
-        else AUTH.signInAnonymously().then(r=>{UID=r.user.uid;res(r.user);}).catch(rej);
-      },rej);
-    }));
-}
-
-/* ─── FIRESTORE PERSISTENCE ─────────────────────────────────── */
-function initPersistence() {
-  return FS.enablePersistence({synchronizeTabs:true}).catch(err=>{
-    if(err.code==='failed-precondition') console.warn('Firestore: multi-tab, one cache');
-    else if(err.code==='unimplemented')  console.warn('Firestore: persistence not supported');
-  });
-}
-
-/* ─── PLAYERS ───────────────────────────────────────────────── */
-function attachPlayersListener() {
-  if(UNSUB.players) UNSUB.players();
-  UNSUB.players = FS.collection('players').orderBy('name')
-    .onSnapshot(snap=>{
-      STATE.players={};
-      snap.forEach(d=>{STATE.players[d.id]=d.data();});
-      renderPlayers(); renderSetupPlayers(); setConn('live');
-    }, err=>{console.error('Players:',err); setConn('offline');});
-}
-
-function openAddPlayer() {
-  editingPID=null;
-  document.getElementById('m-player-title').textContent='Add Player';
-  document.getElementById('f-pname').value='';
-  document.getElementById('f-phcp').value='';
-  openModal('m-player');
-  setTimeout(()=>document.getElementById('f-pname').focus(),150);
-}
-function openEditPlayer(id) {
-  const p=STATE.players[id]; if(!p) return;
-  editingPID=id;
-  document.getElementById('m-player-title').textContent='Edit Player';
-  document.getElementById('f-pname').value=p.name||'';
-  document.getElementById('f-phcp').value=p.handicap??'';
-  openModal('m-player');
-}
-function savePlayer() {
-  const name=document.getElementById('f-pname').value.trim();
-  const hcp=parseFloat(document.getElementById('f-phcp').value)||0;
-  if(!name){toast('Enter a player name');return;}
-  const id=editingPID||('p'+Date.now());
-  const data={name,handicap:hcp,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-  if(!editingPID) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
-  setConn('syncing');
-  FS.collection('players').doc(id).set(data,{merge:true})
-    .then(()=>{toast(editingPID?'Player updated ✓':'Player added ✓');closeModal('m-player');})
-    .catch(err=>{console.error('savePlayer:',err);toast('Save failed — check connection');});
-}
-function deletePlayer(id) {
-  const p=STATE.players[id];
-  if(!p||!confirm('Delete '+p.name+'?')) return;
-  FS.collection('players').doc(id).delete()
-    .then(()=>toast('Player removed')).catch(()=>toast('Delete failed'));
-}
-function renderPlayers() {
-  const el=document.getElementById('player-list');
-  const list=Object.entries(STATE.players);
-  if(!list.length){
-    el.innerHTML='<div class="empty"><span class="empty-icon">👤</span><div class="empty-title">No players yet</div><div class="empty-sub">Tap + Add to create a player profile</div></div>';
-    return;
-  }
-  el.innerHTML=list.map(([id,p])=>`
-    <div class="player-item">
-      <div class="pi-left">
-        <div class="avatar">${esc((p.name||'?')[0].toUpperCase())}</div>
-        <div><div class="pi-name">${esc(p.name)}</div><div class="pi-sub">HCP ${p.handicap??0}</div></div>
-      </div>
-      <div class="pi-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openEditPlayer('${id}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deletePlayer('${id}')">✕</button>
-      </div>
-    </div>`).join('');
-}
-
-/* ─── COURSES ───────────────────────────────────────────────── */
-function attachCoursesListener() {
-  if(UNSUB.courses) UNSUB.courses();
-  UNSUB.courses = FS.collection('courses').orderBy('name')
-    .onSnapshot(snap=>{
-      STATE.courses={};
-      snap.forEach(d=>{STATE.courses[d.id]=d.data();});
-      renderCourses(); renderSetupCourseSelect(); setConn('live');
-    }, err=>{console.error('Courses:',err); setConn('offline');});
-}
-
-function openAddCourse() {
-  editingCID=null;
-  document.getElementById('m-course-title').textContent='Add Course';
-  document.getElementById('f-cname').value='';
-  document.getElementById('f-choles').value='18';
-  buildParGrid(18,[]);
-  openModal('m-course');
-}
-function openEditCourse(id) {
-  const c=STATE.courses[id]; if(!c) return;
-  editingCID=id;
-  document.getElementById('m-course-title').textContent='Edit Course';
-  document.getElementById('f-cname').value=c.name||'';
-  document.getElementById('f-choles').value=String(c.holes||18);
-  buildParGrid(c.holes||18,c.pars||[]);
-  openModal('m-course');
-}
-function buildParGrid(holes,pars) {
-  const cols=holes<=9?5:6;
-  document.getElementById('par-grid-wrap').innerHTML=`
-    <div style="margin-top:12px;">
-      <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);margin-bottom:8px;">Par Per Hole</div>
-      <div class="par-grid" style="grid-template-columns:repeat(${cols},1fr);">
-        ${Array.from({length:holes},(_,i)=>`
-          <div class="par-cell">
-            <div class="par-cell-lbl">H${i+1}</div>
-            <input type="number" class="par-input" data-hole="${i}" value="${pars[i]||4}" min="3" max="6"/>
-          </div>`).join('')}
-      </div>
-    </div>`;
-}
-function saveCourse() {
-  const name=document.getElementById('f-cname').value.trim();
-  const holes=parseInt(document.getElementById('f-choles').value,10);
-  if(!name){toast('Enter a course name');return;}
-  const pars=Array.from(document.querySelectorAll('.par-input')).map(i=>parseInt(i.value,10)||4);
-  const id=editingCID||('c'+Date.now());
-  const data={name,holes,pars,totalPar:pars.reduce((a,b)=>a+b,0),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-  if(!editingCID) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
-  setConn('syncing');
-  FS.collection('courses').doc(id).set(data,{merge:true})
-    .then(()=>{toast(editingCID?'Course updated ✓':'Course added ✓');closeModal('m-course');})
-    .catch(err=>{console.error('saveCourse:',err);toast('Save failed — check connection');});
-}
-function deleteCourse(id) {
-  const c=STATE.courses[id];
-  if(!c||!confirm('Delete '+c.name+'?')) return;
-  FS.collection('courses').doc(id).delete()
-    .then(()=>toast('Course removed')).catch(()=>toast('Delete failed'));
-}
-function renderCourses() {
-  const el=document.getElementById('course-list');
-  const list=Object.entries(STATE.courses);
-  if(!list.length){
-    el.innerHTML='<div class="empty"><span class="empty-icon">🏌️</span><div class="empty-title">No courses yet</div><div class="empty-sub">Tap + Add to save a course</div></div>';
-    return;
-  }
-  el.innerHTML=list.map(([id,c])=>`
-    <div class="course-item">
-      <div><div class="pi-name">${esc(c.name)}</div><div class="pi-sub">${c.holes||18} holes · Par ${c.totalPar||(c.pars||[]).reduce((a,b)=>a+b,0)}</div></div>
-      <div class="pi-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${id}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCourse('${id}')">✕</button>
-      </div>
-    </div>`).join('');
-}
-
-/* ─── ROUND SETUP ───────────────────────────────────────────── */
-function openNewRound() {
-  selectedPIDs.clear();
-  renderSetupCourseSelect();
-  renderSetupPlayers();
-  openModal('m-newround');
-}
-function renderSetupCourseSelect() {
-  const sel=document.getElementById('f-rcourse');
-  const prev=sel.value;
-  sel.innerHTML='<option value="">— choose a course —</option>';
-  Object.entries(STATE.courses).forEach(([id,c])=>{
-    sel.innerHTML+=`<option value="${id}"${id===prev?' selected':''}>${esc(c.name)}</option>`;
-  });
-}
-function renderSetupPlayers() {
-  const el=document.getElementById('setup-players');
-  const list=Object.entries(STATE.players);
-  if(!list.length){el.innerHTML='<div style="font-size:0.85rem;color:var(--ink-muted);">Add players in the Players tab first.</div>';return;}
-  el.innerHTML=list.map(([id,p])=>{
-    const sel=selectedPIDs.has(id);
-    return `<div class="player-chip${sel?' selected':''}" onclick="togglePID('${id}')">
-      <div class="chip-check">${sel?'✓':''}</div>
-      <div class="avatar" style="width:32px;height:32px;font-size:0.85rem;background:${sel?'var(--rough)':'var(--border-dark)'};">${esc((p.name||'?')[0].toUpperCase())}</div>
-      <div><div style="font-weight:600;font-size:0.9rem;">${esc(p.name)}</div><div style="font-size:0.72rem;color:var(--ink-muted);">HCP ${p.handicap??0}</div></div>
-    </div>`;
-  }).join('');
-}
-function togglePID(id) {
-  if(selectedPIDs.has(id)) selectedPIDs.delete(id); else selectedPIDs.add(id);
-  renderSetupPlayers();
-}
-
-/* ─── START ROUND ───────────────────────────────────────────── */
-function startRound() {
-  const courseId=document.getElementById('f-rcourse').value;
-  if(!courseId){toast('Select a course');return;}
-  if(!selectedPIDs.size){toast('Select at least one player');return;}
-  const course=STATE.courses[courseId];
-  const syncCode=genCode(6);
-  const holes=course.holes||18;
-  const pars=course.pars||Array(holes).fill(4);
-  const players=Array.from(selectedPIDs);
-  const scores={};
-  players.forEach(pid=>{scores[pid]=Array(holes).fill(null);});
-  const doc={
-    syncCode,courseId,courseName:course.name,holes,pars,
-    totalPar:pars.reduce((a,b)=>a+b,0),players,scores,
-    status:'active',createdBy:UID,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  };
-  setConn('syncing');
-  FS.collection('rounds').doc(syncCode).set(doc)
-    .then(()=>{closeModal('m-newround');toast('Round started! Code: '+syncCode);activateRound(syncCode,doc);})
-    .catch(err=>{console.error('startRound:',err);toast('Failed to start round');});
-}
-
-/* ─── JOIN ROUND ────────────────────────────────────────────── */
-function joinRound() {
-  const code=document.getElementById('f-joincode').value.trim().toUpperCase();
-  if(code.length<4){toast('Enter a valid sync code');return;}
-  setConn('syncing');
-  FS.collection('rounds').doc(code).get()
-    .then(snap=>{
-      if(!snap.exists){toast('Round not found');setConn('live');return;}
-      const data=snap.data();
-      if(data.status==='complete'){toast('That round is already complete');setConn('live');return;}
-      closeModal('m-join');
-      document.getElementById('f-joincode').value='';
-      activateRound(code,data);
-      toast('Joined round '+code+'!');
-    })
-    .catch(err=>{console.error('joinRound:',err);toast('Failed to join — check code and connection');setConn('offline');});
-}
-
-/* ─── ACTIVATE ROUND ────────────────────────────────────────── */
-function activateRound(syncCode,data) {
-  currentHole=0;
-  STATE.activeRound={syncCode,...data};
-  try{localStorage.setItem('pp_round',syncCode);}catch(e){}
-  document.getElementById('sc-idle').style.display='none';
-  document.getElementById('sc-active').style.display='block';
-  document.getElementById('active-code').textContent=syncCode;
-  subscribeToRound(syncCode);
-  switchTab('scorecard');
-}
-
-/* ─── ROUND LISTENER ────────────────────────────────────────── */
-function subscribeToRound(syncCode) {
-  if(UNSUB.round){UNSUB.round();UNSUB.round=null;}
-  UNSUB.round=FS.collection('rounds').doc(syncCode)
-    .onSnapshot(snap=>{
-      if(!snap.exists){toast('Round not found');deactivateRound();return;}
-      STATE.activeRound={syncCode,...snap.data()};
-      renderActiveUI();
-      setConn('live');
-    },err=>{console.error('Round listener:',err);setConn('offline');});
-}
-
-/* ─── RENDER ACTIVE UI ──────────────────────────────────────── */
-function renderActiveUI() {
-  const r=STATE.activeRound; if(!r) return;
-  document.getElementById('active-course-name').textContent=r.courseName||'—';
-  document.getElementById('active-player-count').textContent=(r.players||[]).length+' player'+((r.players||[]).length!==1?'s':'');
-  currentHole=Math.min(currentHole,(r.holes||18)-1);
-  renderHoleEntry();
-  renderLeaderboard();
-  renderScorecardGrid();
-}
-
-/* ─── HOLE NAV ──────────────────────────────────────────────── */
-function changeHole(delta) {
-  const r=STATE.activeRound; if(!r) return;
-  const next=currentHole+delta;
-  if(next<0||next>=(r.holes||18)) return;
-  currentHole=next;
-  renderHoleEntry();
-}
-
-/* ─── HOLE ENTRY ────────────────────────────────────────────── */
-function renderHoleEntry() {
-  const r=STATE.activeRound; if(!r) return;
-  const h=currentHole;
-  const par=(r.pars||[])[h]||4;
-  document.getElementById('hn-label').textContent='Hole '+(h+1)+' of '+(r.holes||18);
-  document.getElementById('hn-par').textContent='Par '+par;
-  document.getElementById('btn-prev').disabled=h===0;
-  document.getElementById('btn-next').disabled=h===(r.holes||18)-1;
-  const scores=r.scores||{};
-  document.getElementById('score-rows').innerHTML=(r.players||[]).map(pid=>{
-    const player=STATE.players[pid]||{name:pid};
-    const score=(scores[pid]||[])[h];
-    const hasScore=score!==null&&score!==undefined;
-    const diff=hasScore?score-par:null;
-    let badge='–',bClass='badge-empty';
-    if(diff!==null){
-      if(diff<=-2){badge='Eagle';bClass='badge-eagle';}
-      else if(diff===-1){badge='Birdie';bClass='badge-birdie';}
-      else if(diff===0){badge='Par';bClass='badge-par';}
-      else if(diff===1){badge='Bogey';bClass='badge-bogey';}
-      else{badge='+'+diff;bClass='badge-double';}
-    }
-    return `<div class="score-row">
-      <div class="sr-name">${esc(player.name||pid)}</div>
-      <span class="sr-badge ${bClass}">${badge}</span>
-      <div class="stepper">
-        <div class="step-btn" onclick="adjustScore('${pid}',${h},-1)">−</div>
-        <div class="step-val">${hasScore?score:'–'}</div>
-        <div class="step-btn" onclick="adjustScore('${pid}',${h},1)">+</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* ─── SCORE ADJUSTMENT ──────────────────────────────────────── */
-/* CRITICAL: dot-notation update writes ONLY this player's array.
-   No other player's data is read, modified, or overwritten.
-   Safe for simultaneous multi-device scoring.                    */
-function adjustScore(pid,hole,delta) {
-  const r=STATE.activeRound; if(!r) return;
-  const par=(r.pars||[])[hole]||4;
-  const existing=(r.scores?.[pid]||[]);
-  const current=existing[hole]!==null&&existing[hole]!==undefined?existing[hole]:par;
-  const newScore=Math.max(1,current+delta);
-  // Optimistic update
-  if(!STATE.activeRound.scores)STATE.activeRound.scores={};
-  if(!STATE.activeRound.scores[pid])STATE.activeRound.scores[pid]=Array(r.holes||18).fill(null);
-  STATE.activeRound.scores[pid][hole]=newScore;
-  renderHoleEntry();renderLeaderboard();renderScorecardGrid();
-  // Build full updated array for this player
-  const arr=[...(r.scores?.[pid]||Array(r.holes||18).fill(null))];
-  arr[hole]=newScore;
-  setConn('syncing');
-  FS.collection('rounds').doc(r.syncCode).update({
-    ['scores.'+pid]: arr,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(err=>{console.error('adjustScore:',err);toast('Score not saved — check connection');setConn('offline');});
-}
-
-/* ─── LEADERBOARD ───────────────────────────────────────────── */
-function renderLeaderboard() {
-  const r=STATE.activeRound; if(!r) return;
-  const pars=r.pars||[]; const scores=r.scores||{};
-  const rows=(r.players||[]).map(pid=>{
-    const player=STATE.players[pid]||{name:pid};
-    const ps=scores[pid]||[];
-    let gross=0,played=0;
-    ps.forEach((s,i)=>{if(s!==null&&s!==undefined){gross+=s;played++;}});
-    const parSoFar=pars.slice(0,played).reduce((a,b)=>a+b,0);
-    return{pid,name:player.name||pid,gross,diff:gross-parSoFar,played};
-  });
-  rows.sort((a,b)=>{
-    if(!a.played&&!b.played)return 0;
-    if(!a.played)return 1; if(!b.played)return -1;
-    return a.diff-b.diff;
-  });
-  const medals=['🥇','🥈','🥉'];
-  document.getElementById('leaderboard').innerHTML=`
-    <div class="lb-card">
-      <div class="lb-head"><div>#</div><div>Player</div><div style="text-align:center">Gross</div><div style="text-align:right">Score</div></div>
-      ${rows.map((row,i)=>{
-        const ds=row.played===0?'–':row.diff===0?'E':row.diff>0?'+'+row.diff:''+row.diff;
-        const cls=row.diff<0?'under':row.diff>0?'over':'even';
-        return`<div class="lb-row">
-          <div class="lb-rank">${medals[i]||i+1}</div>
-          <div class="lb-name">${esc(row.name)}</div>
-          <div class="lb-gross">${row.played?row.gross:'–'}</div>
-          <div class="lb-diff ${cls}">${ds}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
-
-/* ─── SCORECARD GRID ────────────────────────────────────────── */
-function renderScorecardGrid() {
-  const r=STATE.activeRound; if(!r) return;
-  const holes=r.holes||18; const pars=r.pars||Array(holes).fill(4);
-  const scores=r.scores||{}; const players=r.players||[];
-  const cols='36px 30px '+players.map(()=>'1fr').join(' ');
-  const cls=(s,p)=>{if(s===null||s===undefined)return'';const d=s-p;if(d<=-2)return's-eagle';if(d===-1)return's-birdie';if(d===1)return's-bogey';if(d>=2)return's-double';return'';};
-  const row=(cells,extra='')=>`<div style="display:grid;grid-template-columns:${cols};" class="${extra}">${cells}</div>`;
-  const cell=(content,extraCls='',extraStyle='')=>`<div class="sc-cell ${extraCls}" style="${extraStyle}">${content}</div>`;
-  let html=row(
-    cell('H')+cell('Par')+players.map(pid=>cell(esc((STATE.players[pid]?.name||pid).slice(0,7)))).join(''),
-    'sc-head-row'
-  );
-  for(let h=0;h<holes;h++){
-    const par=pars[h]||4;
-    html+=row(
-      cell(h+1,'','font-weight:700;color:var(--forest);background:var(--mint);')+
-      cell(par,'','background:var(--parchment);font-weight:600;')+
-      players.map(pid=>{const s=(scores[pid]||[])[h];return cell(s!==null&&s!==undefined?s:'–',cls(s,par));}).join(''),
-      'sc-data-row'
-    );
-    if(holes===18&&h===8){
-      const f9p=pars.slice(0,9).reduce((a,b)=>a+b,0);
-      html+=row(
-        cell('OUT')+cell(f9p)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.slice(0,9).reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.slice(0,9).some(s=>s!=null)?v:'–');}).join(''),
-        'sc-nine-row'
-      );
-    }
-  }
-  if(holes===18){
-    const b9p=pars.slice(9).reduce((a,b)=>a+b,0),tp=pars.reduce((a,b)=>a+b,0);
-    html+=row(cell('IN')+cell(b9p)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.slice(9).reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.slice(9).some(s=>s!=null)?v:'–');}).join(''),'sc-nine-row');
-    html+=row(cell('TOT')+cell(tp)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.some(s=>s!=null)?v:'–');}).join(''),'sc-total-row');
-  } else {
-    const tp=pars.reduce((a,b)=>a+b,0);
-    html+=row(cell('TOT')+cell(tp)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.some(s=>s!=null)?v:'–');}).join(''),'sc-total-row');
-  }
-  document.getElementById('sc-grid').innerHTML='<div class="sc-grid">'+html+'</div>';
-}
-
-/* ─── END ROUND ─────────────────────────────────────────────── */
-function endRound() {
-  const r=STATE.activeRound;
-  if(!r||!confirm('Mark this round as complete?'))return;
-  setConn('syncing');
-  FS.collection('rounds').doc(r.syncCode).update({
-    status:'complete',
-    completedAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(()=>{deactivateRound();loadRoundHistory();toast('Round complete! 🏆');})
-  .catch(err=>{console.error('endRound:',err);toast('Failed to end round');});
-}
-function deactivateRound() {
-  if(UNSUB.round){UNSUB.round();UNSUB.round=null;}
-  STATE.activeRound=null; currentHole=0;
-  try{localStorage.removeItem('pp_round');}catch(e){}
-  document.getElementById('sc-idle').style.display='block';
-  document.getElementById('sc-active').style.display='none';
-}
-
-/* ─── ROUND HISTORY ─────────────────────────────────────────── */
-function loadRoundHistory() {
-  FS.collection('rounds').orderBy('createdAt','desc').limit(25).get()
-    .then(snap=>{
-      const el=document.getElementById('rounds-list');
-      const rounds=[];
-      snap.forEach(d=>rounds.push({id:d.id,...d.data()}));
-      if(!rounds.length){el.innerHTML='<div class="empty"><span class="empty-icon">📋</span><div class="empty-title">No rounds yet</div></div>';return;}
-      el.innerHTML=rounds.map(r=>{
-        const active=r.status!=='complete';
-        const date=r.createdAt?.toDate?r.createdAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
-        const ps=(r.players||[]).map(pid=>STATE.players[pid]?.name||pid).join(', ');
-        return`<div class="round-hist">
-          <div class="rh-icon">${active?'⛳':'✓'}</div>
-          <div class="rh-body">
-            <div class="rh-cname">${esc(r.courseName||'—')}</div>
-            <div class="rh-meta">${date}${ps?' · '+esc(ps):''}</div>
-            <div class="rh-meta" style="margin-top:3px;">Code: <strong>${r.syncCode||r.id}</strong></div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <span class="status-badge ${active?'status-active':'status-complete'}">${active?'Active':'Done'}</span>
-            ${active?`<button class="btn btn-ghost btn-sm" onclick="rejoinRound('${r.syncCode||r.id}')">Rejoin</button>`:''}
-          </div>
-        </div>`;
-      }).join('');
-    }).catch(err=>console.error('loadRoundHistory:',err));
-}
-function rejoinRound(syncCode) {
-  setConn('syncing');
-  FS.collection('rounds').doc(syncCode).get()
-    .then(snap=>{
-      if(!snap.exists){toast('Round not found');return;}
-      const data=snap.data();
-      if(data.status==='complete'){toast('Round already complete');return;}
-      activateRound(syncCode,data);
-      toast('Rejoined round '+syncCode);
-    }).catch(()=>toast('Failed to rejoin'));
-}
-
-/* ─── RESUME ON RELOAD (iOS home screen fix) ────────────────── */
-async function tryResume() {
-  let code; try{code=localStorage.getItem('pp_round');}catch(e){}
-  if(!code)return;
-  try {
-    // source:'server' forces fresh fetch — ignores stale offline cache on resume
-    const snap=await FS.collection('rounds').doc(code).get({source:'server'});
-    if(!snap.exists||snap.data().status==='complete'){localStorage.removeItem('pp_round');return;}
-    activateRound(code,snap.data()); toast('Round '+code+' resumed');
-  } catch(err) {
-    // Offline fallback — use cache
-    try {
-      const snap=await FS.collection('rounds').doc(code).get({source:'cache'});
-      if(snap.exists&&snap.data().status!=='complete'){activateRound(code,snap.data());toast('Round '+code+' resumed (offline)');}
-      else localStorage.removeItem('pp_round');
-    } catch(e2){localStorage.removeItem('pp_round');}
-  }
-}
-
-/* ─── iOS HOME SCREEN FIX ───────────────────────────────────── */
-function setupIOSFix() {
-  // bfcache restore: Safari restores the page without re-running JS
-  // Firebase listeners are dead — force a clean reload
-  window.addEventListener('pageshow',e=>{if(e.persisted)window.location.reload();});
-  // App coming back from background — verify listeners
-  document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState!=='visible')return;
-    if(!UNSUB.players||!UNSUB.courses){attachPlayersListener();attachCoursesListener();}
-    if(STATE.activeRound&&!UNSUB.round)subscribeToRound(STATE.activeRound.syncCode);
-  });
-}
-
-/* ─── KEYBOARD SHORTCUTS ────────────────────────────────────── */
-document.getElementById('f-pname').addEventListener('keydown',e=>{if(e.key==='Enter')savePlayer();});
-document.getElementById('f-cname').addEventListener('keydown',e=>{if(e.key==='Enter')saveCourse();});
-document.getElementById('f-joincode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRound();});
-document.getElementById('f-joincode').addEventListener('input',function(){const p=this.selectionStart;this.value=this.value.toUpperCase();this.setSelectionRange(p,p);});
-
-/* ─── BOOTSTRAP ─────────────────────────────────────────────── */
-/* Order is strict. Do not reorder.
-   1. Firebase init
-   2. Persistence  ← must be first Firestore call
-   3. Auth         ← must resolve before any reads
-   4. Listeners    ← players + courses
-   5. iOS fix
-   6. Resume       ← after listeners settle
-   7. History
-   8. Hide loader                                                 */
-document.addEventListener('DOMContentLoaded', async()=>{
-  try {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    FS=firebase.firestore(); AUTH=firebase.auth();
-    await initPersistence();
-    await initAuth();
-    attachPlayersListener();
-    attachCoursesListener();
-    setupIOSFix();
-    await new Promise(r=>setTimeout(r,600)); // let first snapshot events settle
-    await tryResume();
-    loadRoundHistory();
-    const loader=document.getElementById('loading');
-    loader.classList.add('fade');
-    setTimeout(()=>loader.style.display='none',500);
-  } catch(err) {
-    console.error('Bootstrap failed:',err);
-    document.querySelector('.load-sub').textContent='Error loading. Tap to retry.';
-    document.getElementById('loading').onclick=()=>window.location.reload();
-  }
-});
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
 </script>
-
-<!-- SERVICE WORKER (PWA / iOS home screen) -->
-<script>
-if('serviceWorker' in navigator){
-  const SW=`
-const V='pp-v4';
-const PRE=[
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js',
-  'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap'
-];
-self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(V).then(c=>c.addAll(PRE)).then(()=>self.skipWaiting()));
-});
-self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
-});
-self.addEventListener('fetch',e=>{
-  const u=new URL(e.request.url);
-  // NEVER cache Firebase API traffic
-  if(u.hostname.includes('googleapis.com')||u.hostname.includes('firebaseio.com')||u.hostname.includes('identitytoolkit')||u.hostname.includes('securetoken')){return;}
-  // HTML — always network-first (fresh app shell every load)
-  if(e.request.destination==='document'){
-    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));return;
-  }
-  // Static assets (Firebase SDK, fonts) — cache-first
-  e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(res=>{
-    if(res.ok){const cl=res.clone();caches.open(V).then(c=>c.put(e.request,cl));}
-    return res;
-  })));
-});
-`;
-  const blob=new Blob([SW],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'})
-    .then(reg=>reg.update())
-    .catch(err=>console.warn('SW:',err));
-}
-</script>
-
 </body>
 </html>
