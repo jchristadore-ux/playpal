@@ -43,7 +43,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
           {formatStats.map((s,i) => (
             <div key={i} style={{flex:1, padding:'6px 8px', display:'flex', flexDirection:'column', alignItems:'center',
               borderRight: i < formatStats.length-1 ? '1px solid #0A1628' : 'none'}}>
-              <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:16, color:s.color, lineHeight:1}}>{s.value}</div>
+              <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:16, color:s.color, lineHeight:1}}>{s.icon} {s.value}</div>
               <div style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#4A6890', letterSpacing:0.5, marginTop:1}}>{s.label}</div>
             </div>
           ))}
@@ -51,23 +51,22 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
       )}
 
       {/* Score stepper */}
-      <div style={{display:'flex', alignItems:'center', padding:'0 12px 14px', gap:10}}>
+      <div style={{display:'flex', alignItems:'center', padding:'0 12px 14px', gap:8}}>
         <button
           onClick={()=>onScore(p.id, (score||hole.par)-1)}
           disabled={score<=1}
-          style={{width:72, height:72, borderRadius:16, border:'none', background:'#162950',
-            color:'#fff', fontSize:40, fontFamily:'Barlow Condensed', fontWeight:900,
+          style={{width:60, height:60, borderRadius:12, border:'none', background:'#162950',
+            color:'#fff', fontSize:32, fontFamily:'Barlow Condensed', fontWeight:900,
             cursor:'pointer', flexShrink:0, opacity:score>1?1:0.3,
-            WebkitTapHighlightColor:'transparent', userSelect:'none', lineHeight:1}}>
+            WebkitTapHighlightColor:'transparent', userSelect:'none',
+            display:'flex', alignItems:'center', justifyContent:'center'}}>
           −
         </button>
 
         <div
           onClick={onScoreTap}
-          style={{flex:1, textAlign:'center', padding:'0 4px', cursor:'pointer', borderRadius:14,
-            background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)',
-            minHeight:80, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            WebkitTapHighlightColor:'transparent', userSelect:'none'}}>
+          style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+            cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none'}}>
           <div style={{fontFamily:'Barlow Condensed', fontWeight:900, lineHeight:1,
             fontSize:76, color:score?relColor:'#2A4A6E', transition:'color 0.15s'}}>
             {score||'—'}
@@ -75,16 +74,16 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
           <div style={{fontFamily:'Barlow Condensed', fontSize:14, fontWeight:700, letterSpacing:2.5, color:relColor, marginTop:2}}>
             {relLabel}
           </div>
-          {!score && <div style={{fontSize:10, color:'#2A4A6E', marginTop:4, fontFamily:'DM Sans', letterSpacing:0.5}}>TAP TO ENTER</div>}
         </div>
 
         <button
           onClick={()=>onScore(p.id, (score||hole.par)+1)}
-          style={{width:72, height:72, borderRadius:16, border:'none',
+          style={{width:60, height:60, borderRadius:12, border:'none',
             background:'linear-gradient(135deg,#C9A84C,#A8893A)',
-            color:'#0A1628', fontSize:40, fontFamily:'Barlow Condensed', fontWeight:900,
+            color:'#0A1628', fontSize:32, fontFamily:'Barlow Condensed', fontWeight:900,
             cursor:'pointer', flexShrink:0,
-            WebkitTapHighlightColor:'transparent', userSelect:'none', lineHeight:1}}>
+            WebkitTapHighlightColor:'transparent', userSelect:'none',
+            display:'flex', alignItems:'center', justifyContent:'center'}}>
           +
         </button>
       </div>
@@ -100,7 +99,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
             <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#C9A84C', letterSpacing:0.5}}>💰 REQUIRED</span>
           )}
         </div>
-        <div style={{display:'flex', gap:7, marginLeft:2}}>
+        <div style={{display:'flex', gap:6, marginLeft:2}}>
           {[1,2,3,4].map(n=>(
             <button key={n}
               onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
