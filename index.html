@@ -7,1762 +7,1108 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="PlayPal" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#1a3a2a" />
+  <meta name="theme-color" content="#0f2318" />
   <title>PlayPal Golf</title>
 
-  <!-- PWA Manifest inline (avoids separate file requirement) -->
-  <link rel="manifest" href="data:application/json,{%22name%22:%22PlayPal%20Golf%22,%22short_name%22:%22PlayPal%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%231a3a2a%22,%22theme_color%22:%22%231a3a2a%22}" />
-
-  <!-- Apple touch icons (use your own if available) -->
-  <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/72x72/26f3.png" />
-
-  <!-- Firebase SDK v9 compat (CDN, no build step) -->
+  <!-- Firebase v9 compat (CDN — no build step needed) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
   <style>
-    /* =====================================================
-       DESIGN SYSTEM - Golf-green meets modern scorecard
-       ===================================================== */
     :root {
-      --green-deep:   #1a3a2a;
-      --green-mid:    #2d6a4f;
-      --green-bright: #52b788;
-      --green-light:  #d8f3dc;
-      --gold:         #f4a261;
-      --gold-dark:    #e76f51;
-      --white:        #f8f9fa;
-      --gray-100:     #e9ecef;
-      --gray-300:     #ced4da;
-      --gray-500:     #6c757d;
-      --gray-700:     #343a40;
-      --red:          #e63946;
-      --blue:         #4361ee;
-      --shadow-sm:    0 1px 3px rgba(0,0,0,0.15);
-      --shadow-md:    0 4px 12px rgba(0,0,0,0.15);
-      --shadow-lg:    0 8px 30px rgba(0,0,0,0.20);
-      --radius:       12px;
-      --radius-sm:    8px;
-      --safe-top:     env(safe-area-inset-top, 0px);
-      --safe-bottom:  env(safe-area-inset-bottom, 0px);
+      --forest:      #0f2318;
+      --fairway:     #1e4030;
+      --rough:       #2d6a4f;
+      --sprout:      #52b788;
+      --mint:        #d8f3dc;
+      --parchment:   #faf7f0;
+      --card-bg:     #ffffff;
+      --gold:        #c9963a;
+      --red:         #c0392b;
+      --birdie-bg:   #d4edda;
+      --birdie-txt:  #1a5c2e;
+      --eagle-bg:    #fff3cd;
+      --eagle-txt:   #856404;
+      --bogey-bg:    #fde8d8;
+      --bogey-txt:   #8b3a0f;
+      --double-bg:   #fdecea;
+      --double-txt:  #7b1515;
+      --ink:         #1a1a1a;
+      --ink-soft:    #4a4a4a;
+      --ink-muted:   #888888;
+      --border:      #e0dbd0;
+      --border-dark: #c8c0b0;
+      --shadow-xs:   0 1px 2px rgba(0,0,0,0.06);
+      --shadow-sm:   0 2px 8px rgba(0,0,0,0.09);
+      --shadow-md:   0 6px 24px rgba(0,0,0,0.12);
+      --r:           14px;
+      --r-sm:        10px;
+      --r-xs:        6px;
+      --safe-t:      env(safe-area-inset-top, 0px);
+      --safe-b:      env(safe-area-inset-bottom, 0px);
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      font-family: 'Georgia', 'Times New Roman', serif;
-      background: var(--green-deep);
-      color: var(--gray-700);
+    html { height: 100%; background: var(--forest); -webkit-text-size-adjust: 100%; }
+    body {
+      min-height: 100dvh;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--forest); color: var(--ink);
       overflow-x: hidden;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
+      overscroll-behavior: none;
     }
 
-    /* ── App Shell ── */
-    #app {
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      padding-top: var(--safe-top);
-      padding-bottom: var(--safe-bottom);
+    /* Loading */
+    #loading {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--forest);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+      transition: opacity 0.5s ease;
     }
-
-    /* ── Header ── */
-    #header {
-      background: var(--green-deep);
-      color: var(--white);
-      padding: 14px 20px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 2px solid var(--green-mid);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
-    }
-
-    #header h1 {
-      font-size: 1.4rem;
-      letter-spacing: 0.03em;
-      color: var(--green-bright);
-      font-weight: normal;
-    }
-    #header h1 span { color: var(--gold); }
-
-    #sync-indicator {
-      font-size: 0.7rem;
-      font-family: monospace;
-      color: var(--green-bright);
-      opacity: 0.7;
-    }
-    #sync-indicator.error { color: var(--red); opacity: 1; }
-    #sync-indicator.syncing { animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity: 0.2; } }
-
-    /* ── Main Content ── */
-    #main {
-      flex: 1;
-      background: var(--gray-100);
-      border-radius: var(--radius) var(--radius) 0 0;
-      margin-top: 2px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    /* ── Tabs ── */
-    #tabs {
-      display: flex;
-      background: var(--white);
-      border-bottom: 2px solid var(--gray-300);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 13px 8px;
-      border: none;
-      background: none;
-      font-family: inherit;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gray-500);
-      cursor: pointer;
-      transition: color 0.2s, border-bottom 0.2s;
-      border-bottom: 3px solid transparent;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .tab-btn.active {
-      color: var(--green-deep);
-      border-bottom-color: var(--green-bright);
-    }
-
-    /* ── Panels ── */
-    .panel { display: none; padding: 16px; }
-    .panel.active { display: block; }
-
-    /* ── Section Headers ── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .section-header h2 {
-      font-size: 1.1rem;
-      color: var(--green-deep);
-      font-weight: normal;
-    }
-
-    /* ── Cards ── */
-    .card {
-      background: var(--white);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--gray-300);
-    }
-    .card-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .card-row:last-child { margin-bottom: 0; }
-    .card-label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--gray-500);
-      margin-bottom: 4px;
-    }
-    .card-value {
-      font-size: 1rem;
-      color: var(--gray-700);
-      font-weight: bold;
-    }
-
-    /* ── Inputs ── */
-    input, select, textarea {
-      width: 100%;
-      padding: 11px 14px;
-      border: 2px solid var(--gray-300);
-      border-radius: var(--radius-sm);
-      font-size: 1rem;
-      font-family: inherit;
-      color: var(--gray-700);
-      background: var(--white);
-      transition: border-color 0.2s;
-      outline: none;
-      -webkit-appearance: none;
-    }
-    input:focus, select:focus { border-color: var(--green-bright); }
-    input[type="number"] { text-align: center; }
-
-    /* ── Buttons ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 11px 20px;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.1s, opacity 0.2s;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary  { background: var(--green-mid); color: var(--white); }
-    .btn-gold     { background: var(--gold); color: var(--white); }
-    .btn-danger   { background: var(--red); color: var(--white); }
-    .btn-ghost    { background: transparent; color: var(--green-mid); border: 2px solid var(--green-mid); }
-    .btn-sm       { padding: 7px 14px; font-size: 0.8rem; }
-    .btn-full     { width: 100%; }
-
-    /* ── Score Grid ── */
-    .score-grid {
-      display: grid;
-      gap: 1px;
-      background: var(--gray-300);
-      border: 1px solid var(--gray-300);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      font-size: 0.82rem;
-    }
-    .score-grid-header {
-      display: grid;
-      background: var(--green-deep);
-      color: var(--white);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .score-row {
-      display: grid;
-      background: var(--white);
-    }
-    .score-cell {
-      padding: 8px 6px;
-      text-align: center;
-      background: var(--white);
-    }
-    .score-cell.hole-num {
-      background: var(--green-light);
-      font-weight: bold;
-      color: var(--green-deep);
-    }
-    .score-cell.player-name {
-      background: var(--green-light);
-      font-weight: bold;
-      color: var(--green-deep);
-      font-size: 0.75rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .score-cell input {
-      padding: 4px;
-      border: 1px solid var(--gray-300);
-      border-radius: 4px;
-      width: 38px;
-      height: 34px;
-      font-size: 0.85rem;
-      text-align: center;
-    }
-    .score-cell input:focus { border-color: var(--green-bright); }
-
-    /* Score coloring */
-    .eagle { background: #ffd700 !important; font-weight: bold; }
-    .birdie { background: #b7e4c7 !important; }
-    .par    { background: var(--white) !important; }
-    .bogey  { background: #ffd6a5 !important; }
-    .double { background: #ffb3b3 !important; }
-
-    /* ── Player List ── */
-    .player-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background: var(--white);
-      border-radius: var(--radius-sm);
-      margin-bottom: 8px;
-      border: 1px solid var(--gray-300);
-      box-shadow: var(--shadow-sm);
-    }
-    .player-item-left { display: flex; align-items: center; gap: 12px; }
-    .player-avatar {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      background: var(--green-mid);
-      color: var(--white);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-      font-weight: bold;
-      flex-shrink: 0;
-    }
-    .player-name-text { font-size: 0.95rem; font-weight: bold; color: var(--gray-700); }
-    .player-handicap  { font-size: 0.75rem; color: var(--gray-500); }
-
-    /* ── Course List ── */
-    .course-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background: var(--white);
-      border-radius: var(--radius-sm);
-      margin-bottom: 8px;
-      border: 1px solid var(--gray-300);
-    }
-    .course-info { font-size: 0.85rem; color: var(--gray-500); margin-top: 2px; }
-
-    /* ── Round Setup ── */
-    .setup-field { margin-bottom: 14px; }
-    .setup-field label { display: block; font-size: 0.8rem; color: var(--gray-500); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
-
-    /* ── Sync Code ── */
-    #sync-code-display {
-      font-size: 2.5rem;
-      font-family: monospace;
-      color: var(--green-deep);
-      letter-spacing: 0.25em;
-      text-align: center;
-      padding: 16px;
-      background: var(--green-light);
-      border-radius: var(--radius);
-      border: 2px dashed var(--green-mid);
-      margin: 14px 0;
-      font-weight: bold;
-    }
-
-    /* ── Toast ── */
-    #toast {
-      position: fixed;
-      bottom: calc(20px + var(--safe-bottom));
-      left: 50%; transform: translateX(-50%);
-      background: var(--green-deep);
-      color: var(--white);
-      padding: 10px 22px;
-      border-radius: 30px;
-      font-size: 0.88rem;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
-      z-index: 999;
-      white-space: nowrap;
-    }
-    #toast.show { opacity: 1; }
-
-    /* ── Modal ── */
-    .modal-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.55);
-      z-index: 200;
-      align-items: flex-end;
-      justify-content: center;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal-box {
-      background: var(--white);
-      border-radius: var(--radius) var(--radius) 0 0;
-      padding: 24px 20px calc(24px + var(--safe-bottom));
-      width: 100%;
-      max-width: 520px;
-      animation: slideUp 0.25s ease;
-    }
-    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } }
-    .modal-title { font-size: 1.1rem; color: var(--green-deep); margin-bottom: 16px; font-weight: bold; }
-
-    /* ── Totals Row ── */
-    .totals-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-    .total-chip {
-      flex: 1;
-      min-width: 80px;
-      background: var(--white);
-      border: 1px solid var(--gray-300);
-      border-radius: var(--radius-sm);
-      padding: 10px;
-      text-align: center;
-    }
-    .total-chip .tc-label { font-size: 0.68rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; }
-    .total-chip .tc-value { font-size: 1.3rem; font-weight: bold; color: var(--green-deep); margin-top: 2px; }
-    .total-chip .tc-value.over-par { color: var(--red); }
-    .total-chip .tc-value.under-par { color: var(--green-mid); }
-
-    /* ── Loading Screen ── */
-    #loading-screen {
-      position: fixed; inset: 0;
-      background: var(--green-deep);
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column; gap: 16px;
-      z-index: 1000;
-      transition: opacity 0.4s;
-    }
-    #loading-screen.hidden { opacity: 0; pointer-events: none; }
-    .loading-logo { font-size: 2.5rem; color: var(--green-bright); }
-    .loading-text  { color: var(--white); font-size: 1rem; opacity: 0.8; }
-    .loading-spinner {
-      width: 36px; height: 36px;
-      border: 3px solid rgba(255,255,255,0.2);
-      border-top-color: var(--green-bright);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
+    #loading.fade { opacity: 0; pointer-events: none; }
+    .load-logo { font-family: 'DM Serif Display', serif; font-size: 3rem; color: var(--sprout); letter-spacing: -0.02em; }
+    .load-logo em { color: var(--gold); font-style: normal; }
+    .load-sub { color: rgba(255,255,255,0.45); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.12); border-top-color: var(--sprout); border-radius: 50%; animation: spin 0.75s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Leaderboard ── */
-    .lb-row {
-      display: flex; align-items: center;
-      padding: 12px 16px;
-      background: var(--white);
-      border-radius: var(--radius-sm);
-      margin-bottom: 8px;
-      border: 1px solid var(--gray-300);
-      gap: 14px;
-    }
-    .lb-rank { font-size: 1.2rem; font-weight: bold; color: var(--gold); min-width: 28px; }
-    .lb-name { flex: 1; font-weight: bold; }
-    .lb-score { font-size: 1.1rem; font-weight: bold; }
-    .lb-score.under { color: var(--green-mid); }
-    .lb-score.over  { color: var(--red); }
-    .lb-score.even  { color: var(--gray-700); }
+    /* App shell */
+    #app { display: flex; flex-direction: column; min-height: 100dvh; padding-top: var(--safe-t); }
 
-    /* ── Hole Nav ── */
-    .hole-nav {
+    /* Header */
+    #header {
+      background: var(--forest); padding: 14px 20px 12px;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px;
-      background: var(--white);
-      border-radius: var(--radius-sm);
-      margin-bottom: 12px;
-      border: 1px solid var(--gray-300);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      position: sticky; top: 0; z-index: 200;
     }
-    .hole-num-big { font-size: 1.6rem; font-weight: bold; color: var(--green-deep); }
-    .hole-par-text { font-size: 0.8rem; color: var(--gray-500); }
+    .header-brand { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--sprout); }
+    .header-brand em { color: var(--gold); font-style: normal; }
+    #conn-dot {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.68rem; color: rgba(255,255,255,0.4);
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    #conn-dot::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--sprout);
+      animation: pulse-dot 2.5s infinite;
+    }
+    #conn-dot.offline::before { background: #e74c3c; animation: none; }
+    #conn-dot.syncing::before { background: var(--gold); animation: spin 1s linear infinite; border-radius: 0; }
+    @keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(82,183,136,0.5); } 50% { box-shadow: 0 0 0 5px rgba(82,183,136,0); } }
 
-    /* ── Responsive ── */
-    @media (max-width: 380px) {
-      .score-cell { padding: 6px 3px; font-size: 0.75rem; }
-      #sync-code-display { font-size: 2rem; }
+    /* Tab bar */
+    #tabs {
+      background: var(--forest); display: flex;
+      border-bottom: 1px solid rgba(255,255,255,0.08); padding: 0 4px;
     }
+    .tab {
+      flex: 1; padding: 10px 4px 9px; border: none; background: none; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 500;
+      color: rgba(255,255,255,0.38); letter-spacing: 0.07em; text-transform: uppercase;
+      border-bottom: 2px solid transparent; transition: color 0.18s, border-color 0.18s;
+      position: relative; bottom: -1px;
+    }
+    .tab.active { color: var(--sprout); border-bottom-color: var(--sprout); }
+    .tab .tab-icon { display: block; font-size: 1.1rem; margin-bottom: 2px; }
 
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--gray-500);
-    }
-    .empty-state .emoji { font-size: 3rem; display: block; margin-bottom: 12px; }
+    /* Main content */
+    #main { flex: 1; background: var(--parchment); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .panel { display: none; padding: 16px; padding-bottom: calc(16px + var(--safe-b)); animation: fadeIn 0.2s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
 
-    .divider { height: 1px; background: var(--gray-300); margin: 16px 0; }
+    /* Section header */
+    .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .sec-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--forest); }
 
-    /* Hole input wrapper for score entry */
-    .hole-inputs-wrapper { display: flex; flex-direction: column; gap: 12px; }
-    .player-score-row {
-      display: flex; align-items: center; gap: 12px;
-      background: var(--white); border-radius: var(--radius-sm);
-      padding: 12px 14px; border: 1px solid var(--gray-300);
+    /* Cards */
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow-sm); }
+
+    /* Form fields */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin-bottom: 6px; }
+    input[type=text], input[type=number], select {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border-dark); border-radius: var(--r-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--ink);
+      background: var(--card-bg); outline: none; -webkit-appearance: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
     }
-    .player-score-row .psr-name { flex: 1; font-weight: bold; font-size: 0.9rem; }
-    .score-stepper {
-      display: flex; align-items: center; gap: 10px;
+    input:focus, select:focus { border-color: var(--rough); box-shadow: 0 0 0 3px rgba(45,106,79,0.12); }
+    input[type=number] { text-align: center; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 11px 20px; border: none; border-radius: var(--r-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; -webkit-user-select: none; user-select: none;
+      transition: transform 0.1s, opacity 0.15s; white-space: nowrap;
     }
-    .stepper-btn {
-      width: 36px; height: 36px;
-      border: 2px solid var(--green-mid);
-      background: var(--white);
-      border-radius: 50%;
-      font-size: 1.2rem;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-weight: bold; color: var(--green-mid);
-      transition: background 0.15s;
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.45; pointer-events: none; }
+    .btn-green  { background: var(--rough); color: #fff; }
+    .btn-gold   { background: var(--gold); color: #fff; }
+    .btn-ghost  { background: transparent; color: var(--rough); border: 1.5px solid var(--rough); }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-sm     { padding: 7px 14px; font-size: 0.8rem; }
+    .btn-full   { width: 100%; }
+    .btn-row    { display: flex; gap: 10px; margin-top: 12px; }
+
+    /* Player item */
+    .player-item { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
+    .pi-left { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--fairway); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 1.1rem; flex-shrink: 0; }
+    .pi-name { font-weight: 600; font-size: 0.95rem; color: var(--ink); }
+    .pi-sub  { font-size: 0.75rem; color: var(--ink-muted); margin-top: 1px; }
+    .pi-actions { display: flex; gap: 6px; }
+
+    /* Course item */
+    .course-item { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
+
+    /* Par grid */
+    .par-grid { display: grid; gap: 6px; margin-top: 10px; }
+    .par-cell { text-align: center; }
+    .par-cell-lbl { font-size: 0.6rem; color: var(--ink-muted); text-transform: uppercase; margin-bottom: 3px; }
+    .par-cell input { padding: 7px 2px; font-size: 0.9rem; border-radius: var(--r-xs); }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 48px 20px; color: var(--ink-muted); }
+    .empty-icon { font-size: 2.8rem; display: block; margin-bottom: 10px; opacity: 0.6; }
+    .empty-title { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--ink-soft); }
+    .empty-sub { font-size: 0.85rem; margin-top: 6px; }
+
+    /* Modal */
+    .overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(15,35,24,0.7); align-items: flex-end; justify-content: center; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+    .overlay.open { display: flex; }
+    .modal { background: var(--card-bg); border-radius: var(--r) var(--r) 0 0; padding: 24px 20px calc(20px + var(--safe-b)); width: 100%; max-width: 540px; max-height: 88dvh; overflow-y: auto; animation: slideUp 0.22s cubic-bezier(0.32,0.72,0,1); }
+    @keyframes slideUp { from { transform: translateY(100%); } }
+    .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--forest); margin-bottom: 18px; }
+    .modal-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border-dark); margin: 0 auto 18px; }
+
+    /* Home CTA */
+    .home-cta { background: var(--forest); border-radius: var(--r); padding: 28px 20px; text-align: center; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .home-cta::before { content: '⛳'; position: absolute; font-size: 9rem; opacity: 0.06; right: -20px; bottom: -20px; }
+    .home-cta-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: #fff; margin-bottom: 6px; }
+    .home-cta-sub { color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 20px; }
+
+    /* Active round header */
+    .round-header { background: var(--forest); border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .rh-course { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #fff; }
+    .rh-sub { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top: 3px; }
+    .rh-code { font-family: 'DM Sans', monospace; font-size: 1rem; font-weight: 700; color: var(--gold); letter-spacing: 0.15em; background: rgba(255,255,255,0.08); padding: 6px 12px; border-radius: var(--r-xs); }
+    .rh-code-label { font-size: 0.6rem; color: rgba(255,255,255,0.35); text-align: right; margin-bottom: 3px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* Hole nav */
+    .hole-nav { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 16px; margin-bottom: 10px; box-shadow: var(--shadow-xs); }
+    .hn-arrow { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--rough); background: transparent; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--rough); cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .hn-arrow:active { background: var(--mint); }
+    .hn-arrow:disabled { opacity: 0.25; pointer-events: none; }
+    .hn-center { text-align: center; }
+    .hn-hole { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: var(--forest); line-height: 1; }
+    .hn-par { font-size: 0.75rem; color: var(--ink-muted); margin-top: 2px; }
+
+    /* Score steppers */
+    .score-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .score-row { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; box-shadow: var(--shadow-xs); gap: 12px; }
+    .sr-name { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--ink); }
+    .sr-badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
+    .badge-eagle  { background: var(--eagle-bg);  color: var(--eagle-txt); }
+    .badge-birdie { background: var(--birdie-bg); color: var(--birdie-txt); }
+    .badge-par    { background: var(--mint);      color: var(--rough); }
+    .badge-bogey  { background: var(--bogey-bg);  color: var(--bogey-txt); }
+    .badge-double { background: var(--double-bg); color: var(--double-txt); }
+    .badge-empty  { background: var(--border);    color: var(--ink-muted); }
+    .stepper { display: flex; align-items: center; gap: 10px; }
+    .step-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--rough); background: #fff; color: var(--rough); font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.13s; font-family: inherit; }
+    .step-btn:active { background: var(--mint); }
+    .step-val { font-family: 'DM Serif Display', serif; font-size: 1.6rem; min-width: 32px; text-align: center; color: var(--ink); line-height: 1; }
+
+    /* Leaderboard */
+    .lb-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+    .lb-head { background: var(--forest); color: rgba(255,255,255,0.5); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; display: grid; grid-template-columns: 36px 1fr 50px 50px; padding: 8px 14px; font-weight: 600; }
+    .lb-row { display: grid; grid-template-columns: 36px 1fr 50px 50px; padding: 11px 14px; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-rank { font-weight: 700; color: var(--gold); font-size: 0.95rem; }
+    .lb-name { font-weight: 600; color: var(--ink); }
+    .lb-gross { text-align: center; color: var(--ink-soft); font-size: 0.85rem; }
+    .lb-diff { text-align: right; font-family: 'DM Serif Display', serif; font-size: 1rem; font-weight: 700; }
+    .lb-diff.under { color: var(--rough); }
+    .lb-diff.over  { color: var(--red); }
+    .lb-diff.even  { color: var(--ink-soft); }
+
+    /* Scorecard grid */
+    .sc-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
+    .sc-grid { border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--border); min-width: 300px; box-shadow: var(--shadow-sm); }
+    .sc-head-row { background: var(--forest); color: rgba(255,255,255,0.7); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+    .sc-data-row { background: var(--card-bg); border-top: 1px solid var(--border); }
+    .sc-data-row:nth-child(even) { background: var(--parchment); }
+    .sc-nine-row { background: var(--mint); border-top: 1px solid var(--rough); font-weight: 700; font-size: 0.72rem; color: var(--forest); }
+    .sc-total-row { background: var(--fairway); border-top: 2px solid var(--forest); color: #fff; font-weight: 700; }
+    .sc-cell { padding: 7px 5px; text-align: center; border-right: 1px solid rgba(0,0,0,0.06); font-size: 0.75rem; }
+    .sc-cell:last-child { border-right: none; }
+    .s-eagle  { background: var(--eagle-bg)  !important; color: var(--eagle-txt)  !important; font-weight: 700; }
+    .s-birdie { background: var(--birdie-bg) !important; color: var(--birdie-txt) !important; }
+    .s-bogey  { background: var(--bogey-bg)  !important; color: var(--bogey-txt)  !important; }
+    .s-double { background: var(--double-bg) !important; color: var(--double-txt) !important; font-weight: 700; }
+
+    /* Player chips (round setup) */
+    .player-chips { display: flex; flex-direction: column; gap: 8px; }
+    .player-chip { display: flex; align-items: center; gap: 12px; background: var(--card-bg); border: 2px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .player-chip.selected { border-color: var(--rough); background: var(--mint); }
+    .chip-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.8rem; transition: all 0.15s; }
+    .player-chip.selected .chip-check { background: var(--rough); border-color: var(--rough); color: #fff; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: calc(24px + var(--safe-b)); left: 50%; transform: translateX(-50%) translateY(8px); background: var(--forest); color: #fff; padding: 11px 24px; border-radius: 30px; font-size: 0.85rem; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 9000; white-space: nowrap; box-shadow: var(--shadow-md); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    /* Round history */
+    .round-hist { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 13px 15px; margin-bottom: 8px; box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; }
+    .rh-icon { width: 38px; height: 38px; border-radius: var(--r-xs); background: var(--mint); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+    .rh-body { flex: 1; }
+    .rh-cname { font-weight: 600; font-size: 0.9rem; color: var(--ink); }
+    .rh-meta  { font-size: 0.72rem; color: var(--ink-muted); margin-top: 2px; }
+    .status-badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }
+    .status-active   { background: var(--mint); color: var(--rough); }
+    .status-complete { background: var(--border); color: var(--ink-muted); }
+
+    @media (min-width: 540px) {
+      #header, #tabs { max-width: 540px; margin-left: auto; margin-right: auto; }
+      #main { max-width: 540px; margin: 0 auto; }
     }
-    .stepper-btn:active { background: var(--green-light); }
-    .stepper-val {
-      font-size: 1.4rem; font-weight: bold; color: var(--gray-700);
-      min-width: 28px; text-align: center;
-    }
-    .stepper-val.birdie-color { color: var(--green-mid); }
-    .stepper-val.eagle-color  { color: var(--gold-dark); }
-    .stepper-val.bogey-color  { color: var(--gold); }
-    .stepper-val.double-color { color: var(--red); }
   </style>
 </head>
 <body>
 
-<!-- Loading Screen -->
-<div id="loading-screen">
-  <div class="loading-logo">⛳</div>
-  <div class="loading-text">Loading PlayPal…</div>
-  <div class="loading-spinner"></div>
+<div id="loading">
+  <div class="load-logo">Play<em>Pal</em></div>
+  <div class="load-sub">Golf Scorecard</div>
+  <div class="spinner"></div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- Modals -->
-<div class="modal-overlay" id="modal-player">
-  <div class="modal-box">
-    <div class="modal-title" id="modal-player-title">Add Player</div>
-    <div class="setup-field">
-      <label>Name</label>
-      <input type="text" id="modal-player-name" placeholder="Player name" autocomplete="off" />
+<!-- Modal: Add/Edit Player -->
+<div class="overlay" id="m-player">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="m-player-title">Add Player</div>
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="f-pname" placeholder="e.g. Tiger Woods" autocomplete="off" />
     </div>
-    <div class="setup-field">
-      <label>Handicap</label>
-      <input type="number" id="modal-player-hcp" placeholder="0" min="0" max="54" />
+    <div class="field">
+      <label>Handicap Index</label>
+      <input type="number" id="f-phcp" placeholder="0" min="0" max="54" step="0.1" />
     </div>
-    <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-player')">Cancel</button>
-      <button class="btn btn-primary btn-full" onclick="savePlayer()">Save</button>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('m-player')">Cancel</button>
+      <button class="btn btn-green btn-full" onclick="savePlayer()">Save Player</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-course">
-  <div class="modal-box">
-    <div class="modal-title" id="modal-course-title">Add Course</div>
-    <div class="setup-field">
+<!-- Modal: Add/Edit Course -->
+<div class="overlay" id="m-course">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="m-course-title">Add Course</div>
+    <div class="field">
       <label>Course Name</label>
-      <input type="text" id="modal-course-name" placeholder="e.g. Pebble Beach" autocomplete="off" />
+      <input type="text" id="f-cname" placeholder="e.g. Augusta National" autocomplete="off" />
     </div>
-    <div class="setup-field">
-      <label>Holes</label>
-      <select id="modal-course-holes">
+    <div class="field">
+      <label>Number of Holes</label>
+      <select id="f-choles" onchange="buildParGrid(parseInt(this.value),[])">
         <option value="9">9 Holes</option>
         <option value="18" selected>18 Holes</option>
       </select>
     </div>
-    <div id="modal-course-pars"></div>
-    <div style="display:flex;gap:10px;margin-top:16px;">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-course')">Cancel</button>
-      <button class="btn btn-primary btn-full" onclick="saveCourse()">Save</button>
+    <div id="par-grid-wrap"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('m-course')">Cancel</button>
+      <button class="btn btn-green btn-full" onclick="saveCourse()">Save Course</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-join">
-  <div class="modal-box">
+<!-- Modal: Join Round -->
+<div class="overlay" id="m-join">
+  <div class="modal">
+    <div class="modal-handle"></div>
     <div class="modal-title">Join a Round</div>
-    <div class="setup-field">
-      <label>Enter Sync Code</label>
-      <input type="text" id="join-code-input" placeholder="e.g. A1B2C3"
-             maxlength="6" autocomplete="off" autocapitalize="characters"
-             style="font-size:1.8rem;letter-spacing:0.2em;text-align:center;text-transform:uppercase;" />
+    <div class="field">
+      <label>6-Letter Sync Code</label>
+      <input type="text" id="f-joincode" placeholder="e.g. A1B2C3"
+        maxlength="6" autocomplete="off" autocapitalize="characters"
+        style="font-size:2rem;letter-spacing:0.25em;text-align:center;text-transform:uppercase;padding:14px;" />
     </div>
-    <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-join')">Cancel</button>
-      <button class="btn btn-gold btn-full" onclick="joinRound()">Join</button>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('m-join')">Cancel</button>
+      <button class="btn btn-gold btn-full" onclick="joinRound()">Join Round</button>
     </div>
   </div>
 </div>
 
-<!-- App Shell -->
+<!-- Modal: New Round Setup -->
+<div class="overlay" id="m-newround">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">New Round</div>
+    <div class="field">
+      <label>Course</label>
+      <select id="f-rcourse"><option value="">— choose a course —</option></select>
+    </div>
+    <div class="field">
+      <label>Players (tap to select)</label>
+      <div class="player-chips" id="setup-players"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('m-newround')">Cancel</button>
+      <button class="btn btn-green btn-full" onclick="startRound()">Start Round ⛳</button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
 <div id="app">
   <div id="header">
-    <h1>Play<span>Pal</span> ⛳</h1>
-    <div id="sync-indicator">connecting…</div>
+    <div class="header-brand">Play<em>Pal</em></div>
+    <div id="conn-dot">live</div>
   </div>
-
+  <div id="tabs">
+    <button class="tab active" onclick="switchTab('scorecard')" id="tab-scorecard"><span class="tab-icon">⛳</span>Scorecard</button>
+    <button class="tab" onclick="switchTab('players')"   id="tab-players"><span class="tab-icon">👤</span>Players</button>
+    <button class="tab" onclick="switchTab('courses')"   id="tab-courses"><span class="tab-icon">🏌️</span>Courses</button>
+    <button class="tab" onclick="switchTab('rounds')"    id="tab-rounds"><span class="tab-icon">📋</span>History</button>
+  </div>
   <div id="main">
-    <div id="tabs">
-      <button class="tab-btn active" onclick="switchTab('scorecard')">Scorecard</button>
-      <button class="tab-btn" onclick="switchTab('players')">Players</button>
-      <button class="tab-btn" onclick="switchTab('courses')">Courses</button>
-      <button class="tab-btn" onclick="switchTab('rounds')">Rounds</button>
-    </div>
 
-    <!-- ===== SCORECARD TAB ===== -->
+    <!-- SCORECARD -->
     <div class="panel active" id="panel-scorecard">
-      <div id="scorecard-no-round">
-        <div class="empty-state">
-          <span class="emoji">⛳</span>
-          <strong>No active round</strong>
-          <p style="margin-top:8px;font-size:0.9rem;">Start a new round or join an existing one</p>
-          <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
-            <button class="btn btn-primary btn-full" onclick="showNewRoundSetup()">+ New Round</button>
-            <button class="btn btn-ghost btn-full" onclick="openModal('modal-join')">Join Round</button>
+      <div id="sc-idle">
+        <div class="home-cta">
+          <div class="home-cta-title">Ready to play?</div>
+          <div class="home-cta-sub">Start a new round or join one in progress</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-gold btn-full" onclick="openNewRound()">+ New Round</button>
+            <button class="btn btn-ghost btn-full" style="color:#fff;border-color:rgba(255,255,255,0.3);" onclick="openModal('m-join')">Join Round</button>
           </div>
         </div>
       </div>
-
-      <div id="scorecard-setup" style="display:none;">
-        <div class="card">
-          <div class="modal-title">New Round Setup</div>
-          <div class="setup-field">
-            <label>Select Course</label>
-            <select id="setup-course-select">
-              <option value="">-- Choose a course --</option>
-            </select>
+      <div id="sc-active" style="display:none;">
+        <div class="round-header">
+          <div>
+            <div class="rh-course" id="active-course-name">—</div>
+            <div class="rh-sub" id="active-player-count">—</div>
           </div>
-          <div class="setup-field">
-            <label>Select Players (tap to select)</label>
-            <div id="setup-player-list"></div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:8px;">
-            <button class="btn btn-ghost btn-full" onclick="cancelNewRound()">Cancel</button>
-            <button class="btn btn-primary btn-full" onclick="startRound()">Start Round</button>
+          <div>
+            <div class="rh-code-label">Code</div>
+            <div class="rh-code" id="active-code">—</div>
           </div>
         </div>
-      </div>
-
-      <div id="scorecard-active" style="display:none;">
-        <div class="card" style="margin-bottom:12px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div class="card-label">Current Round</div>
-              <div class="card-value" id="active-course-name">—</div>
-            </div>
-            <div style="text-align:right;">
-              <div class="card-label">Sync Code</div>
-              <div style="font-family:monospace;font-size:1.1rem;font-weight:bold;color:var(--green-mid);" id="active-sync-code">—</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hole navigation + entry -->
         <div class="hole-nav">
-          <button class="stepper-btn" onclick="prevHole()">‹</button>
-          <div style="text-align:center;">
-            <div class="hole-num-big" id="hole-display">Hole 1</div>
-            <div class="hole-par-text" id="hole-par-display">Par —</div>
+          <button class="hn-arrow" id="btn-prev" onclick="changeHole(-1)">‹</button>
+          <div class="hn-center">
+            <div class="hn-hole" id="hn-label">Hole 1</div>
+            <div class="hn-par"  id="hn-par">Par —</div>
           </div>
-          <button class="stepper-btn" onclick="nextHole()">›</button>
+          <button class="hn-arrow" id="btn-next" onclick="changeHole(1)">›</button>
         </div>
-
-        <div class="hole-inputs-wrapper" id="hole-score-inputs"></div>
-
+        <div class="score-rows" id="score-rows"></div>
         <div class="divider"></div>
-
-        <!-- Leaderboard -->
-        <div class="section-header" style="margin-top:0;">
-          <h2>Leaderboard</h2>
+        <div class="sec-head">
+          <div class="sec-title">Leaderboard</div>
           <button class="btn btn-danger btn-sm" onclick="endRound()">End Round</button>
         </div>
         <div id="leaderboard"></div>
-
-        <!-- Full Scorecard Grid -->
-        <div class="section-header" style="margin-top:16px;">
-          <h2>Full Scorecard</h2>
-        </div>
-        <div style="overflow-x:auto;">
-          <div id="scorecard-grid"></div>
-        </div>
+        <div class="divider"></div>
+        <div class="sec-head"><div class="sec-title">Full Scorecard</div></div>
+        <div class="sc-wrap"><div id="sc-grid"></div></div>
       </div>
     </div>
 
-    <!-- ===== PLAYERS TAB ===== -->
+    <!-- PLAYERS -->
     <div class="panel" id="panel-players">
-      <div class="section-header">
-        <h2>Players</h2>
-        <button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Add</button>
+      <div class="sec-head">
+        <div class="sec-title">Players</div>
+        <button class="btn btn-green btn-sm" onclick="openAddPlayer()">+ Add</button>
       </div>
-      <div id="player-list">
-        <div class="empty-state"><span class="emoji">👤</span>No players yet</div>
-      </div>
+      <div id="player-list"><div class="empty"><span class="empty-icon">👤</span><div class="empty-title">No players yet</div><div class="empty-sub">Tap + Add to create a player profile</div></div></div>
     </div>
 
-    <!-- ===== COURSES TAB ===== -->
+    <!-- COURSES -->
     <div class="panel" id="panel-courses">
-      <div class="section-header">
-        <h2>Courses</h2>
-        <button class="btn btn-primary btn-sm" onclick="openAddCourse()">+ Add</button>
+      <div class="sec-head">
+        <div class="sec-title">Courses</div>
+        <button class="btn btn-green btn-sm" onclick="openAddCourse()">+ Add</button>
       </div>
-      <div id="course-list">
-        <div class="empty-state"><span class="emoji">🏌️</span>No courses yet</div>
-      </div>
+      <div id="course-list"><div class="empty"><span class="empty-icon">🏌️</span><div class="empty-title">No courses yet</div><div class="empty-sub">Tap + Add to save a course</div></div></div>
     </div>
 
-    <!-- ===== ROUNDS TAB ===== -->
+    <!-- HISTORY -->
     <div class="panel" id="panel-rounds">
-      <div class="section-header">
-        <h2>Past Rounds</h2>
-      </div>
-      <div id="rounds-list">
-        <div class="empty-state"><span class="emoji">📋</span>No completed rounds yet</div>
-      </div>
+      <div class="sec-head"><div class="sec-title">Round History</div></div>
+      <div id="rounds-list"><div class="empty"><span class="empty-icon">📋</span><div class="empty-title">No rounds yet</div></div></div>
     </div>
+
   </div>
 </div>
 
 <script>
-// =====================================================
-//  FIREBASE CONFIGURATION
-//  Project: playpal-sync
-//  RTDB: players + rounds
-//  Firestore: live round sync (playpal_rounds/{syncCode})
-// =====================================================
+/* ═══════════════════════════════════════════════════════════════
+   FIREBASE CONFIG
+   Replace the 3 REPLACE_WITH_ values.
+   Everything else is confirmed from your Firebase screenshots.
+   Instructions at bottom of this file.
+═══════════════════════════════════════════════════════════════ */
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyPlaypalSyncKey",   // ← REPLACE with your actual apiKey
+  apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
   authDomain:        "playpal-sync.firebaseapp.com",
-  databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
   projectId:         "playpal-sync",
-  storageBucket:     "playpal-sync.appspot.com",
-  messagingSenderId: "000000000000",            // ← REPLACE with actual
-  appId:             "1:000000000000:web:000000000000000000000000" // ← REPLACE with actual
+  storageBucket:     "playpal-sync.firebasestorage.app",
+  messagingSenderId: "97913885953",
+  appId:             "1:97913885953:web:0e42ee9dbca2c346c0f700"
 };
 
-// =====================================================
-//  CRITICAL: DO NOT initialize Firebase until
-//  firebase-app-compat.js has fully loaded.
-//  We defer all logic until DOMContentLoaded.
-// =====================================================
+/* ─── STATE ─────────────────────────────────────────────────── */
+let FS = null, AUTH = null, UID = null;
 
-// ── State ──────────────────────────────────────────
-let db        = null;   // Realtime DB reference
-let fs        = null;   // Firestore reference
-let auth      = null;   // Auth reference
-let uid       = null;   // Current anonymous UID (persisted to localStorage)
-
-// Local mirrors (populated from Firebase listeners, NEVER written from local init)
-let STATE = {
-  players:    {},   // { playerId: { name, handicap } }
-  courses:    {},   // { courseId: { name, holes, pars[] } }
-  rounds:     {},   // { roundId: { ...roundData } }
-  activeRound: null // current live round object
+const STATE = {
+  players:     {},
+  courses:     {},
+  activeRound: null
 };
 
-let activeRoundListener = null;  // Firestore unsubscribe fn for active round
-let playersListener     = null;  // RTDB listener ref for players
-let coursesListener     = null;  // RTDB listener ref for courses
+const UNSUB = { players: null, courses: null, round: null };
 
-let editingPlayerId  = null;
-let editingCourseId  = null;
-let currentHole      = 0; // 0-indexed
+let currentHole  = 0;
+let selectedPIDs = new Set();
+let editingPID   = null;
+let editingCID   = null;
 
-// ── Utility ────────────────────────────────────────
-function genId(len = 6) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars
-  let id = '';
-  for (let i = 0; i < len; i++) id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
+/* ─── UTILS ─────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-function toast(msg, duration = 2500) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), duration);
+function genCode(n=6) {
+  const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  return Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('');
 }
-
-function setSyncStatus(state, msg) {
-  const el = document.getElementById('sync-indicator');
-  el.textContent = msg;
-  el.className = state === 'error' ? 'error' : state === 'syncing' ? 'syncing' : '';
+function toast(msg, ms=2800) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),ms);
 }
-
+function setConn(s) {
+  const el=document.getElementById('conn-dot');
+  el.textContent=s; el.className=s==='offline'?'offline':s==='syncing'?'syncing':'';
+}
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
 function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const names = ['scorecard','players','courses','rounds'];
-    b.classList.toggle('active', names[i] === name);
-  });
-  document.querySelectorAll('.panel').forEach(p => {
-    p.classList.toggle('active', p.id === `panel-${name}`);
+  ['scorecard','players','courses','rounds'].forEach(n=>{
+    document.getElementById('tab-'+n).classList.toggle('active',n===name);
+    document.getElementById('panel-'+n).classList.toggle('active',n===name);
   });
 }
 
-// ── iOS Standalone Detection & Fix ─────────────────
-// In iOS standalone mode, every navigation creates a new browsing context.
-// We force a hard-reload check on app focus to ensure Firebase listeners reconnect.
-function setupStandaloneReloadFix() {
-  const isStandalone = window.navigator.standalone === true ||
-    window.matchMedia('(display-mode: standalone)').matches;
-
-  if (isStandalone) {
-    // On iOS standalone: when app resumes from background, check if Firebase is connected
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        // Firebase Realtime DB has built-in reconnect, but we verify listeners are alive
-        if (!playersListener || !coursesListener) {
-          setupRTDBListeners();
-        }
-        // If in an active round, verify Firestore listener is alive
-        if (STATE.activeRound && !activeRoundListener) {
-          subscribeToRound(STATE.activeRound.syncCode);
-        }
-        // Force Firebase connection check
-        if (db) {
-          const connRef = db.ref('.info/connected');
-          connRef.once('value').then(snap => {
-            if (!snap.val()) {
-              setSyncStatus('error', 'reconnecting…');
-            }
-          });
-        }
-      }
-    });
-
-    // Prevent iOS from caching the page by disabling page cache (bfcache)
-    window.addEventListener('pageshow', (e) => {
-      if (e.persisted) {
-        // Page was restored from bfcache — force full reload to get fresh Firebase state
-        window.location.reload();
-      }
-    });
-  }
+/* ─── AUTH ──────────────────────────────────────────────────── */
+function initAuth() {
+  return AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .catch(()=>{})
+    .then(()=>new Promise((res,rej)=>{
+      const u=AUTH.onAuthStateChanged(user=>{
+        u();
+        if(user){UID=user.uid;res(user);}
+        else AUTH.signInAnonymously().then(r=>{UID=r.user.uid;res(r.user);}).catch(rej);
+      },rej);
+    }));
 }
 
-// ── Auth ───────────────────────────────────────────
-// CRITICAL FIX: Anonymous auth with UID persistence.
-// Without this, each session gets a NEW anonymous UID.
-// Since RTDB and Firestore rules may be tied to uid,
-// we persist the uid to localStorage so the same user
-// is recognized across sessions.
-//
-// However, Firebase Auth persistence (LOCAL) handles this
-// automatically if we use enableIndexedDbPersistence or
-// set auth.setPersistence(local). We do both as a belt+suspenders.
-
-async function initAuth() {
-  return new Promise((resolve, reject) => {
-    // Firebase Auth LOCAL persistence is the default on web,
-    // but in iOS standalone Safari it may be SESSION.
-    // Explicitly set to LOCAL to survive app restarts.
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .then(() => {
-        // Listen for auth state change (fires once on init)
-        const unsubscribe = auth.onAuthStateChanged(user => {
-          unsubscribe(); // We only need the first emission here
-          if (user) {
-            uid = user.uid;
-            resolve(user);
-          } else {
-            // No existing session — sign in anonymously
-            auth.signInAnonymously()
-              .then(result => {
-                uid = result.user.uid;
-                resolve(result.user);
-              })
-              .catch(reject);
-          }
-        });
-      })
-      .catch(() => {
-        // Persistence setting failed (private browsing) — still sign in
-        auth.onAuthStateChanged(user => {
-          if (user) { uid = user.uid; resolve(user); }
-          else auth.signInAnonymously().then(r => { uid = r.user.uid; resolve(r.user); }).catch(reject);
-        });
-      });
+/* ─── FIRESTORE PERSISTENCE ─────────────────────────────────── */
+function initPersistence() {
+  return FS.enablePersistence({synchronizeTabs:true}).catch(err=>{
+    if(err.code==='failed-precondition') console.warn('Firestore: multi-tab, one cache');
+    else if(err.code==='unimplemented')  console.warn('Firestore: persistence not supported');
   });
 }
 
-// ── RTDB Listeners ─────────────────────────────────
-// CRITICAL FIX: We NEVER write blank/default data on init.
-// We ONLY read. Listeners update local state from DB, not the other way.
-
-function setupRTDBListeners() {
-  const playersRef = db.ref('players');
-  const coursesRef = db.ref('courses');
-
-  // Detach any existing listeners first to prevent duplicate events
-  if (playersListener) db.ref('players').off('value', playersListener);
-  if (coursesListener) db.ref('courses').off('value', coursesListener);
-
-  playersListener = playersRef.on('value', snap => {
-    const data = snap.val();
-    // CRITICAL: Only replace STATE if data exists — never null out from empty snap
-    // during a transient disconnect. Firebase will deliver null if the path is
-    // empty, but we don't want to wipe local state on reconnect glitches.
-    if (data !== null) {
-      STATE.players = data;
-    } else {
-      STATE.players = {};
-    }
-    renderPlayers();
-    updateSetupPlayerList();
-    setSyncStatus('ok', '● live');
-  }, err => {
-    console.error('Players listener error:', err);
-    setSyncStatus('error', '✕ error');
-  });
-
-  coursesListener = coursesRef.on('value', snap => {
-    const data = snap.val();
-    if (data !== null) {
-      STATE.courses = data;
-    } else {
-      STATE.courses = {};
-    }
-    renderCourses();
-    updateSetupCourseSelect();
-    setSyncStatus('ok', '● live');
-  }, err => {
-    console.error('Courses listener error:', err);
-    setSyncStatus('error', '✕ error');
-  });
-
-  // Connection state monitor
-  db.ref('.info/connected').on('value', snap => {
-    if (snap.val() === false) {
-      setSyncStatus('syncing', '◌ offline');
-    } else {
-      setSyncStatus('ok', '● live');
-    }
-  });
+/* ─── PLAYERS ───────────────────────────────────────────────── */
+function attachPlayersListener() {
+  if(UNSUB.players) UNSUB.players();
+  UNSUB.players = FS.collection('players').orderBy('name')
+    .onSnapshot(snap=>{
+      STATE.players={};
+      snap.forEach(d=>{STATE.players[d.id]=d.data();});
+      renderPlayers(); renderSetupPlayers(); setConn('live');
+    }, err=>{console.error('Players:',err); setConn('offline');});
 }
 
-// ── Enable RTDB offline persistence ────────────────
-// This caches RTDB data locally so the app works offline
-// and data survives refreshes without re-fetching.
-// NOTE: This must be called before any other db calls.
-function enableRTDBPersistence() {
-  try {
-    db.goOnline(); // Ensure connection is active
-    // RTDB disk persistence (keeps data cached across sessions)
-    // Use keepSynced on critical paths
-    db.ref('players').keepSynced(true);
-    db.ref('courses').keepSynced(true);
-  } catch (e) {
-    console.warn('RTDB persistence setup warning:', e);
-  }
-}
-
-// ── Firestore Persistence ──────────────────────────
-async function enableFirestorePersistence() {
-  try {
-    await fs.enablePersistence({ synchronizeTabs: true });
-  } catch (err) {
-    if (err.code === 'failed-precondition') {
-      // Multiple tabs open — persistence only in one tab, acceptable
-      console.warn('Firestore persistence: multiple tabs');
-    } else if (err.code === 'unimplemented') {
-      // Browser doesn't support persistence — acceptable
-      console.warn('Firestore persistence: not supported');
-    }
-  }
-}
-
-// ── Player CRUD ────────────────────────────────────
 function openAddPlayer() {
-  editingPlayerId = null;
-  document.getElementById('modal-player-title').textContent = 'Add Player';
-  document.getElementById('modal-player-name').value = '';
-  document.getElementById('modal-player-hcp').value = '';
-  openModal('modal-player');
-  setTimeout(() => document.getElementById('modal-player-name').focus(), 100);
+  editingPID=null;
+  document.getElementById('m-player-title').textContent='Add Player';
+  document.getElementById('f-pname').value='';
+  document.getElementById('f-phcp').value='';
+  openModal('m-player');
+  setTimeout(()=>document.getElementById('f-pname').focus(),150);
 }
-
 function openEditPlayer(id) {
-  editingPlayerId = id;
-  const p = STATE.players[id];
-  if (!p) return;
-  document.getElementById('modal-player-title').textContent = 'Edit Player';
-  document.getElementById('modal-player-name').value = p.name || '';
-  document.getElementById('modal-player-hcp').value = p.handicap != null ? p.handicap : '';
-  openModal('modal-player');
+  const p=STATE.players[id]; if(!p) return;
+  editingPID=id;
+  document.getElementById('m-player-title').textContent='Edit Player';
+  document.getElementById('f-pname').value=p.name||'';
+  document.getElementById('f-phcp').value=p.handicap??'';
+  openModal('m-player');
 }
-
 function savePlayer() {
-  const name = document.getElementById('modal-player-name').value.trim();
-  const hcp  = parseInt(document.getElementById('modal-player-hcp').value, 10) || 0;
-  if (!name) { toast('Please enter a name'); return; }
-
-  const id = editingPlayerId || `p${Date.now()}`;
-  const playerData = { name, handicap: hcp, updatedAt: firebase.database.ServerValue.TIMESTAMP };
-
-  // CRITICAL FIX: Use update (not set) to avoid overwriting sibling nodes
-  db.ref(`players/${id}`).update(playerData)
-    .then(() => {
-      toast(editingPlayerId ? 'Player updated' : 'Player added');
-      closeModal('modal-player');
-    })
-    .catch(err => {
-      console.error('savePlayer error:', err);
-      toast('Save failed — check connection');
-    });
+  const name=document.getElementById('f-pname').value.trim();
+  const hcp=parseFloat(document.getElementById('f-phcp').value)||0;
+  if(!name){toast('Enter a player name');return;}
+  const id=editingPID||('p'+Date.now());
+  const data={name,handicap:hcp,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(!editingPID) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+  setConn('syncing');
+  FS.collection('players').doc(id).set(data,{merge:true})
+    .then(()=>{toast(editingPID?'Player updated ✓':'Player added ✓');closeModal('m-player');})
+    .catch(err=>{console.error('savePlayer:',err);toast('Save failed — check connection');});
 }
-
 function deletePlayer(id) {
-  if (!confirm(`Delete ${STATE.players[id]?.name}?`)) return;
-  db.ref(`players/${id}`).remove()
-    .then(() => toast('Player removed'))
-    .catch(() => toast('Delete failed'));
+  const p=STATE.players[id];
+  if(!p||!confirm('Delete '+p.name+'?')) return;
+  FS.collection('players').doc(id).delete()
+    .then(()=>toast('Player removed')).catch(()=>toast('Delete failed'));
 }
-
 function renderPlayers() {
-  const el = document.getElementById('player-list');
-  const players = Object.entries(STATE.players);
-  if (!players.length) {
-    el.innerHTML = '<div class="empty-state"><span class="emoji">👤</span>No players yet</div>';
+  const el=document.getElementById('player-list');
+  const list=Object.entries(STATE.players);
+  if(!list.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">👤</span><div class="empty-title">No players yet</div><div class="empty-sub">Tap + Add to create a player profile</div></div>';
     return;
   }
-  el.innerHTML = players.map(([id, p]) => `
+  el.innerHTML=list.map(([id,p])=>`
     <div class="player-item">
-      <div class="player-item-left">
-        <div class="player-avatar">${(p.name || '?')[0].toUpperCase()}</div>
-        <div>
-          <div class="player-name-text">${esc(p.name)}</div>
-          <div class="player-handicap">HCP ${p.handicap ?? 0}</div>
-        </div>
+      <div class="pi-left">
+        <div class="avatar">${esc((p.name||'?')[0].toUpperCase())}</div>
+        <div><div class="pi-name">${esc(p.name)}</div><div class="pi-sub">HCP ${p.handicap??0}</div></div>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div class="pi-actions">
         <button class="btn btn-ghost btn-sm" onclick="openEditPlayer('${id}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deletePlayer('${id}')">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ── Course CRUD ────────────────────────────────────
+/* ─── COURSES ───────────────────────────────────────────────── */
+function attachCoursesListener() {
+  if(UNSUB.courses) UNSUB.courses();
+  UNSUB.courses = FS.collection('courses').orderBy('name')
+    .onSnapshot(snap=>{
+      STATE.courses={};
+      snap.forEach(d=>{STATE.courses[d.id]=d.data();});
+      renderCourses(); renderSetupCourseSelect(); setConn('live');
+    }, err=>{console.error('Courses:',err); setConn('offline');});
+}
+
 function openAddCourse() {
-  editingCourseId = null;
-  document.getElementById('modal-course-title').textContent = 'Add Course';
-  document.getElementById('modal-course-name').value = '';
-  document.getElementById('modal-course-holes').value = '18';
-  buildParInputs(18, []);
-  openModal('modal-course');
+  editingCID=null;
+  document.getElementById('m-course-title').textContent='Add Course';
+  document.getElementById('f-cname').value='';
+  document.getElementById('f-choles').value='18';
+  buildParGrid(18,[]);
+  openModal('m-course');
 }
-
 function openEditCourse(id) {
-  editingCourseId = id;
-  const c = STATE.courses[id];
-  if (!c) return;
-  document.getElementById('modal-course-title').textContent = 'Edit Course';
-  document.getElementById('modal-course-name').value = c.name || '';
-  document.getElementById('modal-course-holes').value = c.holes || 18;
-  buildParInputs(c.holes || 18, c.pars || []);
-  openModal('modal-course');
+  const c=STATE.courses[id]; if(!c) return;
+  editingCID=id;
+  document.getElementById('m-course-title').textContent='Edit Course';
+  document.getElementById('f-cname').value=c.name||'';
+  document.getElementById('f-choles').value=String(c.holes||18);
+  buildParGrid(c.holes||18,c.pars||[]);
+  openModal('m-course');
 }
-
-document.getElementById('modal-course-holes').addEventListener('change', function() {
-  buildParInputs(parseInt(this.value), []);
-});
-
-function buildParInputs(holes, existingPars) {
-  const container = document.getElementById('modal-course-pars');
-  // Build a compact grid of par inputs
-  let html = `<div style="margin-top:12px;"><div class="card-label" style="margin-bottom:8px;">Par per Hole</div>`;
-  html += `<div style="display:grid;grid-template-columns:repeat(${holes > 9 ? 6 : 5},1fr);gap:6px;">`;
-  for (let i = 0; i < holes; i++) {
-    const par = existingPars[i] || 4;
-    html += `<div style="text-align:center;">
-      <div style="font-size:0.65rem;color:var(--gray-500);margin-bottom:3px;">H${i+1}</div>
-      <input type="number" class="par-input" data-hole="${i}" value="${par}" min="3" max="6"
-             style="width:100%;padding:6px 2px;font-size:0.85rem;" />
+function buildParGrid(holes,pars) {
+  const cols=holes<=9?5:6;
+  document.getElementById('par-grid-wrap').innerHTML=`
+    <div style="margin-top:12px;">
+      <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);margin-bottom:8px;">Par Per Hole</div>
+      <div class="par-grid" style="grid-template-columns:repeat(${cols},1fr);">
+        ${Array.from({length:holes},(_,i)=>`
+          <div class="par-cell">
+            <div class="par-cell-lbl">H${i+1}</div>
+            <input type="number" class="par-input" data-hole="${i}" value="${pars[i]||4}" min="3" max="6"/>
+          </div>`).join('')}
+      </div>
     </div>`;
-  }
-  html += `</div></div>`;
-  container.innerHTML = html;
 }
-
 function saveCourse() {
-  const name  = document.getElementById('modal-course-name').value.trim();
-  const holes = parseInt(document.getElementById('modal-course-holes').value, 10);
-  if (!name) { toast('Please enter a course name'); return; }
-
-  const parInputs = document.querySelectorAll('.par-input');
-  const pars = [];
-  parInputs.forEach(inp => pars.push(parseInt(inp.value, 10) || 4));
-
-  const id = editingCourseId || `c${Date.now()}`;
-  const courseData = { name, holes, pars, updatedAt: firebase.database.ServerValue.TIMESTAMP };
-
-  // CRITICAL FIX: Use update for merging, not set
-  db.ref(`courses/${id}`).update(courseData)
-    .then(() => {
-      toast(editingCourseId ? 'Course updated' : 'Course added');
-      closeModal('modal-course');
-    })
-    .catch(err => {
-      console.error('saveCourse error:', err);
-      toast('Save failed — check connection');
-    });
+  const name=document.getElementById('f-cname').value.trim();
+  const holes=parseInt(document.getElementById('f-choles').value,10);
+  if(!name){toast('Enter a course name');return;}
+  const pars=Array.from(document.querySelectorAll('.par-input')).map(i=>parseInt(i.value,10)||4);
+  const id=editingCID||('c'+Date.now());
+  const data={name,holes,pars,totalPar:pars.reduce((a,b)=>a+b,0),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(!editingCID) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+  setConn('syncing');
+  FS.collection('courses').doc(id).set(data,{merge:true})
+    .then(()=>{toast(editingCID?'Course updated ✓':'Course added ✓');closeModal('m-course');})
+    .catch(err=>{console.error('saveCourse:',err);toast('Save failed — check connection');});
 }
-
 function deleteCourse(id) {
-  if (!confirm(`Delete ${STATE.courses[id]?.name}?`)) return;
-  db.ref(`courses/${id}`).remove()
-    .then(() => toast('Course removed'))
-    .catch(() => toast('Delete failed'));
+  const c=STATE.courses[id];
+  if(!c||!confirm('Delete '+c.name+'?')) return;
+  FS.collection('courses').doc(id).delete()
+    .then(()=>toast('Course removed')).catch(()=>toast('Delete failed'));
 }
-
 function renderCourses() {
-  const el = document.getElementById('course-list');
-  const courses = Object.entries(STATE.courses);
-  if (!courses.length) {
-    el.innerHTML = '<div class="empty-state"><span class="emoji">🏌️</span>No courses yet</div>';
+  const el=document.getElementById('course-list');
+  const list=Object.entries(STATE.courses);
+  if(!list.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">🏌️</span><div class="empty-title">No courses yet</div><div class="empty-sub">Tap + Add to save a course</div></div>';
     return;
   }
-  el.innerHTML = courses.map(([id, c]) => `
+  el.innerHTML=list.map(([id,c])=>`
     <div class="course-item">
-      <div>
-        <div class="player-name-text">${esc(c.name)}</div>
-        <div class="course-info">${c.holes || 18} holes · Par ${(c.pars||[]).reduce((a,b)=>a+b,0)}</div>
-      </div>
-      <div style="display:flex;gap:8px;">
+      <div><div class="pi-name">${esc(c.name)}</div><div class="pi-sub">${c.holes||18} holes · Par ${c.totalPar||(c.pars||[]).reduce((a,b)=>a+b,0)}</div></div>
+      <div class="pi-actions">
         <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${id}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCourse('${id}')">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ── Round Setup ────────────────────────────────────
-let selectedPlayers = new Set();
-
-function showNewRoundSetup() {
-  selectedPlayers.clear();
-  updateSetupCourseSelect();
-  updateSetupPlayerList();
-  document.getElementById('scorecard-no-round').style.display   = 'none';
-  document.getElementById('scorecard-setup').style.display      = 'block';
-  document.getElementById('scorecard-active').style.display     = 'none';
+/* ─── ROUND SETUP ───────────────────────────────────────────── */
+function openNewRound() {
+  selectedPIDs.clear();
+  renderSetupCourseSelect();
+  renderSetupPlayers();
+  openModal('m-newround');
 }
-
-function cancelNewRound() {
-  document.getElementById('scorecard-no-round').style.display   = 'block';
-  document.getElementById('scorecard-setup').style.display      = 'none';
-}
-
-function updateSetupCourseSelect() {
-  const sel = document.getElementById('setup-course-select');
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">-- Choose a course --</option>';
-  Object.entries(STATE.courses).forEach(([id, c]) => {
-    sel.innerHTML += `<option value="${id}" ${id === prev ? 'selected' : ''}>${esc(c.name)}</option>`;
+function renderSetupCourseSelect() {
+  const sel=document.getElementById('f-rcourse');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— choose a course —</option>';
+  Object.entries(STATE.courses).forEach(([id,c])=>{
+    sel.innerHTML+=`<option value="${id}"${id===prev?' selected':''}>${esc(c.name)}</option>`;
   });
 }
-
-function updateSetupPlayerList() {
-  const el = document.getElementById('setup-player-list');
-  const players = Object.entries(STATE.players);
-  if (!players.length) {
-    el.innerHTML = '<div style="color:var(--gray-500);font-size:0.85rem;">Add players in the Players tab first</div>';
-    return;
-  }
-  el.innerHTML = players.map(([id, p]) => `
-    <div class="player-item" onclick="togglePlayerSelect('${id}')" id="sp-${id}"
-         style="cursor:pointer;border-color:${selectedPlayers.has(id) ? 'var(--green-mid)' : 'var(--gray-300)'};
-                background:${selectedPlayers.has(id) ? 'var(--green-light)' : 'var(--white)'};">
-      <div class="player-item-left">
-        <div class="player-avatar" style="background:${selectedPlayers.has(id) ? 'var(--green-mid)' : 'var(--gray-300)'};">
-          ${selectedPlayers.has(id) ? '✓' : (p.name||'?')[0].toUpperCase()}
-        </div>
-        <div>
-          <div class="player-name-text">${esc(p.name)}</div>
-          <div class="player-handicap">HCP ${p.handicap ?? 0}</div>
-        </div>
-      </div>
-    </div>
-  `).join('');
+function renderSetupPlayers() {
+  const el=document.getElementById('setup-players');
+  const list=Object.entries(STATE.players);
+  if(!list.length){el.innerHTML='<div style="font-size:0.85rem;color:var(--ink-muted);">Add players in the Players tab first.</div>';return;}
+  el.innerHTML=list.map(([id,p])=>{
+    const sel=selectedPIDs.has(id);
+    return `<div class="player-chip${sel?' selected':''}" onclick="togglePID('${id}')">
+      <div class="chip-check">${sel?'✓':''}</div>
+      <div class="avatar" style="width:32px;height:32px;font-size:0.85rem;background:${sel?'var(--rough)':'var(--border-dark)'};">${esc((p.name||'?')[0].toUpperCase())}</div>
+      <div><div style="font-weight:600;font-size:0.9rem;">${esc(p.name)}</div><div style="font-size:0.72rem;color:var(--ink-muted);">HCP ${p.handicap??0}</div></div>
+    </div>`;
+  }).join('');
+}
+function togglePID(id) {
+  if(selectedPIDs.has(id)) selectedPIDs.delete(id); else selectedPIDs.add(id);
+  renderSetupPlayers();
 }
 
-function togglePlayerSelect(id) {
-  if (selectedPlayers.has(id)) selectedPlayers.delete(id);
-  else selectedPlayers.add(id);
-  updateSetupPlayerList();
-}
-
+/* ─── START ROUND ───────────────────────────────────────────── */
 function startRound() {
-  const courseId = document.getElementById('setup-course-select').value;
-  if (!courseId) { toast('Please select a course'); return; }
-  if (selectedPlayers.size === 0) { toast('Please select at least one player'); return; }
-
-  const course  = STATE.courses[courseId];
-  const syncCode = genId(6);
-  const holes   = course.holes || 18;
-
-  // Build scores structure: { playerId: [null, null, ...] (length = holes) }
-  const scores = {};
-  selectedPlayers.forEach(pid => {
-    scores[pid] = Array(holes).fill(null);
-  });
-
-  const roundData = {
-    syncCode,
-    courseId,
-    courseName:  course.name,
-    holes,
-    pars:        course.pars || Array(holes).fill(4),
-    players:     Array.from(selectedPlayers),
-    scores,
-    status:      'active',
-    createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
+  const courseId=document.getElementById('f-rcourse').value;
+  if(!courseId){toast('Select a course');return;}
+  if(!selectedPIDs.size){toast('Select at least one player');return;}
+  const course=STATE.courses[courseId];
+  const syncCode=genCode(6);
+  const holes=course.holes||18;
+  const pars=course.pars||Array(holes).fill(4);
+  const players=Array.from(selectedPIDs);
+  const scores={};
+  players.forEach(pid=>{scores[pid]=Array(holes).fill(null);});
+  const doc={
+    syncCode,courseId,courseName:course.name,holes,pars,
+    totalPar:pars.reduce((a,b)=>a+b,0),players,scores,
+    status:'active',createdBy:UID,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
-
-  // Write to Firestore (live sync document)
-  fs.collection('playpal_rounds').doc(syncCode).set(roundData)
-    .then(() => {
-      // Also write round reference to RTDB for history
-      return db.ref(`rounds/${syncCode}`).update({
-        syncCode,
-        courseId,
-        courseName: course.name,
-        players:    Array.from(selectedPlayers),
-        status:     'active',
-        createdAt:  firebase.database.ServerValue.TIMESTAMP
-      });
-    })
-    .then(() => {
-      toast('Round started! Code: ' + syncCode);
-      activateRound(syncCode, roundData);
-    })
-    .catch(err => {
-      console.error('startRound error:', err);
-      toast('Failed to start round');
-    });
+  setConn('syncing');
+  FS.collection('rounds').doc(syncCode).set(doc)
+    .then(()=>{closeModal('m-newround');toast('Round started! Code: '+syncCode);activateRound(syncCode,doc);})
+    .catch(err=>{console.error('startRound:',err);toast('Failed to start round');});
 }
 
-// ── Round Activation ───────────────────────────────
-function activateRound(syncCode, initialData) {
-  currentHole = 0;
-  STATE.activeRound = { syncCode, ...initialData };
+/* ─── JOIN ROUND ────────────────────────────────────────────── */
+function joinRound() {
+  const code=document.getElementById('f-joincode').value.trim().toUpperCase();
+  if(code.length<4){toast('Enter a valid sync code');return;}
+  setConn('syncing');
+  FS.collection('rounds').doc(code).get()
+    .then(snap=>{
+      if(!snap.exists){toast('Round not found');setConn('live');return;}
+      const data=snap.data();
+      if(data.status==='complete'){toast('That round is already complete');setConn('live');return;}
+      closeModal('m-join');
+      document.getElementById('f-joincode').value='';
+      activateRound(code,data);
+      toast('Joined round '+code+'!');
+    })
+    .catch(err=>{console.error('joinRound:',err);toast('Failed to join — check code and connection');setConn('offline');});
+}
 
-  // Save to localStorage so homescreen reload can resume
-  localStorage.setItem('playpal_active_round', syncCode);
-
-  document.getElementById('scorecard-no-round').style.display  = 'none';
-  document.getElementById('scorecard-setup').style.display     = 'none';
-  document.getElementById('scorecard-active').style.display    = 'block';
-  document.getElementById('active-course-name').textContent    = initialData.courseName || '—';
-  document.getElementById('active-sync-code').textContent      = syncCode;
-
+/* ─── ACTIVATE ROUND ────────────────────────────────────────── */
+function activateRound(syncCode,data) {
+  currentHole=0;
+  STATE.activeRound={syncCode,...data};
+  try{localStorage.setItem('pp_round',syncCode);}catch(e){}
+  document.getElementById('sc-idle').style.display='none';
+  document.getElementById('sc-active').style.display='block';
+  document.getElementById('active-code').textContent=syncCode;
   subscribeToRound(syncCode);
   switchTab('scorecard');
 }
 
+/* ─── ROUND LISTENER ────────────────────────────────────────── */
 function subscribeToRound(syncCode) {
-  // Detach any previous listener
-  if (activeRoundListener) {
-    activeRoundListener();
-    activeRoundListener = null;
-  }
-
-  activeRoundListener = fs.collection('playpal_rounds').doc(syncCode)
-    .onSnapshot(snap => {
-      if (!snap.exists) {
-        toast('Round not found');
-        return;
-      }
-      const data = snap.data();
-      STATE.activeRound = { syncCode, ...data };
-      renderHoleEntry();
-      renderLeaderboard();
-      renderScorecardGrid();
-    }, err => {
-      console.error('Round listener error:', err);
-      setSyncStatus('error', '✕ round error');
-    });
+  if(UNSUB.round){UNSUB.round();UNSUB.round=null;}
+  UNSUB.round=FS.collection('rounds').doc(syncCode)
+    .onSnapshot(snap=>{
+      if(!snap.exists){toast('Round not found');deactivateRound();return;}
+      STATE.activeRound={syncCode,...snap.data()};
+      renderActiveUI();
+      setConn('live');
+    },err=>{console.error('Round listener:',err);setConn('offline');});
 }
 
-// ── Join Round ─────────────────────────────────────
-function joinRound() {
-  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
-  if (code.length < 4) { toast('Enter a valid sync code'); return; }
-
-  fs.collection('playpal_rounds').doc(code).get()
-    .then(snap => {
-      if (!snap.exists) { toast('Round not found'); return; }
-      const data = snap.data();
-      if (data.status === 'complete') { toast('That round is already complete'); return; }
-      closeModal('modal-join');
-      activateRound(code, data);
-      toast('Joined round: ' + code);
-    })
-    .catch(err => {
-      console.error('joinRound error:', err);
-      toast('Failed to join round');
-    });
-}
-
-// ── Hole Navigation & Score Entry ──────────────────
-function prevHole() {
-  if (!STATE.activeRound) return;
-  if (currentHole > 0) { currentHole--; renderHoleEntry(); }
-}
-
-function nextHole() {
-  if (!STATE.activeRound) return;
-  if (currentHole < (STATE.activeRound.holes || 18) - 1) { currentHole++; renderHoleEntry(); }
-}
-
-function renderHoleEntry() {
-  const round = STATE.activeRound;
-  if (!round) return;
-
-  const h    = currentHole;
-  const par  = (round.pars || [])[h] || 4;
-  const total = round.holes || 18;
-
-  document.getElementById('hole-display').textContent    = `Hole ${h + 1} of ${total}`;
-  document.getElementById('hole-par-display').textContent = `Par ${par}`;
-
-  const container = document.getElementById('hole-score-inputs');
-  const players   = round.players || [];
-  const scores    = round.scores || {};
-
-  container.innerHTML = players.map(pid => {
-    const player = STATE.players[pid] || { name: pid };
-    const score  = scores[pid] ? scores[pid][h] : null;
-    const diff   = score !== null ? score - par : null;
-    let colorClass = '';
-    if (diff !== null) {
-      if (diff <= -2) colorClass = 'eagle-color';
-      else if (diff === -1) colorClass = 'birdie-color';
-      else if (diff === 0) colorClass = '';
-      else if (diff === 1) colorClass = 'bogey-color';
-      else colorClass = 'double-color';
-    }
-    return `
-      <div class="player-score-row">
-        <div class="psr-name">${esc(player.name || pid)}</div>
-        <div class="score-stepper">
-          <div class="stepper-btn" onclick="adjustScore('${pid}', ${h}, -1)">−</div>
-          <div class="stepper-val ${colorClass}">${score !== null ? score : '–'}</div>
-          <div class="stepper-btn" onclick="adjustScore('${pid}', ${h}, 1)">+</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function adjustScore(playerId, hole, delta) {
-  const round = STATE.activeRound;
-  if (!round) return;
-
-  const scores = round.scores || {};
-  const playerScores = scores[playerId] ? [...scores[playerId]] : Array(round.holes || 18).fill(null);
-
-  const current = playerScores[hole] !== null ? playerScores[hole] : (round.pars?.[hole] || 4);
-  const newScore = Math.max(1, current + delta);
-  playerScores[hole] = newScore;
-
-  // CRITICAL FIX: Use dot-notation update to patch ONLY the changed field.
-  // This prevents race conditions from multiple devices overwriting each other.
-  const update = {
-    [`scores.${playerId}`]:               playerScores,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  fs.collection('playpal_rounds').doc(round.syncCode).update(update)
-    .catch(err => {
-      console.error('Score update error:', err);
-      toast('Score not saved — check connection');
-    });
-  // Optimistic local update for instant feedback
-  if (!STATE.activeRound.scores) STATE.activeRound.scores = {};
-  STATE.activeRound.scores[playerId] = playerScores;
+/* ─── RENDER ACTIVE UI ──────────────────────────────────────── */
+function renderActiveUI() {
+  const r=STATE.activeRound; if(!r) return;
+  document.getElementById('active-course-name').textContent=r.courseName||'—';
+  document.getElementById('active-player-count').textContent=(r.players||[]).length+' player'+((r.players||[]).length!==1?'s':'');
+  currentHole=Math.min(currentHole,(r.holes||18)-1);
   renderHoleEntry();
   renderLeaderboard();
   renderScorecardGrid();
 }
 
-// ── Leaderboard ────────────────────────────────────
-function renderLeaderboard() {
-  const round = STATE.activeRound;
-  if (!round) return;
+/* ─── HOLE NAV ──────────────────────────────────────────────── */
+function changeHole(delta) {
+  const r=STATE.activeRound; if(!r) return;
+  const next=currentHole+delta;
+  if(next<0||next>=(r.holes||18)) return;
+  currentHole=next;
+  renderHoleEntry();
+}
 
-  const pars   = round.pars || [];
-  const scores = round.scores || {};
-  const players = round.players || [];
-
-  const totals = players.map(pid => {
-    const player = STATE.players[pid] || { name: pid };
-    const pScores = scores[pid] || [];
-    let gross = 0, holesPlayed = 0;
-    pScores.forEach((s, i) => {
-      if (s !== null && s !== undefined) {
-        gross += s;
-        holesPlayed++;
-      }
-    });
-    const parTotal = pars.slice(0, holesPlayed).reduce((a, b) => a + b, 0);
-    const diff = gross - parTotal;
-    return { pid, name: player.name || pid, gross, diff, holesPlayed };
-  });
-
-  totals.sort((a, b) => a.diff - b.diff);
-
-  const el = document.getElementById('leaderboard');
-  if (!totals.length) { el.innerHTML = ''; return; }
-
-  el.innerHTML = totals.map((t, i) => {
-    const diffStr = t.holesPlayed === 0 ? 'E' :
-      t.diff === 0 ? 'E' : (t.diff > 0 ? `+${t.diff}` : `${t.diff}`);
-    const cls = t.diff < 0 ? 'under' : t.diff > 0 ? 'over' : 'even';
-    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
-    return `
-      <div class="lb-row">
-        <div class="lb-rank">${medal}</div>
-        <div class="lb-name">${esc(t.name)}</div>
-        <div style="font-size:0.75rem;color:var(--gray-500);">${t.holesPlayed}H · ${t.gross || 0}</div>
-        <div class="lb-score ${cls}">${diffStr}</div>
+/* ─── HOLE ENTRY ────────────────────────────────────────────── */
+function renderHoleEntry() {
+  const r=STATE.activeRound; if(!r) return;
+  const h=currentHole;
+  const par=(r.pars||[])[h]||4;
+  document.getElementById('hn-label').textContent='Hole '+(h+1)+' of '+(r.holes||18);
+  document.getElementById('hn-par').textContent='Par '+par;
+  document.getElementById('btn-prev').disabled=h===0;
+  document.getElementById('btn-next').disabled=h===(r.holes||18)-1;
+  const scores=r.scores||{};
+  document.getElementById('score-rows').innerHTML=(r.players||[]).map(pid=>{
+    const player=STATE.players[pid]||{name:pid};
+    const score=(scores[pid]||[])[h];
+    const hasScore=score!==null&&score!==undefined;
+    const diff=hasScore?score-par:null;
+    let badge='–',bClass='badge-empty';
+    if(diff!==null){
+      if(diff<=-2){badge='Eagle';bClass='badge-eagle';}
+      else if(diff===-1){badge='Birdie';bClass='badge-birdie';}
+      else if(diff===0){badge='Par';bClass='badge-par';}
+      else if(diff===1){badge='Bogey';bClass='badge-bogey';}
+      else{badge='+'+diff;bClass='badge-double';}
+    }
+    return `<div class="score-row">
+      <div class="sr-name">${esc(player.name||pid)}</div>
+      <span class="sr-badge ${bClass}">${badge}</span>
+      <div class="stepper">
+        <div class="step-btn" onclick="adjustScore('${pid}',${h},-1)">−</div>
+        <div class="step-val">${hasScore?score:'–'}</div>
+        <div class="step-btn" onclick="adjustScore('${pid}',${h},1)">+</div>
       </div>
-    `;
+    </div>`;
   }).join('');
 }
 
-// ── Scorecard Grid ─────────────────────────────────
-function renderScorecardGrid() {
-  const round = STATE.activeRound;
-  if (!round) return;
-
-  const holes  = round.holes || 18;
-  const pars   = round.pars || Array(holes).fill(4);
-  const players = round.players || [];
-  const scores = round.scores || {};
-  const cols   = 2 + players.length; // hole col + par col + player cols
-
-  const grid = document.getElementById('scorecard-grid');
-
-  let html = `<div class="score-grid" style="grid-template-columns:36px 30px ${players.map(() => '1fr').join(' ')};">`;
-
-  // Header row
-  html += `<div class="score-grid-header score-row">
-    <div class="score-cell">H</div>
-    <div class="score-cell">Par</div>
-    ${players.map(pid => {
-      const p = STATE.players[pid] || { name: pid };
-      return `<div class="score-cell">${esc((p.name||'?').substring(0,6))}</div>`;
-    }).join('')}
-  </div>`;
-
-  // Hole rows
-  for (let h = 0; h < holes; h++) {
-    const par = pars[h] || 4;
-    html += `<div class="score-row">
-      <div class="score-cell hole-num">${h+1}</div>
-      <div class="score-cell" style="background:var(--gray-100);font-weight:bold;">${par}</div>
-      ${players.map(pid => {
-        const pScores = scores[pid] || [];
-        const s = pScores[h];
-        if (s === null || s === undefined) return `<div class="score-cell">–</div>`;
-        const diff = s - par;
-        let cls = 'par';
-        if (diff <= -2) cls = 'eagle';
-        else if (diff === -1) cls = 'birdie';
-        else if (diff === 1) cls = 'bogey';
-        else if (diff >= 2) cls = 'double';
-        return `<div class="score-cell ${cls}">${s}</div>`;
-      }).join('')}
-    </div>`;
-    // Page break at 9 for 18-hole rounds
-    if (holes === 18 && h === 8) {
-      const front9Par = pars.slice(0,9).reduce((a,b)=>a+b,0);
-      html += `<div class="score-row" style="background:var(--green-light);">
-        <div class="score-cell" style="font-weight:bold;color:var(--green-deep);">OUT</div>
-        <div class="score-cell" style="font-weight:bold;">${front9Par}</div>
-        ${players.map(pid => {
-          const pScores = scores[pid] || [];
-          const front9 = pScores.slice(0,9).reduce((a,s) => s !== null && s !== undefined ? a+s : a, 0);
-          return `<div class="score-cell" style="font-weight:bold;">${front9||'–'}</div>`;
-        }).join('')}
-      </div>`;
-    }
-  }
-
-  // Totals
-  if (holes === 18) {
-    const back9Par  = pars.slice(9).reduce((a,b)=>a+b,0);
-    const totalPar  = pars.reduce((a,b)=>a+b,0);
-    html += `<div class="score-row" style="background:var(--green-light);">
-      <div class="score-cell" style="font-weight:bold;color:var(--green-deep);">IN</div>
-      <div class="score-cell" style="font-weight:bold;">${back9Par}</div>
-      ${players.map(pid => {
-        const pScores = scores[pid] || [];
-        const back9 = pScores.slice(9).reduce((a,s) => s !== null && s !== undefined ? a+s : a, 0);
-        return `<div class="score-cell" style="font-weight:bold;">${back9||'–'}</div>`;
-      }).join('')}
-    </div>`;
-    html += `<div class="score-row" style="background:var(--green-deep);color:var(--white);">
-      <div class="score-cell" style="font-weight:bold;">TOT</div>
-      <div class="score-cell" style="font-weight:bold;">${totalPar}</div>
-      ${players.map(pid => {
-        const pScores = scores[pid] || [];
-        const tot = pScores.reduce((a,s) => s !== null && s !== undefined ? a+s : a, 0);
-        return `<div class="score-cell" style="font-weight:bold;">${tot||'–'}</div>`;
-      }).join('')}
-    </div>`;
-  }
-
-  html += '</div>';
-  grid.innerHTML = html;
+/* ─── SCORE ADJUSTMENT ──────────────────────────────────────── */
+/* CRITICAL: dot-notation update writes ONLY this player's array.
+   No other player's data is read, modified, or overwritten.
+   Safe for simultaneous multi-device scoring.                    */
+function adjustScore(pid,hole,delta) {
+  const r=STATE.activeRound; if(!r) return;
+  const par=(r.pars||[])[hole]||4;
+  const existing=(r.scores?.[pid]||[]);
+  const current=existing[hole]!==null&&existing[hole]!==undefined?existing[hole]:par;
+  const newScore=Math.max(1,current+delta);
+  // Optimistic update
+  if(!STATE.activeRound.scores)STATE.activeRound.scores={};
+  if(!STATE.activeRound.scores[pid])STATE.activeRound.scores[pid]=Array(r.holes||18).fill(null);
+  STATE.activeRound.scores[pid][hole]=newScore;
+  renderHoleEntry();renderLeaderboard();renderScorecardGrid();
+  // Build full updated array for this player
+  const arr=[...(r.scores?.[pid]||Array(r.holes||18).fill(null))];
+  arr[hole]=newScore;
+  setConn('syncing');
+  FS.collection('rounds').doc(r.syncCode).update({
+    ['scores.'+pid]: arr,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(err=>{console.error('adjustScore:',err);toast('Score not saved — check connection');setConn('offline');});
 }
 
-// ── End Round ──────────────────────────────────────
+/* ─── LEADERBOARD ───────────────────────────────────────────── */
+function renderLeaderboard() {
+  const r=STATE.activeRound; if(!r) return;
+  const pars=r.pars||[]; const scores=r.scores||{};
+  const rows=(r.players||[]).map(pid=>{
+    const player=STATE.players[pid]||{name:pid};
+    const ps=scores[pid]||[];
+    let gross=0,played=0;
+    ps.forEach((s,i)=>{if(s!==null&&s!==undefined){gross+=s;played++;}});
+    const parSoFar=pars.slice(0,played).reduce((a,b)=>a+b,0);
+    return{pid,name:player.name||pid,gross,diff:gross-parSoFar,played};
+  });
+  rows.sort((a,b)=>{
+    if(!a.played&&!b.played)return 0;
+    if(!a.played)return 1; if(!b.played)return -1;
+    return a.diff-b.diff;
+  });
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById('leaderboard').innerHTML=`
+    <div class="lb-card">
+      <div class="lb-head"><div>#</div><div>Player</div><div style="text-align:center">Gross</div><div style="text-align:right">Score</div></div>
+      ${rows.map((row,i)=>{
+        const ds=row.played===0?'–':row.diff===0?'E':row.diff>0?'+'+row.diff:''+row.diff;
+        const cls=row.diff<0?'under':row.diff>0?'over':'even';
+        return`<div class="lb-row">
+          <div class="lb-rank">${medals[i]||i+1}</div>
+          <div class="lb-name">${esc(row.name)}</div>
+          <div class="lb-gross">${row.played?row.gross:'–'}</div>
+          <div class="lb-diff ${cls}">${ds}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* ─── SCORECARD GRID ────────────────────────────────────────── */
+function renderScorecardGrid() {
+  const r=STATE.activeRound; if(!r) return;
+  const holes=r.holes||18; const pars=r.pars||Array(holes).fill(4);
+  const scores=r.scores||{}; const players=r.players||[];
+  const cols='36px 30px '+players.map(()=>'1fr').join(' ');
+  const cls=(s,p)=>{if(s===null||s===undefined)return'';const d=s-p;if(d<=-2)return's-eagle';if(d===-1)return's-birdie';if(d===1)return's-bogey';if(d>=2)return's-double';return'';};
+  const row=(cells,extra='')=>`<div style="display:grid;grid-template-columns:${cols};" class="${extra}">${cells}</div>`;
+  const cell=(content,extraCls='',extraStyle='')=>`<div class="sc-cell ${extraCls}" style="${extraStyle}">${content}</div>`;
+  let html=row(
+    cell('H')+cell('Par')+players.map(pid=>cell(esc((STATE.players[pid]?.name||pid).slice(0,7)))).join(''),
+    'sc-head-row'
+  );
+  for(let h=0;h<holes;h++){
+    const par=pars[h]||4;
+    html+=row(
+      cell(h+1,'','font-weight:700;color:var(--forest);background:var(--mint);')+
+      cell(par,'','background:var(--parchment);font-weight:600;')+
+      players.map(pid=>{const s=(scores[pid]||[])[h];return cell(s!==null&&s!==undefined?s:'–',cls(s,par));}).join(''),
+      'sc-data-row'
+    );
+    if(holes===18&&h===8){
+      const f9p=pars.slice(0,9).reduce((a,b)=>a+b,0);
+      html+=row(
+        cell('OUT')+cell(f9p)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.slice(0,9).reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.slice(0,9).some(s=>s!=null)?v:'–');}).join(''),
+        'sc-nine-row'
+      );
+    }
+  }
+  if(holes===18){
+    const b9p=pars.slice(9).reduce((a,b)=>a+b,0),tp=pars.reduce((a,b)=>a+b,0);
+    html+=row(cell('IN')+cell(b9p)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.slice(9).reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.slice(9).some(s=>s!=null)?v:'–');}).join(''),'sc-nine-row');
+    html+=row(cell('TOT')+cell(tp)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.some(s=>s!=null)?v:'–');}).join(''),'sc-total-row');
+  } else {
+    const tp=pars.reduce((a,b)=>a+b,0);
+    html+=row(cell('TOT')+cell(tp)+players.map(pid=>{const ps=scores[pid]||[];const v=ps.reduce((a,s)=>s!=null?a+s:a,0);return cell(ps.some(s=>s!=null)?v:'–');}).join(''),'sc-total-row');
+  }
+  document.getElementById('sc-grid').innerHTML='<div class="sc-grid">'+html+'</div>';
+}
+
+/* ─── END ROUND ─────────────────────────────────────────────── */
 function endRound() {
-  if (!STATE.activeRound) return;
-  if (!confirm('End this round?')) return;
+  const r=STATE.activeRound;
+  if(!r||!confirm('Mark this round as complete?'))return;
+  setConn('syncing');
+  FS.collection('rounds').doc(r.syncCode).update({
+    status:'complete',
+    completedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{deactivateRound();loadRoundHistory();toast('Round complete! 🏆');})
+  .catch(err=>{console.error('endRound:',err);toast('Failed to end round');});
+}
+function deactivateRound() {
+  if(UNSUB.round){UNSUB.round();UNSUB.round=null;}
+  STATE.activeRound=null; currentHole=0;
+  try{localStorage.removeItem('pp_round');}catch(e){}
+  document.getElementById('sc-idle').style.display='block';
+  document.getElementById('sc-active').style.display='none';
+}
 
-  const syncCode = STATE.activeRound.syncCode;
+/* ─── ROUND HISTORY ─────────────────────────────────────────── */
+function loadRoundHistory() {
+  FS.collection('rounds').orderBy('createdAt','desc').limit(25).get()
+    .then(snap=>{
+      const el=document.getElementById('rounds-list');
+      const rounds=[];
+      snap.forEach(d=>rounds.push({id:d.id,...d.data()}));
+      if(!rounds.length){el.innerHTML='<div class="empty"><span class="empty-icon">📋</span><div class="empty-title">No rounds yet</div></div>';return;}
+      el.innerHTML=rounds.map(r=>{
+        const active=r.status!=='complete';
+        const date=r.createdAt?.toDate?r.createdAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+        const ps=(r.players||[]).map(pid=>STATE.players[pid]?.name||pid).join(', ');
+        return`<div class="round-hist">
+          <div class="rh-icon">${active?'⛳':'✓'}</div>
+          <div class="rh-body">
+            <div class="rh-cname">${esc(r.courseName||'—')}</div>
+            <div class="rh-meta">${date}${ps?' · '+esc(ps):''}</div>
+            <div class="rh-meta" style="margin-top:3px;">Code: <strong>${r.syncCode||r.id}</strong></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <span class="status-badge ${active?'status-active':'status-complete'}">${active?'Active':'Done'}</span>
+            ${active?`<button class="btn btn-ghost btn-sm" onclick="rejoinRound('${r.syncCode||r.id}')">Rejoin</button>`:''}
+          </div>
+        </div>`;
+      }).join('');
+    }).catch(err=>console.error('loadRoundHistory:',err));
+}
+function rejoinRound(syncCode) {
+  setConn('syncing');
+  FS.collection('rounds').doc(syncCode).get()
+    .then(snap=>{
+      if(!snap.exists){toast('Round not found');return;}
+      const data=snap.data();
+      if(data.status==='complete'){toast('Round already complete');return;}
+      activateRound(syncCode,data);
+      toast('Rejoined round '+syncCode);
+    }).catch(()=>toast('Failed to rejoin'));
+}
 
-  Promise.all([
-    fs.collection('playpal_rounds').doc(syncCode).update({
-      status: 'complete',
-      completedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }),
-    db.ref(`rounds/${syncCode}`).update({
-      status: 'complete',
-      completedAt: firebase.database.ServerValue.TIMESTAMP
-    })
-  ]).then(() => {
-    if (activeRoundListener) { activeRoundListener(); activeRoundListener = null; }
-    STATE.activeRound = null;
-    localStorage.removeItem('playpal_active_round');
-    document.getElementById('scorecard-no-round').style.display  = 'block';
-    document.getElementById('scorecard-active').style.display    = 'none';
-    toast('Round complete!');
-    loadRoundsHistory();
-  }).catch(err => {
-    console.error('endRound error:', err);
-    toast('Failed to end round');
+/* ─── RESUME ON RELOAD (iOS home screen fix) ────────────────── */
+async function tryResume() {
+  let code; try{code=localStorage.getItem('pp_round');}catch(e){}
+  if(!code)return;
+  try {
+    // source:'server' forces fresh fetch — ignores stale offline cache on resume
+    const snap=await FS.collection('rounds').doc(code).get({source:'server'});
+    if(!snap.exists||snap.data().status==='complete'){localStorage.removeItem('pp_round');return;}
+    activateRound(code,snap.data()); toast('Round '+code+' resumed');
+  } catch(err) {
+    // Offline fallback — use cache
+    try {
+      const snap=await FS.collection('rounds').doc(code).get({source:'cache'});
+      if(snap.exists&&snap.data().status!=='complete'){activateRound(code,snap.data());toast('Round '+code+' resumed (offline)');}
+      else localStorage.removeItem('pp_round');
+    } catch(e2){localStorage.removeItem('pp_round');}
+  }
+}
+
+/* ─── iOS HOME SCREEN FIX ───────────────────────────────────── */
+function setupIOSFix() {
+  // bfcache restore: Safari restores the page without re-running JS
+  // Firebase listeners are dead — force a clean reload
+  window.addEventListener('pageshow',e=>{if(e.persisted)window.location.reload();});
+  // App coming back from background — verify listeners
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState!=='visible')return;
+    if(!UNSUB.players||!UNSUB.courses){attachPlayersListener();attachCoursesListener();}
+    if(STATE.activeRound&&!UNSUB.round)subscribeToRound(STATE.activeRound.syncCode);
   });
 }
 
-// ── Rounds History ─────────────────────────────────
-function loadRoundsHistory() {
-  db.ref('rounds').orderByChild('createdAt').limitToLast(20)
-    .once('value')
-    .then(snap => {
-      const data = snap.val() || {};
-      STATE.rounds = data;
-      renderRoundsHistory();
-    });
-}
+/* ─── KEYBOARD SHORTCUTS ────────────────────────────────────── */
+document.getElementById('f-pname').addEventListener('keydown',e=>{if(e.key==='Enter')savePlayer();});
+document.getElementById('f-cname').addEventListener('keydown',e=>{if(e.key==='Enter')saveCourse();});
+document.getElementById('f-joincode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRound();});
+document.getElementById('f-joincode').addEventListener('input',function(){const p=this.selectionStart;this.value=this.value.toUpperCase();this.setSelectionRange(p,p);});
 
-function renderRoundsHistory() {
-  const el = document.getElementById('rounds-list');
-  const rounds = Object.entries(STATE.rounds).reverse();
-  if (!rounds.length) {
-    el.innerHTML = '<div class="empty-state"><span class="emoji">📋</span>No completed rounds yet</div>';
-    return;
-  }
-  el.innerHTML = rounds.map(([id, r]) => `
-    <div class="card">
-      <div class="card-row">
-        <div style="flex:1;">
-          <div class="card-value">${esc(r.courseName || '—')}</div>
-          <div class="card-label" style="margin-top:4px;">${r.status === 'active' ? '🟢 Active' : '✓ Complete'} · Code: ${r.syncCode || id}</div>
-        </div>
-        ${r.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="rejoinRound('${r.syncCode||id}')">Rejoin</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-function rejoinRound(syncCode) {
-  fs.collection('playpal_rounds').doc(syncCode).get()
-    .then(snap => {
-      if (!snap.exists) { toast('Round not found'); return; }
-      const data = snap.data();
-      activateRound(syncCode, data);
-    })
-    .catch(() => toast('Failed to load round'));
-}
-
-// ── Resume Active Round on Reload ──────────────────
-// CRITICAL FIX for home screen: on every load, check localStorage
-// for an in-progress round and resubscribe to it.
-function tryResumeRound() {
-  const savedCode = localStorage.getItem('playpal_active_round');
-  if (!savedCode) return Promise.resolve();
-
-  return fs.collection('playpal_rounds').doc(savedCode).get()
-    .then(snap => {
-      if (!snap.exists) {
-        localStorage.removeItem('playpal_active_round');
-        return;
-      }
-      const data = snap.data();
-      if (data.status === 'complete') {
-        localStorage.removeItem('playpal_active_round');
-        return;
-      }
-      activateRound(savedCode, data);
-      toast('Resumed round: ' + savedCode);
-    })
-    .catch(err => {
-      console.error('tryResumeRound error:', err);
-      localStorage.removeItem('playpal_active_round');
-    });
-}
-
-// ── Helpers ────────────────────────────────────────
-function esc(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
-}
-
-// ── Bootstrap ──────────────────────────────────────
-// CRITICAL: Full initialization sequence with proper async ordering.
-// 1. Init Firebase app
-// 2. Enable persistence (before any reads/writes)
-// 3. Auth (wait for existing session or sign in anonymously)
-// 4. Set up RTDB listeners (players, courses, connection state)
-// 5. Try to resume active round
-// 6. Load rounds history
-// 7. Hide loading screen
-
-document.addEventListener('DOMContentLoaded', async () => {
+/* ─── BOOTSTRAP ─────────────────────────────────────────────── */
+/* Order is strict. Do not reorder.
+   1. Firebase init
+   2. Persistence  ← must be first Firestore call
+   3. Auth         ← must resolve before any reads
+   4. Listeners    ← players + courses
+   5. iOS fix
+   6. Resume       ← after listeners settle
+   7. History
+   8. Hide loader                                                 */
+document.addEventListener('DOMContentLoaded', async()=>{
   try {
-    // 1. Init Firebase
     firebase.initializeApp(FIREBASE_CONFIG);
-    db   = firebase.database();
-    fs   = firebase.firestore();
-    auth = firebase.auth();
-
-    // 2. Enable persistence BEFORE any reads
-    // (Firestore persistence must be called before any other Firestore ops)
-    await enableFirestorePersistence();
-    enableRTDBPersistence();
-
-    // 3. Auth — wait for session to resolve or sign in
+    FS=firebase.firestore(); AUTH=firebase.auth();
+    await initPersistence();
     await initAuth();
-
-    // 4. RTDB listeners (players + courses + connection state)
-    setupRTDBListeners();
-
-    // 5. iOS standalone fix
-    setupStandaloneReloadFix();
-
-    // 6. Try to resume active round (wait for RTDB data to settle first)
-    // Small delay to let the first RTDB value event fire
-    await new Promise(r => setTimeout(r, 800));
-    await tryResumeRound();
-
-    // 7. Load rounds history
-    loadRoundsHistory();
-
-    // 8. Hide loading screen
-    const ls = document.getElementById('loading-screen');
-    ls.classList.add('hidden');
-    setTimeout(() => ls.style.display = 'none', 450);
-
-  } catch (err) {
-    console.error('Init error:', err);
-    document.querySelector('.loading-text').textContent = 'Error loading app. Please refresh.';
-    setSyncStatus('error', '✕ error');
+    attachPlayersListener();
+    attachCoursesListener();
+    setupIOSFix();
+    await new Promise(r=>setTimeout(r,600)); // let first snapshot events settle
+    await tryResume();
+    loadRoundHistory();
+    const loader=document.getElementById('loading');
+    loader.classList.add('fade');
+    setTimeout(()=>loader.style.display='none',500);
+  } catch(err) {
+    console.error('Bootstrap failed:',err);
+    document.querySelector('.load-sub').textContent='Error loading. Tap to retry.';
+    document.getElementById('loading').onclick=()=>window.location.reload();
   }
 });
-
-// Handle course holes change for par inputs
-document.getElementById('modal-course-holes').addEventListener('change', function() {
-  const holes = parseInt(this.value, 10);
-  buildParInputs(holes, []);
-});
-
-// Enter key support for modals
-document.getElementById('modal-player-name').addEventListener('keydown', e => {
-  if (e.key === 'Enter') savePlayer();
-});
-document.getElementById('join-code-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') joinRound();
-});
-
 </script>
 
-<!-- Service Worker Registration for PWA -->
+<!-- SERVICE WORKER (PWA / iOS home screen) -->
 <script>
-// Inline service worker registration
-// The SW intercepts fetches and provides offline support
-// while always fetching fresh Firebase data over network.
-if ('serviceWorker' in navigator) {
-  // We use a minimal SW that does NOT cache the HTML page itself
-  // (prevents stale app shell in iOS standalone) but DOES cache
-  // static assets (Firebase SDKs) for performance.
-  const SW_VERSION = 'v2';
-  const swCode = `
-const CACHE_NAME = 'playpal-${SW_VERSION}';
-const PRECACHE = [
+if('serviceWorker' in navigator){
+  const SW=`
+const V='pp-v4';
+const PRE=[
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js',
+  'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap'
 ];
-
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
-  );
+self.addEventListener('install',e=>{
+  e.waitUntil(caches.open(V).then(c=>c.addAll(PRE)).then(()=>self.skipWaiting()));
 });
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
-
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
-  // NEVER cache Firebase API calls, auth, or Firestore/RTDB requests
-  if (url.hostname.includes('firebaseio.com') ||
-      url.hostname.includes('firestore.googleapis.com') ||
-      url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('identitytoolkit') ||
-      url.hostname.includes('securetoken')) {
-    e.respondWith(fetch(e.request));
-    return;
+self.addEventListener('fetch',e=>{
+  const u=new URL(e.request.url);
+  // NEVER cache Firebase API traffic
+  if(u.hostname.includes('googleapis.com')||u.hostname.includes('firebaseio.com')||u.hostname.includes('identitytoolkit')||u.hostname.includes('securetoken')){return;}
+  // HTML — always network-first (fresh app shell every load)
+  if(e.request.destination==='document'){
+    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));return;
   }
-
-  // NEVER cache the HTML page (always serve fresh)
-  if (e.request.destination === 'document') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
-    return;
-  }
-
-  // For Firebase SDK scripts: cache-first (they're versioned and immutable)
-  if (url.hostname === 'www.gstatic.com') {
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        return resp;
-      }))
-    );
-    return;
-  }
-
-  // Default: network first
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  // Static assets (Firebase SDK, fonts) — cache-first
+  e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(res=>{
+    if(res.ok){const cl=res.clone();caches.open(V).then(c=>c.put(e.request,cl));}
+    return res;
+  })));
 });
-  `;
-
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-
-  navigator.serviceWorker.register(swUrl, { scope: './' })
-    .then(reg => {
-      console.log('SW registered:', reg.scope);
-      // Check for updates on every load (critical for home screen version staying fresh)
-      reg.update();
-    })
-    .catch(err => {
-      // SW registration failure is non-fatal — app still works
-      console.warn('SW registration failed:', err);
-    });
+`;
+  const blob=new Blob([SW],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'})
+    .then(reg=>reg.update())
+    .catch(err=>console.warn('SW:',err));
 }
 </script>
 
