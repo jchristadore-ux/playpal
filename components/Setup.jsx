@@ -120,21 +120,17 @@ Rules:
         Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.
       </div>
 
-      {/* Drop / tap zone */}
       <div
         onClick={() => status !== 'scanning' && fileRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
         style={{
           border: `2px dashed ${borderColor}`,
-          borderRadius: 14,
-          background: '#0A1628',
-          minHeight: 180,
+          borderRadius: 14, background: '#0A1628', minHeight: 180,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           gap: 10, cursor: status === 'scanning' ? 'default' : 'pointer',
-          overflow: 'hidden', position: 'relative',
-          transition: 'border-color 0.2s',
+          overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s',
         }}>
 
         {preview && (
@@ -227,17 +223,14 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
     try { existing = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) {}
     const updated = [...existing, course];
 
-    // 1) Write localStorage first — guaranteed local persistence
     localStorage.setItem('pp_custom_courses', JSON.stringify(updated));
 
-    // 2) Sync complete array to RTDB — subscribe listener will update all devices
     if (window.CourseSyncService) {
       window.CourseSyncService.save(updated, function(ok) {
         if (!ok) console.warn('[PlayPal] Course RTDB sync failed — saved locally only');
       });
     }
 
-    // 3) Return BOTH the new course object AND the full updated array to parent
     onSave(course, updated);
   };
 
@@ -262,7 +255,6 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
         </div>
       )}
 
-      {/* Course details */}
       <div style={{display:'flex', flexDirection:'column', gap:10}}>
         <div>
           <Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label>
@@ -284,7 +276,6 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
         </div>
       </div>
 
-      {/* Hole-by-hole scorecard */}
       <div>
         <div style={{display:'flex', alignItems:'baseline', gap:10, marginBottom:8}}>
           <Label>SCORECARD — 18 HOLES</Label>
@@ -307,34 +298,16 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
                 <tr key={i} style={{background: i%2===0 ? '#0A1628' : '#0F2040'}}>
                   <td style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color: i<9 ? '#7A98BC' : '#9BB4D4', textAlign:'center'}}>{h.num}</td>
                   <td style={{padding:'3px 4px'}}>
-                    <input
-                      value={h.par}
-                      onChange={e=>setHoleField(i,'par',e.target.value)}
-                      type="number"
-                      inputMode="numeric"
-                      min="3"
-                      max="5"
-                      tabIndex={i * 3 + 1}
-                      style={holeInputStyle}
-                    />
+                    <input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)}
+                      type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/>
                   </td>
                   <td style={{padding:'3px 4px'}}>
                     <input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)}
-                      placeholder="—" type="number" min="50" max="700"
-                      tabIndex={i * 3 + 2}
-                      style={holeInputStyle}/>
+                      placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/>
                   </td>
                   <td style={{padding:'3px 4px'}}>
-                    <input
-                      value={h.hdcp}
-                      onChange={e=>setHoleField(i,'hdcp',e.target.value)}
-                      type="number"
-                      inputMode="numeric"
-                      min="1"
-                      max="18"
-                      tabIndex={i * 3 + 3}
-                      style={holeInputStyle}
-                    />
+                    <input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)}
+                      type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/>
                   </td>
                 </tr>
               ))}
@@ -397,6 +370,97 @@ const StakesInput = ({ value, onChange }) => {
   );
 };
 
+// ─── Collapsible Course Group ─────────────────────────────────────────────────
+const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
+  const [open, setOpen] = React.useState(defaultOpen || false);
+  if (list.length === 0) return null;
+
+  // If the selected course is in this group, force open
+  const hasSelected = list.some(c => c.id === course?.id);
+  const isOpen = open || hasSelected;
+
+  return (
+    <div style={{marginBottom:4}}>
+      {/* Header row — always visible, tap to expand/collapse */}
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'9px 2px', cursor:'pointer', userSelect:'none',
+          WebkitTapHighlightColor:'transparent',
+        }}>
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <span style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2,
+            color: hasSelected ? '#C9A84C' : '#7A98BC', fontWeight:700}}>{label}</span>
+          <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890',
+            background:'#162950', border:'1px solid #1E3A6E', borderRadius:10,
+            padding:'1px 7px'}}>{list.length}</span>
+          {hasSelected && (
+            <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:0.5,
+              color:'#C9A84C', background:'rgba(201,168,76,0.12)',
+              border:'1px solid rgba(201,168,76,0.3)', borderRadius:4, padding:'1px 6px'}}>
+              SELECTED
+            </span>
+          )}
+        </div>
+        <span style={{
+          fontSize:14, color:'#4A6890',
+          transform: isOpen ? 'rotate(180deg)' : 'none',
+          transition:'transform 0.2s', display:'inline-block',
+        }}>▾</span>
+      </div>
+
+      {/* Course list — only visible when expanded */}
+      {isOpen && (
+        <div style={{display:'flex', flexDirection:'column', gap:8, paddingBottom:4}}>
+          {list.map(c => {
+            const sel = course?.id === c.id;
+            return (
+              <div key={c.id} onClick={() => onSelect(c)}
+                style={{...setupS.courseCard,
+                  border: sel ? '1px solid #C9A84C' : '1px solid #1E3A6E',
+                  background: sel ? 'rgba(201,168,76,0.08)' : '#0F2040'}}>
+                <div style={{flex:1}}>
+                  <div style={{display:'flex', alignItems:'center', gap:8}}>
+                    <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16,
+                      color: sel ? '#C9A84C' : '#fff'}}>{c.name}</div>
+                    {c.custom && (
+                      <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1,
+                        color:'#3DCB6C', background:'rgba(61,203,108,0.12)',
+                        border:'1px solid rgba(61,203,108,0.3)', padding:'1px 6px', borderRadius:4}}>
+                        CUSTOM
+                      </span>
+                    )}
+                  </div>
+                  <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
+                  <div style={{fontSize:10, color:'#4A6890', marginTop:1}}>Rating {c.rating} · Slope {c.slope}</div>
+                </div>
+                {sel && <span style={{color:'#C9A84C', fontSize:20, flexShrink:0}}>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Extract 2-letter state abbreviation from location string (e.g. "Springfield, NJ" → "NJ")
+function _extractState(location) {
+  if (!location) return 'OTHER';
+  const m = location.match(/,\s*([A-Z]{2})$/);
+  return m ? m[1] : 'OTHER';
+}
+
+// Full state name map for display
+const _stateNames = {
+  NJ:'New Jersey', CA:'California', NY:'New York', PA:'Pennsylvania',
+  FL:'Florida', GA:'Georgia', TX:'Texas', IL:'Illinois', AZ:'Arizona',
+  NC:'North Carolina', SC:'South Carolina', VA:'Virginia', MA:'Massachusetts',
+  OH:'Ohio', MI:'Michigan', WI:'Wisconsin', MN:'Minnesota', CO:'Colorado',
+  OR:'Oregon', WA:'Washington', OTHER:'Other',
+};
+
 // ─── Setup Screen ─────────────────────────────────────────────────────────────
 const SetupScreen = ({ allPlayers, onStart }) => {
   const [step, setStep]                         = React.useState(1);
@@ -408,9 +472,6 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const [formats, setFormats]                   = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
   const [stakes,  setStakes]                    = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
 
-  // ── CUSTOM COURSES — live subscription ────────────────────────────────────
-  // Initialise from localStorage for instant render, then subscribe to RTDB
-  // so any device adding a course updates all open clients in realtime.
   const [customCourses, setCustomCourses] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
   });
@@ -443,8 +504,6 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const activeFormats = Object.entries(formats).filter(([,v])=>v).map(([k])=>({ type:k, stakes:stakes[k] }));
   const canStart      = selectedPlayers.length >= 2 && course && activeFormats.length > 0;
 
-  // CourseBuilder writes localStorage + RTDB atomically, then calls back with
-  // (newCourse, fullUpdatedArray). Just update React state here.
   const handleSaveCourse = (newCourse, fullUpdatedArray) => {
     setCustomCourses(fullUpdatedArray);
     setCourse(newCourse);
@@ -462,32 +521,32 @@ const SetupScreen = ({ allPlayers, onStart }) => {
     onStart({ players, course, formats: activeFormats, syncCode: generateSyncCode() });
   };
 
-  const steps = ['Players','Course','Formats'];
+  // Build grouped course list from filtered results
+  const buildStateGroups = (list) => {
+    const groups = {};
+    list.forEach(c => {
+      const state = _extractState(c.location);
+      if (!groups[state]) groups[state] = [];
+      groups[state].push(c);
+    });
+    // Sort: NJ first (home state), then alphabetical by state code
+    const order = Object.keys(groups).sort((a, b) => {
+      if (a === 'NJ') return -1;
+      if (b === 'NJ') return 1;
+      if (a === 'OTHER') return 1;
+      if (b === 'OTHER') return -1;
+      return a.localeCompare(b);
+    });
+    return order.map(state => ({ state, label: _stateNames[state] || state, list: groups[state] }));
+  };
 
-  const CourseGroup = ({label, list}) => list.length === 0 ? null : (
-    <div style={{marginBottom:4}}>
-      <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#4A6890', fontWeight:700, padding:'8px 0 4px'}}>{label}</div>
-      <div style={{display:'flex', flexDirection:'column', gap:8}}>
-        {list.map(c => {
-          const sel = course?.id === c.id;
-          return (
-            <div key={c.id} onClick={()=>setCourse(c)}
-              style={{...setupS.courseCard, border: sel?'1px solid #C9A84C':'1px solid #1E3A6E', background: sel?'rgba(201,168,76,0.08)':'#0F2040'}}>
-              <div style={{flex:1}}>
-                <div style={{display:'flex', alignItems:'center', gap:8}}>
-                  <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color: sel?'#C9A84C':'#fff'}}>{c.name}</div>
-                  {c.custom && <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1, color:'#3DCB6C', background:'rgba(61,203,108,0.12)', border:'1px solid rgba(61,203,108,0.3)', padding:'1px 6px', borderRadius:4}}>CUSTOM</span>}
-                </div>
-                <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
-                <div style={{fontSize:10, color:'#4A6890', marginTop:1}}>Rating {c.rating} · Slope {c.slope}</div>
-              </div>
-              {sel && <span style={{color:'#C9A84C', fontSize:20, flexShrink:0}}>✓</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const customFiltered = filtered.filter(c => c.custom);
+  const builtinFiltered = filtered.filter(c => !c.custom);
+  const stateGroups = buildStateGroups(builtinFiltered);
+  // When searching, auto-open all groups with results
+  const isSearching = !!courseSearch;
+
+  const steps = ['Players','Course','Formats'];
 
   return (
     <div style={setupS.root}>
@@ -555,7 +614,6 @@ const SetupScreen = ({ allPlayers, onStart }) => {
               <div style={setupS.stepTitle}>SELECT COURSE</div>
               <div style={setupS.stepSub}>Search, scan a scorecard, or enter manually</div>
 
-              {/* Search */}
               <div style={{marginTop:16, marginBottom:10}}>
                 <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)}
                   placeholder="Search courses…"
@@ -563,7 +621,6 @@ const SetupScreen = ({ allPlayers, onStart }) => {
                     padding:'11px 14px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box'}}/>
               </div>
 
-              {/* Add course buttons */}
               <div style={{display:'flex', gap:8, marginBottom:6}}>
                 <Btn onClick={()=>setAddMode('scanner')} variant="green"
                   style={{flex:1, padding:'11px 10px', fontSize:13}}>
@@ -577,11 +634,29 @@ const SetupScreen = ({ allPlayers, onStart }) => {
 
               {/* Course lists */}
               <div style={{display:'flex', flexDirection:'column'}}>
-                {customCourses.length > 0 &&
-                  <CourseGroup label="MY COURSES" list={filtered.filter(c => c.custom)}/>
-                }
-                <CourseGroup label="NEW JERSEY" list={filtered.filter(c => !c.custom && c.location.includes(', NJ'))}/>
-                <CourseGroup label="OTHER COURSES" list={filtered.filter(c => !c.custom && !c.location.includes(', NJ'))}/>
+                {/* My Courses — always shown if any, collapsed by default unless has selected */}
+                {customFiltered.length > 0 && (
+                  <CourseGroup
+                    label="MY COURSES"
+                    list={customFiltered}
+                    course={course}
+                    onSelect={setCourse}
+                    defaultOpen={true}
+                  />
+                )}
+
+                {/* Built-in courses grouped by state, all collapsed by default */}
+                {stateGroups.map(({ state, label, list }) => (
+                  <CourseGroup
+                    key={state}
+                    label={label.toUpperCase()}
+                    list={list}
+                    course={course}
+                    onSelect={setCourse}
+                    defaultOpen={isSearching}
+                  />
+                ))}
+
                 {filtered.length === 0 && (
                   <div style={{textAlign:'center', padding:'32px 0', color:'#4A6890', fontFamily:'DM Sans', fontSize:13}}>
                     No courses match "{courseSearch}"<br/>
