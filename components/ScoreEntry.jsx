@@ -229,7 +229,7 @@ const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) =
 );
 
 // ── Main ScoreEntry Screen ────────────────────────────────────────────────────
-const ScoreEntry = ({ round, onSaveRound }) => {
+const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins } = window;
 
   const { players, course, formats } = round;
@@ -266,6 +266,7 @@ const ScoreEntry = ({ round, onSaveRound }) => {
   const [keypad,   setKeypad]   = React.useState(null);  // { playerId } or null
   const [wolfPicker, setWolfPicker] = React.useState(false);
   const [showFinish, setShowFinish] = React.useState(false);
+  const [showExit,   setShowExit]   = React.useState(false);
 
   const hasWolf      = formats.some(f => f.type === 'wolf');
   const hasPTM       = formats.some(f => f.type === 'passmoney');
@@ -542,6 +543,16 @@ const ScoreEntry = ({ round, onSaveRound }) => {
         </div>
       )}
 
+      {/* Exit Round — always visible at bottom */}
+      <div style={{flexShrink:0, padding:'6px 12px 10px', background:'#050E1C', borderTop:'1px solid #1E3A6E', display:'flex', justifyContent:'center'}}>
+        <button onClick={()=>setShowExit(true)}
+          style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed',
+            fontWeight:700, fontSize:12, letterSpacing:1.5, color:'#4A6890',
+            WebkitTapHighlightColor:'transparent', padding:'6px 16px'}}>
+          EXIT ROUND
+        </button>
+      </div>
+
       {/* Keypad modal */}
       {keypad && (
         <ScoreKeypad
@@ -564,6 +575,19 @@ const ScoreEntry = ({ round, onSaveRound }) => {
           onClose={()=>setWolfPicker(false)}
         />
       )}
+
+      {/* Exit Round confirmation modal */}
+      <Modal open={showExit} onClose={()=>setShowExit(false)} title="Exit Round?">
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.6}}>
+            Your scores are saved locally. You can resume this round from the home screen.
+          </div>
+          <div style={{display:'flex', gap:10}}>
+            <Btn onClick={()=>setShowExit(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>
+            <Btn onClick={onExitRound} variant="danger" style={{flex:1}}>EXIT ROUND</Btn>
+          </div>
+        </div>
+      </Modal>
 
       {/* Finish confirmation modal */}
       <Modal open={showFinish} onClose={()=>setShowFinish(false)} title="Finish Round?">
