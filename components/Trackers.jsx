@@ -1,4 +1,4 @@
-// Trackers.jsx v3 — Corrected Wolf, PTM (hold/pass), Nassau, Round Tracker
+// Trackers.jsx v4 — RoundTracker shows gross strokes; Wolf leader only when sole leader
 
 // ─── ROUND TRACKER ───────────────────────────────────────────────────────────
 const RoundTracker = ({ players, scores, course, holeIdx }) => {
@@ -18,10 +18,15 @@ const RoundTracker = ({ players, scores, course, holeIdx }) => {
                 <div style={{width:7, height:7, borderRadius:'50%', background:p.color}}/>
                 <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
               </div>
-              <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:26, color:vsColor, lineHeight:1}}>
-                {holesPlayed===0?'—':vs===0?'E':vs>0?`+${vs}`:vs}
+              {/* Big number = gross strokes */}
+              <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:26, color:'#fff', lineHeight:1}}>
+                {holesPlayed === 0 ? '—' : gross}
               </div>
-              <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#4A6890', marginTop:2}}>{gross>0?`${gross} · ${holesPlayed}H`:'—'}</div>
+              {/* Sub-line = score to par + holes played */}
+              <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:vsColor, marginTop:2}}>
+                {holesPlayed === 0 ? '—' : (vs === 0 ? 'E' : vs > 0 ? `+${vs}` : String(vs))}
+                {holesPlayed > 0 && <span style={{color:'#4A6890', marginLeft:4}}>{holesPlayed}H</span>}
+              </div>
             </div>
           );
         })}
@@ -38,17 +43,17 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
   const wd         = wolfData[holeIdx] || { wolfId:wolfPlayer.id, partnerId:null, confirmed:false, lone:false };
   const standings  = calcWolfStandings(scores, wolfData, players, course);
 
-  // Sort by points descending
   const ranked = [...players].sort((a,b) => (standings[b.id]||0) - (standings[a.id]||0));
 
-  // Hole result if confirmed
   const holeResult = React.useMemo(() => {
     if (!wd.confirmed) return null;
     return resolveWolfHole(scores, holeIdx, wd.wolfId, wd.partnerId, !wd.lone, players);
   }, [wd.confirmed, JSON.stringify(scores), holeIdx]);
 
-  const maxPts    = Math.max(...players.map(p => standings[p.id]||0));
-  const leader    = players.find(p => (standings[p.id]||0) === maxPts && maxPts > 0);
+  const maxPts = Math.max(...players.map(p => standings[p.id]||0));
+  // Only declare a sole leader — if tied at top, no "LEADS" banner
+  const leaders = players.filter(p => (standings[p.id]||0) === maxPts && maxPts > 0);
+  const soleLeader = leaders.length === 1 ? leaders[0] : null;
 
   return (
     <div style={trS.section}>
@@ -60,9 +65,9 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
       {/* Standings */}
       <div style={trS.row}>
         {ranked.map(p => {
-          const pts     = standings[p.id] || 0;
-          const isWolf  = wolfPlayer.id === p.id;
-          const isLeader = leader?.id === p.id;
+          const pts      = standings[p.id] || 0;
+          const isWolf   = wolfPlayer.id === p.id;
+          const isLeader = soleLeader?.id === p.id;
           return (
             <div key={p.id} style={{...trS.card,
               border: isWolf?'1px solid #E5534B': isLeader?'1px solid #C9A84C':'1px solid #1E3A6E',
@@ -75,17 +80,17 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
                 {pts>0?`+${pts}`:pts}
               </div>
               <div style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890', marginTop:2}}>pts</div>
-              {isWolf && <div style={{fontSize:9, fontFamily:'Barlow Condensed', fontWeight:700, color:'#E5534B', letterSpacing:0.5, marginTop:2}}>🐺 WOLF</div>}
-              {isLeader && !isWolf && <div style={{fontSize:9, fontFamily:'Barlow Condensed', fontWeight:700, color:'#C9A84C', marginTop:2}}>★ LEAD</div>}
+              {isWolf    && <div style={{fontSize:9, fontFamily:'Barlow Condensed', fontWeight:700, color:'#E5534B', letterSpacing:0.5, marginTop:2}}>🐺 WOLF</div>}
+              {isLeader  && <div style={{fontSize:9, fontFamily:'Barlow Condensed', fontWeight:700, color:'#C9A84C', marginTop:2}}>★ LEAD</div>}
             </div>
           );
         })}
       </div>
 
-      {/* Pot summary */}
-      {maxPts > 0 && leader && (
+      {/* Pot summary — only when sole leader */}
+      {soleLeader && (
         <div style={{fontSize:11, color:'#C9A84C', fontFamily:'Barlow Condensed', fontWeight:700, background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:7, padding:'5px 10px'}}>
-          {leader.name.split(' ')[0]} LEADS — wins ${stake} from each player (${stake*(players.length-1)} total) if held
+          {soleLeader.name.split(' ')[0]} LEADS — wins ${stake} from each player (${stake*(players.length-1)} total) if held
         </div>
       )}
 
@@ -144,7 +149,6 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   const { computePTMState, checkPTMPass, checkPTMWin18, ptmNextPlayer } = window;
   const stake = format?.stakes || 5;
 
-  // Full PTM state replay through ALL scored holes
   const { holderId: currentHolder, log } = React.useMemo(() =>
     computePTMState(scores, putts, players, course, ptmInitialHolder),
     [JSON.stringify(scores), JSON.stringify(putts)]
@@ -154,10 +158,8 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   const isHole18   = holeIdx === 17;
   const par        = course.holes[holeIdx]?.par;
 
-  // Count H18 passes from log
   const hole18Passes = log.filter(l => l.holeIdx === 17).length;
 
-  // Live preview: what happens THIS hole for the current holder
   const curScore = scores[currentHolder]?.[holeIdx];
   const curPutts = (putts[currentHolder]?.[holeIdx]) || 0;
 
@@ -189,7 +191,6 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
     }
   }
 
-  // Recent pass log (last 5)
   const recentLog = log.slice(-5).reverse();
 
   return (
@@ -199,7 +200,6 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
         <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake} POT</span>
       </div>
 
-      {/* Current holder */}
       <div style={{background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', gap:14}}>
         <div style={{fontSize:28}}>💰</div>
         <div style={{flex:1}}>
@@ -216,7 +216,6 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
         <Avatar player={holder} size={40}/>
       </div>
 
-      {/* Live preview */}
       {preview && (
         <div style={{borderRadius:10, padding:'10px 12px', display:'flex', alignItems:'center', gap:10,
           background: preview.outcome==='win' ? 'rgba(201,168,76,0.08)' : preview.outcome==='keep' ? 'rgba(61,203,108,0.06)' : 'rgba(229,83,75,0.08)',
@@ -229,7 +228,6 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
         </div>
       )}
 
-      {/* Rule reminder */}
       <div style={{display:'flex', gap:8}}>
         <div style={{flex:1, background:'rgba(229,83,75,0.06)', border:'1px solid rgba(229,83,75,0.2)', borderRadius:8, padding:'8px 10px'}}>
           <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#E5534B', letterSpacing:1, marginBottom:3}}>PASS</div>
@@ -243,7 +241,6 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
         </div>
       </div>
 
-      {/* Pass history */}
       {recentLog.length > 0 && (
         <div>
           <Label style={{marginBottom:6, display:'block'}}>PASS HISTORY</Label>
