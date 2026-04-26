@@ -19,10 +19,8 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, isWolf, i
           <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:20, color:'#fff', letterSpacing:0.3, lineHeight:1}}>{p.name}</div>
           <div style={{fontSize:11, color:'#7A98BC', marginTop:3}}>HCP {p.handicap}</div>
         </div>
-        {/* Wolf icon (non-wolf) */}
         {isWolf && !hasWolf && <span style={{fontSize:20}}>🐺</span>}
         {isPartner && !isWolf && <span style={{fontSize:18, opacity:0.85}}>⚑</span>}
-        {/* PICK button — only shown for wolf player */}
         {hasWolf && isWolf && (
           <button onClick={onWolfTap} style={{
             background: !wolfData?.[holeIdx]?.confirmed ? '#E5534B' : 'rgba(61,203,108,0.15)',
@@ -69,7 +67,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, isWolf, i
           −
         </button>
 
-        {/* Score display box — tap opens name grid */}
         <div
           onClick={onScoreTap}
           style={{flex:1, cursor:'pointer', borderRadius:12,
@@ -145,9 +142,8 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, isWolf, i
   );
 };
 
-// ── Score Name Grid Modal — single tap confirms ───────────────────────────────
+// ── Score Name Grid Modal ─────────────────────────────────────────────────────
 const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
-  // Build tiles for scores 1 through par+4 (covers Ace through common worst)
   const scoreName = (strokes, par) => {
     const d = strokes - par;
     if (strokes === 1)  return { label:'ACE',    color:'#FFD700', border:'#FFD700' };
@@ -161,7 +157,6 @@ const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
     return               { label:`+${d}`,       color:'#8B0000', border:'#8B0000' };
   };
 
-  // Show scores 1–9
   const tiles = Array.from({length:9}, (_,i) => i+1);
 
   return (
@@ -169,8 +164,6 @@ const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
       display:'flex',alignItems:'center',justifyContent:'center', padding:'20px'}}
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:'#0F2040',borderRadius:16,padding:'20px',width:'100%',maxWidth:380}}>
-
-        {/* Header */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
           <div style={{fontFamily:'Barlow Condensed',fontWeight:800,fontSize:16,color:'#fff',letterSpacing:0.5}}>
             {player.name.toUpperCase()} — HOLE {hole.num} (PAR {hole.par})
@@ -179,8 +172,6 @@ const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
             style={{background:'none',border:'none',color:'#7A98BC',fontSize:20,cursor:'pointer',
               lineHeight:1,padding:'0 4px',WebkitTapHighlightColor:'transparent'}}>✕</button>
         </div>
-
-        {/* Score tiles grid */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
           {tiles.map(n => {
             const s = scoreName(n, hole.par);
@@ -243,13 +234,56 @@ const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) =
   </div>
 );
 
+// ── Collapsible Game Trackers Drawer ─────────────────────────────────────────
+const TrackersDrawer = ({ open, onToggle, formats, children }) => {
+  const formatIcons = { wolf:'🐺', nassau:'💰', stableford:'⭐', passmoney:'💸', skins:'🎯' };
+  const activeTypes = formats.map(f => f.type);
+
+  return (
+    <div style={{borderTop:'1px solid #1E3A6E'}}>
+      {/* Toggle bar */}
+      <button
+        onClick={onToggle}
+        style={{
+          width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'11px 16px', background:'#050E1C', border:'none', cursor:'pointer',
+          WebkitTapHighlightColor:'transparent',
+        }}>
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
+            letterSpacing:2, color: open ? '#C9A84C' : '#7A98BC'}}>
+            GAME TRACKERS
+          </span>
+          <div style={{display:'flex', gap:4}}>
+            {activeTypes.map(t => (
+              <span key={t} style={{fontSize:13}}>{formatIcons[t] || '🎯'}</span>
+            ))}
+          </div>
+        </div>
+        <span style={{
+          fontSize:14, color:'#4A6890',
+          display:'inline-block',
+          transform: open ? 'rotate(180deg)' : 'none',
+          transition:'transform 0.2s',
+        }}>▾</span>
+      </button>
+
+      {/* Content — only rendered when open */}
+      {open && (
+        <div>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Main ScoreEntry Screen ────────────────────────────────────────────────────
 const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
 
   const { players, course, formats } = round;
 
-  // Scores: { [playerId]: [score_h1, score_h2, ... score_h18] }
   const [scores,   setScores]   = React.useState(() => {
     try {
       const saved = localStorage.getItem('pp_scores_' + round.id);
@@ -276,7 +310,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     }
   });
 
-  // wolfData: { [holeIdx]: { wolfId, partnerId, confirmed, lone } }
   const [wolfData, setWolfData] = React.useState(() => {
     try {
       const saved = localStorage.getItem('pp_wolf_' + round.id);
@@ -286,10 +319,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
 
   const [nassauPresses, setNassauPresses] = React.useState([]);
   const [holeIdx,  setHoleIdx]  = React.useState(0);
-  const [keypad,   setKeypad]   = React.useState(null);  // { playerId } or null
+  const [keypad,   setKeypad]   = React.useState(null);
   const [wolfPicker, setWolfPicker] = React.useState(false);
   const [showFinish, setShowFinish] = React.useState(false);
   const [showExit,   setShowExit]   = React.useState(false);
+  const [trackersOpen, setTrackersOpen] = React.useState(false);
 
   const hasWolf      = formats.some(f => f.type === 'wolf');
   const hasPTM       = formats.some(f => f.type === 'passmoney');
@@ -305,13 +339,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const wolfPlayer   = hasWolf ? getWolfForHole(players, holeIdx) : null;
   const wolfHoleData = wolfData[holeIdx] || { wolfId: wolfPlayer?.id, partnerId: null, confirmed: false, lone: false };
 
-  // PTM state replayed through all scored holes
   const ptmState = React.useMemo(() => {
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
     return computePTMState(scores, putts, players, course, players[0]?.id);
   }, [JSON.stringify(scores), JSON.stringify(putts)]);
 
-  // Persist to localStorage
   React.useEffect(() => {
     localStorage.setItem('pp_scores_' + round.id, JSON.stringify(scores));
   }, [scores]);
@@ -325,7 +357,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     localStorage.setItem('pp_wolf_' + round.id, JSON.stringify(wolfData));
   }, [wolfData]);
 
-  // Per-player running format stats for the stat strip
   const playerFormatStats = React.useMemo(() => {
     const result = {};
     players.forEach(p => {
@@ -353,7 +384,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
         }
       }
 
-      // Always show running stroke total
       if (holesPlayed > 0) {
         const total = (scores[p.id]||[]).reduce((acc, s) => acc + (s || 0), 0);
         stats.push({ icon:'⛳', label:'STROKES', value: String(total), color: '#9BB4D4' });
@@ -370,7 +400,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     return result;
   }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx]);
 
-  // Score setter
   const setScore = (playerId, val) => {
     const clamped = Math.max(1, val);
     setScores(prev => {
@@ -380,7 +409,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     });
   };
 
-  // Putt setter
   const setPutt = (playerId, val) => {
     setPutts(prev => {
       const next = { ...prev, [playerId]: [...(prev[playerId] || Array(18).fill(0))] };
@@ -397,7 +425,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     });
   };
 
-  // Wolf actions
   const handleWolfPick = (partnerId) => {
     setWolfData(prev => ({
       ...prev,
@@ -422,12 +449,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     });
   };
 
-  // Nassau press
   const handlePress = (segment, startHole, stake) => {
     setNassauPresses(prev => [...prev, { segment, startHole, stake }]);
   };
 
-  // Navigation
   const prevHole = () => holeIdx > 0  && setHoleIdx(holeIdx - 1);
   const nextHole = () => holeIdx < 17 && setHoleIdx(holeIdx + 1);
 
@@ -438,8 +463,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     onSaveRound(scores, wolfData, putts, nassauPresses, {}, popFlags);
   };
 
-  // Hole header info
   const parColor = hole.par === 3 ? '#7B9FE0' : hole.par === 5 ? '#C9A84C' : '#9BB4D4';
+
+  // Determine which tracker sections to show in the drawer
+  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins;
 
   return (
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0A1628'}}>
@@ -448,7 +475,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
       <div style={{flexShrink:0, background:'#050E1C', borderBottom:'1px solid #1E3A6E', padding:'12px 16px 10px'}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
 
-          {/* Prev arrow */}
           <button onClick={prevHole} disabled={holeIdx===0}
             style={{width:36, height:36, borderRadius:8, border:'none', background:holeIdx===0?'transparent':'#0F2040',
               color:holeIdx===0?'#1E3A6E':'#9BB4D4', fontSize:20, cursor:holeIdx===0?'default':'pointer',
@@ -457,7 +483,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
             ‹
           </button>
 
-          {/* Hole info */}
           <div style={{flex:1, textAlign:'center'}}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'center', gap:8}}>
               <span style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:32, color:'#fff', lineHeight:1}}>
@@ -473,7 +498,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
             </div>
           </div>
 
-          {/* Next arrow */}
           <button onClick={nextHole} disabled={holeIdx===17}
             style={{width:36, height:36, borderRadius:8, border:'none', background:holeIdx===17?'transparent':'#0F2040',
               color:holeIdx===17?'#1E3A6E':'#9BB4D4', fontSize:20, cursor:holeIdx===17?'default':'pointer',
@@ -533,35 +557,44 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
           })}
         </div>
 
-        {/* Game trackers */}
+        {/* Round tracker — always visible */}
         <div style={{marginTop:12}}>
           <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
-          {hasWolf && (
-            <WolfTracker
-              players={players} scores={scores} wolfData={wolfData}
-              course={course} holeIdx={holeIdx}
-              onSetPartner={handleWolfPick}
-              onLoneWolf={handleLoneWolf}
-              onResetWolf={handleResetWolf}
-              format={wolfFmt}
-            />
-          )}
-          {hasPTM && (
-            <PTMTracker
-              players={players} scores={scores} putts={putts}
-              course={course} holeIdx={holeIdx}
-              ptmInitialHolder={players[0]?.id}
-              format={ptmFmt}
-            />
-          )}
-          {hasNassau && (
-            <NassauTracker
-              players={players} scores={scores} popFlags={popFlags} course={course}
-              holeIdx={holeIdx} presses={nassauPresses}
-              onPress={handlePress} format={nassauFmt}
-            />
-          )}
         </div>
+
+        {/* Game trackers — collapsible drawer */}
+        {hasAnyTracker && (
+          <TrackersDrawer
+            open={trackersOpen}
+            onToggle={() => setTrackersOpen(v => !v)}
+            formats={formats}>
+            {hasWolf && (
+              <WolfTracker
+                players={players} scores={scores} wolfData={wolfData}
+                course={course} holeIdx={holeIdx}
+                onSetPartner={handleWolfPick}
+                onLoneWolf={handleLoneWolf}
+                onResetWolf={handleResetWolf}
+                format={wolfFmt}
+              />
+            )}
+            {hasPTM && (
+              <PTMTracker
+                players={players} scores={scores} putts={putts}
+                course={course} holeIdx={holeIdx}
+                ptmInitialHolder={players[0]?.id}
+                format={ptmFmt}
+              />
+            )}
+            {hasNassau && (
+              <NassauTracker
+                players={players} scores={scores} popFlags={popFlags} course={course}
+                holeIdx={holeIdx} presses={nassauPresses}
+                onPress={handlePress} format={nassauFmt}
+              />
+            )}
+          </TrackersDrawer>
+        )}
 
         {/* Bottom padding + finish button */}
         <div style={{padding:'16px 12px 24px'}}>
