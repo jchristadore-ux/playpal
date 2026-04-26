@@ -1,576 +1,1770 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>PlayPal — Golf Companion</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PlayPal" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#1a3a2a" />
+  <title>PlayPal Golf</title>
 
-<!-- Firebase: RTDB only. No auth. No Firestore. Single project: playpal-sync. -->
-<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
+  <!-- PWA Manifest inline (avoids separate file requirement) -->
+  <link rel="manifest" href="data:application/json,{%22name%22:%22PlayPal%20Golf%22,%22short_name%22:%22PlayPal%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%231a3a2a%22,%22theme_color%22:%22%231a3a2a%22}" />
 
-<script src="components/gameData.js?v=2"></script>
-<script src="components/gameUtils.js?v=2"></script>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
-  #root { height: 100%; }
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1E3A6E; border-radius: 4px; }
-  input::placeholder { color: #4A6890; }
-  button { font-family: 'DM Sans', sans-serif; }
-  * { -webkit-tap-highlight-color: transparent; }
+  <!-- Apple touch icons (use your own if available) -->
+  <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/72x72/26f3.png" />
 
-  /* Deep-link loading overlay */
-  #pp-join-overlay {
-    position: fixed; inset: 0; background: #0A1628; z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 20px; font-family: 'Barlow Condensed', sans-serif;
-  }
-  #pp-join-overlay .pp-join-logo { font-size: 52px; line-height: 1; }
-  #pp-join-overlay .pp-join-title { font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff; }
-  #pp-join-overlay .pp-join-code {
-    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #3DCB6C;
-    background: rgba(61,203,108,0.08); border: 1px solid rgba(61,203,108,0.3);
-    border-radius: 10px; padding: 10px 24px;
-  }
-  #pp-join-overlay .pp-join-status { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A98BC; font-family: 'DM Sans', sans-serif; }
-  #pp-join-overlay .pp-join-spinner {
-    width: 36px; height: 36px; border: 3px solid #1E3A6E;
-    border-top-color: #3DCB6C; border-radius: 50%;
-    animation: pp-spin 0.8s linear infinite;
-  }
-  #pp-join-overlay .pp-join-error { font-size: 14px; color: #E5534B; text-align: center; max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
-  #pp-join-overlay .pp-join-dismiss {
-    margin-top: 8px; background: transparent; border: 1px solid #1E3A6E;
-    color: #7A98BC; border-radius: 8px; padding: 10px 24px;
-    font-family: 'Barlow Condensed', sans-serif; font-size: 14px;
-    font-weight: 700; letter-spacing: 1px; cursor: pointer;
-  }
-  @keyframes pp-spin { to { transform: rotate(360deg); } }
-</style>
+  <!-- Firebase SDK v9 compat (CDN, no build step) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* =====================================================
+       DESIGN SYSTEM - Golf-green meets modern scorecard
+       ===================================================== */
+    :root {
+      --green-deep:   #1a3a2a;
+      --green-mid:    #2d6a4f;
+      --green-bright: #52b788;
+      --green-light:  #d8f3dc;
+      --gold:         #f4a261;
+      --gold-dark:    #e76f51;
+      --white:        #f8f9fa;
+      --gray-100:     #e9ecef;
+      --gray-300:     #ced4da;
+      --gray-500:     #6c757d;
+      --gray-700:     #343a40;
+      --red:          #e63946;
+      --blue:         #4361ee;
+      --shadow-sm:    0 1px 3px rgba(0,0,0,0.15);
+      --shadow-md:    0 4px 12px rgba(0,0,0,0.15);
+      --shadow-lg:    0 8px 30px rgba(0,0,0,0.20);
+      --radius:       12px;
+      --radius-sm:    8px;
+      --safe-top:     env(safe-area-inset-top, 0px);
+      --safe-bottom:  env(safe-area-inset-bottom, 0px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: var(--green-deep);
+      color: var(--gray-700);
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+
+    /* ── App Shell ── */
+    #app {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+    }
+
+    /* ── Header ── */
+    #header {
+      background: var(--green-deep);
+      color: var(--white);
+      padding: 14px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--green-mid);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+    }
+
+    #header h1 {
+      font-size: 1.4rem;
+      letter-spacing: 0.03em;
+      color: var(--green-bright);
+      font-weight: normal;
+    }
+    #header h1 span { color: var(--gold); }
+
+    #sync-indicator {
+      font-size: 0.7rem;
+      font-family: monospace;
+      color: var(--green-bright);
+      opacity: 0.7;
+    }
+    #sync-indicator.error { color: var(--red); opacity: 1; }
+    #sync-indicator.syncing { animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0.2; } }
+
+    /* ── Main Content ── */
+    #main {
+      flex: 1;
+      background: var(--gray-100);
+      border-radius: var(--radius) var(--radius) 0 0;
+      margin-top: 2px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Tabs ── */
+    #tabs {
+      display: flex;
+      background: var(--white);
+      border-bottom: 2px solid var(--gray-300);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 13px 8px;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      cursor: pointer;
+      transition: color 0.2s, border-bottom 0.2s;
+      border-bottom: 3px solid transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .tab-btn.active {
+      color: var(--green-deep);
+      border-bottom-color: var(--green-bright);
+    }
+
+    /* ── Panels ── */
+    .panel { display: none; padding: 16px; }
+    .panel.active { display: block; }
+
+    /* ── Section Headers ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-header h2 {
+      font-size: 1.1rem;
+      color: var(--green-deep);
+      font-weight: normal;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-300);
+    }
+    .card-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .card-row:last-child { margin-bottom: 0; }
+    .card-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-500);
+      margin-bottom: 4px;
+    }
+    .card-value {
+      font-size: 1rem;
+      color: var(--gray-700);
+      font-weight: bold;
+    }
+
+    /* ── Inputs ── */
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 2px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--gray-700);
+      background: var(--white);
+      transition: border-color 0.2s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--green-bright); }
+    input[type="number"] { text-align: center; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 11px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: var(--green-mid); color: var(--white); }
+    .btn-gold     { background: var(--gold); color: var(--white); }
+    .btn-danger   { background: var(--red); color: var(--white); }
+    .btn-ghost    { background: transparent; color: var(--green-mid); border: 2px solid var(--green-mid); }
+    .btn-sm       { padding: 7px 14px; font-size: 0.8rem; }
+    .btn-full     { width: 100%; }
+
+    /* ── Score Grid ── */
+    .score-grid {
+      display: grid;
+      gap: 1px;
+      background: var(--gray-300);
+      border: 1px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      font-size: 0.82rem;
+    }
+    .score-grid-header {
+      display: grid;
+      background: var(--green-deep);
+      color: var(--white);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .score-row {
+      display: grid;
+      background: var(--white);
+    }
+    .score-cell {
+      padding: 8px 6px;
+      text-align: center;
+      background: var(--white);
+    }
+    .score-cell.hole-num {
+      background: var(--green-light);
+      font-weight: bold;
+      color: var(--green-deep);
+    }
+    .score-cell.player-name {
+      background: var(--green-light);
+      font-weight: bold;
+      color: var(--green-deep);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .score-cell input {
+      padding: 4px;
+      border: 1px solid var(--gray-300);
+      border-radius: 4px;
+      width: 38px;
+      height: 34px;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .score-cell input:focus { border-color: var(--green-bright); }
+
+    /* Score coloring */
+    .eagle { background: #ffd700 !important; font-weight: bold; }
+    .birdie { background: #b7e4c7 !important; }
+    .par    { background: var(--white) !important; }
+    .bogey  { background: #ffd6a5 !important; }
+    .double { background: #ffb3b3 !important; }
+
+    /* ── Player List ── */
+    .player-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--gray-300);
+      box-shadow: var(--shadow-sm);
+    }
+    .player-item-left { display: flex; align-items: center; gap: 12px; }
+    .player-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--green-mid);
+      color: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .player-name-text { font-size: 0.95rem; font-weight: bold; color: var(--gray-700); }
+    .player-handicap  { font-size: 0.75rem; color: var(--gray-500); }
+
+    /* ── Course List ── */
+    .course-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--gray-300);
+    }
+    .course-info { font-size: 0.85rem; color: var(--gray-500); margin-top: 2px; }
+
+    /* ── Round Setup ── */
+    .setup-field { margin-bottom: 14px; }
+    .setup-field label { display: block; font-size: 0.8rem; color: var(--gray-500); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Sync Code ── */
+    #sync-code-display {
+      font-size: 2.5rem;
+      font-family: monospace;
+      color: var(--green-deep);
+      letter-spacing: 0.25em;
+      text-align: center;
+      padding: 16px;
+      background: var(--green-light);
+      border-radius: var(--radius);
+      border: 2px dashed var(--green-mid);
+      margin: 14px 0;
+      font-weight: bold;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: calc(20px + var(--safe-bottom));
+      left: 50%; transform: translateX(-50%);
+      background: var(--green-deep);
+      color: var(--white);
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-size: 0.88rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--white);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 24px 20px calc(24px + var(--safe-bottom));
+      width: 100%;
+      max-width: 520px;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } }
+    .modal-title { font-size: 1.1rem; color: var(--green-deep); margin-bottom: 16px; font-weight: bold; }
+
+    /* ── Totals Row ── */
+    .totals-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .total-chip {
+      flex: 1;
+      min-width: 80px;
+      background: var(--white);
+      border: 1px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      text-align: center;
+    }
+    .total-chip .tc-label { font-size: 0.68rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; }
+    .total-chip .tc-value { font-size: 1.3rem; font-weight: bold; color: var(--green-deep); margin-top: 2px; }
+    .total-chip .tc-value.over-par { color: var(--red); }
+    .total-chip .tc-value.under-par { color: var(--green-mid); }
+
+    /* ── Loading Screen ── */
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: var(--green-deep);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      z-index: 1000;
+      transition: opacity 0.4s;
+    }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+    .loading-logo { font-size: 2.5rem; color: var(--green-bright); }
+    .loading-text  { color: var(--white); font-size: 1rem; opacity: 0.8; }
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: var(--green-bright);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Leaderboard ── */
+    .lb-row {
+      display: flex; align-items: center;
+      padding: 12px 16px;
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--gray-300);
+      gap: 14px;
+    }
+    .lb-rank { font-size: 1.2rem; font-weight: bold; color: var(--gold); min-width: 28px; }
+    .lb-name { flex: 1; font-weight: bold; }
+    .lb-score { font-size: 1.1rem; font-weight: bold; }
+    .lb-score.under { color: var(--green-mid); }
+    .lb-score.over  { color: var(--red); }
+    .lb-score.even  { color: var(--gray-700); }
+
+    /* ── Hole Nav ── */
+    .hole-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      border: 1px solid var(--gray-300);
+    }
+    .hole-num-big { font-size: 1.6rem; font-weight: bold; color: var(--green-deep); }
+    .hole-par-text { font-size: 0.8rem; color: var(--gray-500); }
+
+    /* ── Responsive ── */
+    @media (max-width: 380px) {
+      .score-cell { padding: 6px 3px; font-size: 0.75rem; }
+      #sync-code-display { font-size: 2rem; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray-500);
+    }
+    .empty-state .emoji { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+    .divider { height: 1px; background: var(--gray-300); margin: 16px 0; }
+
+    /* Hole input wrapper for score entry */
+    .hole-inputs-wrapper { display: flex; flex-direction: column; gap: 12px; }
+    .player-score-row {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--white); border-radius: var(--radius-sm);
+      padding: 12px 14px; border: 1px solid var(--gray-300);
+    }
+    .player-score-row .psr-name { flex: 1; font-weight: bold; font-size: 0.9rem; }
+    .score-stepper {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .stepper-btn {
+      width: 36px; height: 36px;
+      border: 2px solid var(--green-mid);
+      background: var(--white);
+      border-radius: 50%;
+      font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-weight: bold; color: var(--green-mid);
+      transition: background 0.15s;
+    }
+    .stepper-btn:active { background: var(--green-light); }
+    .stepper-val {
+      font-size: 1.4rem; font-weight: bold; color: var(--gray-700);
+      min-width: 28px; text-align: center;
+    }
+    .stepper-val.birdie-color { color: var(--green-mid); }
+    .stepper-val.eagle-color  { color: var(--gold-dark); }
+    .stepper-val.bogey-color  { color: var(--gold); }
+    .stepper-val.double-color { color: var(--red); }
+  </style>
 </head>
 <body>
 
-<!-- Deep-link join overlay -->
-<div id="pp-join-overlay" style="display:none;">
-  <div class="pp-join-logo">🏌️</div>
-  <div class="pp-join-title">JOINING ROUND</div>
-  <div class="pp-join-code" id="pp-join-code-display">------</div>
-  <div class="pp-join-spinner" id="pp-join-spinner"></div>
-  <div class="pp-join-status" id="pp-join-status">Connecting…</div>
-  <div class="pp-join-error" id="pp-join-error" style="display:none;"></div>
-  <button class="pp-join-dismiss" id="pp-join-dismiss" style="display:none;" onclick="dismissJoinOverlay()">GO TO HOME</button>
+<!-- Loading Screen -->
+<div id="loading-screen">
+  <div class="loading-logo">⛳</div>
+  <div class="loading-text">Loading PlayPal…</div>
+  <div class="loading-spinner"></div>
 </div>
 
-<div id="root"></div>
+<!-- Toast -->
+<div id="toast"></div>
 
-<script type="text/babel" src="components/Shared.jsx"></script>
-<script type="text/babel" src="components/Home.jsx"></script>
-<script type="text/babel" src="components/Setup.jsx"></script>
-<script type="text/babel" src="components/PlayerCard.jsx"></script>
-<script type="text/babel" src="components/Trackers.jsx"></script>
-<script type="text/babel" src="components/ScoreEntry.jsx"></script>
-<script type="text/babel" src="components/Summary.jsx"></script>
+<!-- Modals -->
+<div class="modal-overlay" id="modal-player">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-player-title">Add Player</div>
+    <div class="setup-field">
+      <label>Name</label>
+      <input type="text" id="modal-player-name" placeholder="Player name" autocomplete="off" />
+    </div>
+    <div class="setup-field">
+      <label>Handicap</label>
+      <input type="number" id="modal-player-hcp" placeholder="0" min="0" max="54" />
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-player')">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="savePlayer()">Save</button>
+    </div>
+  </div>
+</div>
 
-<script>
-/* ============================================================
-   FIREBASE CONFIG — playpal-sync (correct project)
-   All data: https://playpal-sync-default-rtdb.firebaseio.com
-     /players/{id}      — player profiles
-     /courses/{id}      — custom courses
-     /rounds/{syncCode} — round data (was wrongly using Firestore)
-   Rules: { ".read": true, ".write": true }
-   No auth. No Firestore. Nothing from playpal-scorecard.
-   ============================================================ */
-var PLAYPAL_FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
-  authDomain:        "playpal-sync.firebaseapp.com",
-  databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
-  projectId:         "playpal-sync",
-  storageBucket:     "playpal-sync.firebasestorage.app",
-  messagingSenderId: "97913885953",
-  appId:             "1:97913885953:web:0e42ee9dbca2c346c0f700"
-};
+<div class="modal-overlay" id="modal-course">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-course-title">Add Course</div>
+    <div class="setup-field">
+      <label>Course Name</label>
+      <input type="text" id="modal-course-name" placeholder="e.g. Pebble Beach" autocomplete="off" />
+    </div>
+    <div class="setup-field">
+      <label>Holes</label>
+      <select id="modal-course-holes">
+        <option value="9">9 Holes</option>
+        <option value="18" selected>18 Holes</option>
+      </select>
+    </div>
+    <div id="modal-course-pars"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-course')">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="saveCourse()">Save</button>
+    </div>
+  </div>
+</div>
 
-/* ============================================================
-   FIREBASE INIT — synchronous after first call, no auth
-   ============================================================ */
-var _fbApp   = null;
-var _fbDb    = null;
-var _fbReady = false;
+<div class="modal-overlay" id="modal-join">
+  <div class="modal-box">
+    <div class="modal-title">Join a Round</div>
+    <div class="setup-field">
+      <label>Enter Sync Code</label>
+      <input type="text" id="join-code-input" placeholder="e.g. A1B2C3"
+             maxlength="6" autocomplete="off" autocapitalize="characters"
+             style="font-size:1.8rem;letter-spacing:0.2em;text-align:center;text-transform:uppercase;" />
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-join')">Cancel</button>
+      <button class="btn btn-gold btn-full" onclick="joinRound()">Join</button>
+    </div>
+  </div>
+</div>
 
-function _fbInit(cb) {
-  if (_fbReady) { setTimeout(function() { cb(true); }, 0); return; }
-  try {
-    _fbApp = !window.firebase.apps.length
-      ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
-      : window.firebase.apps[0];
-    _fbDb    = window.firebase.database();
-    _fbReady = true;
-    console.log('[PlayPal] Firebase ready — playpal-sync RTDB');
-    setTimeout(function() { cb(true); }, 0);
-  } catch(e) {
-    console.warn('[PlayPal] Firebase init failed:', e.message);
-    setTimeout(function() { cb(false); }, 0);
-  }
-}
+<!-- App Shell -->
+<div id="app">
+  <div id="header">
+    <h1>Play<span>Pal</span> ⛳</h1>
+    <div id="sync-indicator">connecting…</div>
+  </div>
 
-/* ============================================================
-   PLAYER SYNC SERVICE  →  RTDB /players/{id}
-   ============================================================ */
-var PlayerSyncService = (function() {
+  <div id="main">
+    <div id="tabs">
+      <button class="tab-btn active" onclick="switchTab('scorecard')">Scorecard</button>
+      <button class="tab-btn" onclick="switchTab('players')">Players</button>
+      <button class="tab-btn" onclick="switchTab('courses')">Courses</button>
+      <button class="tab-btn" onclick="switchTab('rounds')">Rounds</button>
+    </div>
 
-  function save(players, cb) {
-    _fbInit(function(ok) {
-      if (!ok) { cb && cb(false); return; }
-      var obj = {};
-      players.forEach(function(p) { obj[p.id] = p; });
-      _fbDb.ref('players').set(obj)
-        .then(function() { cb && cb(true); })
-        .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
-    });
-  }
-
-  function load(cb) {
-    _fbInit(function(ok) {
-      if (!ok) { cb(null); return; }
-      _fbDb.ref('players').once('value')
-        .then(function(snap) {
-          var val = snap.val();
-          if (!val) { cb(null); return; }
-          cb(Object.values(val));
-        })
-        .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
-    });
-  }
-
-  function subscribe(cb) {
-    _fbInit(function(ok) {
-      if (!ok) return;
-      _fbDb.ref('players').on('value', function(snap) {
-        var val = snap.val();
-        if (val) cb(Object.values(val));
-      });
-    });
-  }
-
-  function unsubscribe() {
-    if (_fbDb) _fbDb.ref('players').off('value');
-  }
-
-  return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
-})();
-
-/* ============================================================
-   COURSE SYNC SERVICE  →  RTDB /courses/{id}
-   ============================================================ */
-var CourseSyncService = (function() {
-
-  function save(courses, cb) {
-    _fbInit(function(ok) {
-      if (!ok) { cb && cb(false); return; }
-      var obj = {};
-      courses.forEach(function(c) { obj[c.id] = c; });
-      _fbDb.ref('courses').set(obj)
-        .then(function() { cb && cb(true); })
-        .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
-    });
-  }
-
-  function load(cb) {
-    _fbInit(function(ok) {
-      if (!ok) { cb(null); return; }
-      _fbDb.ref('courses').once('value')
-        .then(function(snap) {
-          var val = snap.val();
-          cb(val ? Object.values(val) : []);
-        })
-        .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
-    });
-  }
-
-  return { save: save, load: load };
-})();
-
-/* ============================================================
-   ROUND SYNC SERVICE  →  RTDB /rounds/{syncCode}
-   Previously used Firestore on the wrong project (playpal-scorecard).
-   Now correctly uses RTDB on playpal-sync, same as players/courses.
-   ============================================================ */
-var RoundSyncService = (function() {
-
-  function saveRound(roundObj, cb) {
-    _fbInit(function(ok) {
-      if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
-      _fbDb.ref('rounds/' + roundObj.syncCode).set({
-        syncCode: roundObj.syncCode,
-        round:    roundObj,
-        savedAt:  Date.now()
-      })
-      .then(function() { cb && cb(true); })
-      .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
-    });
-  }
-
-  function fetchRound(syncCode, cb) {
-    _fbInit(function(ok) {
-      if (!ok) { cb(null, 'Firebase unavailable'); return; }
-      _fbDb.ref('rounds/' + syncCode.trim().toUpperCase()).once('value')
-        .then(function(snap) {
-          if (!snap.exists()) { cb(null, 'Round not found'); return; }
-          var d = snap.val();
-          cb(d.round || null, null);
-        })
-        .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
-    });
-  }
-
-  return { saveRound: saveRound, fetchRound: fetchRound };
-})();
-
-window.PlayerSyncService  = PlayerSyncService;
-window.CourseSyncService  = CourseSyncService;
-window.RoundSyncService   = RoundSyncService;
-
-/* ============================================================
-   DEEP-LINK DETECTION
-   ============================================================ */
-(function() {
-  var params   = new URLSearchParams(window.location.search);
-  var rawCode  = params.get('join') || params.get('code') || '';
-  var joinCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-  if (!joinCode || joinCode.length < 4) return;
-
-  var overlay   = document.getElementById('pp-join-overlay');
-  var codeEl    = document.getElementById('pp-join-code-display');
-  var statusEl  = document.getElementById('pp-join-status');
-  var spinnerEl = document.getElementById('pp-join-spinner');
-  var errorEl   = document.getElementById('pp-join-error');
-  var dismissEl = document.getElementById('pp-join-dismiss');
-
-  overlay.style.display = 'flex';
-  codeEl.textContent = joinCode;
-
-  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
-  function showError(msg) {
-    if (spinnerEl)  spinnerEl.style.display  = 'none';
-    if (errorEl)  { errorEl.style.display   = 'block'; errorEl.textContent = msg; }
-    if (dismissEl)  dismissEl.style.display  = 'block';
-    setStatus('Could not join round');
-  }
-
-  setStatus('Connecting to Firebase…');
-
-  // Same-device fast path
-  try {
-    var local = localStorage.getItem('pp_round');
-    if (local) {
-      var r = JSON.parse(local);
-      if (r.syncCode === joinCode) {
-        setStatus('Round found! Loading…');
-        sessionStorage.setItem('pp_screen', 'score');
-        window.__pp_deeplink_round = r;
-        _clearJoinParam();
-        setTimeout(function() { overlay.style.display = 'none'; }, 300);
-        return;
-      }
-    }
-  } catch(e) { /* fall through */ }
-
-  RoundSyncService.fetchRound(joinCode, function(round, err) {
-    if (!round) {
-      showError(
-        err === 'Round not found'
-          ? 'No active round found for code "' + joinCode + '".\nMake sure the host has started the round.'
-          : 'Connection error: ' + (err || 'Unknown') + '\nCheck your internet and try again.'
-      );
-      return;
-    }
-    setStatus('Round found! Loading…');
-    localStorage.setItem('pp_round', JSON.stringify(round));
-    sessionStorage.setItem('pp_screen', 'score');
-    _clearJoinParam();
-    if (window.__pp_deeplink_ready) {
-      window.__pp_deeplink_ready(round);
-    } else {
-      window.__pp_deeplink_round = round;
-    }
-    setTimeout(function() { overlay.style.display = 'none'; }, 400);
-  });
-
-  function _clearJoinParam() {
-    try {
-      var u = new URL(window.location.href);
-      u.searchParams.delete('join');
-      u.searchParams.delete('code');
-      window.history.replaceState({}, '', u.toString());
-    } catch(e) {}
-  }
-})();
-
-function dismissJoinOverlay() {
-  var overlay = document.getElementById('pp-join-overlay');
-  if (overlay) overlay.style.display = 'none';
-  try {
-    var u = new URL(window.location.href);
-    u.searchParams.delete('join');
-    u.searchParams.delete('code');
-    window.history.replaceState({}, '', u.toString());
-  } catch(e) {}
-}
-</script>
-
-<script type="text/babel">
-
-const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "accentGreen": "#3DCB6C",
-  "accentGold": "#C9A84C",
-  "bgColor": "#0A1628",
-  "cardBg": "#0F2040",
-  "showSyncCode": true
-} /*EDITMODE-END*/;
-
-const App = () => {
-  // ── ROUTING FIX ──────────────────────────────────────────────────────────
-  // sessionStorage is cleared when the tab/browser closes.
-  // A fresh open always lands on 'home'.
-  // Mid-round page refreshes correctly resume the scoring screen.
-  // Deep-link joins write 'score' to sessionStorage before React mounts.
-  const [screen, setScreen] = React.useState(() => {
-    if (window.__pp_deeplink_round) return 'score';
-    return sessionStorage.getItem('pp_screen') || 'home';
-  });
-
-  const [players, setPlayers] = React.useState(() => {
-    const saved = localStorage.getItem('pp_players');
-    return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
-  });
-
-  const [round, setRound] = React.useState(() => {
-    if (window.__pp_deeplink_round) {
-      const r = window.__pp_deeplink_round;
-      window.__pp_deeplink_round = null;
-      return r;
-    }
-    // Only restore in-progress round if the session was already on scoring
-    const savedScreen = sessionStorage.getItem('pp_screen');
-    if (savedScreen === 'score') {
-      const saved = localStorage.getItem('pp_round');
-      return saved ? JSON.parse(saved) : null;
-    }
-    return null;
-  });
-
-  const [finalScores,  setFinalScores]  = React.useState(null);
-  const [finalWolf,    setFinalWolf]    = React.useState(null);
-  const [finalPutts,   setFinalPutts]   = React.useState(null);
-  const [finalPresses, setFinalPresses] = React.useState([]);
-  const [finalChips,   setFinalChips]   = React.useState({});
-  const [tweaks,       setTweaks]       = React.useState(TWEAK_DEFAULTS);
-  const [tweaksOpen,   setTweaksOpen]   = React.useState(false);
-
-  const recentRounds = React.useMemo(() => {
-    const saved = localStorage.getItem('pp_recent');
-    return saved ? JSON.parse(saved) : [
-      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Stableford' },
-      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Wolf · Pass the Money' },
-    ];
-  }, []);
-
-  // ── Persist screen to sessionStorage (not localStorage) ──────────────────
-  React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
-
-  // ── Deep-link callback registration ──────────────────────────────────────
-  React.useEffect(() => {
-    window.__pp_deeplink_ready = (incomingRound) => {
-      setRound(incomingRound);
-      setScreen('score');
-      const overlay = document.getElementById('pp-join-overlay');
-      if (overlay) overlay.style.display = 'none';
-    };
-    return () => { window.__pp_deeplink_ready = null; };
-  }, []);
-
-  // ── PLAYER SYNC: load from RTDB on mount, subscribe to live changes ───────
-  React.useEffect(() => {
-    PlayerSyncService.load(function(remotePlayers) {
-      if (remotePlayers && remotePlayers.length > 0) {
-        // Remote is source of truth
-        setPlayers(remotePlayers);
-        localStorage.setItem('pp_players', JSON.stringify(remotePlayers));
-      }
-    });
-    // Live subscription — another device saves players → this device updates instantly
-    PlayerSyncService.subscribe(function(remoteP) {
-      setPlayers(remoteP);
-      localStorage.setItem('pp_players', JSON.stringify(remoteP));
-    });
-    return () => { PlayerSyncService.unsubscribe(); };
-  }, []);
-
-  // ── Tweaks message handler ────────────────────────────────────────────────
-  React.useEffect(() => {
-    const handler = (e) => {
-      if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
-      if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
-    };
-    window.addEventListener('message', handler);
-    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
-    return () => window.removeEventListener('message', handler);
-  }, []);
-
-  const saveTweakKey = (key, val) => {
-    const next = { ...tweaks, [key]: val };
-    setTweaks(next);
-    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
-  };
-
-  // ── Player management — save to localStorage + RTDB ──────────────────────
-  const handleManagePlayers = (updated) => {
-    setPlayers(updated);
-    localStorage.setItem('pp_players', JSON.stringify(updated));
-    PlayerSyncService.save(updated, function(ok) {
-      if (!ok) console.warn('[PlayPal] Player sync to RTDB failed — saved locally');
-    });
-  };
-
-  // ── Round start — save to RTDB /rounds/{syncCode} ────────────────────────
-  const handleStartRound = (config) => {
-    const r = { ...config, id: Date.now() };
-    setRound(r);
-    localStorage.setItem('pp_round', JSON.stringify(r));
-    sessionStorage.setItem('pp_screen', 'score');
-    setScreen('score');
-    RoundSyncService.saveRound(r, function(ok) {
-      if (ok) console.log('[PlayPal] Round saved to RTDB:', r.syncCode);
-      else    console.warn('[PlayPal] Round save failed — works locally only');
-    });
-  };
-
-  const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}) => {
-    setFinalScores(scores); setFinalWolf(wolfData); setFinalPutts(putts);
-    setFinalPresses(presses); setFinalChips(chips);
-    const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
-    recent.unshift({
-      courseName: round.course.name,
-      date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
-      players: round.players.length,
-      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · ')
-    });
-    localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
-    setScreen('summary');
-  };
-
-  const handleNewRound = () => {
-    setRound(null); setFinalScores(null);
-    localStorage.removeItem('pp_round');
-    sessionStorage.removeItem('pp_screen');
-    setScreen('home');
-  };
-
-  const handleJoinRound = (savedRound) => {
-    setRound(savedRound);
-    sessionStorage.setItem('pp_screen', 'score');
-    setScreen('score');
-  };
-
-  const cssVars = {
-    '--green': tweaks.accentGreen,
-    '--gold':  tweaks.accentGold,
-    '--bg':    tweaks.bgColor,
-    '--card':  tweaks.cardBg
-  };
-
-  return (
-    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
-      <NavBar
-        syncCode={tweaks.showSyncCode && round ? round.syncCode : null}
-        onHome={() => setScreen(round ? 'score' : 'home')}
-        currentScreen={screen} />
-
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
-        {screen === 'home' &&
-          <HomeScreen
-            onStartRound={() => setScreen('setup')}
-            players={players}
-            onManagePlayers={handleManagePlayers}
-            recentRounds={recentRounds}
-            onJoinRound={handleJoinRound} />
-        }
-        {screen === 'setup' &&
-          <SetupScreen
-            allPlayers={players}
-            onStart={handleStartRound} />
-        }
-        {screen === 'score' && round &&
-          <ScoreEntry
-            round={round}
-            onSaveRound={handleSaveRound} />
-        }
-        {screen === 'summary' && round && finalScores &&
-          <SummaryScreen
-            round={round}
-            scores={finalScores}
-            wolfData={finalWolf}
-            putts={finalPutts}
-            nassauPresses={finalPresses}
-            manualChips={finalChips}
-            onNewRound={handleNewRound} />
-        }
+    <!-- ===== SCORECARD TAB ===== -->
+    <div class="panel active" id="panel-scorecard">
+      <div id="scorecard-no-round">
+        <div class="empty-state">
+          <span class="emoji">⛳</span>
+          <strong>No active round</strong>
+          <p style="margin-top:8px;font-size:0.9rem;">Start a new round or join an existing one</p>
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-primary btn-full" onclick="showNewRoundSetup()">+ New Round</button>
+            <button class="btn btn-ghost btn-full" onclick="openModal('modal-join')">Join Round</button>
+          </div>
+        </div>
       </div>
 
-      {/* Bottom Tab Nav */}
-      {screen !== 'score' &&
-        <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
-          {[
-            { id:'home',    icon:'🏠', label:'HOME' },
-            { id:'setup',   icon:'⛳', label:'NEW ROUND' },
-            ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }]  : []),
-            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : [])
-          ].map(tab =>
-            <div key={tab.id} onClick={() => setScreen(tab.id)} style={{
-              flex:1, display:'flex', flexDirection:'column', alignItems:'center',
-              justifyContent:'center', padding:'10px 4px', cursor:'pointer',
-              color: screen === tab.id ? tweaks.accentGold : '#4A6890',
-              borderTop: screen === tab.id ? `2px solid ${tweaks.accentGold}` : '2px solid transparent'
-            }}>
-              <span style={{ fontSize:18 }}>{tab.icon}</span>
-              <span style={{ fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:1.5, fontWeight:700, marginTop:2 }}>{tab.label}</span>
-            </div>
-          )}
+      <div id="scorecard-setup" style="display:none;">
+        <div class="card">
+          <div class="modal-title">New Round Setup</div>
+          <div class="setup-field">
+            <label>Select Course</label>
+            <select id="setup-course-select">
+              <option value="">-- Choose a course --</option>
+            </select>
+          </div>
+          <div class="setup-field">
+            <label>Select Players (tap to select)</label>
+            <div id="setup-player-list"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:8px;">
+            <button class="btn btn-ghost btn-full" onclick="cancelNewRound()">Cancel</button>
+            <button class="btn btn-primary btn-full" onclick="startRound()">Start Round</button>
+          </div>
         </div>
-      }
+      </div>
 
-      {/* Tweaks Panel */}
-      {tweaksOpen &&
-        <div style={{ position:'fixed', bottom:80, right:16, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:14, padding:16, zIndex:500, width:260, boxShadow:'0 8px 32px rgba(0,0,0,0.6)' }}>
-          <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:16, color:'#fff', letterSpacing:1, marginBottom:14 }}>TWEAKS</div>
-          {[['accentGreen','Green Accent'],['accentGold','Gold Accent'],['bgColor','Background']].map(([k,label]) =>
-            <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-              <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>{label}</span>
-              <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, padding:'5px' }} />
+      <div id="scorecard-active" style="display:none;">
+        <div class="card" style="margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div class="card-label">Current Round</div>
+              <div class="card-value" id="active-course-name">—</div>
             </div>
-          )}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
-            <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>Show Sync Code</span>
-            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width:40, height:22, borderRadius:11, background:tweaks.showSyncCode ? tweaks.accentGreen : '#1E3A6E', cursor:'pointer', display:'flex', alignItems:'center', padding:2, transition:'background 0.2s' }}>
-              <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', transform:tweaks.showSyncCode ? 'translateX(18px)' : 'translateX(0)', transition:'transform 0.2s' }} />
+            <div style="text-align:right;">
+              <div class="card-label">Sync Code</div>
+              <div style="font-family:monospace;font-size:1.1rem;font-weight:bold;color:var(--green-mid);" id="active-sync-code">—</div>
             </div>
           </div>
         </div>
-      }
+
+        <!-- Hole navigation + entry -->
+        <div class="hole-nav">
+          <button class="stepper-btn" onclick="prevHole()">‹</button>
+          <div style="text-align:center;">
+            <div class="hole-num-big" id="hole-display">Hole 1</div>
+            <div class="hole-par-text" id="hole-par-display">Par —</div>
+          </div>
+          <button class="stepper-btn" onclick="nextHole()">›</button>
+        </div>
+
+        <div class="hole-inputs-wrapper" id="hole-score-inputs"></div>
+
+        <div class="divider"></div>
+
+        <!-- Leaderboard -->
+        <div class="section-header" style="margin-top:0;">
+          <h2>Leaderboard</h2>
+          <button class="btn btn-danger btn-sm" onclick="endRound()">End Round</button>
+        </div>
+        <div id="leaderboard"></div>
+
+        <!-- Full Scorecard Grid -->
+        <div class="section-header" style="margin-top:16px;">
+          <h2>Full Scorecard</h2>
+        </div>
+        <div style="overflow-x:auto;">
+          <div id="scorecard-grid"></div>
+        </div>
+      </div>
     </div>
-  );
+
+    <!-- ===== PLAYERS TAB ===== -->
+    <div class="panel" id="panel-players">
+      <div class="section-header">
+        <h2>Players</h2>
+        <button class="btn btn-primary btn-sm" onclick="openAddPlayer()">+ Add</button>
+      </div>
+      <div id="player-list">
+        <div class="empty-state"><span class="emoji">👤</span>No players yet</div>
+      </div>
+    </div>
+
+    <!-- ===== COURSES TAB ===== -->
+    <div class="panel" id="panel-courses">
+      <div class="section-header">
+        <h2>Courses</h2>
+        <button class="btn btn-primary btn-sm" onclick="openAddCourse()">+ Add</button>
+      </div>
+      <div id="course-list">
+        <div class="empty-state"><span class="emoji">🏌️</span>No courses yet</div>
+      </div>
+    </div>
+
+    <!-- ===== ROUNDS TAB ===== -->
+    <div class="panel" id="panel-rounds">
+      <div class="section-header">
+        <h2>Past Rounds</h2>
+      </div>
+      <div id="rounds-list">
+        <div class="empty-state"><span class="emoji">📋</span>No completed rounds yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+//  FIREBASE CONFIGURATION
+//  Project: playpal-sync
+//  RTDB: players + rounds
+//  Firestore: live round sync (playpal_rounds/{syncCode})
+// =====================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyPlaypalSyncKey",   // ← REPLACE with your actual apiKey
+  authDomain:        "playpal-sync.firebaseapp.com",
+  databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
+  projectId:         "playpal-sync",
+  storageBucket:     "playpal-sync.appspot.com",
+  messagingSenderId: "000000000000",            // ← REPLACE with actual
+  appId:             "1:000000000000:web:000000000000000000000000" // ← REPLACE with actual
 };
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+// =====================================================
+//  CRITICAL: DO NOT initialize Firebase until
+//  firebase-app-compat.js has fully loaded.
+//  We defer all logic until DOMContentLoaded.
+// =====================================================
+
+// ── State ──────────────────────────────────────────
+let db        = null;   // Realtime DB reference
+let fs        = null;   // Firestore reference
+let auth      = null;   // Auth reference
+let uid       = null;   // Current anonymous UID (persisted to localStorage)
+
+// Local mirrors (populated from Firebase listeners, NEVER written from local init)
+let STATE = {
+  players:    {},   // { playerId: { name, handicap } }
+  courses:    {},   // { courseId: { name, holes, pars[] } }
+  rounds:     {},   // { roundId: { ...roundData } }
+  activeRound: null // current live round object
+};
+
+let activeRoundListener = null;  // Firestore unsubscribe fn for active round
+let playersListener     = null;  // RTDB listener ref for players
+let coursesListener     = null;  // RTDB listener ref for courses
+
+let editingPlayerId  = null;
+let editingCourseId  = null;
+let currentHole      = 0; // 0-indexed
+
+// ── Utility ────────────────────────────────────────
+function genId(len = 6) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars
+  let id = '';
+  for (let i = 0; i < len; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function toast(msg, duration = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-indicator');
+  el.textContent = msg;
+  el.className = state === 'error' ? 'error' : state === 'syncing' ? 'syncing' : '';
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    const names = ['scorecard','players','courses','rounds'];
+    b.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${name}`);
+  });
+}
+
+// ── iOS Standalone Detection & Fix ─────────────────
+// In iOS standalone mode, every navigation creates a new browsing context.
+// We force a hard-reload check on app focus to ensure Firebase listeners reconnect.
+function setupStandaloneReloadFix() {
+  const isStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+
+  if (isStandalone) {
+    // On iOS standalone: when app resumes from background, check if Firebase is connected
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        // Firebase Realtime DB has built-in reconnect, but we verify listeners are alive
+        if (!playersListener || !coursesListener) {
+          setupRTDBListeners();
+        }
+        // If in an active round, verify Firestore listener is alive
+        if (STATE.activeRound && !activeRoundListener) {
+          subscribeToRound(STATE.activeRound.syncCode);
+        }
+        // Force Firebase connection check
+        if (db) {
+          const connRef = db.ref('.info/connected');
+          connRef.once('value').then(snap => {
+            if (!snap.val()) {
+              setSyncStatus('error', 'reconnecting…');
+            }
+          });
+        }
+      }
+    });
+
+    // Prevent iOS from caching the page by disabling page cache (bfcache)
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) {
+        // Page was restored from bfcache — force full reload to get fresh Firebase state
+        window.location.reload();
+      }
+    });
+  }
+}
+
+// ── Auth ───────────────────────────────────────────
+// CRITICAL FIX: Anonymous auth with UID persistence.
+// Without this, each session gets a NEW anonymous UID.
+// Since RTDB and Firestore rules may be tied to uid,
+// we persist the uid to localStorage so the same user
+// is recognized across sessions.
+//
+// However, Firebase Auth persistence (LOCAL) handles this
+// automatically if we use enableIndexedDbPersistence or
+// set auth.setPersistence(local). We do both as a belt+suspenders.
+
+async function initAuth() {
+  return new Promise((resolve, reject) => {
+    // Firebase Auth LOCAL persistence is the default on web,
+    // but in iOS standalone Safari it may be SESSION.
+    // Explicitly set to LOCAL to survive app restarts.
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .then(() => {
+        // Listen for auth state change (fires once on init)
+        const unsubscribe = auth.onAuthStateChanged(user => {
+          unsubscribe(); // We only need the first emission here
+          if (user) {
+            uid = user.uid;
+            resolve(user);
+          } else {
+            // No existing session — sign in anonymously
+            auth.signInAnonymously()
+              .then(result => {
+                uid = result.user.uid;
+                resolve(result.user);
+              })
+              .catch(reject);
+          }
+        });
+      })
+      .catch(() => {
+        // Persistence setting failed (private browsing) — still sign in
+        auth.onAuthStateChanged(user => {
+          if (user) { uid = user.uid; resolve(user); }
+          else auth.signInAnonymously().then(r => { uid = r.user.uid; resolve(r.user); }).catch(reject);
+        });
+      });
+  });
+}
+
+// ── RTDB Listeners ─────────────────────────────────
+// CRITICAL FIX: We NEVER write blank/default data on init.
+// We ONLY read. Listeners update local state from DB, not the other way.
+
+function setupRTDBListeners() {
+  const playersRef = db.ref('players');
+  const coursesRef = db.ref('courses');
+
+  // Detach any existing listeners first to prevent duplicate events
+  if (playersListener) db.ref('players').off('value', playersListener);
+  if (coursesListener) db.ref('courses').off('value', coursesListener);
+
+  playersListener = playersRef.on('value', snap => {
+    const data = snap.val();
+    // CRITICAL: Only replace STATE if data exists — never null out from empty snap
+    // during a transient disconnect. Firebase will deliver null if the path is
+    // empty, but we don't want to wipe local state on reconnect glitches.
+    if (data !== null) {
+      STATE.players = data;
+    } else {
+      STATE.players = {};
+    }
+    renderPlayers();
+    updateSetupPlayerList();
+    setSyncStatus('ok', '● live');
+  }, err => {
+    console.error('Players listener error:', err);
+    setSyncStatus('error', '✕ error');
+  });
+
+  coursesListener = coursesRef.on('value', snap => {
+    const data = snap.val();
+    if (data !== null) {
+      STATE.courses = data;
+    } else {
+      STATE.courses = {};
+    }
+    renderCourses();
+    updateSetupCourseSelect();
+    setSyncStatus('ok', '● live');
+  }, err => {
+    console.error('Courses listener error:', err);
+    setSyncStatus('error', '✕ error');
+  });
+
+  // Connection state monitor
+  db.ref('.info/connected').on('value', snap => {
+    if (snap.val() === false) {
+      setSyncStatus('syncing', '◌ offline');
+    } else {
+      setSyncStatus('ok', '● live');
+    }
+  });
+}
+
+// ── Enable RTDB offline persistence ────────────────
+// This caches RTDB data locally so the app works offline
+// and data survives refreshes without re-fetching.
+// NOTE: This must be called before any other db calls.
+function enableRTDBPersistence() {
+  try {
+    db.goOnline(); // Ensure connection is active
+    // RTDB disk persistence (keeps data cached across sessions)
+    // Use keepSynced on critical paths
+    db.ref('players').keepSynced(true);
+    db.ref('courses').keepSynced(true);
+  } catch (e) {
+    console.warn('RTDB persistence setup warning:', e);
+  }
+}
+
+// ── Firestore Persistence ──────────────────────────
+async function enableFirestorePersistence() {
+  try {
+    await fs.enablePersistence({ synchronizeTabs: true });
+  } catch (err) {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open — persistence only in one tab, acceptable
+      console.warn('Firestore persistence: multiple tabs');
+    } else if (err.code === 'unimplemented') {
+      // Browser doesn't support persistence — acceptable
+      console.warn('Firestore persistence: not supported');
+    }
+  }
+}
+
+// ── Player CRUD ────────────────────────────────────
+function openAddPlayer() {
+  editingPlayerId = null;
+  document.getElementById('modal-player-title').textContent = 'Add Player';
+  document.getElementById('modal-player-name').value = '';
+  document.getElementById('modal-player-hcp').value = '';
+  openModal('modal-player');
+  setTimeout(() => document.getElementById('modal-player-name').focus(), 100);
+}
+
+function openEditPlayer(id) {
+  editingPlayerId = id;
+  const p = STATE.players[id];
+  if (!p) return;
+  document.getElementById('modal-player-title').textContent = 'Edit Player';
+  document.getElementById('modal-player-name').value = p.name || '';
+  document.getElementById('modal-player-hcp').value = p.handicap != null ? p.handicap : '';
+  openModal('modal-player');
+}
+
+function savePlayer() {
+  const name = document.getElementById('modal-player-name').value.trim();
+  const hcp  = parseInt(document.getElementById('modal-player-hcp').value, 10) || 0;
+  if (!name) { toast('Please enter a name'); return; }
+
+  const id = editingPlayerId || `p${Date.now()}`;
+  const playerData = { name, handicap: hcp, updatedAt: firebase.database.ServerValue.TIMESTAMP };
+
+  // CRITICAL FIX: Use update (not set) to avoid overwriting sibling nodes
+  db.ref(`players/${id}`).update(playerData)
+    .then(() => {
+      toast(editingPlayerId ? 'Player updated' : 'Player added');
+      closeModal('modal-player');
+    })
+    .catch(err => {
+      console.error('savePlayer error:', err);
+      toast('Save failed — check connection');
+    });
+}
+
+function deletePlayer(id) {
+  if (!confirm(`Delete ${STATE.players[id]?.name}?`)) return;
+  db.ref(`players/${id}`).remove()
+    .then(() => toast('Player removed'))
+    .catch(() => toast('Delete failed'));
+}
+
+function renderPlayers() {
+  const el = document.getElementById('player-list');
+  const players = Object.entries(STATE.players);
+  if (!players.length) {
+    el.innerHTML = '<div class="empty-state"><span class="emoji">👤</span>No players yet</div>';
+    return;
+  }
+  el.innerHTML = players.map(([id, p]) => `
+    <div class="player-item">
+      <div class="player-item-left">
+        <div class="player-avatar">${(p.name || '?')[0].toUpperCase()}</div>
+        <div>
+          <div class="player-name-text">${esc(p.name)}</div>
+          <div class="player-handicap">HCP ${p.handicap ?? 0}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditPlayer('${id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePlayer('${id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Course CRUD ────────────────────────────────────
+function openAddCourse() {
+  editingCourseId = null;
+  document.getElementById('modal-course-title').textContent = 'Add Course';
+  document.getElementById('modal-course-name').value = '';
+  document.getElementById('modal-course-holes').value = '18';
+  buildParInputs(18, []);
+  openModal('modal-course');
+}
+
+function openEditCourse(id) {
+  editingCourseId = id;
+  const c = STATE.courses[id];
+  if (!c) return;
+  document.getElementById('modal-course-title').textContent = 'Edit Course';
+  document.getElementById('modal-course-name').value = c.name || '';
+  document.getElementById('modal-course-holes').value = c.holes || 18;
+  buildParInputs(c.holes || 18, c.pars || []);
+  openModal('modal-course');
+}
+
+document.getElementById('modal-course-holes').addEventListener('change', function() {
+  buildParInputs(parseInt(this.value), []);
+});
+
+function buildParInputs(holes, existingPars) {
+  const container = document.getElementById('modal-course-pars');
+  // Build a compact grid of par inputs
+  let html = `<div style="margin-top:12px;"><div class="card-label" style="margin-bottom:8px;">Par per Hole</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(${holes > 9 ? 6 : 5},1fr);gap:6px;">`;
+  for (let i = 0; i < holes; i++) {
+    const par = existingPars[i] || 4;
+    html += `<div style="text-align:center;">
+      <div style="font-size:0.65rem;color:var(--gray-500);margin-bottom:3px;">H${i+1}</div>
+      <input type="number" class="par-input" data-hole="${i}" value="${par}" min="3" max="6"
+             style="width:100%;padding:6px 2px;font-size:0.85rem;" />
+    </div>`;
+  }
+  html += `</div></div>`;
+  container.innerHTML = html;
+}
+
+function saveCourse() {
+  const name  = document.getElementById('modal-course-name').value.trim();
+  const holes = parseInt(document.getElementById('modal-course-holes').value, 10);
+  if (!name) { toast('Please enter a course name'); return; }
+
+  const parInputs = document.querySelectorAll('.par-input');
+  const pars = [];
+  parInputs.forEach(inp => pars.push(parseInt(inp.value, 10) || 4));
+
+  const id = editingCourseId || `c${Date.now()}`;
+  const courseData = { name, holes, pars, updatedAt: firebase.database.ServerValue.TIMESTAMP };
+
+  // CRITICAL FIX: Use update for merging, not set
+  db.ref(`courses/${id}`).update(courseData)
+    .then(() => {
+      toast(editingCourseId ? 'Course updated' : 'Course added');
+      closeModal('modal-course');
+    })
+    .catch(err => {
+      console.error('saveCourse error:', err);
+      toast('Save failed — check connection');
+    });
+}
+
+function deleteCourse(id) {
+  if (!confirm(`Delete ${STATE.courses[id]?.name}?`)) return;
+  db.ref(`courses/${id}`).remove()
+    .then(() => toast('Course removed'))
+    .catch(() => toast('Delete failed'));
+}
+
+function renderCourses() {
+  const el = document.getElementById('course-list');
+  const courses = Object.entries(STATE.courses);
+  if (!courses.length) {
+    el.innerHTML = '<div class="empty-state"><span class="emoji">🏌️</span>No courses yet</div>';
+    return;
+  }
+  el.innerHTML = courses.map(([id, c]) => `
+    <div class="course-item">
+      <div>
+        <div class="player-name-text">${esc(c.name)}</div>
+        <div class="course-info">${c.holes || 18} holes · Par ${(c.pars||[]).reduce((a,b)=>a+b,0)}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCourse('${id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Round Setup ────────────────────────────────────
+let selectedPlayers = new Set();
+
+function showNewRoundSetup() {
+  selectedPlayers.clear();
+  updateSetupCourseSelect();
+  updateSetupPlayerList();
+  document.getElementById('scorecard-no-round').style.display   = 'none';
+  document.getElementById('scorecard-setup').style.display      = 'block';
+  document.getElementById('scorecard-active').style.display     = 'none';
+}
+
+function cancelNewRound() {
+  document.getElementById('scorecard-no-round').style.display   = 'block';
+  document.getElementById('scorecard-setup').style.display      = 'none';
+}
+
+function updateSetupCourseSelect() {
+  const sel = document.getElementById('setup-course-select');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">-- Choose a course --</option>';
+  Object.entries(STATE.courses).forEach(([id, c]) => {
+    sel.innerHTML += `<option value="${id}" ${id === prev ? 'selected' : ''}>${esc(c.name)}</option>`;
+  });
+}
+
+function updateSetupPlayerList() {
+  const el = document.getElementById('setup-player-list');
+  const players = Object.entries(STATE.players);
+  if (!players.length) {
+    el.innerHTML = '<div style="color:var(--gray-500);font-size:0.85rem;">Add players in the Players tab first</div>';
+    return;
+  }
+  el.innerHTML = players.map(([id, p]) => `
+    <div class="player-item" onclick="togglePlayerSelect('${id}')" id="sp-${id}"
+         style="cursor:pointer;border-color:${selectedPlayers.has(id) ? 'var(--green-mid)' : 'var(--gray-300)'};
+                background:${selectedPlayers.has(id) ? 'var(--green-light)' : 'var(--white)'};">
+      <div class="player-item-left">
+        <div class="player-avatar" style="background:${selectedPlayers.has(id) ? 'var(--green-mid)' : 'var(--gray-300)'};">
+          ${selectedPlayers.has(id) ? '✓' : (p.name||'?')[0].toUpperCase()}
+        </div>
+        <div>
+          <div class="player-name-text">${esc(p.name)}</div>
+          <div class="player-handicap">HCP ${p.handicap ?? 0}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function togglePlayerSelect(id) {
+  if (selectedPlayers.has(id)) selectedPlayers.delete(id);
+  else selectedPlayers.add(id);
+  updateSetupPlayerList();
+}
+
+function startRound() {
+  const courseId = document.getElementById('setup-course-select').value;
+  if (!courseId) { toast('Please select a course'); return; }
+  if (selectedPlayers.size === 0) { toast('Please select at least one player'); return; }
+
+  const course  = STATE.courses[courseId];
+  const syncCode = genId(6);
+  const holes   = course.holes || 18;
+
+  // Build scores structure: { playerId: [null, null, ...] (length = holes) }
+  const scores = {};
+  selectedPlayers.forEach(pid => {
+    scores[pid] = Array(holes).fill(null);
+  });
+
+  const roundData = {
+    syncCode,
+    courseId,
+    courseName:  course.name,
+    holes,
+    pars:        course.pars || Array(holes).fill(4),
+    players:     Array.from(selectedPlayers),
+    scores,
+    status:      'active',
+    createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  // Write to Firestore (live sync document)
+  fs.collection('playpal_rounds').doc(syncCode).set(roundData)
+    .then(() => {
+      // Also write round reference to RTDB for history
+      return db.ref(`rounds/${syncCode}`).update({
+        syncCode,
+        courseId,
+        courseName: course.name,
+        players:    Array.from(selectedPlayers),
+        status:     'active',
+        createdAt:  firebase.database.ServerValue.TIMESTAMP
+      });
+    })
+    .then(() => {
+      toast('Round started! Code: ' + syncCode);
+      activateRound(syncCode, roundData);
+    })
+    .catch(err => {
+      console.error('startRound error:', err);
+      toast('Failed to start round');
+    });
+}
+
+// ── Round Activation ───────────────────────────────
+function activateRound(syncCode, initialData) {
+  currentHole = 0;
+  STATE.activeRound = { syncCode, ...initialData };
+
+  // Save to localStorage so homescreen reload can resume
+  localStorage.setItem('playpal_active_round', syncCode);
+
+  document.getElementById('scorecard-no-round').style.display  = 'none';
+  document.getElementById('scorecard-setup').style.display     = 'none';
+  document.getElementById('scorecard-active').style.display    = 'block';
+  document.getElementById('active-course-name').textContent    = initialData.courseName || '—';
+  document.getElementById('active-sync-code').textContent      = syncCode;
+
+  subscribeToRound(syncCode);
+  switchTab('scorecard');
+}
+
+function subscribeToRound(syncCode) {
+  // Detach any previous listener
+  if (activeRoundListener) {
+    activeRoundListener();
+    activeRoundListener = null;
+  }
+
+  activeRoundListener = fs.collection('playpal_rounds').doc(syncCode)
+    .onSnapshot(snap => {
+      if (!snap.exists) {
+        toast('Round not found');
+        return;
+      }
+      const data = snap.data();
+      STATE.activeRound = { syncCode, ...data };
+      renderHoleEntry();
+      renderLeaderboard();
+      renderScorecardGrid();
+    }, err => {
+      console.error('Round listener error:', err);
+      setSyncStatus('error', '✕ round error');
+    });
+}
+
+// ── Join Round ─────────────────────────────────────
+function joinRound() {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (code.length < 4) { toast('Enter a valid sync code'); return; }
+
+  fs.collection('playpal_rounds').doc(code).get()
+    .then(snap => {
+      if (!snap.exists) { toast('Round not found'); return; }
+      const data = snap.data();
+      if (data.status === 'complete') { toast('That round is already complete'); return; }
+      closeModal('modal-join');
+      activateRound(code, data);
+      toast('Joined round: ' + code);
+    })
+    .catch(err => {
+      console.error('joinRound error:', err);
+      toast('Failed to join round');
+    });
+}
+
+// ── Hole Navigation & Score Entry ──────────────────
+function prevHole() {
+  if (!STATE.activeRound) return;
+  if (currentHole > 0) { currentHole--; renderHoleEntry(); }
+}
+
+function nextHole() {
+  if (!STATE.activeRound) return;
+  if (currentHole < (STATE.activeRound.holes || 18) - 1) { currentHole++; renderHoleEntry(); }
+}
+
+function renderHoleEntry() {
+  const round = STATE.activeRound;
+  if (!round) return;
+
+  const h    = currentHole;
+  const par  = (round.pars || [])[h] || 4;
+  const total = round.holes || 18;
+
+  document.getElementById('hole-display').textContent    = `Hole ${h + 1} of ${total}`;
+  document.getElementById('hole-par-display').textContent = `Par ${par}`;
+
+  const container = document.getElementById('hole-score-inputs');
+  const players   = round.players || [];
+  const scores    = round.scores || {};
+
+  container.innerHTML = players.map(pid => {
+    const player = STATE.players[pid] || { name: pid };
+    const score  = scores[pid] ? scores[pid][h] : null;
+    const diff   = score !== null ? score - par : null;
+    let colorClass = '';
+    if (diff !== null) {
+      if (diff <= -2) colorClass = 'eagle-color';
+      else if (diff === -1) colorClass = 'birdie-color';
+      else if (diff === 0) colorClass = '';
+      else if (diff === 1) colorClass = 'bogey-color';
+      else colorClass = 'double-color';
+    }
+    return `
+      <div class="player-score-row">
+        <div class="psr-name">${esc(player.name || pid)}</div>
+        <div class="score-stepper">
+          <div class="stepper-btn" onclick="adjustScore('${pid}', ${h}, -1)">−</div>
+          <div class="stepper-val ${colorClass}">${score !== null ? score : '–'}</div>
+          <div class="stepper-btn" onclick="adjustScore('${pid}', ${h}, 1)">+</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function adjustScore(playerId, hole, delta) {
+  const round = STATE.activeRound;
+  if (!round) return;
+
+  const scores = round.scores || {};
+  const playerScores = scores[playerId] ? [...scores[playerId]] : Array(round.holes || 18).fill(null);
+
+  const current = playerScores[hole] !== null ? playerScores[hole] : (round.pars?.[hole] || 4);
+  const newScore = Math.max(1, current + delta);
+  playerScores[hole] = newScore;
+
+  // CRITICAL FIX: Use dot-notation update to patch ONLY the changed field.
+  // This prevents race conditions from multiple devices overwriting each other.
+  const update = {
+    [`scores.${playerId}`]:               playerScores,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  fs.collection('playpal_rounds').doc(round.syncCode).update(update)
+    .catch(err => {
+      console.error('Score update error:', err);
+      toast('Score not saved — check connection');
+    });
+  // Optimistic local update for instant feedback
+  if (!STATE.activeRound.scores) STATE.activeRound.scores = {};
+  STATE.activeRound.scores[playerId] = playerScores;
+  renderHoleEntry();
+  renderLeaderboard();
+  renderScorecardGrid();
+}
+
+// ── Leaderboard ────────────────────────────────────
+function renderLeaderboard() {
+  const round = STATE.activeRound;
+  if (!round) return;
+
+  const pars   = round.pars || [];
+  const scores = round.scores || {};
+  const players = round.players || [];
+
+  const totals = players.map(pid => {
+    const player = STATE.players[pid] || { name: pid };
+    const pScores = scores[pid] || [];
+    let gross = 0, holesPlayed = 0;
+    pScores.forEach((s, i) => {
+      if (s !== null && s !== undefined) {
+        gross += s;
+        holesPlayed++;
+      }
+    });
+    const parTotal = pars.slice(0, holesPlayed).reduce((a, b) => a + b, 0);
+    const diff = gross - parTotal;
+    return { pid, name: player.name || pid, gross, diff, holesPlayed };
+  });
+
+  totals.sort((a, b) => a.diff - b.diff);
+
+  const el = document.getElementById('leaderboard');
+  if (!totals.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = totals.map((t, i) => {
+    const diffStr = t.holesPlayed === 0 ? 'E' :
+      t.diff === 0 ? 'E' : (t.diff > 0 ? `+${t.diff}` : `${t.diff}`);
+    const cls = t.diff < 0 ? 'under' : t.diff > 0 ? 'over' : 'even';
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
+    return `
+      <div class="lb-row">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-name">${esc(t.name)}</div>
+        <div style="font-size:0.75rem;color:var(--gray-500);">${t.holesPlayed}H · ${t.gross || 0}</div>
+        <div class="lb-score ${cls}">${diffStr}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Scorecard Grid ─────────────────────────────────
+function renderScorecardGrid() {
+  const round = STATE.activeRound;
+  if (!round) return;
+
+  const holes  = round.holes || 18;
+  const pars   = round.pars || Array(holes).fill(4);
+  const players = round.players || [];
+  const scores = round.scores || {};
+  const cols   = 2 + players.length; // hole col + par col + player cols
+
+  const grid = document.getElementById('scorecard-grid');
+
+  let html = `<div class="score-grid" style="grid-template-columns:36px 30px ${players.map(() => '1fr').join(' ')};">`;
+
+  // Header row
+  html += `<div class="score-grid-header score-row">
+    <div class="score-cell">H</div>
+    <div class="score-cell">Par</div>
+    ${players.map(pid => {
+      const p = STATE.players[pid] || { name: pid };
+      return `<div class="score-cell">${esc((p.name||'?').substring(0,6))}</div>`;
+    }).join('')}
+  </div>`;
+
+  // Hole rows
+  for (let h = 0; h < holes; h++) {
+    const par = pars[h] || 4;
+    html += `<div class="score-row">
+      <div class="score-cell hole-num">${h+1}</div>
+      <div class="score-cell" style="background:var(--gray-100);font-weight:bold;">${par}</div>
+      ${players.map(pid => {
+        const pScores = scores[pid] || [];
+        const s = pScores[h];
+        if (s === null || s === undefined) return `<div class="score-cell">–</div>`;
+        const diff = s - par;
+        let cls = 'par';
+        if (diff <= -2) cls = 'eagle';
+        else if (diff === -1) cls = 'birdie';
+        else if (diff === 1) cls = 'bogey';
+        else if (diff >= 2) cls = 'double';
+        return `<div class="score-cell ${cls}">${s}</div>`;
+      }).join('')}
+    </div>`;
+    // Page break at 9 for 18-hole rounds
+    if (holes === 18 && h === 8) {
+      const front9Par = pars.slice(0,9).reduce((a,b)=>a+b,0);
+      html += `<div class="score-row" style="background:var(--green-light);">
+        <div class="score-cell" style="font-weight:bold;color:var(--green-deep);">OUT</div>
+        <div class="score-cell" style="font-weight:bold;">${front9Par}</div>
+        ${players.map(pid => {
+          const pScores = scores[pid] || [];
+          const front9 = pScores.slice(0,9).reduce((a,s) => s !== null && s !== undefined ? a+s : a, 0);
+          return `<div class="score-cell" style="font-weight:bold;">${front9||'–'}</div>`;
+        }).join('')}
+      </div>`;
+    }
+  }
+
+  // Totals
+  if (holes === 18) {
+    const back9Par  = pars.slice(9).reduce((a,b)=>a+b,0);
+    const totalPar  = pars.reduce((a,b)=>a+b,0);
+    html += `<div class="score-row" style="background:var(--green-light);">
+      <div class="score-cell" style="font-weight:bold;color:var(--green-deep);">IN</div>
+      <div class="score-cell" style="font-weight:bold;">${back9Par}</div>
+      ${players.map(pid => {
+        const pScores = scores[pid] || [];
+        const back9 = pScores.slice(9).reduce((a,s) => s !== null && s !== undefined ? a+s : a, 0);
+        return `<div class="score-cell" style="font-weight:bold;">${back9||'–'}</div>`;
+      }).join('')}
+    </div>`;
+    html += `<div class="score-row" style="background:var(--green-deep);color:var(--white);">
+      <div class="score-cell" style="font-weight:bold;">TOT</div>
+      <div class="score-cell" style="font-weight:bold;">${totalPar}</div>
+      ${players.map(pid => {
+        const pScores = scores[pid] || [];
+        const tot = pScores.reduce((a,s) => s !== null && s !== undefined ? a+s : a, 0);
+        return `<div class="score-cell" style="font-weight:bold;">${tot||'–'}</div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  html += '</div>';
+  grid.innerHTML = html;
+}
+
+// ── End Round ──────────────────────────────────────
+function endRound() {
+  if (!STATE.activeRound) return;
+  if (!confirm('End this round?')) return;
+
+  const syncCode = STATE.activeRound.syncCode;
+
+  Promise.all([
+    fs.collection('playpal_rounds').doc(syncCode).update({
+      status: 'complete',
+      completedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }),
+    db.ref(`rounds/${syncCode}`).update({
+      status: 'complete',
+      completedAt: firebase.database.ServerValue.TIMESTAMP
+    })
+  ]).then(() => {
+    if (activeRoundListener) { activeRoundListener(); activeRoundListener = null; }
+    STATE.activeRound = null;
+    localStorage.removeItem('playpal_active_round');
+    document.getElementById('scorecard-no-round').style.display  = 'block';
+    document.getElementById('scorecard-active').style.display    = 'none';
+    toast('Round complete!');
+    loadRoundsHistory();
+  }).catch(err => {
+    console.error('endRound error:', err);
+    toast('Failed to end round');
+  });
+}
+
+// ── Rounds History ─────────────────────────────────
+function loadRoundsHistory() {
+  db.ref('rounds').orderByChild('createdAt').limitToLast(20)
+    .once('value')
+    .then(snap => {
+      const data = snap.val() || {};
+      STATE.rounds = data;
+      renderRoundsHistory();
+    });
+}
+
+function renderRoundsHistory() {
+  const el = document.getElementById('rounds-list');
+  const rounds = Object.entries(STATE.rounds).reverse();
+  if (!rounds.length) {
+    el.innerHTML = '<div class="empty-state"><span class="emoji">📋</span>No completed rounds yet</div>';
+    return;
+  }
+  el.innerHTML = rounds.map(([id, r]) => `
+    <div class="card">
+      <div class="card-row">
+        <div style="flex:1;">
+          <div class="card-value">${esc(r.courseName || '—')}</div>
+          <div class="card-label" style="margin-top:4px;">${r.status === 'active' ? '🟢 Active' : '✓ Complete'} · Code: ${r.syncCode || id}</div>
+        </div>
+        ${r.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="rejoinRound('${r.syncCode||id}')">Rejoin</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function rejoinRound(syncCode) {
+  fs.collection('playpal_rounds').doc(syncCode).get()
+    .then(snap => {
+      if (!snap.exists) { toast('Round not found'); return; }
+      const data = snap.data();
+      activateRound(syncCode, data);
+    })
+    .catch(() => toast('Failed to load round'));
+}
+
+// ── Resume Active Round on Reload ──────────────────
+// CRITICAL FIX for home screen: on every load, check localStorage
+// for an in-progress round and resubscribe to it.
+function tryResumeRound() {
+  const savedCode = localStorage.getItem('playpal_active_round');
+  if (!savedCode) return Promise.resolve();
+
+  return fs.collection('playpal_rounds').doc(savedCode).get()
+    .then(snap => {
+      if (!snap.exists) {
+        localStorage.removeItem('playpal_active_round');
+        return;
+      }
+      const data = snap.data();
+      if (data.status === 'complete') {
+        localStorage.removeItem('playpal_active_round');
+        return;
+      }
+      activateRound(savedCode, data);
+      toast('Resumed round: ' + savedCode);
+    })
+    .catch(err => {
+      console.error('tryResumeRound error:', err);
+      localStorage.removeItem('playpal_active_round');
+    });
+}
+
+// ── Helpers ────────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ── Bootstrap ──────────────────────────────────────
+// CRITICAL: Full initialization sequence with proper async ordering.
+// 1. Init Firebase app
+// 2. Enable persistence (before any reads/writes)
+// 3. Auth (wait for existing session or sign in anonymously)
+// 4. Set up RTDB listeners (players, courses, connection state)
+// 5. Try to resume active round
+// 6. Load rounds history
+// 7. Hide loading screen
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // 1. Init Firebase
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db   = firebase.database();
+    fs   = firebase.firestore();
+    auth = firebase.auth();
+
+    // 2. Enable persistence BEFORE any reads
+    // (Firestore persistence must be called before any other Firestore ops)
+    await enableFirestorePersistence();
+    enableRTDBPersistence();
+
+    // 3. Auth — wait for session to resolve or sign in
+    await initAuth();
+
+    // 4. RTDB listeners (players + courses + connection state)
+    setupRTDBListeners();
+
+    // 5. iOS standalone fix
+    setupStandaloneReloadFix();
+
+    // 6. Try to resume active round (wait for RTDB data to settle first)
+    // Small delay to let the first RTDB value event fire
+    await new Promise(r => setTimeout(r, 800));
+    await tryResumeRound();
+
+    // 7. Load rounds history
+    loadRoundsHistory();
+
+    // 8. Hide loading screen
+    const ls = document.getElementById('loading-screen');
+    ls.classList.add('hidden');
+    setTimeout(() => ls.style.display = 'none', 450);
+
+  } catch (err) {
+    console.error('Init error:', err);
+    document.querySelector('.loading-text').textContent = 'Error loading app. Please refresh.';
+    setSyncStatus('error', '✕ error');
+  }
+});
+
+// Handle course holes change for par inputs
+document.getElementById('modal-course-holes').addEventListener('change', function() {
+  const holes = parseInt(this.value, 10);
+  buildParInputs(holes, []);
+});
+
+// Enter key support for modals
+document.getElementById('modal-player-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') savePlayer();
+});
+document.getElementById('join-code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') joinRound();
+});
+
 </script>
+
+<!-- Service Worker Registration for PWA -->
+<script>
+// Inline service worker registration
+// The SW intercepts fetches and provides offline support
+// while always fetching fresh Firebase data over network.
+if ('serviceWorker' in navigator) {
+  // We use a minimal SW that does NOT cache the HTML page itself
+  // (prevents stale app shell in iOS standalone) but DOES cache
+  // static assets (Firebase SDKs) for performance.
+  const SW_VERSION = 'v2';
+  const swCode = `
+const CACHE_NAME = 'playpal-${SW_VERSION}';
+const PRECACHE = [
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+
+  // NEVER cache Firebase API calls, auth, or Firestore/RTDB requests
+  if (url.hostname.includes('firebaseio.com') ||
+      url.hostname.includes('firestore.googleapis.com') ||
+      url.hostname.includes('googleapis.com') ||
+      url.hostname.includes('identitytoolkit') ||
+      url.hostname.includes('securetoken')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // NEVER cache the HTML page (always serve fresh)
+  if (e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // For Firebase SDK scripts: cache-first (they're versioned and immutable)
+  if (url.hostname === 'www.gstatic.com') {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        return resp;
+      }))
+    );
+    return;
+  }
+
+  // Default: network first
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+});
+  `;
+
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swUrl, { scope: './' })
+    .then(reg => {
+      console.log('SW registered:', reg.scope);
+      // Check for updates on every load (critical for home screen version staying fresh)
+      reg.update();
+    })
+    .catch(err => {
+      // SW registration failure is non-fatal — app still works
+      console.warn('SW registration failed:', err);
+    });
+}
+</script>
+
 </body>
 </html>
