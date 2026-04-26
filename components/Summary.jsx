@@ -28,7 +28,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const ptmChips = {}; // legacy stub — PTM winner computed via ptmState.holderId
 
   const stablefordPts = React.useMemo(()=>
-    Object.fromEntries(players.map(p=>[p.id, course.holes.reduce((a,h,i)=>a+calcStablefordPoints(scores[p.id]?.[i]||0,h.par,p.handicap,h.hdcp),0)])), []);
+//     Object.fromEntries(players.map(p=>[p.id, course.holes.reduce((a,h,i)=>a+calcStablefordPoints(scores[p.id]?.[i]||0,h.par),0)])), []);
 
   // Leaderboard sorted by gross score
   const leaderboard = [...players].map(p=>({
