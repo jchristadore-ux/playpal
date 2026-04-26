@@ -1,4 +1,4 @@
-// gameUtils.js v4 — Stroke-only scoring. Net Score removed entirely.
+// gameUtils.js v5 — Stroke-only scoring. Tiebreaker: strokes → birdies → fewest bogeys.
 
 function scoreName(gross, par) {
   const d = gross - par;
@@ -22,6 +22,53 @@ function calcStablefordPoints(gross, par) {
   return 0;
 }
 
+// ─── TIEBREAKER ──────────────────────────────────────────────────────────────
+/*
+  Given a list of tied players, returns the subset that wins after applying:
+    1. Fewest total strokes
+    2. Most birdies (score === par - 1)
+    3. Fewest bogeys (score === par + 1)
+  If still tied after all three, all remaining players share the win.
+*/
+function resolveTiebreaker(tiedPlayers, scores, course) {
+  if (tiedPlayers.length <= 1) return tiedPlayers;
+
+  // 1. Fewest total strokes
+  const strokeTotals = tiedPlayers.map(p => ({
+    p,
+    strokes: (scores[p.id]||[]).reduce((a,b) => a+(b||0), 0),
+  }));
+  const minStrokes = Math.min(...strokeTotals.map(x => x.strokes));
+  let survivors = strokeTotals.filter(x => x.strokes === minStrokes).map(x => x.p);
+  if (survivors.length === 1) return survivors;
+
+  // 2. Most birdies
+  const birdieCounts = survivors.map(p => ({
+    p,
+    birdies: course.holes.reduce((acc, h, i) => {
+      const s = scores[p.id]?.[i];
+      return acc + (s && s === h.par - 1 ? 1 : 0);
+    }, 0),
+  }));
+  const maxBirdies = Math.max(...birdieCounts.map(x => x.birdies));
+  survivors = birdieCounts.filter(x => x.birdies === maxBirdies).map(x => x.p);
+  if (survivors.length === 1) return survivors;
+
+  // 3. Fewest bogeys
+  const bogeyCounts = survivors.map(p => ({
+    p,
+    bogeys: course.holes.reduce((acc, h, i) => {
+      const s = scores[p.id]?.[i];
+      return acc + (s && s === h.par + 1 ? 1 : 0);
+    }, 0),
+  }));
+  const minBogeys = Math.min(...bogeyCounts.map(x => x.bogeys));
+  survivors = bogeyCounts.filter(x => x.bogeys === minBogeys).map(x => x.p);
+
+  // Still tied — share the win
+  return survivors;
+}
+
 // ─── WOLF ────────────────────────────────────────────────────────────────────
 
 function getWolfForHole(players, holeIdx) {
@@ -30,21 +77,10 @@ function getWolfForHole(players, holeIdx) {
 
 /*
   WOLF RULES (stroke-only):
-  • Max 1 point per player per hole — EXCEPT the Lone Wolf who can earn 2.
-
-  Team Wolf (wolf picks a partner):
-    Team A = wolf + partner combined strokes
-    Team B = other two players combined strokes
-    Lower combined strokes wins → each teammate earns 1 point. Tie = no points.
-
-  Lone Wolf (wolf plays solo):
-    Compare: (wolf strokes × 2) vs (sum of 2 lowest stroke scores among other 3 players)
-    • Lone Wolf wins  → wolf earns 2 points
-    • Others win      → each non-wolf player whose strokes ≤ 2nd-lowest earns 1 point
-    • Exact tie       → no points
+  Team Wolf: combined raw strokes, lower wins. Tie = no points.
+  Lone Wolf: (wolf strokes × 2) vs sum of 2 lowest others. Lone Wolf wins → +2. Others win → +1 each.
 */
 function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
-  // Raw strokes only — null if score missing
   const strokes = {};
   players.forEach(p => {
     const g = scores[p.id]?.[holeIdx];
@@ -66,7 +102,7 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
     if (otherStrokes.length < 2) return { wolfWins:false, otherWins:false, tied:true, deltas };
 
     const wolfScore  = wolfStrokes * 2;
-    const otherScore = otherStrokes[0] + otherStrokes[1]; // two lowest raw strokes
+    const otherScore = otherStrokes[0] + otherStrokes[1];
     const wolfWins   = wolfScore < otherScore;
     const otherWins  = otherScore < wolfScore;
 
@@ -81,7 +117,6 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
     return { wolfWins, otherWins, tied: (!wolfWins && !otherWins), deltas };
 
   } else {
-    // Team Wolf: combined raw strokes
     const wolfScore  = wolfTeam.reduce((s, id) => s + (strokes[id] ?? 99), 0);
     const otherScore = others.reduce((s, id)   => s + (strokes[id] ?? 99), 0);
     const wolfWins   = wolfScore < otherScore;
@@ -92,7 +127,6 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
   }
 }
 
-// Cumulative wolf point standings across all confirmed holes
 function calcWolfStandings(scores, wolfData, players, course) {
   const pts = Object.fromEntries(players.map(p => [p.id, 0]));
   for (let i = 0; i < 18; i++) {
@@ -104,13 +138,20 @@ function calcWolfStandings(scores, wolfData, players, course) {
   return pts;
 }
 
-// Wolf end-of-round payout: most points wins the pot from each other player
-function calcWolfPayouts(wolfPts, players, stake) {
+// Wolf payout with tiebreaker
+function calcWolfPayouts(wolfPts, players, stake, scores, course) {
   const pay = Object.fromEntries(players.map(p => [p.id, 0]));
   if (!players.length) return pay;
+
   const maxPts  = Math.max(...players.map(p => wolfPts[p.id] || 0));
-  const winners = players.filter(p => (wolfPts[p.id] || 0) === maxPts);
+  const tied    = players.filter(p => (wolfPts[p.id] || 0) === maxPts);
   const losers  = players.filter(p => (wolfPts[p.id] || 0) < maxPts);
+
+  // Apply tiebreaker if multiple players share the lead
+  const winners = (tied.length > 1 && scores && course)
+    ? resolveTiebreaker(tied, scores, course)
+    : tied;
+
   losers.forEach(l => {
     pay[l.id] -= stake;
     winners.forEach(w => { pay[w.id] += stake / winners.length; });
@@ -268,7 +309,8 @@ function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresse
     let pay = {};
     if (f.type === 'wolf') {
       const pts = calcWolfStandings(scores, wolfData, players, course);
-      pay = calcWolfPayouts(pts, players, f.stakes);
+      // Pass scores + course so tiebreaker can evaluate strokes/birdies/bogeys
+      pay = calcWolfPayouts(pts, players, f.stakes, scores, course);
     } else if (f.type === 'nassau') {
       pay = calcNassauPayouts(scores, players, course, f.stakes, nassauPresses);
     } else if (f.type === 'passmoney') {
@@ -277,12 +319,24 @@ function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresse
     } else if (f.type === 'skins') {
       pay = calcSkins(scores, players, course, f.stakes).payouts;
     } else if (f.type === 'stableford') {
-      const top = Math.max(...players.map(p =>
-        course.holes.reduce((a,h,i) => a + calcStablefordPoints(scores[p.id]?.[i]||0, h.par), 0)
-      ));
+      // Find highest point total
+      const playerPts = players.map(p => ({
+        p,
+        pts: course.holes.reduce((a,h,i) => a + calcStablefordPoints(scores[p.id]?.[i]||0, h.par), 0),
+      }));
+      const maxPts = Math.max(...playerPts.map(x => x.pts));
+      const tiedPlayers = playerPts.filter(x => x.pts === maxPts).map(x => x.p);
+
+      // Apply tiebreaker
+      const winners = tiedPlayers.length > 1
+        ? resolveTiebreaker(tiedPlayers, scores, course)
+        : tiedPlayers;
+
       players.forEach(p => {
-        const my = course.holes.reduce((a,h,i) => a + calcStablefordPoints(scores[p.id]?.[i]||0, h.par), 0);
-        pay[p.id] = my === top ? f.stakes*(players.length-1) : -f.stakes;
+        const isWinner = winners.some(w => w.id === p.id);
+        pay[p.id] = isWinner
+          ? (f.stakes * (players.length - winners.length)) / winners.length
+          : -f.stakes;
       });
     }
     players.forEach(p => { totals[p.id] += (pay[p.id]||0); });
@@ -293,7 +347,7 @@ function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresse
 // expose on window
 if (typeof window !== 'undefined') {
   Object.assign(window, {
-    scoreName, calcStablefordPoints,
+    scoreName, calcStablefordPoints, resolveTiebreaker,
     getWolfForHole, resolveWolfHole, calcWolfStandings, calcWolfPayouts,
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts,
