@@ -1,4 +1,4 @@
-// Summary.jsx v2 — Scorecard, per-format payouts, Venmo deep-links, GHIN flow
+// Summary.jsx v3 — Scorecard, per-format payouts, Venmo deep-links, GHIN flow
 
 const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, onNewRound }) => {
   const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar } = window;
@@ -23,12 +23,15 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   []);
 
   const wolfPts = React.useMemo(()=>
-    formats.some(f=>f.type==='wolf') ? calcWolfStandings(scores, wolfData, players, course) : {}, []);
+    formats.some(f=>f.type==='wolf') ? calcWolfStandings(scores, wolfData, players, course) : {},
+  []);
 
-  const ptmChips = {}; // legacy stub — PTM winner computed via ptmState.holderId
-
-  const stablefordPts = React.useMemo(()=>
-//     Object.fromEntries(players.map(p=>[p.id, course.holes.reduce((a,h,i)=>a+calcStablefordPoints(scores[p.id]?.[i]||0,h.par),0)])), []);
+  const stablefordPts = React.useMemo(() =>
+    Object.fromEntries(players.map(p => [
+      p.id,
+      course.holes.reduce((a, h, i) => a + calcStablefordPoints(scores[p.id]?.[i] || 0, h.par), 0)
+    ])),
+  []);
 
   // Leaderboard sorted by gross score
   const leaderboard = [...players].map(p=>({
@@ -44,8 +47,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   players.forEach(debtor => {
     if ((payouts[debtor.id]||0) >= 0) return;
     const owed = Math.abs(payouts[debtor.id]);
-    // Find creditors proportionally
-    const creditors = players.filter(p=>( payouts[p.id]||0)>0).sort((a,b)=>(payouts[b.id]||0)-(payouts[a.id]||0));
+    const creditors = players.filter(p=>(payouts[p.id]||0)>0).sort((a,b)=>(payouts[b.id]||0)-(payouts[a.id]||0));
     if (creditors.length) debts.push({ from:debtor, to:creditors[0], amount:owed });
   });
 
@@ -54,7 +56,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     const note = `PlayPal Golf · ${course.name} · ${new Date().toLocaleDateString()}`;
     const encoded = encodeURIComponent(note);
     const venmoHandle = to.venmo.replace('@','');
-    // Try mobile deep link first, fall back to web
     const deepLink = `venmo://paycharge?txn=pay&recipients=${venmoHandle}&amount=${amount.toFixed(2)}&note=${encoded}`;
     const webLink  = `https://venmo.com/${venmoHandle}?txn=pay&amount=${amount.toFixed(2)}&note=${encoded}`;
     const a = document.createElement('a'); a.href = deepLink; a.click();
@@ -73,41 +74,26 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const buildScorecardEmail = () => {
     const date = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
     const parTotal = course.holes.reduce((a,h)=>a+h.par,0);
-
-    // Header
     let body = `SCORECARD — ${course.name}\n${date}\n`;
     body += `${'─'.repeat(60)}\n\n`;
-
-    // Column widths
     const nameW = Math.max(...players.map(p=>p.name.length), 6);
     const pad = (s, w) => String(s).padStart(w);
     const lpad = (s, w) => String(s).padEnd(w);
-
-    // Hole numbers header
     body += lpad('HOLE', nameW+2);
     course.holes.forEach(h => { body += pad(h.num, 4); });
     body += pad('TOT', 6) + pad('+/-', 6) + '\n';
-
-    // Par row
     body += lpad('PAR', nameW+2);
     course.holes.forEach(h => { body += pad(h.par, 4); });
     body += pad(parTotal, 6) + pad('—', 6) + '\n';
     body += `${'─'.repeat(nameW+2+course.holes.length*4+12)}\n`;
-
-    // Player rows
     players.forEach(p => {
       body += lpad(p.name, nameW+2);
-      course.holes.forEach((h,i) => {
-        const s = scores[p.id]?.[i];
-        body += pad(s||'·', 4);
-      });
+      course.holes.forEach((h,i) => { const s = scores[p.id]?.[i]; body += pad(s||'·', 4); });
       const tot = totalScore(scores, p.id);
       const vs = totalVsPar(scores, p.id, course.holes);
       body += pad(tot||'—', 6);
       body += pad(vs===0?'E':vs>0?`+${vs}`:vs, 6) + '\n';
     });
-
-    // Putts row
     if (putts) {
       body += `${'─'.repeat(nameW+2+course.holes.length*4+12)}\n`;
       body += lpad('PUTTS', nameW+2);
@@ -117,11 +103,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
       });
       body += '\n';
     }
-
-    // Format results
     if (formats.length > 0) {
-      body += `\n${'─'.repeat(60)}\n`;
-      body += `GAME RESULTS\n\n`;
+      body += `\n${'─'.repeat(60)}\nGAME RESULTS\n\n`;
       formats.forEach(f => {
         const info = FORMAT_INFO[f.type];
         body += `${info.label.toUpperCase()}\n`;
@@ -136,7 +119,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         body += '\n';
       });
     }
-
     body += `${'─'.repeat(60)}\nSent via PlayPal Golf\n`;
     return body;
   };
@@ -228,7 +210,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                     </tr>
                   );
                 })}
-                {/* Putts row */}
                 {putts && <tr>
                   <td style={{...sumS.td, color:'#4A6890', fontSize:11, fontFamily:'Barlow Condensed', letterSpacing:1}}>PUTTS</td>
                   {course.holes.map((_,i)=>{
@@ -241,7 +222,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               </tbody>
             </table>
 
-            {/* Wolf + PTM summary mini-tables */}
             {Object.keys(wolfPts).length>0 && (
               <div style={{marginTop:16}}>
                 <Label style={{padding:'0 4px'}}>WOLF STANDINGS</Label>
@@ -271,24 +251,23 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                     <span style={{fontSize:18}}>{info.icon}</span>
                     <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{info.label}</span>
                     <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:13, color:'#C9A84C'}}>
-                      {f.type==='wolf'     ? `$${f.stakes} round pot` :
-                       f.type==='passmoney'? `$${f.stakes} round pot` :
-                       f.type==='nassau'   ? `$${f.stakes}/bet` :
-                       f.type==='skins'    ? `$${f.stakes}/skin` :
-                       f.type==='stableford'?`$${f.stakes} winner takes all`:''}
+                      {f.type==='wolf'      ? `$${f.stakes} round pot` :
+                       f.type==='passmoney' ? `$${f.stakes} round pot` :
+                       f.type==='nassau'    ? `$${f.stakes}/bet` :
+                       f.type==='skins'     ? `$${f.stakes}/skin` :
+                       f.type==='stableford'? `$${f.stakes} winner takes all` : ''}
                     </span>
                   </div>
                   {players.map(p=>{
                     const v=payouts[p.id]||0;
                     const isWinner = v > 0;
-                    const isWolfWinner = f.type==='wolf' && isWinner;
                     const isPTMWinner = f.type==='passmoney' && ptmState.holderId===p.id;
                     return (
                       <div key={p.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #0A1628'}}>
                         <Avatar player={p} size={28}/>
                         <div style={{flex:1}}>
                           <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color:'#fff'}}>{p.name}</span>
-                          {f.type==='wolf' && <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC'}}>{wolfPts[p.id]||0} wolf pts{isWolfWinner ? ` — wins $${f.stakes} from each player` : ''}</div>}
+                          {f.type==='wolf' && <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC'}}>{wolfPts[p.id]||0} wolf pts{isWinner ? ` — wins $${f.stakes} from each player` : ''}</div>}
                           {isPTMWinner && <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#C9A84C'}}>💰 holds the money — wins ${f.stakes} from each player</div>}
                           {f.type==='stableford' && <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#FFD700'}}>{stablefordPts[p.id]||0} pts</div>}
                         </div>
@@ -302,7 +281,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               );
             })}
 
-            {/* Net summary */}
             <div style={{background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.3)', borderRadius:12, padding:'16px'}}>
               <Label style={{color:'#C9A84C', display:'block', marginBottom:12}}>NET SETTLEMENT</Label>
               {debts.length===0
@@ -324,10 +302,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         {/* ── SEND / ACTIONS ────────────────────────────────────────── */}
         {tab==='actions' && (
           <div style={{display:'flex', flexDirection:'column', gap:10}}>
-            {/* Email */}
             <div style={{background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'16px'}}>
               <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', marginBottom:4}}>✉️ EMAIL SCORECARD</div>
-              <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC', marginBottom:12}}>Sends a full scorecard PDF to all {players.length} players</div>
+              <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC', marginBottom:12}}>Sends a full scorecard to all {players.length} players</div>
               <div style={{display:'flex', flexDirection:'column', gap:4, marginBottom:12}}>
                 {players.map(p=><div key={p.id} style={{fontSize:12, color:'#4A6890', fontFamily:'DM Sans'}}>→ {p.email}</div>)}
               </div>
@@ -336,7 +313,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               </Btn>
             </div>
 
-            {/* GHIN */}
             <div style={{background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'16px'}}>
               <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', marginBottom:4}}>🏌️ POST TO GHIN</div>
               <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC', marginBottom:12}}>Posts each player's adjusted gross score to GHIN for handicap update</div>
@@ -362,7 +338,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               )}
             </div>
 
-            {/* Venmo */}
             {debts.length>0 && (
               <div style={{background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'16px'}}>
                 <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', marginBottom:4}}>💸 VENMO REQUESTS</div>
