@@ -126,14 +126,14 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
         </div>
         <div style={homeS.tagline}>Track every stroke. Every format. Every dollar.</div>
-        <div style={{display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center', width:'100%', maxWidth:360}}>
-          <Btn onClick={onStartRound} variant="gold" style={{flex:1, padding:'16px 24px', fontSize:18, borderRadius:14, boxShadow:'0 4px 32px rgba(201,168,76,0.3)'}}>
+        <div style={{display:'flex', gap:10, width:'100%', maxWidth:360}}>
+          <Btn onClick={onStartRound} variant="gold" style={{flex:1, padding:'16px 20px', fontSize:17, borderRadius:14, boxShadow:'0 4px 32px rgba(201,168,76,0.3)', whiteSpace:'nowrap'}}>
             ⛳ START NEW ROUND
           </Btn>
-          <Btn onClick={()=>setShowCourses(true)} variant="surface" style={{padding:'16px 18px', fontSize:18, borderRadius:14}}>
+          <Btn onClick={()=>setShowCourses(true)} variant="surface" style={{padding:'16px 14px', fontSize:15, borderRadius:14, flexShrink:0}}>
             🗺️ COURSES
           </Btn>
-          <Btn onClick={()=>setShowJoin(true)} variant="surface" style={{padding:'16px 18px', fontSize:18, borderRadius:14}}>
+          <Btn onClick={()=>setShowJoin(true)} variant="surface" style={{padding:'16px 14px', fontSize:15, borderRadius:14, flexShrink:0}}>
             🔗 JOIN
           </Btn>
         </div>
