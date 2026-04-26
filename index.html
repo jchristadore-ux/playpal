@@ -82,9 +82,6 @@
 <script>
 /* ============================================================
    FIREBASE CONFIG — playpal-sync project
-   RTDB:      /players, /courses  (open rules: true/true)
-   Firestore: /playpal_rounds     (open rules: if true)
-   Auth:      Anonymous
    ============================================================ */
 var PLAYPAL_FIREBASE_CONFIG = {
   apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
@@ -98,9 +95,6 @@ var PLAYPAL_FIREBASE_CONFIG = {
 
 /* ============================================================
    FIREBASE INIT
-   Single init, shared by all three services.
-   Queues callbacks while anonymous auth is resolving so no
-   call is ever dropped during the async sign-in window.
    ============================================================ */
 var _fbApp       = null;
 var _fbDb        = null;
@@ -141,7 +135,6 @@ function _fbInit(cb) {
    PLAYER SYNC SERVICE  (Realtime Database → /players)
    ============================================================ */
 var PlayerSyncService = (function() {
-
   function save(players, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -152,7 +145,6 @@ var PlayerSyncService = (function() {
         .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
     });
   }
-
   function load(cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null); return; }
@@ -165,7 +157,6 @@ var PlayerSyncService = (function() {
         .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
     });
   }
-
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
@@ -175,20 +166,16 @@ var PlayerSyncService = (function() {
       });
     });
   }
-
   function unsubscribe() {
     if (_fbDb) _fbDb.ref('players').off('value');
   }
-
   return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
 /* ============================================================
    CUSTOM COURSE SYNC SERVICE  (Realtime Database → /courses)
-   Now includes subscribe/unsubscribe for realtime updates.
    ============================================================ */
 var CourseSyncService = (function() {
-
   function save(courses, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -199,7 +186,6 @@ var CourseSyncService = (function() {
         .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
     });
   }
-
   function load(cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null); return; }
@@ -211,7 +197,6 @@ var CourseSyncService = (function() {
         .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
     });
   }
-
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
@@ -221,11 +206,9 @@ var CourseSyncService = (function() {
       });
     });
   }
-
   function unsubscribe() {
     if (_fbDb) _fbDb.ref('courses').off('value');
   }
-
   return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
@@ -234,7 +217,6 @@ var CourseSyncService = (function() {
    ============================================================ */
 var RoundSyncService = (function() {
   var COLLECTION = 'playpal_rounds';
-
   function saveRound(roundObj, cb) {
     _fbInit(function(ok) {
       if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
@@ -247,7 +229,6 @@ var RoundSyncService = (function() {
       .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
     });
   }
-
   function fetchRound(syncCode, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null, 'Firebase unavailable'); return; }
@@ -259,7 +240,6 @@ var RoundSyncService = (function() {
         .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
     });
   }
-
   return { saveRound: saveRound, fetchRound: fetchRound };
 })();
 
@@ -269,8 +249,6 @@ window.RoundSyncService  = RoundSyncService;
 
 /* ============================================================
    DEEP-LINK DETECTION
-   Runs before React mounts. Shows overlay immediately on ?join=
-   or ?code=, fetches round, hands off to React.
    ============================================================ */
 (function() {
   var params   = new URLSearchParams(window.location.search);
@@ -298,7 +276,6 @@ window.RoundSyncService  = RoundSyncService;
 
   setStatus('Connecting to Firebase…');
 
-  // Fast path — same device
   try {
     var local = localStorage.getItem('pp_round');
     if (local) {
@@ -368,10 +345,6 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 } /*EDITMODE-END*/;
 
 const App = () => {
-  // ── ROUTING ───────────────────────────────────────────────────────────────
-  // sessionStorage clears on browser/tab close → fresh open always lands on home.
-  // Mid-round page refreshes correctly resume scoring.
-  // Deep-link sets sessionStorage before React mounts.
   const [screen, setScreen] = React.useState(() => {
     if (window.__pp_deeplink_round) return 'score';
     return sessionStorage.getItem('pp_screen') || 'home';
@@ -412,10 +385,8 @@ const App = () => {
     ];
   }, []);
 
-  // Persist screen to sessionStorage (not localStorage — clears on browser close)
   React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
 
-  // Deep-link callback — registered after React mounts for late Firebase responses
   React.useEffect(() => {
     window.__pp_deeplink_ready = (incomingRound) => {
       setRound(incomingRound);
@@ -426,7 +397,6 @@ const App = () => {
     return () => { window.__pp_deeplink_ready = null; };
   }, []);
 
-  // Player sync — load from RTDB on mount, subscribe to live changes
   React.useEffect(() => {
     PlayerSyncService.load(function(remotePlayers) {
       if (remotePlayers && remotePlayers.length > 0) {
@@ -441,7 +411,6 @@ const App = () => {
     return () => { PlayerSyncService.unsubscribe(); };
   }, []);
 
-  // Tweaks message handler (edit mode)
   React.useEffect(() => {
     const handler = (e) => {
       if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
@@ -458,7 +427,6 @@ const App = () => {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
   };
 
-  // Player management — save to localStorage + RTDB
   const handleManagePlayers = (updated) => {
     setPlayers(updated);
     localStorage.setItem('pp_players', JSON.stringify(updated));
@@ -467,7 +435,6 @@ const App = () => {
     });
   };
 
-  // Round start — save to Firestore for QR/code joining
   const handleStartRound = (config) => {
     const r = { ...config, id: Date.now() };
     setRound(r);
@@ -497,6 +464,12 @@ const App = () => {
   const handleNewRound = () => {
     setRound(null); setFinalScores(null);
     localStorage.removeItem('pp_round');
+    sessionStorage.removeItem('pp_screen');
+    setScreen('home');
+  };
+
+  // Exit mid-round — scores preserved in localStorage keyed by round.id, resumable via Join
+  const handleExitRound = () => {
     sessionStorage.removeItem('pp_screen');
     setScreen('home');
   };
@@ -538,7 +511,8 @@ const App = () => {
         {screen === 'score' && round &&
           <ScoreEntry
             round={round}
-            onSaveRound={handleSaveRound} />
+            onSaveRound={handleSaveRound}
+            onExitRound={handleExitRound} />
         }
         {screen === 'summary' && round && finalScores &&
           <SummaryScreen
@@ -552,22 +526,29 @@ const App = () => {
         }
       </div>
 
-      {/* Bottom Tab Nav */}
+      {/* Bottom Tab Nav — hidden on score screen (ScoreEntry has its own exit button) */}
       {screen !== 'score' &&
         <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
           {[
-            { id:'home',    icon:'🏠', label:'HOME' },
-            { id:'setup',   icon:'⛳', label:'NEW ROUND' },
-            ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }]  : []),
-            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : [])
+            { id:'home',     icon:'🏠', label:'HOME' },
+            { id:'setup',    icon:'⛳', label:'NEW ROUND' },
+            ...(round        ? [{ id:'score',   icon:'🏌️', label:'SCORING'  }] : []),
+            ...(finalScores  ? [{ id:'summary', icon:'📊', label:'RESULTS'  }] : []),
+            ...(round        ? [{ id:'__exit',  icon:'🚪', label:'EXIT'     }] : []),
           ].map(tab =>
-            <div key={tab.id} onClick={() => setScreen(tab.id)} style={{
-              flex:1, display:'flex', flexDirection:'column', alignItems:'center',
-              justifyContent:'center', padding:'10px 4px', cursor:'pointer',
-              color: screen === tab.id ? tweaks.accentGold : '#4A6890',
-              borderTop: screen === tab.id ? `2px solid ${tweaks.accentGold}` : '2px solid transparent',
-              transition: 'color 0.15s'
-            }}>
+            <div key={tab.id}
+              onClick={() => tab.id === '__exit' ? handleExitRound() : setScreen(tab.id)}
+              style={{
+                flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+                justifyContent:'center', padding:'10px 4px', cursor:'pointer',
+                color: tab.id === '__exit' ? '#E5534B'
+                     : screen === tab.id  ? tweaks.accentGold
+                     : '#4A6890',
+                borderTop: screen === tab.id && tab.id !== '__exit'
+                  ? `2px solid ${tweaks.accentGold}`
+                  : '2px solid transparent',
+                transition: 'color 0.15s',
+              }}>
               <div style={{ fontSize:20, lineHeight:1 }}>{tab.icon}</div>
               <div style={{ fontFamily:'Barlow Condensed', fontSize:10, fontWeight:700, letterSpacing:1, marginTop:3 }}>{tab.label}</div>
             </div>
