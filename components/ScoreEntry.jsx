@@ -1,6 +1,6 @@
 // ScoreEntry.jsx — Full Score Entry Screen (stroke-only, no net scoring)
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#2A4A6E':diff<=-2?'#FFD700':diff===-1?'#3DCB6C':diff===0?'#9BB4D4':diff===1?'#E5534B':'#C0392B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -95,6 +95,21 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
             WebkitTapHighlightColor:'transparent', userSelect:'none',
             display:'flex', alignItems:'center', justifyContent:'center'}}>
           +
+        </button>
+      </div>
+
+      <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
+        <button
+          onClick={()=>onPopToggle(p.id)}
+          style={{
+            borderRadius:999, padding:'5px 10px', minHeight:28,
+            border:gettingPop ? '1px solid rgba(201,168,76,0.55)' : '1px solid #1E3A6E',
+            background:gettingPop ? 'rgba(201,168,76,0.16)' : '#0A1628',
+            color:gettingPop ? '#C9A84C' : '#7A98BC',
+            fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
+            cursor:'pointer', WebkitTapHighlightColor:'transparent'
+          }}>
+          {gettingPop ? 'POP ON' : 'POP'}
         </button>
       </div>
 
@@ -230,7 +245,7 @@ const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) =
 
 // ── Main ScoreEntry Screen ────────────────────────────────────────────────────
 const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
-  const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins } = window;
+  const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
 
   const { players, course, formats } = round;
 
@@ -250,6 +265,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
       return saved ? JSON.parse(saved) : Object.fromEntries(players.map(p=>[p.id, Array(18).fill(0)]));
     } catch(e) {
       return Object.fromEntries(players.map(p=>[p.id, Array(18).fill(0)]));
+    }
+  });
+  const [popFlags, setPopFlags] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('pp_pop_' + round.id);
+      return saved ? JSON.parse(saved) : Object.fromEntries(players.map(p=>[p.id, Array(18).fill(false)]));
+    } catch(e) {
+      return Object.fromEntries(players.map(p=>[p.id, Array(18).fill(false)]));
     }
   });
 
@@ -296,6 +319,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     localStorage.setItem('pp_putts_' + round.id, JSON.stringify(putts));
   }, [putts]);
   React.useEffect(() => {
+    localStorage.setItem('pp_pop_' + round.id, JSON.stringify(popFlags));
+  }, [popFlags]);
+  React.useEffect(() => {
     localStorage.setItem('pp_wolf_' + round.id, JSON.stringify(wolfData));
   }, [wolfData]);
 
@@ -315,7 +341,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
       if (hasStable) {
         const pts = course.holes.reduce((acc, h, i) => {
           const g = scores[p.id]?.[i];
-          return acc + (g ? calcStablefordPoints(g, h.par) : 0);
+          return acc + (g ? calcStablefordPoints(getAdjustedHoleScore(scores, popFlags, p.id, i), h.par) : 0);
         }, 0);
         stats.push({ icon:'⭐', label:'STBL PTS', value: String(pts), color: pts >= 2 ? '#C9A84C' : '#7A98BC' });
       }
@@ -334,7 +360,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
       }
 
       if (hasSkins) {
-        const { skins } = calcSkins(scores, players, course, skinsFmt?.stakes || 1);
+        const { skins } = calcSkins(scores, players, course, skinsFmt?.stakes || 1, popFlags);
         const won = skins[p.id] || 0;
         stats.push({ icon:'🎯', label:'SKINS', value: String(won), color: won > 0 ? '#C9A84C' : '#7A98BC' });
       }
@@ -342,7 +368,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
       result[p.id] = stats;
     });
     return result;
-  }, [JSON.stringify(scores), JSON.stringify(wolfData), holeIdx]);
+  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx]);
 
   // Score setter
   const setScore = (playerId, val) => {
@@ -359,6 +385,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     setPutts(prev => {
       const next = { ...prev, [playerId]: [...(prev[playerId] || Array(18).fill(0))] };
       next[playerId][holeIdx] = val;
+      return next;
+    });
+  };
+
+  const togglePop = (playerId) => {
+    setPopFlags(prev => {
+      const next = { ...prev, [playerId]: [...(prev[playerId] || Array(18).fill(false))] };
+      next[playerId][holeIdx] = !next[playerId][holeIdx];
       return next;
     });
   };
@@ -401,7 +435,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
 
   const handleFinish = () => {
-    onSaveRound(scores, wolfData, putts, nassauPresses, {});
+    onSaveRound(scores, wolfData, putts, nassauPresses, {}, popFlags);
   };
 
   // Hole header info
@@ -482,6 +516,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
                 hole={hole}
                 holeIdx={holeIdx}
                 putts={putts}
+                gettingPop={!!popFlags[p.id]?.[holeIdx]}
                 isWolf={isWolf}
                 isPartner={isPartner}
                 isPTMHolder={isPTM}
@@ -492,6 +527,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
                 onPutt={setPutt}
                 onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)}
+                onPopToggle={togglePop}
               />
             );
           })}
@@ -520,7 +556,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
           )}
           {hasNassau && (
             <NassauTracker
-              players={players} scores={scores} course={course}
+              players={players} scores={scores} popFlags={popFlags} course={course}
               holeIdx={holeIdx} presses={nassauPresses}
               onPress={handlePress} format={nassauFmt}
             />

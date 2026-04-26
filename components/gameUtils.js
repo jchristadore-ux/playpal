@@ -11,7 +11,14 @@ function scoreName(gross, par) {
   return               { label:`+${d}`,   short:`+${d}`,color:'#8B0000' };
 }
 
-// Stableford uses raw stroke differential vs par (no handicap adjustment)
+function getAdjustedHoleScore(scores, popFlags, playerId, holeIdx) {
+  const gross = scores[playerId]?.[holeIdx];
+  if (!gross) return 0;
+  const pop = !!(popFlags?.[playerId]?.[holeIdx]);
+  return Math.max(1, gross - (pop ? 1 : 0));
+}
+
+// Stableford supports optional pop-adjusted stroke comparison (raw remains unchanged)
 function calcStablefordPoints(gross, par) {
   if (!gross) return 0;
   const d = gross - par;
@@ -228,11 +235,11 @@ function calcPTMPayouts(holderId, players, stake) {
 
 // ─── NASSAU WITH PRESSES (raw strokes) ───────────────────────────────────────
 
-function calcNassauUnits(scores, p1, p2, course, holesRange) {
+function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags=null) {
   let units = 0;
   for (const i of holesRange) {
-    const g1 = scores[p1.id]?.[i];
-    const g2 = scores[p2.id]?.[i];
+    const g1 = getAdjustedHoleScore(scores, popFlags, p1.id, i);
+    const g2 = getAdjustedHoleScore(scores, popFlags, p2.id, i);
     if (!g1 || !g2) continue;
     if (g1 < g2) units++;
     else if (g2 < g1) units--;
@@ -240,17 +247,17 @@ function calcNassauUnits(scores, p1, p2, course, holesRange) {
   return units;
 }
 
-function nassauSegmentStatus(scores, players, course, holesRange, currentHole) {
+function nassauSegmentStatus(scores, players, course, holesRange, currentHole, popFlags=null) {
   if (players.length < 2) return 'EVEN';
   const played = holesRange.filter(i => i <= currentHole);
-  const units  = calcNassauUnits(scores, players[0], players[1], course, played);
+  const units  = calcNassauUnits(scores, players[0], players[1], course, played, popFlags);
   const n0     = players[0].name.split(' ')[0];
   const n1     = players[1].name.split(' ')[0];
   if (units === 0) return 'EVEN';
   return units > 0 ? `${n0} +${units}` : `${n1} +${Math.abs(units)}`;
 }
 
-function calcNassauPayouts(scores, players, course, baseStake, presses=[]) {
+function calcNassauPayouts(scores, players, course, baseStake, presses=[], popFlags=null) {
   const payouts = Object.fromEntries(players.map(p=>[p.id,0]));
   if (players.length < 2) return payouts;
   const p1=players[0], p2=players[1];
@@ -264,7 +271,7 @@ function calcNassauPayouts(scores, players, course, baseStake, presses=[]) {
     })),
   ];
   segs.forEach(seg=>{
-    const u=calcNassauUnits(scores,p1,p2,course,seg.holes);
+    const u=calcNassauUnits(scores,p1,p2,course,seg.holes,popFlags);
     if (u>0){ payouts[p1.id]+=seg.stake; payouts[p2.id]-=seg.stake; }
     else if (u<0){ payouts[p2.id]+=seg.stake; payouts[p1.id]-=seg.stake; }
   });
@@ -273,12 +280,12 @@ function calcNassauPayouts(scores, players, course, baseStake, presses=[]) {
 
 // ─── SKINS (raw strokes) ─────────────────────────────────────────────────────
 
-function calcSkins(scores, players, course, stakes) {
+function calcSkins(scores, players, course, stakes, popFlags=null) {
   const skins = Object.fromEntries(players.map(p=>[p.id,0]));
   let carryover = 0;
   for (let i = 0; i < 18; i++) {
     const raw = players.map(p => {
-      const g = scores[p.id]?.[i];
+      const g = getAdjustedHoleScore(scores, popFlags, p.id, i);
       return g ? { id: p.id, strokes: g } : null;
     }).filter(Boolean);
     if (raw.length < players.length) { carryover++; continue; }
@@ -303,7 +310,7 @@ function totalVsPar(scores, pid, holes) {
   return (scores[pid]||[]).reduce((acc,s,i) => acc+(s&&holes[i] ? s-holes[i].par : 0), 0);
 }
 
-function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses=[], ptmHolderId=null) {
+function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses=[], ptmHolderId=null, popFlags=null) {
   const totals = Object.fromEntries(players.map(p=>[p.id,0]));
   formats.forEach(f => {
     let pay = {};
@@ -312,17 +319,17 @@ function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresse
       // Pass scores + course so tiebreaker can evaluate strokes/birdies/bogeys
       pay = calcWolfPayouts(pts, players, f.stakes, scores, course);
     } else if (f.type === 'nassau') {
-      pay = calcNassauPayouts(scores, players, course, f.stakes, nassauPresses);
+      pay = calcNassauPayouts(scores, players, course, f.stakes, nassauPresses, popFlags);
     } else if (f.type === 'passmoney') {
       const holder = ptmHolderId || players[0].id;
       pay = calcPTMPayouts(holder, players, f.stakes);
     } else if (f.type === 'skins') {
-      pay = calcSkins(scores, players, course, f.stakes).payouts;
+      pay = calcSkins(scores, players, course, f.stakes, popFlags).payouts;
     } else if (f.type === 'stableford') {
       // Find highest point total
       const playerPts = players.map(p => ({
         p,
-        pts: course.holes.reduce((a,h,i) => a + calcStablefordPoints(scores[p.id]?.[i]||0, h.par), 0),
+        pts: course.holes.reduce((a,h,i) => a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags, p.id, i), h.par), 0),
       }));
       const maxPts = Math.max(...playerPts.map(x => x.pts));
       const tiedPlayers = playerPts.filter(x => x.pts === maxPts).map(x => x.p);
@@ -351,6 +358,6 @@ if (typeof window !== 'undefined') {
     getWolfForHole, resolveWolfHole, calcWolfStandings, calcWolfPayouts,
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts,
-    calcSkins, totalScore, totalVsPar, calcAllPayouts,
+    getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
   });
 }
