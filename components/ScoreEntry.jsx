@@ -9,13 +9,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
   const cardBorder = isWolf ? '1.5px solid rgba(229,83,75,0.5)' : isPartner ? `1.5px solid ${p.color}55` : '1px solid #1E3A6E';
   const cardBg     = isWolf ? 'rgba(229,83,75,0.05)' : '#0F2040';
 
-  // Stroke modifier for display (same logic as getHoleStrokes but display-only)
-  const holeStrokes = (() => {
-    const base = Math.floor(p.handicap / 18);
-    const rem  = p.handicap % 18;
-    return base + (hole.hdcp <= rem ? 1 : 0);
-  })();
-
   return (
     <div style={{background:cardBg, border:cardBorder, borderRadius:18, overflow:'hidden', flexShrink:0}}>
 
@@ -24,10 +17,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, isWolf, isPartner, is
         <Avatar player={p} size={36}/>
         <div style={{flex:1, minWidth:0}}>
           <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:20, color:'#fff', letterSpacing:0.3, lineHeight:1}}>{p.name}</div>
-          <div style={{fontSize:11, color:'#7A98BC', marginTop:3}}>
-            HCP {p.handicap}
-            {holeStrokes > 0 && <span style={{color:'#C9A84C', marginLeft:5, fontWeight:700}}>+{holeStrokes} stroke{holeStrokes>1?'s':''}</span>}
-          </div>
+          <div style={{fontSize:11, color:'#7A98BC', marginTop:3}}>HCP {p.handicap}</div>
         </div>
         {/* Wolf icon (non-wolf) */}
         {isWolf && !hasWolf && <span style={{fontSize:20}}>🐺</span>}
@@ -315,15 +305,10 @@ const ScoreEntry = ({ round, onSaveRound }) => {
       const stats = [];
       const holesPlayed = (scores[p.id]||[]).filter(Boolean).length;
 
-      if (holesPlayed > 0) {
-        const total = (scores[p.id]||[]).reduce((acc, s) => acc + (s || 0), 0);
-        stats.push({ label: 'STROKES', value: String(total), color: '#9BB4D4' });
-      }
-
       if (hasWolf) {
         const wolfPts = calcWolfStandings(scores, wolfData, players, course);
         const pts = wolfPts[p.id] || 0;
-        stats.push({ label: 'WOLF PTS', value: String(pts), color: pts > 0 ? '#3DCB6C' : '#7A98BC' });
+        stats.push({ icon:'🐺', label:'WOLF PTS', value: String(pts), color: pts > 0 ? '#3DCB6C' : '#7A98BC' });
       }
 
       if (hasStable) {
@@ -331,13 +316,21 @@ const ScoreEntry = ({ round, onSaveRound }) => {
           const g = scores[p.id]?.[i];
           return acc + (g ? calcStablefordPoints(g, h.par) : 0);
         }, 0);
-        stats.push({ label: 'STBL PTS', value: String(pts), color: pts >= 2 ? '#C9A84C' : '#7A98BC' });
+        stats.push({ icon:'⭐', label:'STBL PTS', value: String(pts), color: pts >= 2 ? '#C9A84C' : '#7A98BC' });
+      }
+
+      if (hasPTM) {
+        const isHolder = ptmState.holderId === p.id;
+        stats.push({ icon:'💰', label:'HOLDS', value: isHolder ? '💰' : '', color: isHolder ? '#C9A84C' : '#4A6890' });
+      } else {
+        // Always show holes played as the last pill with golfer icon
+        stats.push({ icon:'🏌️', label:'HOLES', value: String(holesPlayed), color: holesPlayed > 0 ? '#9BB4D4' : '#4A6890' });
       }
 
       if (hasSkins) {
         const { skins } = calcSkins(scores, players, course, skinsFmt?.stakes || 1);
         const won = skins[p.id] || 0;
-        stats.push({ label: 'SKINS', value: String(won), color: won > 0 ? '#C9A84C' : '#7A98BC' });
+        stats.push({ icon:'🎯', label:'SKINS', value: String(won), color: won > 0 ? '#C9A84C' : '#7A98BC' });
       }
 
       result[p.id] = stats;
