@@ -322,11 +322,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
 
       if (hasPTM) {
         const isHolder = ptmState.holderId === p.id;
-        stats.push({ icon:'💰', label:'HOLDS', value: isHolder ? '💰' : '', color: isHolder ? '#C9A84C' : '#4A6890' });
-      } else {
-        // Always show holes played as the last pill with golfer icon
-        stats.push({ icon:'🏌️', label:'HOLES', value: String(holesPlayed), color: holesPlayed > 0 ? '#9BB4D4' : '#4A6890' });
+        if (isHolder) {
+          stats.push({ icon:'💰', label:'HOLDS', value: '', color: '#C9A84C' });
+        }
       }
+
+      // Always show holes played
+      stats.push({ icon:'🏌️', label:'HOLES', value: String(holesPlayed), color: holesPlayed > 0 ? '#9BB4D4' : '#4A6890' });
 
       if (hasSkins) {
         const { skins } = calcSkins(scores, players, course, skinsFmt?.stakes || 1);
