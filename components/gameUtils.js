@@ -1,925 +1,438 @@
-// Setup.jsx — Course persistence + scorecard image scan + realtime course sync
+// gameUtils.js v6 — Nassau uses explicit nassauPlayers list + pop-aware getAdjustedHoleScore
 
-// ─── Scorecard Scanner ────────────────────────────────────────────────────────
-const ScorecardScanner = ({ onResult, onCancel }) => {
-  const [status, setStatus]     = React.useState('idle');
-  const [preview, setPreview]   = React.useState(null);
-  const [errorMsg, setErrorMsg] = React.useState('');
-  const fileRef = React.useRef(null);
-
-  const handleFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      setErrorMsg('Please upload an image file (JPG, PNG, HEIC, etc.)');
-      setStatus('error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target.result);
-    reader.readAsDataURL(file);
-    setStatus('scanning');
-    setErrorMsg('');
-    const b64Reader = new FileReader();
-    b64Reader.onload = (e) => {
-      const b64 = e.target.result.split(',')[1];
-      callVision(b64, file.type || 'image/jpeg');
-    };
-    b64Reader.readAsDataURL(file);
-  };
-
-  const callVision = async (b64, mediaType) => {
-    const prompt = `You are analyzing a golf scorecard image. Extract the data and return ONLY valid JSON — no markdown, no explanation, no code fences.
-
-Return exactly this structure:
-{
-  "name": "Full official course name",
-  "location": "City, State",
-  "rating": 72.0,
-  "slope": 113,
-  "holes": [
-    {"num": 1, "par": 4, "yds": 380, "hdcp": 7},
-    {"num": 2, "par": 4, "yds": 350, "hdcp": 11},
-    ... (exactly 18 entries)
-  ]
+function scoreName(gross, par) {
+  const d = gross - par;
+  if (d <= -3) return { label:'Albatross', short:'ALB', color:'#FFD700' };
+  if (d === -2) return { label:'Eagle',    short:'EGL', color:'#FFD700' };
+  if (d === -1) return { label:'Birdie',   short:'BRD', color:'#3DCB6C' };
+  if (d === 0)  return { label:'Par',      short:'PAR', color:'#7A98BC' };
+  if (d === 1)  return { label:'Bogey',    short:'BOG', color:'#E5534B' };
+  if (d === 2)  return { label:'Double',   short:'DBL', color:'#C0392B' };
+  return               { label:`+${d}`,   short:`+${d}`,color:'#8B0000' };
 }
 
-Rules:
-- name: official course name from the scorecard header
-- location: city and state abbreviation, e.g. "Bridgewater, NJ" — use "Unknown" if not visible
-- rating: course/scratch rating decimal number — default 72.0 if not visible
-- slope: slope rating integer — default 113 if not visible
-- holes: EXACTLY 18 entries numbered 1–18, each with:
-    num  = hole number (1–18)
-    par  = 3, 4, or 5 only
-    yds  = yardage integer (use 0 if unreadable)
-    hdcp = handicap/stroke index 1–18 (assign 1–18 sequentially if not visible)
-- If only a 9-hole scorecard is visible, fill holes 10–18 by repeating holes 1–9 par values with hdcp offset by 9
-- NEVER return fewer than 18 holes`;
-
-    try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1200,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-              { type: 'text', text: prompt }
-            ]
-          }]
-        })
-      });
-      if (!resp.ok) throw new Error('API error ' + resp.status);
-      const data = await resp.json();
-      const raw  = data.content?.find(b => b.type === 'text')?.text || '';
-      const clean = raw.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      if (!parsed.name || !Array.isArray(parsed.holes) || parsed.holes.length !== 18) {
-        throw new Error('Could not read all 18 holes. Try a clearer, well-lit photo.');
-      }
-      parsed.rating = parseFloat(parsed.rating) || 72.0;
-      parsed.slope  = parseInt(parsed.slope)    || 113;
-      parsed.holes  = parsed.holes.map((h, i) => ({
-        num:  parseInt(h.num)  || i + 1,
-        par:  parseInt(h.par)  || 4,
-        yds:  parseInt(h.yds)  || 0,
-        hdcp: parseInt(h.hdcp) || i + 1,
-      }));
-      setStatus('done');
-      onResult(parsed);
-    } catch (err) {
-      console.error('[Scanner]', err);
-      setStatus('error');
-      setErrorMsg(err.message || 'Could not read scorecard. Try a clearer, well-lit photo.');
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleFile(file);
-  };
-
-  const borderColor = status === 'error' ? '#E5534B' : status === 'done' ? '#3DCB6C' : '#1E3A6E';
-
-  return (
-    <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, color:'#C9A84C', letterSpacing:1}}>
-        📸 SCAN SCORECARD
-      </div>
-      <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.6}}>
-        Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.
-      </div>
-      <div
-        onClick={() => status !== 'scanning' && fileRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={e => e.preventDefault()}
-        style={{
-          border: `2px dashed ${borderColor}`,
-          borderRadius: 14, background: '#0A1628', minHeight: 180,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 10, cursor: status === 'scanning' ? 'default' : 'pointer',
-          overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s',
-        }}>
-        {preview && (
-          <img src={preview} alt="preview" style={{
-            position:'absolute', inset:0, width:'100%', height:'100%',
-            objectFit:'cover', opacity: status === 'scanning' ? 0.4 : 0.25,
-          }}/>
-        )}
-        <div style={{position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
-          {status === 'scanning' ? (
-            <>
-              <div style={{width:36, height:36, border:'3px solid #1E3A6E', borderTopColor:'#3DCB6C', borderRadius:'50%', animation:'ppSpin 0.8s linear infinite'}}/>
-              <div style={{fontFamily:'Barlow Condensed', fontSize:14, letterSpacing:1, color:'#3DCB6C'}}>READING SCORECARD…</div>
-            </>
-          ) : status === 'error' ? (
-            <>
-              <div style={{fontSize:32}}>⚠️</div>
-              <div style={{fontFamily:'DM Sans', fontSize:13, color:'#E5534B', textAlign:'center', padding:'0 16px'}}>{errorMsg}</div>
-              <div style={{fontFamily:'Barlow Condensed', fontSize:12, color:'#7A98BC', letterSpacing:1}}>TAP TO TRY AGAIN</div>
-            </>
-          ) : (
-            <>
-              <div style={{fontSize:40}}>📸</div>
-              <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', letterSpacing:1}}>TAP TO UPLOAD SCORECARD</div>
-              <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC'}}>or drag and drop an image</div>
-            </>
-          )}
-        </div>
-      </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}}
-        onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}
-      />
-      <div style={{display:'flex', gap:10}}>
-        <Btn onClick={onCancel} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-        {(status === 'error' || status === 'idle') && preview && (
-          <Btn onClick={() => { setStatus('idle'); setPreview(null); setErrorMsg(''); }} variant="surface" style={{flex:1}}>
-            CLEAR IMAGE
-          </Btn>
-        )}
-      </div>
-      <style>{`@keyframes ppSpin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-};
-
-// ─── Custom Course Builder ────────────────────────────────────────────────────
-const BLANK_HOLES = Array.from({length:18}, (_,i) => ({ num:i+1, par:4, yds:'', hdcp:i+1 }));
-
-const CourseBuilder = ({ onSave, onCancel, prefill }) => {
-  const [name,     setName]     = React.useState(prefill?.name     || '');
-  const [location, setLocation] = React.useState(prefill?.location || '');
-  const [rating,   setRating]   = React.useState(prefill?.rating   ? String(prefill.rating) : '');
-  const [slope,    setSlope]    = React.useState(prefill?.slope    ? String(prefill.slope)  : '');
-  const [holes,    setHoles]    = React.useState(() => {
-    if (prefill?.holes?.length === 18) {
-      return prefill.holes.map(h => ({ num:h.num, par:h.par||4, yds:h.yds||'', hdcp:h.hdcp||h.num }));
-    }
-    return BLANK_HOLES.map(h => ({...h}));
-  });
-
-  const setHoleField = (idx, field, val) => {
-    setHoles(prev => prev.map((h,i) =>
-      i === idx ? {...h, [field]: field === 'yds' ? val : Number(val)||0} : h
-    ));
-  };
-
-  const totalPar = holes.reduce((a,h) => a + (h.par||0), 0);
-  const valid    = name.trim() && holes.every(h => h.par >= 3 && h.par <= 6 && h.hdcp >= 1 && h.hdcp <= 18);
-
-  const handleSave = () => {
-    const course = {
-      id:       'custom_' + Date.now(),
-      name:     name.trim(),
-      location: location.trim() || 'Custom Course',
-      rating:   parseFloat(rating) || 72.0,
-      slope:    parseInt(slope)    || 113,
-      custom:   true,
-      holes:    holes.map(h => ({...h, yds: parseInt(h.yds)||0})),
-    };
-    let existing = [];
-    try { existing = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) {}
-    const updated = [...existing, course];
-    localStorage.setItem('pp_custom_courses', JSON.stringify(updated));
-    if (window.CourseSyncService) {
-      window.CourseSyncService.save(updated, function(ok) {
-        if (!ok) console.warn('[PlayPal] Course RTDB sync failed — saved locally only');
-      });
-    }
-    onSave(course, updated);
-  };
-
-  const inputStyle = {
-    background:'#162950', border:'1px solid #1E3A6E', borderRadius:8,
-    padding:'10px 12px', color:'#fff', fontFamily:'DM Sans', fontSize:14,
-    outline:'none', boxSizing:'border-box', width:'100%',
-  };
-  const holeInputStyle = {
-    background:'#162950', border:'1px solid #1E3A6E', color:'#fff', borderRadius:5,
-    padding:'5px 4px', fontFamily:'DM Sans', fontSize:13, width:'100%', outline:'none', textAlign:'center'
-  };
-
-  return (
-    <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, color:'#C9A84C', letterSpacing:1}}>
-        {prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}
-      </div>
-      {prefill && (
-        <div style={{background:'rgba(61,203,108,0.06)', border:'1px solid rgba(61,203,108,0.25)', borderRadius:10, padding:'10px 14px', fontFamily:'DM Sans', fontSize:12, color:'#3DCB6C'}}>
-          Scorecard scanned successfully — review and correct any values before saving.
-        </div>
-      )}
-      <div style={{display:'flex', flexDirection:'column', gap:10}}>
-        <div>
-          <Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label>
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/>
-        </div>
-        <div>
-          <Label style={{display:'block', marginBottom:4}}>LOCATION</Label>
-          <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/>
-        </div>
-        <div style={{display:'flex', gap:10}}>
-          <div style={{flex:1}}>
-            <Label style={{display:'block', marginBottom:4}}>COURSE RATING</Label>
-            <input value={rating} onChange={e=>setRating(e.target.value)} placeholder="e.g. 70.1" style={inputStyle}/>
-          </div>
-          <div style={{flex:1}}>
-            <Label style={{display:'block', marginBottom:4}}>SLOPE</Label>
-            <input value={slope} onChange={e=>setSlope(e.target.value)} placeholder="e.g. 121" style={inputStyle}/>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div style={{display:'flex', alignItems:'baseline', gap:10, marginBottom:8}}>
-          <Label>SCORECARD — 18 HOLES</Label>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:12,
-            color: totalPar >= 68 && totalPar <= 76 ? '#3DCB6C' : '#E5534B'}}>
-            Total par: {totalPar}
-          </span>
-        </div>
-        <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
-          <table style={{borderCollapse:'collapse', width:'100%', minWidth:300}}>
-            <thead>
-              <tr>
-                {['#','PAR','YDS','HCP'].map(h=>(
-                  <th key={h} style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:1, color:'#4A6890', textAlign:'center', borderBottom:'1px solid #1E3A6E'}}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {holes.map((h, i) => (
-                <tr key={i} style={{background: i%2===0 ? '#0A1628' : '#0F2040'}}>
-                  <td style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color: i<9 ? '#7A98BC' : '#9BB4D4', textAlign:'center'}}>{h.num}</td>
-                  <td style={{padding:'3px 4px'}}>
-                    <input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)}
-                      type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/>
-                  </td>
-                  <td style={{padding:'3px 4px'}}>
-                    <input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)}
-                      placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/>
-                  </td>
-                  <td style={{padding:'3px 4px'}}>
-                    <input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)}
-                      type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div style={{display:'flex', gap:10}}>
-        <Btn onClick={onCancel} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-        <Btn onClick={handleSave} variant="gold" disabled={!valid} style={{flex:2}}>
-          💾 SAVE COURSE
-        </Btn>
-      </div>
-    </div>
-  );
-};
-
-// ─── Stakes Input ─────────────────────────────────────────────────────────────
-const StakesInput = ({ value, onChange }) => {
-  const presets = [1, 2, 5, 10, 20, 25, 50];
-  const [custom, setCustom] = React.useState(!presets.includes(value));
-  const [customVal, setCustomVal] = React.useState(presets.includes(value) ? '' : String(value));
-
-  const handleCustomChange = (v) => {
-    setCustomVal(v);
-    const n = parseFloat(v);
-    if (!isNaN(n) && n > 0) onChange(n);
-  };
-
-  return (
-    <div style={{display:'flex', flexDirection:'column', gap:8}}>
-      <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-        {presets.map(v => (
-          <div key={v} onClick={() => { setCustom(false); onChange(v); }}
-            style={{padding:'6px 13px', borderRadius:7, cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15,
-              background: !custom && value===v ? '#3DCB6C' : '#162950',
-              color:      !custom && value===v ? '#0A1628'  : '#9BB4D4',
-              border:     !custom && value===v ? 'none'     : '1px solid #1E3A6E'}}>
-            ${v}
-          </div>
-        ))}
-        <div onClick={()=>setCustom(true)}
-          style={{padding:'6px 13px', borderRadius:7, cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15,
-            background: custom ? '#C9A84C' : '#162950', color: custom ? '#0A1628' : '#9BB4D4',
-            border: custom ? 'none' : '1px solid #1E3A6E'}}>
-          OTHER
-        </div>
-      </div>
-      {custom && (
-        <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:20, color:'#C9A84C', fontWeight:800}}>$</span>
-          <input autoFocus value={customVal} onChange={e=>handleCustomChange(e.target.value)}
-            type="number" min="0.5" step="0.5" placeholder="Enter amount"
-            style={{flex:1, background:'#162950', border:'1px solid #C9A84C', borderRadius:8, padding:'10px 12px',
-              color:'#fff', fontFamily:'Barlow Condensed', fontSize:18, fontWeight:700, outline:'none'}}/>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─── Nassau Match Config UI ───────────────────────────────────────────────────
-// Appears inside the Nassau format card after stake input.
-// roundPlayers = the players selected for this round (already filtered by step 1).
-const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
-  // config = { matchType: '1v1'|'2v2', playersInMatch: [], teams: null|{team1:[],team2:[]} }
-
-  const matchType      = config.matchType || '1v1';
-  const playersInMatch = config.playersInMatch || [];
-  const teams          = config.teams || null;
-
-  // Enough players for 2v2?
-  const can2v2 = roundPlayers.length >= 4;
-
-  // Switch match type
-  const setMatchType = (t) => {
-    // Reset assignment when switching
-    onChange({ matchType: t, playersInMatch: [], teams: null });
-  };
-
-  // Toggle a player in/out of the match (1v1: max 2, 2v2: max 4)
-  const togglePlayer = (id) => {
-    const max = matchType === '2v2' ? 4 : 2;
-    const next = playersInMatch.includes(id)
-      ? playersInMatch.filter(x => x !== id)
-      : playersInMatch.length < max ? [...playersInMatch, id] : playersInMatch;
-    // Rebuild teams when list changes in 2v2
-    if (matchType === '2v2' && next.length === 4) {
-      onChange({
-        matchType,
-        playersInMatch: next,
-        teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] },
-      });
-    } else {
-      onChange({ matchType, playersInMatch: next, teams: null });
-    }
-  };
-
-  // Swap a player between teams in 2v2
-  const moveToTeam = (id, teamKey) => {
-    if (!teams) return;
-    const other = teamKey === 'team1' ? 'team2' : 'team1';
-    // Remove from wherever they are, add to target
-    const newT1 = (teams.team1 || []).filter(x => x !== id);
-    const newT2 = (teams.team2 || []).filter(x => x !== id);
-    if (teamKey === 'team1') newT1.push(id);
-    else newT2.push(id);
-    onChange({ matchType, playersInMatch, teams: { team1: newT1, team2: newT2 } });
-  };
-
-  const playerById = (id) => roundPlayers.find(p => p.id === id);
-
-  const isValid1v1 = matchType === '1v1' && playersInMatch.length === 2;
-  const isValid2v2 = matchType === '2v2' && teams &&
-    (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
-  const isValid = isValid1v1 || isValid2v2;
-
-  return (
-    <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:2}}>MATCH FORMAT</div>
-
-      {/* 1v1 / 2v2 toggle */}
-      <div style={{display:'flex', gap:8}}>
-        {['1v1', ...(can2v2 ? ['2v2'] : [])].map(t => (
-          <div key={t}
-            onClick={() => setMatchType(t)}
-            style={{
-              flex:1, textAlign:'center', padding:'8px 0', borderRadius:8, cursor:'pointer',
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15,
-              background: matchType === t ? '#C9A84C' : '#162950',
-              color:      matchType === t ? '#0A1628'  : '#9BB4D4',
-              border:     matchType === t ? 'none'     : '1px solid #1E3A6E',
-            }}>
-            {t}
-          </div>
-        ))}
-      </div>
-
-      {/* Player selection */}
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
-        SELECT {matchType === '2v2' ? '4' : '2'} PLAYERS
-      </div>
-      <div style={{display:'flex', flexDirection:'column', gap:6}}>
-        {roundPlayers.map(p => {
-          const selected = playersInMatch.includes(p.id);
-          const inTeam1  = teams?.team1?.includes(p.id);
-          const inTeam2  = teams?.team2?.includes(p.id);
-          return (
-            <div key={p.id}
-              onClick={() => togglePlayer(p.id)}
-              style={{
-                display:'flex', alignItems:'center', gap:10,
-                borderRadius:10, padding:'10px 12px', cursor:'pointer',
-                background: selected ? `${p.color}11` : '#0A1628',
-                border: selected ? `1px solid ${p.color}` : '1px solid #1E3A6E',
-              }}>
-              <div style={{
-                width:20, height:20, borderRadius:6, border:`2px solid ${selected ? p.color : '#1E3A6E'}`,
-                background: selected ? p.color : 'transparent', flexShrink:0,
-                display:'flex', alignItems:'center', justifyContent:'center',
-              }}>
-                {selected && <span style={{color:'#0A1628', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
-              </div>
-              <Avatar player={p} size={28}/>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color: selected ? '#fff' : '#9BB4D4', flex:1}}>
-                {p.name}
-              </span>
-              {/* 2v2 team assignment buttons — only when player is selected */}
-              {matchType === '2v2' && selected && (
-                <div style={{display:'flex', gap:4}} onClick={e => e.stopPropagation()}>
-                  {['team1', 'team2'].map((tk, ti) => (
-                    <div key={tk}
-                      onClick={() => moveToTeam(p.id, tk)}
-                      style={{
-                        padding:'3px 8px', borderRadius:6, cursor:'pointer',
-                        fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
-                        background: (tk === 'team1' ? inTeam1 : inTeam2) ? p.color : '#162950',
-                        color:      (tk === 'team1' ? inTeam1 : inTeam2) ? '#0A1628' : '#4A6890',
-                        border:     (tk === 'team1' ? inTeam1 : inTeam2) ? 'none' : '1px solid #1E3A6E',
-                      }}>
-                      T{ti + 1}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 2v2 team summary */}
-      {matchType === '2v2' && teams && (teams.team1||[]).length > 0 && (
-        <div style={{display:'flex', gap:8}}>
-          {['team1','team2'].map((tk, ti) => {
-            const members = (teams[tk] || []).map(playerById).filter(Boolean);
-            return (
-              <div key={tk} style={{flex:1, background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:8, padding:'8px 10px'}}>
-                <div style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890', letterSpacing:1, marginBottom:4}}>TEAM {ti+1}</div>
-                {members.map(p => (
-                  <div key={p.id} style={{display:'flex', alignItems:'center', gap:5, marginBottom:2}}>
-                    <div style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
-                    <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p.name.split(' ')[0]}</span>
-                  </div>
-                ))}
-                {members.length === 0 && (
-                  <div style={{fontFamily:'DM Sans', fontSize:11, color:'#4A6890'}}>No players</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Validation hint */}
-      {!isValid && (
-        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#E5534B'}}>
-          {matchType === '1v1'
-            ? `Select exactly 2 players for the match (${playersInMatch.length}/2)`
-            : `Select 4 players and assign 2 to each team`}
-        </div>
-      )}
-      {isValid && (
-        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#3DCB6C'}}>
-          {matchType === '1v1'
-            ? `✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`
-            : `✓ Team match configured`}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─── Collapsible Course Group ─────────────────────────────────────────────────
-const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
-  const [open, setOpen] = React.useState(defaultOpen || false);
-  if (list.length === 0) return null;
-  const hasSelected = list.some(c => c.id === course?.id);
-  const isOpen = open || hasSelected;
-
-  return (
-    <div style={{marginBottom:4}}>
-      <div
-        onClick={() => setOpen(v => !v)}
-        style={{
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'9px 2px', cursor:'pointer', userSelect:'none',
-          WebkitTapHighlightColor:'transparent',
-        }}>
-        <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2,
-            color: hasSelected ? '#C9A84C' : '#7A98BC', fontWeight:700}}>{label}</span>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890',
-            background:'#162950', border:'1px solid #1E3A6E', borderRadius:10,
-            padding:'1px 7px'}}>{list.length}</span>
-          {hasSelected && (
-            <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:0.5,
-              color:'#C9A84C', background:'rgba(201,168,76,0.12)',
-              border:'1px solid rgba(201,168,76,0.3)', borderRadius:4, padding:'1px 6px'}}>
-              SELECTED
-            </span>
-          )}
-        </div>
-        <span style={{
-          fontSize:14, color:'#4A6890',
-          transform: isOpen ? 'rotate(180deg)' : 'none',
-          transition:'transform 0.2s', display:'inline-block',
-        }}>▾</span>
-      </div>
-      {isOpen && (
-        <div style={{display:'flex', flexDirection:'column', gap:8, paddingBottom:4}}>
-          {list.map(c => {
-            const sel = course?.id === c.id;
-            return (
-              <div key={c.id} onClick={() => onSelect(c)}
-                style={{...setupS.courseCard,
-                  border: sel ? '1px solid #C9A84C' : '1px solid #1E3A6E',
-                  background: sel ? 'rgba(201,168,76,0.08)' : '#0F2040'}}>
-                <div style={{flex:1}}>
-                  <div style={{display:'flex', alignItems:'center', gap:8}}>
-                    <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16,
-                      color: sel ? '#C9A84C' : '#fff'}}>{c.name}</div>
-                    {c.custom && (
-                      <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1,
-                        color:'#3DCB6C', background:'rgba(61,203,108,0.12)',
-                        border:'1px solid rgba(61,203,108,0.3)', padding:'1px 6px', borderRadius:4}}>
-                        CUSTOM
-                      </span>
-                    )}
-                  </div>
-                  <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
-                  <div style={{fontSize:10, color:'#4A6890', marginTop:1}}>Rating {c.rating} · Slope {c.slope}</div>
-                </div>
-                {sel && <span style={{color:'#C9A84C', fontSize:20, flexShrink:0}}>✓</span>}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-function _extractState(location) {
-  if (!location) return 'OTHER';
-  const m = location.match(/,\s*([A-Z]{2})$/);
-  return m ? m[1] : 'OTHER';
+function getAdjustedHoleScore(scores, popFlags, playerId, holeIdx) {
+  const gross = scores[playerId]?.[holeIdx];
+  if (!gross) return 0;
+  const pop = !!(popFlags?.[playerId]?.[holeIdx]);
+  return Math.max(1, gross - (pop ? 1 : 0));
 }
 
-const _stateNames = {
-  NJ:'New Jersey', CA:'California', NY:'New York', PA:'Pennsylvania',
-  FL:'Florida', GA:'Georgia', TX:'Texas', IL:'Illinois', AZ:'Arizona',
-  NC:'North Carolina', SC:'South Carolina', VA:'Virginia', MA:'Massachusetts',
-  OH:'Ohio', MI:'Michigan', WI:'Wisconsin', MN:'Minnesota', CO:'Colorado',
-  OR:'Oregon', WA:'Washington', OTHER:'Other',
-};
+function calcStablefordPoints(gross, par) {
+  if (!gross) return 0;
+  const d = gross - par;
+  if (d <= -2) return 5;
+  if (d === -1) return 3;
+  if (d === 0)  return 2;
+  if (d === 1)  return 1;
+  return 0;
+}
 
-// ─── Setup Screen ─────────────────────────────────────────────────────────────
-const SetupScreen = ({ allPlayers, onStart }) => {
-  const [step, setStep]                         = React.useState(1);
-  const [selectedPlayers, setSelectedPlayers]   = React.useState(allPlayers.slice(0,4).map(p=>p.id));
-  const [course, setCourse]                     = React.useState(null);
-  const [courseSearch, setCourseSearch]         = React.useState('');
-  const [addMode, setAddMode]                   = React.useState('list');
-  const [scanPrefill, setScanPrefill]           = React.useState(null);
-  const [formats, setFormats]                   = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
-  const [stakes,  setStakes]                    = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
-  // nassauMatchConfig: { matchType:'1v1'|'2v2', playersInMatch:[], teams:null|{team1:[],team2:[]} }
-  const [nassauMatchConfig, setNassauMatchConfig] = React.useState({ matchType:'1v1', playersInMatch:[], teams:null });
+// ─── TIEBREAKER ──────────────────────────────────────────────────────────────
+function resolveTiebreaker(tiedPlayers, scores, course) {
+  if (tiedPlayers.length <= 1) return tiedPlayers;
 
-  const [customCourses, setCustomCourses] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
-  });
-
-  React.useEffect(() => {
-    if (!window.CourseSyncService) return;
-    window.CourseSyncService.subscribe(function(remote) {
-      if (!remote || remote.length === 0) return;
-      setCustomCourses(prev => {
-        const remoteIds = new Set(remote.map(c => c.id));
-        const localOnly = prev.filter(c => !remoteIds.has(c.id));
-        const merged = [...remote, ...localOnly];
-        localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
-        return merged;
-      });
-    });
-    return () => { window.CourseSyncService.unsubscribe(); };
-  }, []);
-
-  // Reset nassauMatchConfig when selected players change (stale IDs)
-  React.useEffect(() => {
-    setNassauMatchConfig(prev => ({
-      ...prev,
-      playersInMatch: prev.playersInMatch.filter(id => selectedPlayers.includes(id)),
-      teams: prev.teams ? {
-        team1: (prev.teams.team1 || []).filter(id => selectedPlayers.includes(id)),
-        team2: (prev.teams.team2 || []).filter(id => selectedPlayers.includes(id)),
-      } : null,
-    }));
-  }, [selectedPlayers.join(',')]);
-
-  const togglePlayer = (id) => {
-    setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length < 6 ? [...prev,id] : prev);
-  };
-  const toggleFormat = (f) => setFormats(prev => ({...prev, [f]:!prev[f]}));
-
-  const allCourses    = [...customCourses, ...COURSES];
-  const query         = courseSearch.toLowerCase();
-  const filtered      = allCourses.filter(c =>
-    !query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query)
-  );
-
-  // Validation for Nassau: must have a valid match config
-  const nassauValid = (() => {
-    if (!formats.nassau) return true; // not enabled, no validation needed
-    const { matchType, playersInMatch, teams } = nassauMatchConfig;
-    if (matchType === '1v1') return playersInMatch.length === 2;
-    if (matchType === '2v2') return (
-      playersInMatch.length === 4 &&
-      teams && (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2
-    );
-    return false;
-  })();
-
-  const activeFormats = Object.entries(formats).filter(([,v])=>v).map(([k])=>({
-    type: k,
-    stakes: stakes[k],
-    // Attach nassauConfig to the nassau format entry
-    ...(k === 'nassau' ? { nassauConfig: nassauMatchConfig } : {}),
+  const strokeTotals = tiedPlayers.map(p => ({
+    p,
+    strokes: (scores[p.id]||[]).reduce((a,b) => a+(b||0), 0),
   }));
+  const minStrokes = Math.min(...strokeTotals.map(x => x.strokes));
+  let survivors = strokeTotals.filter(x => x.strokes === minStrokes).map(x => x.p);
+  if (survivors.length === 1) return survivors;
 
-  const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid;
+  const birdieCounts = survivors.map(p => ({
+    p,
+    birdies: course.holes.reduce((acc, h, i) => {
+      const s = scores[p.id]?.[i];
+      return acc + (s && s === h.par - 1 ? 1 : 0);
+    }, 0),
+  }));
+  const maxBirdies = Math.max(...birdieCounts.map(x => x.birdies));
+  survivors = birdieCounts.filter(x => x.birdies === maxBirdies).map(x => x.p);
+  if (survivors.length === 1) return survivors;
 
-  const handleSaveCourse = (newCourse, fullUpdatedArray) => {
-    setCustomCourses(fullUpdatedArray);
-    setCourse(newCourse);
-    setAddMode('list');
-    setScanPrefill(null);
-  };
+  const bogeyCounts = survivors.map(p => ({
+    p,
+    bogeys: course.holes.reduce((acc, h, i) => {
+      const s = scores[p.id]?.[i];
+      return acc + (s && s === h.par + 1 ? 1 : 0);
+    }, 0),
+  }));
+  const minBogeys = Math.min(...bogeyCounts.map(x => x.bogeys));
+  survivors = bogeyCounts.filter(x => x.bogeys === minBogeys).map(x => x.p);
+  return survivors;
+}
 
-  const handleScanResult = (scannedData) => {
-    setScanPrefill(scannedData);
-    setAddMode('builder');
-  };
+// ─── WOLF ────────────────────────────────────────────────────────────────────
+function getWolfForHole(players, holeIdx) {
+  return players[holeIdx % players.length];
+}
 
-  const handleStart = () => {
-    const players = allPlayers.filter(p => selectedPlayers.includes(p.id));
-    onStart({ players, course, formats: activeFormats, syncCode: generateSyncCode() });
-  };
+function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
+  const strokes = {};
+  players.forEach(p => {
+    const g = scores[p.id]?.[holeIdx];
+    strokes[p.id] = (g && g > 0) ? g : null;
+  });
 
-  const buildStateGroups = (list) => {
-    const groups = {};
-    list.forEach(c => {
-      const state = _extractState(c.location);
-      if (!groups[state]) groups[state] = [];
-      groups[state].push(c);
+  const wolfTeam = isLone ? [wolfId] : [wolfId, partnerId].filter(Boolean);
+  const others   = players.map(p => p.id).filter(id => !wolfTeam.includes(id));
+  const deltas   = Object.fromEntries(players.map(p => [p.id, 0]));
+
+  if (isLone) {
+    const wolfStrokes = strokes[wolfId];
+    if (wolfStrokes === null) return { wolfWins:false, otherWins:false, tied:true, deltas };
+
+    const otherStrokes = others
+      .map(id => strokes[id])
+      .filter(s => s !== null)
+      .sort((a, b) => a - b);
+    if (otherStrokes.length < 2) return { wolfWins:false, otherWins:false, tied:true, deltas };
+
+    const wolfScore  = wolfStrokes * 2;
+    const otherScore = otherStrokes[0] + otherStrokes[1];
+    const wolfWins   = wolfScore < otherScore;
+    const otherWins  = otherScore < wolfScore;
+
+    if (wolfWins) {
+      deltas[wolfId] = 2;
+    } else if (otherWins) {
+      const threshold = otherStrokes[1];
+      others.forEach(id => {
+        if (strokes[id] !== null && strokes[id] <= threshold) deltas[id] = 1;
+      });
+    }
+    return { wolfWins, otherWins, tied: (!wolfWins && !otherWins), deltas };
+
+  } else {
+    const wolfScore  = wolfTeam.reduce((s, id) => s + (strokes[id] ?? 99), 0);
+    const otherScore = others.reduce((s, id)   => s + (strokes[id] ?? 99), 0);
+    const wolfWins   = wolfScore < otherScore;
+    const otherWins  = otherScore < wolfScore;
+    if (wolfWins)       wolfTeam.forEach(id => { deltas[id] = 1; });
+    else if (otherWins) others.forEach(id   => { deltas[id] = 1; });
+    return { wolfWins, otherWins, tied: (!wolfWins && !otherWins), deltas };
+  }
+}
+
+function calcWolfStandings(scores, wolfData, players, course) {
+  const pts = Object.fromEntries(players.map(p => [p.id, 0]));
+  for (let i = 0; i < 18; i++) {
+    const wd = wolfData?.[i];
+    if (!wd?.confirmed) continue;
+    const { deltas } = resolveWolfHole(scores, i, wd.wolfId, wd.partnerId, !!wd.lone, players);
+    players.forEach(p => { pts[p.id] += deltas[p.id]; });
+  }
+  return pts;
+}
+
+function calcWolfPayouts(wolfPts, players, stake, scores, course) {
+  const pay = Object.fromEntries(players.map(p => [p.id, 0]));
+  if (!players.length) return pay;
+
+  const maxPts  = Math.max(...players.map(p => wolfPts[p.id] || 0));
+  const tied    = players.filter(p => (wolfPts[p.id] || 0) === maxPts);
+  const losers  = players.filter(p => (wolfPts[p.id] || 0) < maxPts);
+
+  const winners = (tied.length > 1 && scores && course)
+    ? resolveTiebreaker(tied, scores, course)
+    : tied;
+
+  losers.forEach(l => {
+    pay[l.id] -= stake;
+    winners.forEach(w => { pay[w.id] += stake / winners.length; });
+  });
+  return pay;
+}
+
+// ─── PASS THE MONEY ──────────────────────────────────────────────────────────
+function checkPTMPass(score, par, putts) {
+  return score >= par + 2 || putts >= 3;
+}
+
+function checkPTMWin18(score, par, putts) {
+  return score <= par + 1 && putts <= 2;
+}
+
+function ptmNextPlayer(players, currentId) {
+  const idx = players.findIndex(p => p.id === currentId);
+  return players[(idx + 1) % players.length];
+}
+
+function computePTMState(scores, putts, players, course, initialHolderId) {
+  let holderId = initialHolderId || players[0].id;
+  const log    = [];
+
+  for (let i = 0; i < 18; i++) {
+    const par = course.holes[i].par;
+
+    if (i < 17) {
+      const score = scores[holderId]?.[i];
+      const putt  = (putts[holderId]?.[i]) || 0;
+      if (!score) continue;
+      if (checkPTMPass(score, par, putt)) {
+        const next   = ptmNextPlayer(players, holderId);
+        const reason = score >= par + 2 ? 'Double+' : '3-Putt';
+        log.push({ holeIdx: i, fromId: holderId, toId: next.id, reason });
+        holderId = next.id;
+      }
+    } else {
+      const hole18StartHolder = holderId;
+      let   passes            = 0;
+      while (true) {
+        const score = scores[holderId]?.[i];
+        const putt  = (putts[holderId]?.[i]) || 0;
+        if (!score) break;
+        if (!checkPTMPass(score, par, putt)) break;
+        if (passes >= 3) {
+          const reason = score >= par + 2 ? 'Double+' : '3-Putt';
+          log.push({ holeIdx: i, fromId: holderId, toId: hole18StartHolder, reason, final: true });
+          holderId = hole18StartHolder;
+          break;
+        }
+        const next   = ptmNextPlayer(players, holderId);
+        const reason = score >= par + 2 ? 'Double+' : '3-Putt';
+        log.push({ holeIdx: i, fromId: holderId, toId: next.id, reason });
+        holderId = next.id;
+        passes++;
+      }
+    }
+  }
+
+  return { holderId, log };
+}
+
+function calcPTMPayouts(holderId, players, stake) {
+  const pay = Object.fromEntries(players.map(p => [p.id, 0]));
+  players.forEach(p => {
+    if (p.id === holderId) pay[p.id] = stake * (players.length - 1);
+    else pay[p.id] = -stake;
+  });
+  return pay;
+}
+
+// ─── NASSAU WITH PRESSES (pop-aware, explicit player list) ───────────────────
+//
+// nassauConfig shape:
+//   { playersInMatch: [id, id, ...], teams: null }              — 1v1
+//   { playersInMatch: [A,B,C,D], teams: { team1:[A,B], team2:[C,D] } } — 2v2
+//
+// For 2v2: hole winner = lower combined adjusted score among each team.
+// For 1v1: hole winner = lower adjusted score of the two players.
+//
+// nassauPlayers = allPlayers filtered to playersInMatch, preserving order.
+
+function _nassauHoleResult(scores, popFlags, nassauConfig, nassauPlayers, holeIdx) {
+  // Returns { side1Units, side2Units }  (+1 = side wins hole, -1 = other side wins)
+  const cfg = nassauConfig || {};
+  const teams = cfg.teams;
+
+  if (teams && nassauPlayers.length === 4) {
+    // 2v2: team combined adjusted score
+    const t1ids = teams.team1 || [];
+    const t2ids = teams.team2 || [];
+    const t1score = t1ids.reduce((s, id) => {
+      const adj = getAdjustedHoleScore(scores, popFlags, id, holeIdx);
+      return adj ? s + adj : s + 99;
+    }, 0);
+    const t2score = t2ids.reduce((s, id) => {
+      const adj = getAdjustedHoleScore(scores, popFlags, id, holeIdx);
+      return adj ? s + adj : s + 99;
+    }, 0);
+    if (t1score === t2score) return 0;
+    return t1score < t2score ? 1 : -1;
+  } else {
+    // 1v1
+    const p1 = nassauPlayers[0];
+    const p2 = nassauPlayers[1];
+    if (!p1 || !p2) return 0;
+    const s1 = getAdjustedHoleScore(scores, popFlags, p1.id, holeIdx);
+    const s2 = getAdjustedHoleScore(scores, popFlags, p2.id, holeIdx);
+    if (!s1 || !s2) return 0;
+    if (s1 === s2) return 0;
+    return s1 < s2 ? 1 : -1;
+  }
+}
+
+function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
+  // Legacy 1v1 helper — kept for any internal callers but now pop-aware
+  let units = 0;
+  for (const i of holesRange) {
+    const s1 = getAdjustedHoleScore(scores, popFlags || {}, p1.id, i);
+    const s2 = getAdjustedHoleScore(scores, popFlags || {}, p2.id, i);
+    if (!s1 || !s2) continue;
+    if (s1 < s2) units++;
+    else if (s2 < s1) units--;
+  }
+  return units;
+}
+
+// nassauSegmentStatus — supports both 1v1 and 2v2 via nassauConfig
+function nassauSegmentStatus(scores, players, course, holesRange, currentHole, popFlags, nassauConfig) {
+  // Resolve the players actually in the match
+  const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
+  if (nassauPlayers.length < 2) return 'EVEN';
+  const played = holesRange.filter(i => i <= currentHole);
+  const teams  = nassauConfig?.teams;
+
+  if (teams && nassauPlayers.length === 4) {
+    const t1ids  = teams.team1 || [];
+    const t2ids  = teams.team2 || [];
+    let units = 0;
+    played.forEach(i => {
+      const r = _nassauHoleResult(scores, popFlags || {}, nassauConfig, nassauPlayers, i);
+      units += r;
     });
-    const order = Object.keys(groups).sort((a, b) => {
-      if (a === 'NJ') return -1;
-      if (b === 'NJ') return 1;
-      if (a === 'OTHER') return 1;
-      if (b === 'OTHER') return -1;
-      return a.localeCompare(b);
-    });
-    return order.map(state => ({ state, label: _stateNames[state] || state, list: groups[state] }));
-  };
+    const t1name = nassauPlayers.filter(p => t1ids.includes(p.id)).map(p => p.name.split(' ')[0]).join('/');
+    const t2name = nassauPlayers.filter(p => t2ids.includes(p.id)).map(p => p.name.split(' ')[0]).join('/');
+    if (units === 0) return 'EVEN';
+    return units > 0 ? `${t1name} +${units}` : `${t2name} +${Math.abs(units)}`;
+  } else {
+    const units = calcNassauUnits(scores, nassauPlayers[0], nassauPlayers[1], course, played, popFlags || {});
+    const n0 = nassauPlayers[0].name.split(' ')[0];
+    const n1 = nassauPlayers[1].name.split(' ')[0];
+    if (units === 0) return 'EVEN';
+    return units > 0 ? `${n0} +${units}` : `${n1} +${Math.abs(units)}`;
+  }
+}
 
-  const customFiltered  = filtered.filter(c => c.custom);
-  const builtinFiltered = filtered.filter(c => !c.custom);
-  const stateGroups     = buildStateGroups(builtinFiltered);
-  const isSearching     = !!courseSearch;
+function _resolveNassauPlayers(allPlayers, nassauConfig) {
+  if (!nassauConfig || !nassauConfig.playersInMatch || nassauConfig.playersInMatch.length === 0) {
+    // Fallback: first 2 players (legacy behaviour)
+    return allPlayers.slice(0, 2);
+  }
+  return nassauConfig.playersInMatch
+    .map(id => allPlayers.find(p => p.id === id))
+    .filter(Boolean);
+}
 
-  // Players in this round (for Nassau config)
-  const roundPlayersForNassau = allPlayers.filter(p => selectedPlayers.includes(p.id));
+function calcNassauPayouts(scores, players, course, baseStake, presses, popFlags, nassauConfig) {
+  const payouts = Object.fromEntries(players.map(p => [p.id, 0]));
+  const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
+  if (nassauPlayers.length < 2) return payouts;
 
-  const steps = ['Players','Course','Formats'];
+  const teams = nassauConfig?.teams;
 
-  return (
-    <div style={setupS.root}>
-      {/* Step indicator */}
-      <div style={setupS.stepBar}>
-        {steps.map((s,i) => (
-          <React.Fragment key={s}>
-            <div style={setupS.stepItem} onClick={()=> i+1 < step && setStep(i+1)}>
-              <div style={{...setupS.stepDot, background: step>i+1?'#3DCB6C': step===i+1?'#C9A84C':'#1E3A6E', color: step>=i+1?'#0A1628':'#4A6890'}}>
-                {step>i+1 ? '✓' : i+1}
-              </div>
-              <span style={{...setupS.stepLabel, color: step===i+1?'#fff': step>i+1?'#3DCB6C':'#4A6890'}}>{s}</span>
-            </div>
-            {i<2 && <div style={{flex:1, height:1, background: step>i+1?'#3DCB6C':'#1E3A6E', margin:'0 8px', marginBottom:12}}/>}
-          </React.Fragment>
-        ))}
-      </div>
+  const segs = [
+    { holes: Array.from({length:9},  (_, i) => i),    stake: baseStake },
+    { holes: Array.from({length:9},  (_, i) => i + 9), stake: baseStake },
+    { holes: Array.from({length:18}, (_, i) => i),    stake: baseStake },
+    ...(presses || []).map(pr => ({
+      holes: Array.from({length: 18 - pr.startHole}, (_, i) => i + pr.startHole),
+      stake: pr.stake || baseStake,
+    })),
+  ];
 
-      <div style={setupS.content}>
+  segs.forEach(seg => {
+    if (teams && nassauPlayers.length === 4) {
+      // 2v2
+      const t1ids = teams.team1 || [];
+      const t2ids = teams.team2 || [];
+      let units = 0;
+      seg.holes.forEach(i => {
+        units += _nassauHoleResult(scores, popFlags || {}, nassauConfig, nassauPlayers, i);
+      });
+      if (units > 0) {
+        t1ids.forEach(id => { payouts[id] = (payouts[id] || 0) + seg.stake; });
+        t2ids.forEach(id => { payouts[id] = (payouts[id] || 0) - seg.stake; });
+      } else if (units < 0) {
+        t2ids.forEach(id => { payouts[id] = (payouts[id] || 0) + seg.stake; });
+        t1ids.forEach(id => { payouts[id] = (payouts[id] || 0) - seg.stake; });
+      }
+    } else {
+      // 1v1
+      const u = calcNassauUnits(scores, nassauPlayers[0], nassauPlayers[1], course, seg.holes, popFlags || {});
+      if (u > 0) {
+        payouts[nassauPlayers[0].id] = (payouts[nassauPlayers[0].id] || 0) + seg.stake;
+        payouts[nassauPlayers[1].id] = (payouts[nassauPlayers[1].id] || 0) - seg.stake;
+      } else if (u < 0) {
+        payouts[nassauPlayers[1].id] = (payouts[nassauPlayers[1].id] || 0) + seg.stake;
+        payouts[nassauPlayers[0].id] = (payouts[nassauPlayers[0].id] || 0) - seg.stake;
+      }
+    }
+  });
 
-        {/* ── STEP 1: Players ── */}
-        {step===1 && (
-          <div>
-            <div style={setupS.stepTitle}>SELECT PLAYERS <span style={{color:'#7A98BC', fontSize:13, fontWeight:400}}>({selectedPlayers.length} selected)</span></div>
-            <div style={setupS.stepSub}>Choose 2–6 players for this round</div>
-            <div style={{display:'flex', flexDirection:'column', gap:10, marginTop:16}}>
-              {allPlayers.map(p => {
-                const sel = selectedPlayers.includes(p.id);
-                return (
-                  <div key={p.id} onClick={()=>togglePlayer(p.id)}
-                    style={{...setupS.playerRow, border: sel?`1px solid ${p.color}`:'1px solid #1E3A6E', background: sel?`${p.color}11`:'#0F2040'}}>
-                    <Avatar player={p} size={42}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:17, color:'#fff'}}>{p.name}</div>
-                      <div style={{fontSize:11, color:'#7A98BC'}}>HCP {p.handicap} · GHIN {p.ghin}</div>
-                    </div>
-                    <div style={{...setupS.check, background: sel?p.color:'transparent', border:`2px solid ${sel?p.color:'#1E3A6E'}`}}>
-                      {sel && <span style={{color:'#0A1628', fontSize:14, fontWeight:900}}>✓</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <Btn onClick={()=>setStep(2)} variant="gold" disabled={selectedPlayers.length<2} style={{width:'100%', marginTop:24, padding:'15px', fontSize:17}}>
-              NEXT: SELECT COURSE →
-            </Btn>
-          </div>
-        )}
+  return payouts;
+}
 
-        {/* ── STEP 2: Course ── */}
-        {step===2 && (
-          addMode === 'scanner' ? (
-            <ScorecardScanner
-              onResult={handleScanResult}
-              onCancel={() => { setAddMode('list'); setScanPrefill(null); }}
-            />
-          ) : addMode === 'builder' ? (
-            <CourseBuilder
-              onSave={handleSaveCourse}
-              onCancel={() => { setAddMode('list'); setScanPrefill(null); }}
-              prefill={scanPrefill}
-            />
-          ) : (
-            <div>
-              <div style={setupS.stepTitle}>SELECT COURSE</div>
-              <div style={setupS.stepSub}>Search, scan a scorecard, or enter manually</div>
-              <div style={{marginTop:16, marginBottom:10}}>
-                <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)}
-                  placeholder="Search courses…"
-                  style={{width:'100%', background:'#162950', border:'1px solid #1E3A6E', borderRadius:10,
-                    padding:'11px 14px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box'}}/>
-              </div>
-              <div style={{display:'flex', gap:8, marginBottom:6}}>
-                <Btn onClick={()=>setAddMode('scanner')} variant="green" style={{flex:1, padding:'11px 10px', fontSize:13}}>
-                  📸 SCAN SCORECARD
-                </Btn>
-                <Btn onClick={()=>{ setScanPrefill(null); setAddMode('builder'); }} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>
-                  ✏️ ENTER MANUALLY
-                </Btn>
-              </div>
-              <div style={{display:'flex', flexDirection:'column'}}>
-                {customFiltered.length > 0 && (
-                  <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={setCourse} defaultOpen={true}/>
-                )}
-                {stateGroups.map(({ state, label, list }) => (
-                  <CourseGroup key={state} label={label.toUpperCase()} list={list} course={course} onSelect={setCourse} defaultOpen={isSearching}/>
-                ))}
-                {filtered.length === 0 && (
-                  <div style={{textAlign:'center', padding:'32px 0', color:'#4A6890', fontFamily:'DM Sans', fontSize:13}}>
-                    No courses match "{courseSearch}"<br/>
-                    <span onClick={()=>setAddMode('scanner')} style={{color:'#3DCB6C', cursor:'pointer', fontWeight:600}}>📸 Scan a scorecard →</span>
-                    {' · '}
-                    <span onClick={()=>{ setScanPrefill(null); setAddMode('builder'); }} style={{color:'#C9A84C', cursor:'pointer', fontWeight:600}}>enter manually →</span>
-                  </div>
-                )}
-              </div>
-              <div style={{display:'flex', gap:10, marginTop:24}}>
-                <Btn onClick={()=>setStep(1)} variant="ghost" style={{padding:'14px 20px'}}>← BACK</Btn>
-                <Btn onClick={()=>setStep(3)} variant="gold" disabled={!course} style={{flex:1, fontSize:17}}>NEXT: FORMATS →</Btn>
-              </div>
-            </div>
-          )
-        )}
+// ─── SKINS (raw strokes) ─────────────────────────────────────────────────────
+function calcSkins(scores, players, course, stakes, popFlags) {
+  const skins = Object.fromEntries(players.map(p => [p.id, 0]));
+  let carryover = 0;
+  for (let i = 0; i < 18; i++) {
+    const raw = players.map(p => {
+      const g = getAdjustedHoleScore(scores, popFlags, p.id, i);
+      return g ? { id: p.id, strokes: g } : null;
+    }).filter(Boolean);
+    if (raw.length < players.length) { carryover++; continue; }
+    raw.sort((a, b) => a.strokes - b.strokes);
+    const low     = raw[0].strokes;
+    const winners = raw.filter(n => n.strokes === low);
+    if (winners.length === 1) { skins[winners[0].id] += 1 + carryover; carryover = 0; }
+    else carryover++;
+  }
+  const total = Object.values(skins).reduce((a, b) => a + b, 0);
+  const pay   = Object.fromEntries(players.map(p => [p.id, skins[p.id] * stakes - (total > 0 ? stakes : 0)]));
+  return { skins, payouts: pay };
+}
 
-        {/* ── STEP 3: Formats & Stakes ── */}
-        {step===3 && (
-          <div>
-            <div style={setupS.stepTitle}>FORMATS & STAKES</div>
-            <div style={setupS.stepSub}>Choose one or more formats and set your stakes</div>
-            <div style={{display:'flex', flexDirection:'column', gap:12, marginTop:16}}>
-              {Object.entries(FORMAT_INFO).map(([key, info]) => {
-                const on = formats[key];
-                return (
-                  <div key={key} style={{...setupS.formatCard, border: on?'1px solid #3DCB6C':'1px solid #1E3A6E', background: on?'rgba(61,203,108,0.05)':'#0F2040'}}>
-                    <div style={{display:'flex', alignItems:'center', gap:12}} onClick={()=>toggleFormat(key)}>
-                      <span style={{fontSize:24, flexShrink:0}}>{info.icon}</span>
-                      <div style={{flex:1}}>
-                        <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:17, color: on?'#3DCB6C':'#fff'}}>{info.label}</div>
-                        <div style={{fontSize:12, color:'#7A98BC', marginTop:2, lineHeight:1.4}}>{info.desc}</div>
-                      </div>
-                      <div style={{...setupS.check, flexShrink:0, background: on?'#3DCB6C':'transparent', border:`2px solid ${on?'#3DCB6C':'#1E3A6E'}`}}>
-                        {on && <span style={{color:'#0A1628', fontSize:14, fontWeight:900}}>✓</span>}
-                      </div>
-                    </div>
-                    {on && (
-                      <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
-                        <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:8}}>
-                          STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet (3 bets total)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
-                        </div>
-                        <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
+// ─── TOTALS ──────────────────────────────────────────────────────────────────
+function totalScore(scores, pid) {
+  return (scores[pid] || []).reduce((a, b) => a + (b || 0), 0);
+}
 
-                        {/* Nassau match config — appears below stake */}
-                        {key === 'nassau' && (
-                          <NassauMatchConfig
-                            roundPlayers={roundPlayersForNassau}
-                            config={nassauMatchConfig}
-                            onChange={setNassauMatchConfig}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+function totalVsPar(scores, pid, holes) {
+  return (scores[pid] || []).reduce((acc, s, i) => acc + (s && holes[i] ? s - holes[i].par : 0), 0);
+}
 
-            {activeFormats.length > 0 && (
-              <div style={{marginTop:16, background:'rgba(201,168,76,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:10, padding:'12px 14px'}}>
-                <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#C9A84C', marginBottom:8}}>ROUND SUMMARY</div>
-                <div style={{fontFamily:'DM Sans', fontSize:12, color:'#9BB4D4'}}>
-                  <div style={{marginBottom:2}}>📍 {course?.name}</div>
-                  <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players</div>
-                  {activeFormats.map(f => (
-                    <div key={f.type}>
-                      🎯 {FORMAT_INFO[f.type].label} — <span style={{color:'#C9A84C', fontWeight:700}}>${f.stakes}</span>
-                      {f.type === 'nassau' && f.nassauConfig?.playersInMatch?.length > 0 && (
-                        <span style={{color:'#7A98BC', marginLeft:6}}>
-                          ({f.nassauConfig.matchType === '2v2' ? '2v2' : '1v1'})
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses, ptmHolderId, popFlags, nassauConfig) {
+  nassauPresses = nassauPresses || [];
+  popFlags      = popFlags      || {};
+  const totals = Object.fromEntries(players.map(p => [p.id, 0]));
+  formats.forEach(f => {
+    let pay = {};
+    if (f.type === 'wolf') {
+      const pts = calcWolfStandings(scores, wolfData, players, course);
+      pay = calcWolfPayouts(pts, players, f.stakes, scores, course);
+    } else if (f.type === 'nassau') {
+      // Use nassauConfig from format if present, fall back to arg
+      const cfg = f.nassauConfig || nassauConfig || null;
+      pay = calcNassauPayouts(scores, players, course, f.stakes, nassauPresses, popFlags, cfg);
+    } else if (f.type === 'passmoney') {
+      const holder = ptmHolderId || players[0].id;
+      pay = calcPTMPayouts(holder, players, f.stakes);
+    } else if (f.type === 'skins') {
+      pay = calcSkins(scores, players, course, f.stakes, popFlags).payouts;
+    } else if (f.type === 'stableford') {
+      const playerPts = players.map(p => ({
+        p,
+        pts: course.holes.reduce((a, h, i) =>
+          a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags, p.id, i), h.par), 0),
+      }));
+      const maxPts = Math.max(...playerPts.map(x => x.pts));
+      const tiedPlayers = playerPts.filter(x => x.pts === maxPts).map(x => x.p);
+      const winners = tiedPlayers.length > 1
+        ? resolveTiebreaker(tiedPlayers, scores, course)
+        : tiedPlayers;
+      players.forEach(p => {
+        const isWinner = winners.some(w => w.id === p.id);
+        pay[p.id] = isWinner
+          ? (f.stakes * (players.length - winners.length)) / winners.length
+          : -f.stakes;
+      });
+    }
+    players.forEach(p => { totals[p.id] += (pay[p.id] || 0); });
+  });
+  return totals;
+}
 
-            <div style={{display:'flex', gap:10, marginTop:16}}>
-              <Btn onClick={()=>setStep(2)} variant="ghost" style={{padding:'14px 20px'}}>← BACK</Btn>
-              <Btn onClick={handleStart} variant="gold" disabled={!canStart}
-                style={{flex:1, fontSize:17, padding:'15px', boxShadow: canStart?'0 4px 24px rgba(201,168,76,0.3)':'none'}}>
-                ⛳ TEE IT UP
-              </Btn>
-            </div>
-            {!canStart && (
-              <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#4A6890'}}>
-                {!nassauValid
-                  ? 'Complete Nassau match setup to continue'
-                  : 'Select at least one format to continue'}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const setupS = {
-  root:       { flex:1, overflowY:'auto', display:'flex', flexDirection:'column' },
-  stepBar:    { display:'flex', alignItems:'flex-end', padding:'20px 24px 0', gap:0 },
-  stepItem:   { display:'flex', flexDirection:'column', alignItems:'center', gap:6, cursor:'pointer' },
-  stepDot:    { width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, transition:'all 0.2s' },
-  stepLabel:  { fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, fontWeight:600, marginBottom:12 },
-  content:    { padding:'24px 20px', flex:1 },
-  stepTitle:  { fontFamily:'Barlow Condensed', fontWeight:800, fontSize:24, color:'#fff', letterSpacing:1 },
-  stepSub:    { fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', marginTop:4 },
-  playerRow:  { display:'flex', alignItems:'center', gap:14, borderRadius:12, padding:'14px 16px', cursor:'pointer', transition:'all 0.15s' },
-  courseCard: { display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:12, padding:'14px 16px', cursor:'pointer' },
-  formatCard: { borderRadius:12, padding:'16px', cursor:'default' },
-  check:      { width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-};
-
-Object.assign(window, { SetupScreen, CourseBuilder, ScorecardScanner });
+// expose on window
+if (typeof window !== 'undefined') {
+  Object.assign(window, {
+    scoreName, calcStablefordPoints, resolveTiebreaker,
+    getWolfForHole, resolveWolfHole, calcWolfStandings, calcWolfPayouts,
+    checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
+    calcNassauUnits, nassauSegmentStatus, calcNassauPayouts,
+    getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
+  });
+}
