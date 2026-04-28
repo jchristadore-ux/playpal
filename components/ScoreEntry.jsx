@@ -95,21 +95,34 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Pop pill — only for non-Nassau players (Nassau pops shown via format stat pills) */}
-      {!isNassauPlayer && (
+      {/* Pop pill row */}
+      {(isNassauPlayer ? nassauPopActive : true) && (
         <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
-          <button
-            onClick={()=>onPopToggle(p.id)}
-            style={{
+          {isNassauPlayer ? (
+            <div style={{
               borderRadius:999, padding:'5px 10px', minHeight:28,
-              border:gettingPop ? '1px solid rgba(201,168,76,0.55)' : '1px solid #1E3A6E',
-              background:gettingPop ? 'rgba(201,168,76,0.16)' : '#0A1628',
-              color:gettingPop ? '#C9A84C' : '#7A98BC',
+              border:'1px solid rgba(201,168,76,0.55)',
+              background:'rgba(201,168,76,0.16)',
+              color:'#C9A84C',
               fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
-              cursor:'pointer', WebkitTapHighlightColor:'transparent'
+              display:'flex', alignItems:'center', gap:4,
             }}>
-            {gettingPop ? 'POP ON' : 'POP'}
-          </button>
+              <span>💰</span> POP ON
+            </div>
+          ) : (
+            <button
+              onClick={()=>onPopToggle(p.id)}
+              style={{
+                borderRadius:999, padding:'5px 10px', minHeight:28,
+                border:gettingPop ? '1px solid rgba(201,168,76,0.55)' : '1px solid #1E3A6E',
+                background:gettingPop ? 'rgba(201,168,76,0.16)' : '#0A1628',
+                color:gettingPop ? '#C9A84C' : '#7A98BC',
+                fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
+                cursor:'pointer', WebkitTapHighlightColor:'transparent'
+              }}>
+              {gettingPop ? 'POP ON' : 'POP'}
+            </button>
+          )}
         </div>
       )}
 
