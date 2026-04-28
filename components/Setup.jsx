@@ -205,8 +205,6 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
     try { existing = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) {}
     const updated = [...existing, course];
     localStorage.setItem('pp_custom_courses', JSON.stringify(updated));
-    // Write to RTDB — this triggers the App-level CourseSyncService.subscribe callback
-    // on ALL open sessions, updating customCourses state everywhere instantly.
     if (window.CourseSyncService) {
       window.CourseSyncService.save(updated, function(ok) {
         if (!ok) console.warn('[PlayPal] Course RTDB sync failed — saved locally only');
@@ -348,15 +346,147 @@ const StakesInput = ({ value, onChange }) => {
   );
 };
 
+// ─── Nassau Pop Hole Selector ─────────────────────────────────────────────────
+// Shown after player selection in NassauMatchConfig.
+// Allows selecting which holes one of the Nassau players is "getting a pop" on.
+// popHoles shape: { [playerId]: boolean[18] }
+const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
+  if (!nassauPlayers || nassauPlayers.length < 2) return null;
+
+  // Which player is getting pops — only one player gets pops (the higher hcp player)
+  // but we let the user pick which player and which holes manually
+  const [activePlayer, setActivePlayer] = React.useState(nassauPlayers[0].id);
+
+  const toggleHole = (holeIdx) => {
+    const current = popHoles[activePlayer] || Array(18).fill(false);
+    const next = [...current];
+    next[holeIdx] = !next[holeIdx];
+    onChange({ ...popHoles, [activePlayer]: next });
+  };
+
+  const clearAll = () => {
+    onChange({ ...popHoles, [activePlayer]: Array(18).fill(false) });
+  };
+
+  const popCount = (popHoles[activePlayer] || []).filter(Boolean).length;
+
+  return (
+    <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
+      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>STROKE POPS (OPTIONAL)</div>
+      <div style={{fontFamily:'DM Sans', fontSize:12, color:'#4A6890', lineHeight:1.5}}>
+        Select which player is getting strokes and tap the holes they receive them on.
+      </div>
+
+      {/* Player selector */}
+      <div style={{display:'flex', gap:8}}>
+        {nassauPlayers.map(p => (
+          <div key={p.id} onClick={() => setActivePlayer(p.id)}
+            style={{
+              flex:1, display:'flex', alignItems:'center', gap:8,
+              padding:'8px 10px', borderRadius:9, cursor:'pointer',
+              background: activePlayer === p.id ? `${p.color}18` : '#0A1628',
+              border: activePlayer === p.id ? `1px solid ${p.color}` : '1px solid #1E3A6E',
+            }}>
+            <div style={{width:8, height:8, borderRadius:'50%', background:p.color, flexShrink:0}}/>
+            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13,
+              color: activePlayer === p.id ? p.color : '#9BB4D4', flex:1}}>
+              {p.name.split(' ')[0].toUpperCase()}
+            </span>
+            {(popHoles[p.id] || []).filter(Boolean).length > 0 && (
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11,
+                color:'#C9A84C', background:'rgba(201,168,76,0.15)', borderRadius:4, padding:'1px 5px'}}>
+                {(popHoles[p.id] || []).filter(Boolean).length}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Hole grid */}
+      <div>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
+          <Label style={{fontSize:10}}>
+            {nassauPlayers.find(p => p.id === activePlayer)?.name.split(' ')[0].toUpperCase()} — SELECT POP HOLES
+            {popCount > 0 && <span style={{color:'#C9A84C', marginLeft:6}}>{popCount} SELECTED</span>}
+          </Label>
+          {popCount > 0 && (
+            <button onClick={clearAll}
+              style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed',
+                fontWeight:700, fontSize:10, letterSpacing:1, color:'#4A6890',
+                WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>
+              CLEAR
+            </button>
+          )}
+        </div>
+
+        {/* Front 9 */}
+        <div style={{marginBottom:6}}>
+          <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1.5, color:'#4A6890', marginBottom:4}}>FRONT 9</div>
+          <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
+            {Array.from({length:9}, (_, i) => {
+              const active = !!(popHoles[activePlayer]?.[i]);
+              const activeP = nassauPlayers.find(p => p.id === activePlayer);
+              return (
+                <div key={i} onClick={() => toggleHole(i)}
+                  style={{
+                    flex:1, minWidth:28, height:34, borderRadius:6, cursor:'pointer',
+                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                    background: active ? (activeP?.color || '#C9A84C') : '#162950',
+                    border: active ? 'none' : '1px solid #1E3A6E',
+                    WebkitTapHighlightColor:'transparent', userSelect:'none',
+                    transition:'background 0.12s',
+                  }}>
+                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12,
+                    color: active ? '#0A1628' : '#4A6890', lineHeight:1}}>{i+1}</span>
+                  {active && <span style={{fontSize:6, color:'#0A1628', marginTop:1}}>POP</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Back 9 */}
+        <div>
+          <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1.5, color:'#4A6890', marginBottom:4}}>BACK 9</div>
+          <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
+            {Array.from({length:9}, (_, i) => {
+              const holeIdx = i + 9;
+              const active = !!(popHoles[activePlayer]?.[holeIdx]);
+              const activeP = nassauPlayers.find(p => p.id === activePlayer);
+              return (
+                <div key={holeIdx} onClick={() => toggleHole(holeIdx)}
+                  style={{
+                    flex:1, minWidth:28, height:34, borderRadius:6, cursor:'pointer',
+                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                    background: active ? (activeP?.color || '#C9A84C') : '#162950',
+                    border: active ? 'none' : '1px solid #1E3A6E',
+                    WebkitTapHighlightColor:'transparent', userSelect:'none',
+                    transition:'background 0.12s',
+                  }}>
+                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12,
+                    color: active ? '#0A1628' : '#4A6890', lineHeight:1}}>{holeIdx+1}</span>
+                  {active && <span style={{fontSize:6, color:'#0A1628', marginTop:1}}>POP</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Nassau Match Config UI ───────────────────────────────────────────────────
 const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
   const matchType      = config.matchType || '1v1';
   const playersInMatch = config.playersInMatch || [];
   const teams          = config.teams || null;
+  // popHoles: { [playerId]: boolean[18] }
+  const popHoles       = config.popHoles || {};
   const can2v2 = roundPlayers.length >= 4;
 
   const setMatchType = (t) => {
-    onChange({ matchType: t, playersInMatch: [], teams: null });
+    onChange({ matchType: t, playersInMatch: [], teams: null, popHoles: {} });
   };
 
   const togglePlayer = (id) => {
@@ -365,9 +495,9 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
       ? playersInMatch.filter(x => x !== id)
       : playersInMatch.length < max ? [...playersInMatch, id] : playersInMatch;
     if (matchType === '2v2' && next.length === 4) {
-      onChange({ matchType, playersInMatch: next, teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] } });
+      onChange({ matchType, playersInMatch: next, teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] }, popHoles });
     } else {
-      onChange({ matchType, playersInMatch: next, teams: null });
+      onChange({ matchType, playersInMatch: next, teams: null, popHoles });
     }
   };
 
@@ -377,7 +507,11 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
     const newT2 = (teams.team2 || []).filter(x => x !== id);
     if (teamKey === 'team1') newT1.push(id);
     else newT2.push(id);
-    onChange({ matchType, playersInMatch, teams: { team1: newT1, team2: newT2 } });
+    onChange({ matchType, playersInMatch, teams: { team1: newT1, team2: newT2 }, popHoles });
+  };
+
+  const handlePopChange = (nextPopHoles) => {
+    onChange({ matchType, playersInMatch, teams, popHoles: nextPopHoles });
   };
 
   const playerById = (id) => roundPlayers.find(p => p.id === id);
@@ -385,6 +519,9 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
   const isValid2v2 = matchType === '2v2' && teams &&
     (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
   const isValid = isValid1v1 || isValid2v2;
+
+  // Nassau players for pop config
+  const nassauPlayersForPop = playersInMatch.map(id => playerById(id)).filter(Boolean);
 
   return (
     <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
@@ -485,6 +622,15 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
             : `✓ Team match configured`}
         </div>
       )}
+
+      {/* Pop hole selector — only shown when players are selected */}
+      {isValid && matchType === '1v1' && nassauPlayersForPop.length === 2 && (
+        <NassauPopConfig
+          nassauPlayers={nassauPlayersForPop}
+          popHoles={popHoles}
+          onChange={handlePopChange}
+        />
+      )}
     </div>
   );
 };
@@ -573,9 +719,6 @@ const _stateNames = {
 };
 
 // ─── Setup Screen ─────────────────────────────────────────────────────────────
-// customCourses is now passed as a prop from App, which owns the single
-// CourseSyncService subscription. SetupScreen no longer subscribes or
-// unsubscribes independently.
 const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [step, setStep]                         = React.useState(1);
   const [selectedPlayers, setSelectedPlayers]   = React.useState(allPlayers.slice(0,4).map(p=>p.id));
@@ -585,9 +728,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [scanPrefill, setScanPrefill]           = React.useState(null);
   const [formats, setFormats]                   = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
   const [stakes,  setStakes]                    = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
-  const [nassauMatchConfig, setNassauMatchConfig] = React.useState({ matchType:'1v1', playersInMatch:[], teams:null });
+  const [nassauMatchConfig, setNassauMatchConfig] = React.useState({ matchType:'1v1', playersInMatch:[], teams:null, popHoles:{} });
 
-  // customCourses comes from props — no local subscription needed.
   const localCourses = customCourses || [];
 
   // Reset nassauMatchConfig when selected players change (stale IDs)
@@ -599,6 +741,12 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
         team1: (prev.teams.team1 || []).filter(id => selectedPlayers.includes(id)),
         team2: (prev.teams.team2 || []).filter(id => selectedPlayers.includes(id)),
       } : null,
+      // Clear popHoles for players no longer in the match
+      popHoles: Object.fromEntries(
+        Object.entries(prev.popHoles || {}).filter(([id]) =>
+          prev.playersInMatch.filter(pid => selectedPlayers.includes(pid)).includes(id)
+        )
+      ),
     }));
   }, [selectedPlayers.join(',')]);
 
@@ -633,9 +781,6 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid;
 
   const handleSaveCourse = (newCourse, fullUpdatedArray) => {
-    // RTDB write already done in CourseBuilder.handleSave.
-    // App's subscription callback will update customCourses prop automatically.
-    // Just update local course selection state.
     setCourse(newCourse);
     setAddMode('list');
     setScanPrefill(null);
@@ -830,7 +975,11 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                       🎯 {FORMAT_INFO[f.type].label} — <span style={{color:'#C9A84C', fontWeight:700}}>${f.stakes}</span>
                       {f.type === 'nassau' && f.nassauConfig?.playersInMatch?.length > 0 && (
                         <span style={{color:'#7A98BC', marginLeft:6}}>
-                          ({f.nassauConfig.matchType === '2v2' ? '2v2' : '1v1'})
+                          ({f.nassauConfig.matchType === '2v2' ? '2v2' : '1v1'}
+                          {(() => {
+                            const popCount = Object.values(f.nassauConfig.popHoles || {}).reduce((a, arr) => a + (arr || []).filter(Boolean).length, 0);
+                            return popCount > 0 ? ` · ${popCount} pops` : '';
+                          })()})
                         </span>
                       )}
                     </div>
