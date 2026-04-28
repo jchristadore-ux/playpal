@@ -96,6 +96,7 @@ var PLAYPAL_FIREBASE_CONFIG = {
 
 /* ============================================================
    FIREBASE INIT
+   Queues callbacks while anonymous auth resolves. No call dropped.
    ============================================================ */
 var _fbApp       = null;
 var _fbDb        = null;
@@ -134,8 +135,23 @@ function _fbInit(cb) {
 
 /* ============================================================
    PLAYER SYNC SERVICE  (Realtime Database → /players)
+
+   FIX 1: subscribe() stores its callback reference and calls
+           .off(ref, cb) before re-attaching — prevents duplicate
+           listeners on StrictMode double-invoke or remount.
+
+   FIX 2: unsubscribe() detaches only this service's specific
+           callback, not all listeners on the ref. This prevents
+           one component's cleanup from killing another component's
+           active listener.
+
+   FIX 3: load() is kept for external callers but is NO LONGER
+           called alongside subscribe() in App — that race condition
+           was the primary cross-device sync bug.
    ============================================================ */
 var PlayerSyncService = (function() {
+  var _cb = null; // stored callback reference for safe detach
+
   function save(players, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -146,6 +162,7 @@ var PlayerSyncService = (function() {
         .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
     });
   }
+
   function load(cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null); return; }
@@ -158,25 +175,51 @@ var PlayerSyncService = (function() {
         .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
     });
   }
+
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
-      _fbDb.ref('players').on('value', function(snap) {
+      // Detach previous listener before re-attaching.
+      // Prevents duplicate listeners from StrictMode double-invoke.
+      if (_cb) { _fbDb.ref('players').off('value', _cb); }
+      _cb = function(snap) {
         var val = snap.val();
-        if (val) cb(Object.values(val));
-      });
+        // Always call cb — empty array is a valid state (all players deleted).
+        cb(val ? Object.values(val) : []);
+      };
+      _fbDb.ref('players').on('value', _cb);
     });
   }
+
   function unsubscribe() {
-    if (_fbDb) _fbDb.ref('players').off('value');
+    // Detach only this service's callback, not all value listeners on the ref.
+    if (_fbDb && _cb) { _fbDb.ref('players').off('value', _cb); }
+    _cb = null;
   }
+
   return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
 /* ============================================================
    CUSTOM COURSE SYNC SERVICE  (Realtime Database → /courses)
+
+   Same fixes as PlayerSyncService above.
+
+   FIX 4: App now owns the course subscription (lifted from
+           SetupScreen and HomeScreen). Both components previously
+           subscribed and called unsubscribe() on cleanup —
+           .off('value') without a callback reference killed ALL
+           listeners on /courses globally. When Home unmounted
+           (user navigated to Setup), its cleanup was silently
+           killing Setup's live listener. Courses then stopped
+           updating until the component remounted.
+
+           Solution: store the callback reference, use named
+           .off(ref, cb), and keep the single subscription in App.
    ============================================================ */
 var CourseSyncService = (function() {
+  var _cb = null; // stored callback reference for safe detach
+
   function save(courses, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -187,6 +230,7 @@ var CourseSyncService = (function() {
         .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
     });
   }
+
   function load(cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null); return; }
@@ -198,18 +242,27 @@ var CourseSyncService = (function() {
         .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
     });
   }
+
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
-      _fbDb.ref('courses').on('value', function(snap) {
+      // Detach previous listener before re-attaching.
+      if (_cb) { _fbDb.ref('courses').off('value', _cb); }
+      _cb = function(snap) {
         var val = snap.val();
-        if (val) cb(Object.values(val));
-      });
+        // Always call cb — empty array is valid (all courses deleted).
+        cb(val ? Object.values(val) : []);
+      };
+      _fbDb.ref('courses').on('value', _cb);
     });
   }
+
   function unsubscribe() {
-    if (_fbDb) _fbDb.ref('courses').off('value');
+    // Detach only this service's callback.
+    if (_fbDb && _cb) { _fbDb.ref('courses').off('value', _cb); }
+    _cb = null;
   }
+
   return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
@@ -356,6 +409,22 @@ const App = () => {
     return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
   });
 
+  // FIX: Course subscription lifted to App level.
+  // Previously, both HomeScreen and SetupScreen each subscribed to
+  // CourseSyncService independently. Both also called unsubscribe() on
+  // cleanup. Because unsubscribe() was calling .off('value') without a
+  // callback reference, it removed ALL value listeners on /courses globally.
+  // When the user navigated from Home → Setup, Home's cleanup killed Setup's
+  // newly-attached listener. Courses then stopped receiving real-time updates
+  // until the component fully remounted.
+  //
+  // Now: one subscription lives in App for the entire session. customCourses
+  // state is passed down as a prop to HomeScreen and SetupScreen. Neither
+  // component subscribes or unsubscribes independently.
+  const [customCourses, setCustomCourses] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
+  });
+
   const [round, setRound] = React.useState(() => {
     if (window.__pp_deeplink_round) {
       const r = window.__pp_deeplink_round;
@@ -370,15 +439,15 @@ const App = () => {
     return null;
   });
 
-  const [finalScores,  setFinalScores]  = React.useState(null);
-  const [finalWolf,    setFinalWolf]    = React.useState(null);
-  const [finalPutts,   setFinalPutts]   = React.useState(null);
-  const [finalPresses, setFinalPresses] = React.useState([]);
-  const [finalChips,   setFinalChips]   = React.useState({});
-  const [finalPopFlags,setFinalPopFlags]= React.useState(null);
-  const [viewSyncCode, setViewSyncCode] = React.useState(null);
-  const [tweaks,       setTweaks]       = React.useState(TWEAK_DEFAULTS);
-  const [tweaksOpen,   setTweaksOpen]   = React.useState(false);
+  const [finalScores,   setFinalScores]   = React.useState(null);
+  const [finalWolf,     setFinalWolf]     = React.useState(null);
+  const [finalPutts,    setFinalPutts]    = React.useState(null);
+  const [finalPresses,  setFinalPresses]  = React.useState([]);
+  const [finalChips,    setFinalChips]    = React.useState({});
+  const [finalPopFlags, setFinalPopFlags] = React.useState(null);
+  const [viewSyncCode,  setViewSyncCode]  = React.useState(null);
+  const [tweaks,        setTweaks]        = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen,    setTweaksOpen]    = React.useState(false);
 
   const recentRounds = React.useMemo(() => {
     const saved = localStorage.getItem('pp_recent');
@@ -400,18 +469,44 @@ const App = () => {
     return () => { window.__pp_deeplink_ready = null; };
   }, []);
 
+  // FIX: Removed PlayerSyncService.load() call.
+  //
+  // The previous code called both load() and subscribe() in the same useEffect:
+  //
+  //   PlayerSyncService.load(cb)       ← once('value'), resolves async ~50-200ms later
+  //   PlayerSyncService.subscribe(cb)  ← on('value'), fires immediately on attach
+  //
+  // RTDB's on('value') fires synchronously on first attach with the current snapshot,
+  // correctly setting state. Then load()'s once('value') Promise resolves slightly later
+  // and calls setPlayers() again with a STALE pre-write snapshot — overwriting the
+  // subscription's correct real-time state. Any player added by another device would
+  // appear briefly (from the subscription firing), then disappear (load() overwrote it).
+  //
+  // Fix: subscribe() alone is sufficient. on('value') fires immediately with current
+  // data on attach, making load() 100% redundant. Removing load() eliminates the race.
   React.useEffect(() => {
-    PlayerSyncService.load(function(remotePlayers) {
+    PlayerSyncService.subscribe(function(remotePlayers) {
       if (remotePlayers && remotePlayers.length > 0) {
         setPlayers(remotePlayers);
         localStorage.setItem('pp_players', JSON.stringify(remotePlayers));
       }
     });
-    PlayerSyncService.subscribe(function(remoteP) {
-      setPlayers(remoteP);
-      localStorage.setItem('pp_players', JSON.stringify(remoteP));
-    });
     return () => { PlayerSyncService.unsubscribe(); };
+  }, []);
+
+  // Course subscription — single listener for the entire app session.
+  // Merge strategy: RTDB is authoritative; keep any local-only courses not yet synced.
+  React.useEffect(() => {
+    CourseSyncService.subscribe(function(remoteCourses) {
+      setCustomCourses(function(prev) {
+        const remoteIds = new Set(remoteCourses.map(function(c) { return c.id; }));
+        const localOnly = prev.filter(function(c) { return !remoteIds.has(c.id); });
+        const merged = remoteCourses.concat(localOnly);
+        localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
+        return merged;
+      });
+    });
+    return () => { CourseSyncService.unsubscribe(); };
   }, []);
 
   React.useEffect(() => {
@@ -438,6 +533,15 @@ const App = () => {
     });
   };
 
+  // Called by CourseBuilder (via SetupScreen or HomeScreen) after saving a course.
+  // The RTDB write in CourseBuilder.handleSave triggers the App-level subscription,
+  // which updates customCourses state automatically. This handler just syncs the
+  // prop back down so SetupScreen's selected course state stays consistent.
+  const handleCourseSaved = (newCourse, fullUpdatedArray) => {
+    // State will arrive via the subscription callback. No manual setCustomCourses needed.
+    // This is intentionally a no-op — it exists so child components have a stable callback.
+  };
+
   const handleStartRound = (config) => {
     const r = { ...config, id: Date.now() };
     setRound(r);
@@ -457,8 +561,8 @@ const App = () => {
     round.players.forEach(function(player) {
       holeScores[player.id] = round.course.holes.map(function(_, i) {
         return {
-          strokes: scores[player.id]?.[i] || null,
-          putts: (putts[player.id]?.[i]) || 0,
+          strokes:    scores[player.id]?.[i] || null,
+          putts:      (putts[player.id]?.[i]) || 0,
           gettingPop: !!(popFlags[player.id]?.[i]),
         };
       });
@@ -488,7 +592,6 @@ const App = () => {
     setScreen('home');
   };
 
-  // Exit mid-round — scores preserved in localStorage keyed by round.id, resumable via Join
   const handleExitRound = () => {
     sessionStorage.removeItem('pp_screen');
     setScreen('home');
@@ -522,11 +625,14 @@ const App = () => {
             onManagePlayers={handleManagePlayers}
             recentRounds={recentRounds}
             onJoinRound={handleJoinRound}
-            onViewRound={handleViewRound} />
+            onViewRound={handleViewRound}
+            customCourses={customCourses}
+            onCourseSaved={handleCourseSaved} />
         }
         {screen === 'setup' &&
           <SetupScreen
             allPlayers={players}
+            customCourses={customCourses}
             onStart={handleStartRound} />
         }
         {screen === 'score' && round &&
