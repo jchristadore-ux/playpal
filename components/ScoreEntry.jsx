@@ -1,6 +1,6 @@
-// ScoreEntry.jsx — Full Score Entry Screen (stroke-only, no net scoring)
+// ScoreEntry.jsx — Full Score Entry Screen with Nassau pop isolation and tracker pills
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#2A4A6E':diff<=-2?'#FFD700':diff===-1?'#3DCB6C':diff===0?'#9BB4D4':diff===1?'#E5534B':'#C0392B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -95,19 +95,47 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, isWolf, i
         </button>
       </div>
 
-      <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
-        <button
-          onClick={()=>onPopToggle(p.id)}
-          style={{
-            borderRadius:999, padding:'5px 10px', minHeight:28,
-            border:gettingPop ? '1px solid rgba(201,168,76,0.55)' : '1px solid #1E3A6E',
-            background:gettingPop ? 'rgba(201,168,76,0.16)' : '#0A1628',
-            color:gettingPop ? '#C9A84C' : '#7A98BC',
-            fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
-            cursor:'pointer', WebkitTapHighlightColor:'transparent'
-          }}>
-          {gettingPop ? 'POP ON' : 'POP'}
-        </button>
+      {/* Pop pill row — Nassau players show pre-configured read-only pop; others show toggleable pop */}
+      <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px', gap:6}}>
+        {isNassauPlayer ? (
+          // Nassau player: show read-only pop indicator for this hole
+          nassauPopActive ? (
+            <div style={{
+              borderRadius:999, padding:'5px 10px', minHeight:28,
+              border:'1px solid rgba(201,168,76,0.55)',
+              background:'rgba(201,168,76,0.16)',
+              color:'#C9A84C',
+              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
+              display:'flex', alignItems:'center', gap:4,
+            }}>
+              <span>💰</span> POP ON
+            </div>
+          ) : (
+            <div style={{
+              borderRadius:999, padding:'5px 10px', minHeight:28,
+              border:'1px solid #1E3A6E',
+              background:'#0A1628',
+              color:'#4A6890',
+              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
+            }}>
+              NO POP
+            </div>
+          )
+        ) : (
+          // Non-Nassau player: normal toggleable pop for other formats (skins, stableford)
+          <button
+            onClick={()=>onPopToggle(p.id)}
+            style={{
+              borderRadius:999, padding:'5px 10px', minHeight:28,
+              border:gettingPop ? '1px solid rgba(201,168,76,0.55)' : '1px solid #1E3A6E',
+              background:gettingPop ? 'rgba(201,168,76,0.16)' : '#0A1628',
+              color:gettingPop ? '#C9A84C' : '#7A98BC',
+              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
+              cursor:'pointer', WebkitTapHighlightColor:'transparent'
+            }}>
+            {gettingPop ? 'POP ON' : 'POP'}
+          </button>
+        )}
       </div>
 
       {/* Putt tracker */}
@@ -241,7 +269,6 @@ const TrackersDrawer = ({ open, onToggle, formats, children }) => {
 
   return (
     <div style={{borderTop:'1px solid #1E3A6E'}}>
-      {/* Toggle bar */}
       <button
         onClick={onToggle}
         style={{
@@ -268,7 +295,6 @@ const TrackersDrawer = ({ open, onToggle, formats, children }) => {
         }}>▾</span>
       </button>
 
-      {/* Content — only rendered when open */}
       {open && (
         <div>
           {children}
@@ -278,11 +304,53 @@ const TrackersDrawer = ({ open, onToggle, formats, children }) => {
   );
 };
 
+// ── Nassau Hole Status Helper (stroke play, pop-aware) ───────────────────────
+// Returns { front, back, overall } status strings for a 1v1 Nassau match
+// using per-hole popFlags (Nassau-specific, not global popFlags)
+function _nassauLiveStatus(scores, nassauPopFlags, players, nassauConfig, course, currentHoleIdx) {
+  const { nassauSegmentStatus } = window;
+  const front = nassauSegmentStatus(
+    scores, players, course,
+    Array.from({length:9}, (_, i) => i),
+    currentHoleIdx, nassauPopFlags, nassauConfig
+  );
+  const back = nassauSegmentStatus(
+    scores, players, course,
+    Array.from({length:9}, (_, i) => i + 9),
+    currentHoleIdx, nassauPopFlags, nassauConfig
+  );
+  const overall = nassauSegmentStatus(
+    scores, players, course,
+    Array.from({length:18}, (_, i) => i),
+    currentHoleIdx, nassauPopFlags, nassauConfig
+  );
+  return { front, back, overall };
+}
+
 // ── Main ScoreEntry Screen ────────────────────────────────────────────────────
 const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
 
   const { players, course, formats } = round;
+
+  // ── Nassau config extraction ─────────────────────────────────────────────
+  const nassauFmtObj  = formats.find(f => f.type === 'nassau');
+  const nassauCfg     = nassauFmtObj?.nassauConfig || null;
+  // nassauPlayerIds: the two players in the Nassau match
+  const nassauPlayerIds = nassauCfg?.playersInMatch || [];
+  // nassauPopHoles: { [playerId]: boolean[18] } — pre-configured at setup
+  const nassauPopHoles  = nassauCfg?.popHoles || {};
+
+  // Build nassauPopFlags: same shape as popFlags but only for Nassau match players,
+  // using the pre-configured pop holes from setup. Used ONLY for Nassau scoring.
+  // This is a derived constant — does not change during the round.
+  const nassauPopFlags = React.useMemo(() => {
+    const flags = {};
+    nassauPlayerIds.forEach(pid => {
+      flags[pid] = Array.from({length:18}, (_, i) => !!(nassauPopHoles[pid]?.[i]));
+    });
+    return flags;
+  }, []);
 
   const [scores,   setScores]   = React.useState(() => {
     try {
@@ -301,6 +369,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
       return Object.fromEntries(players.map(p=>[p.id, Array(18).fill(0)]));
     }
   });
+
+  // popFlags: used for non-Nassau formats (skins, stableford) — freely toggled per hole
+  // Nassau players' popFlags for non-Nassau formats are independent from nassauPopFlags
   const [popFlags, setPopFlags] = React.useState(() => {
     try {
       const saved = localStorage.getItem('pp_pop_' + round.id);
@@ -327,12 +398,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
 
   const hasWolf      = formats.some(f => f.type === 'wolf');
   const hasPTM       = formats.some(f => f.type === 'passmoney');
-  const hasNassau    = formats.some(f => f.type === 'nassau');
+  const hasNassau    = !!nassauFmtObj;
   const hasStable    = formats.some(f => f.type === 'stableford');
   const hasSkins     = formats.some(f => f.type === 'skins');
   const wolfFmt      = formats.find(f => f.type === 'wolf');
   const ptmFmt       = formats.find(f => f.type === 'passmoney');
-  const nassauFmt    = formats.find(f => f.type === 'nassau');
+  const nassauFmt    = nassauFmtObj;
   const skinsFmt     = formats.find(f => f.type === 'skins');
 
   const hole         = course.holes[holeIdx];
@@ -343,6 +414,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
     return computePTMState(scores, putts, players, course, players[0]?.id);
   }, [JSON.stringify(scores), JSON.stringify(putts)]);
+
+  // Live Nassau status for pill display
+  const nassauLiveStatus = React.useMemo(() => {
+    if (!hasNassau || nassauPlayerIds.length < 2) return null;
+    return _nassauLiveStatus(scores, nassauPopFlags, players, nassauCfg, course, holeIdx);
+  }, [JSON.stringify(scores), holeIdx]);
 
   React.useEffect(() => {
     localStorage.setItem('pp_scores_' + round.id, JSON.stringify(scores));
@@ -362,6 +439,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     players.forEach(p => {
       const stats = [];
       const holesPlayed = (scores[p.id]||[]).filter(Boolean).length;
+      const isNassauPlayer = nassauPlayerIds.includes(p.id);
 
       if (hasWolf) {
         const wolfPts = calcWolfStandings(scores, wolfData, players, course);
@@ -395,10 +473,26 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
         stats.push({ icon:'🎯', label:'SKINS', value: String(won), color: won > 0 ? '#C9A84C' : '#7A98BC' });
       }
 
+      // Nassau tracker pills — only for the two Nassau match players
+      if (hasNassau && isNassauPlayer && nassauLiveStatus) {
+        const { front, back, overall } = nassauLiveStatus;
+        // Front 9 pill
+        const frontColor = front === 'EVEN' ? '#7A98BC' : '#C9A84C';
+        stats.push({ icon:'💰', label:'F9', value: front, color: frontColor });
+        // Back 9 pill (only if on back 9 or complete)
+        if (holeIdx >= 9) {
+          const backColor = back === 'EVEN' ? '#7A98BC' : '#C9A84C';
+          stats.push({ icon:'', label:'B9', value: back, color: backColor });
+        }
+        // Overall
+        const overallColor = overall === 'EVEN' ? '#7A98BC' : '#C9A84C';
+        stats.push({ icon:'', label:'18', value: overall, color: overallColor });
+      }
+
       result[p.id] = stats;
     });
     return result;
-  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx]);
+  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx, nassauLiveStatus]);
 
   const setScore = (playerId, val) => {
     const clamped = Math.max(1, val);
@@ -417,6 +511,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     });
   };
 
+  // togglePop only affects non-Nassau formats (popFlags state)
+  // Nassau pops are pre-configured and read-only
   const togglePop = (playerId) => {
     setPopFlags(prev => {
       const next = { ...prev, [playerId]: [...(prev[playerId] || Array(18).fill(false))] };
@@ -460,12 +556,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
 
   const handleFinish = () => {
+    // Merge nassauPopFlags into popFlags for Nassau scoring at summary/payout time
+    // Nassau players' nassauPopFlags take precedence for Nassau calculations
+    // The nassauConfig already carries popHoles — calcAllPayouts uses it directly
     onSaveRound(scores, wolfData, putts, nassauPresses, {}, popFlags);
   };
 
   const parColor = hole.par === 3 ? '#7B9FE0' : hole.par === 5 ? '#C9A84C' : '#9BB4D4';
 
-  // Determine which tracker sections to show in the drawer
   const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins;
 
   return (
@@ -529,9 +627,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
         {/* Player score cards */}
         <div style={{padding:'12px 12px 0', display:'flex', flexDirection:'column', gap:10}}>
           {players.map(p => {
-            const isWolf    = hasWolf && wolfPlayer?.id === p.id;
-            const isPartner = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
-            const isPTM     = hasPTM && ptmState.holderId === p.id;
+            const isWolf       = hasWolf && wolfPlayer?.id === p.id;
+            const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
+            const isPTM        = hasPTM && ptmState.holderId === p.id;
+            const isNassauPlayer = nassauPlayerIds.includes(p.id);
+            // nassauPopActive: is this Nassau player getting a pop on THIS hole?
+            const nassauPopActive = isNassauPlayer && !!(nassauPopFlags[p.id]?.[holeIdx]);
+
             return (
               <PlayerScoreCard
                 key={p.id}
@@ -541,6 +643,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
                 holeIdx={holeIdx}
                 putts={putts}
                 gettingPop={!!popFlags[p.id]?.[holeIdx]}
+                nassauPopActive={nassauPopActive}
+                isNassauPlayer={isNassauPlayer}
                 isWolf={isWolf}
                 isPartner={isPartner}
                 isPTMHolder={isPTM}
@@ -588,9 +692,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
             )}
             {hasNassau && (
               <NassauTracker
-                players={players} scores={scores} popFlags={popFlags} course={course}
+                players={players} scores={scores} popFlags={nassauPopFlags} course={course}
                 holeIdx={holeIdx} presses={nassauPresses}
                 onPress={handlePress} format={nassauFmt}
+                nassauConfig={nassauCfg}
               />
             )}
           </TrackersDrawer>
