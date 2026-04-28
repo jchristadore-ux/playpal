@@ -1,4 +1,4 @@
-// gameUtils.js v6 — Nassau uses explicit nassauPlayers list + pop-aware getAdjustedHoleScore
+// gameUtils.js v7 — Nassau uses nassauConfig.popHoles for isolated pop-aware scoring
 
 function scoreName(gross, par) {
   const d = gross - par;
@@ -211,43 +211,54 @@ function calcPTMPayouts(holderId, players, stake) {
   return pay;
 }
 
-// ─── NASSAU WITH PRESSES (pop-aware, explicit player list) ───────────────────
+// ─── NASSAU WITH PRESSES ─────────────────────────────────────────────────────
 //
 // nassauConfig shape:
-//   { playersInMatch: [id, id, ...], teams: null }              — 1v1
-//   { playersInMatch: [A,B,C,D], teams: { team1:[A,B], team2:[C,D] } } — 2v2
+//   {
+//     playersInMatch: [id, id, ...],
+//     matchType: '1v1' | '2v2',
+//     teams: null | { team1:[A,B], team2:[C,D] },
+//     popHoles: { [playerId]: boolean[18] }   ← pre-configured Nassau pops
+//   }
 //
-// For 2v2: hole winner = lower combined adjusted score among each team.
-// For 1v1: hole winner = lower adjusted score of the two players.
+// IMPORTANT: nassauConfig.popHoles is used ONLY for Nassau scoring.
+// The global popFlags are used for all other formats (skins, stableford).
 //
-// nassauPlayers = allPlayers filtered to playersInMatch, preserving order.
+// _buildNassauPopFlags: converts nassauConfig.popHoles (boolean arrays) into
+// the same shape as popFlags for use in getAdjustedHoleScore calls.
 
-function _nassauHoleResult(scores, popFlags, nassauConfig, nassauPlayers, holeIdx) {
-  // Returns { side1Units, side2Units }  (+1 = side wins hole, -1 = other side wins)
-  const cfg = nassauConfig || {};
+function _buildNassauPopFlags(nassauConfig) {
+  if (!nassauConfig?.popHoles) return {};
+  const flags = {};
+  Object.entries(nassauConfig.popHoles).forEach(([pid, arr]) => {
+    flags[pid] = Array.isArray(arr) ? arr : Array(18).fill(false);
+  });
+  return flags;
+}
+
+function _nassauHoleResult(scores, nassauPopFlagsForCalc, nassauConfig, nassauPlayers, holeIdx) {
+  const cfg   = nassauConfig || {};
   const teams = cfg.teams;
 
   if (teams && nassauPlayers.length === 4) {
-    // 2v2: team combined adjusted score
     const t1ids = teams.team1 || [];
     const t2ids = teams.team2 || [];
     const t1score = t1ids.reduce((s, id) => {
-      const adj = getAdjustedHoleScore(scores, popFlags, id, holeIdx);
+      const adj = getAdjustedHoleScore(scores, nassauPopFlagsForCalc, id, holeIdx);
       return adj ? s + adj : s + 99;
     }, 0);
     const t2score = t2ids.reduce((s, id) => {
-      const adj = getAdjustedHoleScore(scores, popFlags, id, holeIdx);
+      const adj = getAdjustedHoleScore(scores, nassauPopFlagsForCalc, id, holeIdx);
       return adj ? s + adj : s + 99;
     }, 0);
     if (t1score === t2score) return 0;
     return t1score < t2score ? 1 : -1;
   } else {
-    // 1v1
     const p1 = nassauPlayers[0];
     const p2 = nassauPlayers[1];
     if (!p1 || !p2) return 0;
-    const s1 = getAdjustedHoleScore(scores, popFlags, p1.id, holeIdx);
-    const s2 = getAdjustedHoleScore(scores, popFlags, p2.id, holeIdx);
+    const s1 = getAdjustedHoleScore(scores, nassauPopFlagsForCalc, p1.id, holeIdx);
+    const s2 = getAdjustedHoleScore(scores, nassauPopFlagsForCalc, p2.id, holeIdx);
     if (!s1 || !s2) return 0;
     if (s1 === s2) return 0;
     return s1 < s2 ? 1 : -1;
@@ -255,7 +266,7 @@ function _nassauHoleResult(scores, popFlags, nassauConfig, nassauPlayers, holeId
 }
 
 function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
-  // Legacy 1v1 helper — kept for any internal callers but now pop-aware
+  // Legacy 1v1 helper — uses passed popFlags (for backward compat)
   let units = 0;
   for (const i of holesRange) {
     const s1 = getAdjustedHoleScore(scores, popFlags || {}, p1.id, i);
@@ -267,43 +278,50 @@ function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
   return units;
 }
 
-// nassauSegmentStatus — supports both 1v1 and 2v2 via nassauConfig
+function _resolveNassauPlayers(allPlayers, nassauConfig) {
+  if (!nassauConfig || !nassauConfig.playersInMatch || nassauConfig.playersInMatch.length === 0) {
+    return allPlayers.slice(0, 2);
+  }
+  return nassauConfig.playersInMatch
+    .map(id => allPlayers.find(p => p.id === id))
+    .filter(Boolean);
+}
+
+// nassauSegmentStatus — supports 1v1 and 2v2, uses nassauConfig.popHoles when available
 function nassauSegmentStatus(scores, players, course, holesRange, currentHole, popFlags, nassauConfig) {
-  // Resolve the players actually in the match
   const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
   if (nassauPlayers.length < 2) return 'EVEN';
   const played = holesRange.filter(i => i <= currentHole);
   const teams  = nassauConfig?.teams;
+
+  // Use nassauConfig.popHoles for Nassau-specific pop calculations;
+  // fall back to passed popFlags for legacy callers
+  const nassauPopFlagsForCalc = nassauConfig?.popHoles
+    ? _buildNassauPopFlags(nassauConfig)
+    : (popFlags || {});
 
   if (teams && nassauPlayers.length === 4) {
     const t1ids  = teams.team1 || [];
     const t2ids  = teams.team2 || [];
     let units = 0;
     played.forEach(i => {
-      const r = _nassauHoleResult(scores, popFlags || {}, nassauConfig, nassauPlayers, i);
-      units += r;
+      units += _nassauHoleResult(scores, nassauPopFlagsForCalc, nassauConfig, nassauPlayers, i);
     });
     const t1name = nassauPlayers.filter(p => t1ids.includes(p.id)).map(p => p.name.split(' ')[0]).join('/');
     const t2name = nassauPlayers.filter(p => t2ids.includes(p.id)).map(p => p.name.split(' ')[0]).join('/');
     if (units === 0) return 'EVEN';
     return units > 0 ? `${t1name} +${units}` : `${t2name} +${Math.abs(units)}`;
   } else {
-    const units = calcNassauUnits(scores, nassauPlayers[0], nassauPlayers[1], course, played, popFlags || {});
+    // 1v1 — use nassauPopFlagsForCalc
+    let units = 0;
+    played.forEach(i => {
+      units += _nassauHoleResult(scores, nassauPopFlagsForCalc, nassauConfig, nassauPlayers, i);
+    });
     const n0 = nassauPlayers[0].name.split(' ')[0];
     const n1 = nassauPlayers[1].name.split(' ')[0];
     if (units === 0) return 'EVEN';
     return units > 0 ? `${n0} +${units}` : `${n1} +${Math.abs(units)}`;
   }
-}
-
-function _resolveNassauPlayers(allPlayers, nassauConfig) {
-  if (!nassauConfig || !nassauConfig.playersInMatch || nassauConfig.playersInMatch.length === 0) {
-    // Fallback: first 2 players (legacy behaviour)
-    return allPlayers.slice(0, 2);
-  }
-  return nassauConfig.playersInMatch
-    .map(id => allPlayers.find(p => p.id === id))
-    .filter(Boolean);
 }
 
 function calcNassauPayouts(scores, players, course, baseStake, presses, popFlags, nassauConfig) {
@@ -312,6 +330,11 @@ function calcNassauPayouts(scores, players, course, baseStake, presses, popFlags
   if (nassauPlayers.length < 2) return payouts;
 
   const teams = nassauConfig?.teams;
+
+  // Use nassauConfig.popHoles for Nassau-specific adjusted scores
+  const nassauPopFlagsForCalc = nassauConfig?.popHoles
+    ? _buildNassauPopFlags(nassauConfig)
+    : (popFlags || {});
 
   const segs = [
     { holes: Array.from({length:9},  (_, i) => i),    stake: baseStake },
@@ -325,12 +348,11 @@ function calcNassauPayouts(scores, players, course, baseStake, presses, popFlags
 
   segs.forEach(seg => {
     if (teams && nassauPlayers.length === 4) {
-      // 2v2
       const t1ids = teams.team1 || [];
       const t2ids = teams.team2 || [];
       let units = 0;
       seg.holes.forEach(i => {
-        units += _nassauHoleResult(scores, popFlags || {}, nassauConfig, nassauPlayers, i);
+        units += _nassauHoleResult(scores, nassauPopFlagsForCalc, nassauConfig, nassauPlayers, i);
       });
       if (units > 0) {
         t1ids.forEach(id => { payouts[id] = (payouts[id] || 0) + seg.stake; });
@@ -340,12 +362,15 @@ function calcNassauPayouts(scores, players, course, baseStake, presses, popFlags
         t1ids.forEach(id => { payouts[id] = (payouts[id] || 0) - seg.stake; });
       }
     } else {
-      // 1v1
-      const u = calcNassauUnits(scores, nassauPlayers[0], nassauPlayers[1], course, seg.holes, popFlags || {});
-      if (u > 0) {
+      // 1v1 — use nassauPopFlagsForCalc directly
+      let units = 0;
+      seg.holes.forEach(i => {
+        units += _nassauHoleResult(scores, nassauPopFlagsForCalc, nassauConfig, nassauPlayers, i);
+      });
+      if (units > 0) {
         payouts[nassauPlayers[0].id] = (payouts[nassauPlayers[0].id] || 0) + seg.stake;
         payouts[nassauPlayers[1].id] = (payouts[nassauPlayers[1].id] || 0) - seg.stake;
-      } else if (u < 0) {
+      } else if (units < 0) {
         payouts[nassauPlayers[1].id] = (payouts[nassauPlayers[1].id] || 0) + seg.stake;
         payouts[nassauPlayers[0].id] = (payouts[nassauPlayers[0].id] || 0) - seg.stake;
       }
@@ -355,7 +380,7 @@ function calcNassauPayouts(scores, players, course, baseStake, presses, popFlags
   return payouts;
 }
 
-// ─── SKINS (raw strokes) ─────────────────────────────────────────────────────
+// ─── SKINS (pop-aware) ───────────────────────────────────────────────────────
 function calcSkins(scores, players, course, stakes, popFlags) {
   const skins = Object.fromEntries(players.map(p => [p.id, 0]));
   let carryover = 0;
@@ -395,13 +420,14 @@ function calcAllPayouts(scores, wolfData, players, course, formats, nassauPresse
       const pts = calcWolfStandings(scores, wolfData, players, course);
       pay = calcWolfPayouts(pts, players, f.stakes, scores, course);
     } else if (f.type === 'nassau') {
-      // Use nassauConfig from format if present, fall back to arg
+      // nassauConfig from format object takes precedence — it carries popHoles
       const cfg = f.nassauConfig || nassauConfig || null;
       pay = calcNassauPayouts(scores, players, course, f.stakes, nassauPresses, popFlags, cfg);
     } else if (f.type === 'passmoney') {
       const holder = ptmHolderId || players[0].id;
       pay = calcPTMPayouts(holder, players, f.stakes);
     } else if (f.type === 'skins') {
+      // Skins use global popFlags (not Nassau-specific pops)
       pay = calcSkins(scores, players, course, f.stakes, popFlags).payouts;
     } else if (f.type === 'stableford') {
       const playerPts = players.map(p => ({
