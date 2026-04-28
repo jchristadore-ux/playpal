@@ -205,6 +205,8 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
     try { existing = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) {}
     const updated = [...existing, course];
     localStorage.setItem('pp_custom_courses', JSON.stringify(updated));
+    // Write to RTDB — this triggers the App-level CourseSyncService.subscribe callback
+    // on ALL open sessions, updating customCourses state everywhere instantly.
     if (window.CourseSyncService) {
       window.CourseSyncService.save(updated, function(ok) {
         if (!ok) console.warn('[PlayPal] Course RTDB sync failed — saved locally only');
@@ -347,47 +349,30 @@ const StakesInput = ({ value, onChange }) => {
 };
 
 // ─── Nassau Match Config UI ───────────────────────────────────────────────────
-// Appears inside the Nassau format card after stake input.
-// roundPlayers = the players selected for this round (already filtered by step 1).
 const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
-  // config = { matchType: '1v1'|'2v2', playersInMatch: [], teams: null|{team1:[],team2:[]} }
-
   const matchType      = config.matchType || '1v1';
   const playersInMatch = config.playersInMatch || [];
   const teams          = config.teams || null;
-
-  // Enough players for 2v2?
   const can2v2 = roundPlayers.length >= 4;
 
-  // Switch match type
   const setMatchType = (t) => {
-    // Reset assignment when switching
     onChange({ matchType: t, playersInMatch: [], teams: null });
   };
 
-  // Toggle a player in/out of the match (1v1: max 2, 2v2: max 4)
   const togglePlayer = (id) => {
     const max = matchType === '2v2' ? 4 : 2;
     const next = playersInMatch.includes(id)
       ? playersInMatch.filter(x => x !== id)
       : playersInMatch.length < max ? [...playersInMatch, id] : playersInMatch;
-    // Rebuild teams when list changes in 2v2
     if (matchType === '2v2' && next.length === 4) {
-      onChange({
-        matchType,
-        playersInMatch: next,
-        teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] },
-      });
+      onChange({ matchType, playersInMatch: next, teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] } });
     } else {
       onChange({ matchType, playersInMatch: next, teams: null });
     }
   };
 
-  // Swap a player between teams in 2v2
   const moveToTeam = (id, teamKey) => {
     if (!teams) return;
-    const other = teamKey === 'team1' ? 'team2' : 'team1';
-    // Remove from wherever they are, add to target
     const newT1 = (teams.team1 || []).filter(x => x !== id);
     const newT2 = (teams.team2 || []).filter(x => x !== id);
     if (teamKey === 'team1') newT1.push(id);
@@ -396,7 +381,6 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
   };
 
   const playerById = (id) => roundPlayers.find(p => p.id === id);
-
   const isValid1v1 = matchType === '1v1' && playersInMatch.length === 2;
   const isValid2v2 = matchType === '2v2' && teams &&
     (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
@@ -405,12 +389,9 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
   return (
     <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
       <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:2}}>MATCH FORMAT</div>
-
-      {/* 1v1 / 2v2 toggle */}
       <div style={{display:'flex', gap:8}}>
         {['1v1', ...(can2v2 ? ['2v2'] : [])].map(t => (
-          <div key={t}
-            onClick={() => setMatchType(t)}
+          <div key={t} onClick={() => setMatchType(t)}
             style={{
               flex:1, textAlign:'center', padding:'8px 0', borderRadius:8, cursor:'pointer',
               fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15,
@@ -422,8 +403,6 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
           </div>
         ))}
       </div>
-
-      {/* Player selection */}
       <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
         SELECT {matchType === '2v2' ? '4' : '2'} PLAYERS
       </div>
@@ -433,8 +412,7 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
           const inTeam1  = teams?.team1?.includes(p.id);
           const inTeam2  = teams?.team2?.includes(p.id);
           return (
-            <div key={p.id}
-              onClick={() => togglePlayer(p.id)}
+            <div key={p.id} onClick={() => togglePlayer(p.id)}
               style={{
                 display:'flex', alignItems:'center', gap:10,
                 borderRadius:10, padding:'10px 12px', cursor:'pointer',
@@ -452,12 +430,10 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
               <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color: selected ? '#fff' : '#9BB4D4', flex:1}}>
                 {p.name}
               </span>
-              {/* 2v2 team assignment buttons — only when player is selected */}
               {matchType === '2v2' && selected && (
                 <div style={{display:'flex', gap:4}} onClick={e => e.stopPropagation()}>
                   {['team1', 'team2'].map((tk, ti) => (
-                    <div key={tk}
-                      onClick={() => moveToTeam(p.id, tk)}
+                    <div key={tk} onClick={() => moveToTeam(p.id, tk)}
                       style={{
                         padding:'3px 8px', borderRadius:6, cursor:'pointer',
                         fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
@@ -474,8 +450,6 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
           );
         })}
       </div>
-
-      {/* 2v2 team summary */}
       {matchType === '2v2' && teams && (teams.team1||[]).length > 0 && (
         <div style={{display:'flex', gap:8}}>
           {['team1','team2'].map((tk, ti) => {
@@ -497,8 +471,6 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
           })}
         </div>
       )}
-
-      {/* Validation hint */}
       {!isValid && (
         <div style={{fontFamily:'DM Sans', fontSize:11, color:'#E5534B'}}>
           {matchType === '1v1'
@@ -526,8 +498,7 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
 
   return (
     <div style={{marginBottom:4}}>
-      <div
-        onClick={() => setOpen(v => !v)}
+      <div onClick={() => setOpen(v => !v)}
         style={{
           display:'flex', alignItems:'center', justifyContent:'space-between',
           padding:'9px 2px', cursor:'pointer', userSelect:'none',
@@ -602,7 +573,10 @@ const _stateNames = {
 };
 
 // ─── Setup Screen ─────────────────────────────────────────────────────────────
-const SetupScreen = ({ allPlayers, onStart }) => {
+// customCourses is now passed as a prop from App, which owns the single
+// CourseSyncService subscription. SetupScreen no longer subscribes or
+// unsubscribes independently.
+const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [step, setStep]                         = React.useState(1);
   const [selectedPlayers, setSelectedPlayers]   = React.useState(allPlayers.slice(0,4).map(p=>p.id));
   const [course, setCourse]                     = React.useState(null);
@@ -611,27 +585,10 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const [scanPrefill, setScanPrefill]           = React.useState(null);
   const [formats, setFormats]                   = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
   const [stakes,  setStakes]                    = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
-  // nassauMatchConfig: { matchType:'1v1'|'2v2', playersInMatch:[], teams:null|{team1:[],team2:[]} }
   const [nassauMatchConfig, setNassauMatchConfig] = React.useState({ matchType:'1v1', playersInMatch:[], teams:null });
 
-  const [customCourses, setCustomCourses] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
-  });
-
-  React.useEffect(() => {
-    if (!window.CourseSyncService) return;
-    window.CourseSyncService.subscribe(function(remote) {
-      if (!remote || remote.length === 0) return;
-      setCustomCourses(prev => {
-        const remoteIds = new Set(remote.map(c => c.id));
-        const localOnly = prev.filter(c => !remoteIds.has(c.id));
-        const merged = [...remote, ...localOnly];
-        localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
-        return merged;
-      });
-    });
-    return () => { window.CourseSyncService.unsubscribe(); };
-  }, []);
+  // customCourses comes from props — no local subscription needed.
+  const localCourses = customCourses || [];
 
   // Reset nassauMatchConfig when selected players change (stale IDs)
   React.useEffect(() => {
@@ -650,15 +607,14 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   };
   const toggleFormat = (f) => setFormats(prev => ({...prev, [f]:!prev[f]}));
 
-  const allCourses    = [...customCourses, ...COURSES];
+  const allCourses    = [...localCourses, ...COURSES];
   const query         = courseSearch.toLowerCase();
   const filtered      = allCourses.filter(c =>
     !query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query)
   );
 
-  // Validation for Nassau: must have a valid match config
   const nassauValid = (() => {
-    if (!formats.nassau) return true; // not enabled, no validation needed
+    if (!formats.nassau) return true;
     const { matchType, playersInMatch, teams } = nassauMatchConfig;
     if (matchType === '1v1') return playersInMatch.length === 2;
     if (matchType === '2v2') return (
@@ -671,14 +627,15 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const activeFormats = Object.entries(formats).filter(([,v])=>v).map(([k])=>({
     type: k,
     stakes: stakes[k],
-    // Attach nassauConfig to the nassau format entry
     ...(k === 'nassau' ? { nassauConfig: nassauMatchConfig } : {}),
   }));
 
   const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid;
 
   const handleSaveCourse = (newCourse, fullUpdatedArray) => {
-    setCustomCourses(fullUpdatedArray);
+    // RTDB write already done in CourseBuilder.handleSave.
+    // App's subscription callback will update customCourses prop automatically.
+    // Just update local course selection state.
     setCourse(newCourse);
     setAddMode('list');
     setScanPrefill(null);
@@ -716,9 +673,7 @@ const SetupScreen = ({ allPlayers, onStart }) => {
   const stateGroups     = buildStateGroups(builtinFiltered);
   const isSearching     = !!courseSearch;
 
-  // Players in this round (for Nassau config)
   const roundPlayersForNassau = allPlayers.filter(p => selectedPlayers.includes(p.id));
-
   const steps = ['Players','Course','Formats'];
 
   return (
@@ -850,8 +805,6 @@ const SetupScreen = ({ allPlayers, onStart }) => {
                           STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet (3 bets total)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
                         </div>
                         <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
-
-                        {/* Nassau match config — appears below stake */}
                         {key === 'nassau' && (
                           <NassauMatchConfig
                             roundPlayers={roundPlayersForNassau}
