@@ -1,4 +1,4 @@
-// Trackers.jsx v4 — RoundTracker shows gross strokes; Wolf leader only when sole leader
+// Trackers.jsx v5 — NassauTracker uses nassauConfig for pop-aware isolated scoring
 
 // ─── ROUND TRACKER ───────────────────────────────────────────────────────────
 const RoundTracker = ({ players, scores, course, holeIdx }) => {
@@ -18,11 +18,9 @@ const RoundTracker = ({ players, scores, course, holeIdx }) => {
                 <div style={{width:7, height:7, borderRadius:'50%', background:p.color}}/>
                 <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
               </div>
-              {/* Big number = gross strokes */}
               <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:26, color:'#fff', lineHeight:1}}>
                 {holesPlayed === 0 ? '—' : gross}
               </div>
-              {/* Sub-line = score to par + holes played */}
               <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:vsColor, marginTop:2}}>
                 {holesPlayed === 0 ? '—' : (vs === 0 ? 'E' : vs > 0 ? `+${vs}` : String(vs))}
                 {holesPlayed > 0 && <span style={{color:'#4A6890', marginLeft:4}}>{holesPlayed}H</span>}
@@ -51,7 +49,6 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
   }, [wd.confirmed, JSON.stringify(scores), holeIdx]);
 
   const maxPts = Math.max(...players.map(p => standings[p.id]||0));
-  // Only declare a sole leader — if tied at top, no "LEADS" banner
   const leaders = players.filter(p => (standings[p.id]||0) === maxPts && maxPts > 0);
   const soleLeader = leaders.length === 1 ? leaders[0] : null;
 
@@ -62,7 +59,6 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
         <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake} ROUND POT</span>
       </div>
 
-      {/* Standings */}
       <div style={trS.row}>
         {ranked.map(p => {
           const pts      = standings[p.id] || 0;
@@ -87,14 +83,12 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
         })}
       </div>
 
-      {/* Pot summary — only when sole leader */}
       {soleLeader && (
         <div style={{fontSize:11, color:'#C9A84C', fontFamily:'Barlow Condensed', fontWeight:700, background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:7, padding:'5px 10px'}}>
           {soleLeader.name.split(' ')[0]} LEADS — wins ${stake} from each player (${stake*(players.length-1)} total) if held
         </div>
       )}
 
-      {/* This hole action */}
       <div style={trS.wolfBox}>
         <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:13, color:'#E5534B', marginBottom:8}}>
           🐺 {wolfPlayer.name.toUpperCase()} IS WOLF — HOLE {holeIdx+1}
@@ -266,22 +260,59 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
 };
 
 // ─── NASSAU TRACKER ──────────────────────────────────────────────────────────
-const NassauTracker = ({ players, scores, popFlags, course, holeIdx, presses, onPress, format }) => {
+// nassauConfig is passed from ScoreEntry so segment status uses nassauConfig.popHoles
+// for isolated Nassau scoring. popFlags here IS nassauPopFlags (pre-configured Nassau pops).
+const NassauTracker = ({ players, scores, popFlags, course, holeIdx, presses, onPress, format, nassauConfig }) => {
   const { nassauSegmentStatus } = window;
   const stake = format?.stakes || 5;
-  const front = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),   holeIdx, popFlags);
-  const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9), holeIdx, popFlags);
-  const full  = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),  holeIdx, popFlags);
+
+  // nassauSegmentStatus will use nassauConfig.popHoles if present
+  const front = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),   holeIdx, popFlags, nassauConfig);
+  const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9), holeIdx, popFlags, nassauConfig);
+  const full  = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),  holeIdx, popFlags, nassauConfig);
 
   const canPressF9 = holeIdx < 9  && front !== 'EVEN';
   const canPressB9 = holeIdx >= 9 && back  !== 'EVEN';
   const statusColor = s => s==='EVEN' ? '#7A98BC' : '#C9A84C';
 
+  // Show which Nassau players have pops on this hole
+  const nassauPlayers = (nassauConfig?.playersInMatch || [])
+    .map(id => players.find(p => p.id === id))
+    .filter(Boolean);
+  const popThisHole = nassauPlayers.filter(p => !!(nassauConfig?.popHoles?.[p.id]?.[holeIdx]));
+
   return (
     <div style={trS.section}>
-      <div style={trS.head}><span>💰</span><Label>NASSAU</Label>
+      <div style={trS.head}>
+        <span>💰</span><Label>NASSAU</Label>
         <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake}/BET</span>
       </div>
+
+      {/* Nassau match players */}
+      {nassauPlayers.length >= 2 && (
+        <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:2}}>
+          <Label style={{fontSize:9, color:'#4A6890'}}>MATCH</Label>
+          {nassauPlayers.map((p, i) => (
+            <React.Fragment key={p.id}>
+              {i > 0 && <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#4A6890'}}>vs</span>}
+              <div style={{display:'flex', alignItems:'center', gap:4}}>
+                <div style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
+                <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p.name.split(' ')[0]}</span>
+              </div>
+            </React.Fragment>
+          ))}
+          {popThisHole.length > 0 && (
+            <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:4,
+              background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)',
+              borderRadius:5, padding:'1px 6px'}}>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#C9A84C', letterSpacing:0.5}}>
+                💰 {popThisHole.map(p => p.name.split(' ')[0]).join(', ')} +1
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{display:'flex', gap:8}}>
         {[['FRONT 9',front,canPressF9,'front'],['BACK 9',back,canPressB9,'back'],['18 HOLES',full,false,'full']].map(([lbl,status,canPress,seg])=>(
           <div key={lbl} style={{flex:1, background:'#162950', borderRadius:10, padding:'10px 12px', border:'1px solid #1E3A6E'}}>
