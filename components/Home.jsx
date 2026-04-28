@@ -1,6 +1,6 @@
 // Home.jsx — Dashboard / Landing Screen
 
-const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, onViewRound }) => {
+const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, onViewRound, customCourses, onCourseSaved }) => {
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
   const [localPlayers,setLocalPlayers]  = React.useState(players);
@@ -9,9 +9,12 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const [joining,     setJoining]       = React.useState(false);
   const [showCourses, setShowCourses]   = React.useState(false);
   const [addCourseOpen, setAddCourseOpen] = React.useState(false);
-  const [customCourses, setCustomCourses] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
-  });
+
+  // customCourses is now owned by App and passed as a prop.
+  // HomeScreen no longer subscribes to CourseSyncService independently —
+  // that was causing the competing-unsubscribe race condition where this
+  // component's cleanup was killing SetupScreen's active listener on /courses.
+  const courses = customCourses || [];
 
   const [showJoin, setShowJoin] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -29,21 +32,6 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     if (!params.has('join') && !params.has('code')) {
       setShowJoin(false);
     }
-  }, []);
-
-  React.useEffect(() => {
-    if (!window.CourseSyncService) return;
-    window.CourseSyncService.subscribe(function(remote) {
-      if (!remote || remote.length === 0) return;
-      setCustomCourses(prev => {
-        const remoteIds = new Set(remote.map(c => c.id));
-        const localOnly = prev.filter(c => !remoteIds.has(c.id));
-        const merged = [...remote, ...localOnly];
-        localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
-        return merged;
-      });
-    });
-    return () => { window.CourseSyncService.unsubscribe(); };
   }, []);
 
   const handleJoin = () => {
@@ -109,7 +97,12 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   };
 
   const handleSaveCourse = (newCourse, allCourses) => {
-    setCustomCourses(allCourses); setAddCourseOpen(false); setShowCourses(true);
+    // RTDB write already done in CourseBuilder.handleSave.
+    // App's subscription will update customCourses state automatically.
+    // Close the modal.
+    setAddCourseOpen(false);
+    setShowCourses(true);
+    if (onCourseSaved) onCourseSaved(newCourse, allCourses);
   };
 
   const CourseBuilderComponent = window.CourseBuilder;
@@ -249,12 +242,12 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
           <Btn onClick={()=>setAddCourseOpen(true)} variant="gold" style={{width:'100%'}}>+ ADD COURSE</Btn>
           <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:360, overflowY:'auto'}}>
-            {customCourses.length === 0 && (
+            {courses.length === 0 && (
               <div style={{background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:10, padding:'14px 12px', color:'#7A98BC', fontSize:13}}>
                 No custom courses saved yet.
               </div>
             )}
-            {customCourses.map((c) => (
+            {courses.map((c) => (
               <div key={c.id} style={{background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:10, padding:'12px 14px'}}>
                 <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{c.name}</div>
                 <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
