@@ -95,34 +95,9 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Pop pill row — Nassau players show pre-configured read-only pop; others show toggleable pop */}
-      <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px', gap:6}}>
-        {isNassauPlayer ? (
-          // Nassau player: show read-only pop indicator for this hole
-          nassauPopActive ? (
-            <div style={{
-              borderRadius:999, padding:'5px 10px', minHeight:28,
-              border:'1px solid rgba(201,168,76,0.55)',
-              background:'rgba(201,168,76,0.16)',
-              color:'#C9A84C',
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
-              display:'flex', alignItems:'center', gap:4,
-            }}>
-              <span>💰</span> POP ON
-            </div>
-          ) : (
-            <div style={{
-              borderRadius:999, padding:'5px 10px', minHeight:28,
-              border:'1px solid #1E3A6E',
-              background:'#0A1628',
-              color:'#4A6890',
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
-            }}>
-              NO POP
-            </div>
-          )
-        ) : (
-          // Non-Nassau player: normal toggleable pop for other formats (skins, stableford)
+      {/* Pop pill — only for non-Nassau players (Nassau pops shown via format stat pills) */}
+      {!isNassauPlayer && (
+        <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
           <button
             onClick={()=>onPopToggle(p.id)}
             style={{
@@ -135,8 +110,8 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             }}>
             {gettingPop ? 'POP ON' : 'POP'}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Putt tracker */}
       <div style={{display:'flex', alignItems:'center', padding:'8px 14px 12px',
