@@ -547,7 +547,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   };
 
   const prevHole = () => holeIdx > 0  && setHoleIdx(holeIdx - 1);
-  const nextHole = () => holeIdx < 17 && setHoleIdx(holeIdx + 1);
 
   const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
@@ -559,6 +558,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
   // Combined: all scores entered AND both guards satisfied
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
+
+  // nextHole respects canAdvance — header arrow and bottom button both route through here
+  const nextHole = () => canAdvance && holeIdx < 17 && setHoleIdx(holeIdx + 1);
 
   const handleFinish = () => {
     // Merge nassauPopFlags into popFlags for Nassau scoring at summary/payout time
@@ -601,9 +603,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
             </div>
           </div>
 
-          <button onClick={nextHole} disabled={holeIdx===17}
-            style={{width:36, height:36, borderRadius:8, border:'none', background:holeIdx===17?'transparent':'#0F2040',
-              color:holeIdx===17?'#1E3A6E':'#9BB4D4', fontSize:20, cursor:holeIdx===17?'default':'pointer',
+          <button onClick={nextHole} disabled={holeIdx===17 || (currentHoleScored && !canAdvance)}
+            style={{width:36, height:36, borderRadius:8, border:'none',
+              background: holeIdx===17 ? 'transparent' : '#0F2040',
+              color: holeIdx===17 ? '#1E3A6E' : currentHoleScored && !canAdvance ? '#E5534B55' : '#9BB4D4',
+              fontSize:20,
+              cursor: holeIdx===17 || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ›
