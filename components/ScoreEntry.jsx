@@ -376,7 +376,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     } catch(e) { return {}; }
   });
 
-  const [nassauPresses, setNassauPresses] = React.useState([]);
+
   const [holeIdx,  setHoleIdx]  = React.useState(0);
   const [keypad,   setKeypad]   = React.useState(null);
   const [wolfPicker, setWolfPicker] = React.useState(false);
@@ -526,10 +526,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     });
   };
 
-  const handlePress = (segment, startHole, stake) => {
-    setNassauPresses(prev => [...prev, { segment, startHole, stake }]);
-  };
-
   const prevHole = () => holeIdx > 0  && setHoleIdx(holeIdx - 1);
   const nextHole = () => holeIdx < 17 && setHoleIdx(holeIdx + 1);
 
@@ -540,7 +536,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     // Merge nassauPopFlags into popFlags for Nassau scoring at summary/payout time
     // Nassau players' nassauPopFlags take precedence for Nassau calculations
     // The nassauConfig already carries popHoles — calcAllPayouts uses it directly
-    onSaveRound(scores, wolfData, putts, nassauPresses, {}, popFlags);
+    onSaveRound(scores, wolfData, putts, [], {}, popFlags);
   };
 
   const parColor = hole.par === 3 ? '#7B9FE0' : hole.par === 5 ? '#C9A84C' : '#9BB4D4';
@@ -674,8 +670,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
             {hasNassau && (
               <NassauTracker
                 players={players} scores={scores} popFlags={nassauPopFlags} course={course}
-                holeIdx={holeIdx} presses={nassauPresses}
-                onPress={handlePress} format={nassauFmt}
+                holeIdx={holeIdx} format={nassauFmt}
                 nassauConfig={nassauCfg}
               />
             )}
