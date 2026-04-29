@@ -461,20 +461,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
         stats.push({ icon:'🎯', label:'SKINS', value: String(won), color: won > 0 ? '#C9A84C' : '#7A98BC' });
       }
 
-      // Nassau tracker pills — only for the two Nassau match players
+      // Nassau tracker pills — F9 + overall, only for the two Nassau match players
       if (hasNassau && isNassauPlayer && nassauLiveStatus) {
-        const { front, back, overall } = nassauLiveStatus;
-        // Front 9 pill
-        const frontColor = front === 'EVEN' ? '#7A98BC' : '#C9A84C';
-        stats.push({ icon:'💰', label:'F9', value: front, color: frontColor });
-        // Back 9 pill (only if on back 9 or complete)
-        if (holeIdx >= 9) {
-          const backColor = back === 'EVEN' ? '#7A98BC' : '#C9A84C';
-          stats.push({ icon:'', label:'B9', value: back, color: backColor });
-        }
-        // Overall
+        const { front, overall } = nassauLiveStatus;
+        const frontColor   = front   === 'EVEN' ? '#7A98BC' : '#C9A84C';
         const overallColor = overall === 'EVEN' ? '#7A98BC' : '#C9A84C';
-        stats.push({ icon:'', label:'18', value: overall, color: overallColor });
+        stats.push({ icon:'💰', label:'F9',  value: front,   color: frontColor });
+        stats.push({ icon:'',   label:'18',  value: overall, color: overallColor });
       }
 
       result[p.id] = stats;
