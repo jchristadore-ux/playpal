@@ -1,11 +1,11 @@
-// Summary.jsx v3 — Scorecard, per-format payouts, Venmo deep-links, GHIN flow
+// Summary.jsx v4 — readOnly prop for viewing saved rounds
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, onNewRound }) => {
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, onNewRound, readOnly }) => {
   const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore } = window;
   const { players, course, formats, syncCode } = round;
   const [toast, setToast]       = React.useState(null);
   const [tab, setTab]           = React.useState('scorecard');
-  const [ghinStep, setGhinStep] = React.useState('idle'); // idle | logging | posted
+  const [ghinStep, setGhinStep] = React.useState('idle');
   const [emailSent, setEmailSent] = React.useState(false);
   const [venmoSent, setVenmoSent] = React.useState({});
 
@@ -33,7 +33,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     ])),
   []);
 
-  // Leaderboard sorted by gross score
   const leaderboard = [...players].map(p=>({
     ...p,
     gross:   totalScore(scores, p.id),
@@ -42,7 +41,6 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     stPts:   stablefordPts[p.id]||0,
   })).sort((a,b)=>a.vsPar-b.vsPar);
 
-  // Net debts: who pays whom
   const debts = [];
   players.forEach(debtor => {
     if ((payouts[debtor.id]||0) >= 0) return;
@@ -133,15 +131,23 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     showToast(`Scorecard opened in Mail for ${players.length} players`);
   };
 
-  const tabs = [['scorecard','📊 SCORES'],['payouts','💰 PAYOUTS'],['actions','📤 SEND']];
+  // In readOnly mode, only show scorecard and payouts tabs
+  const tabs = readOnly
+    ? [['scorecard','📊 SCORES'],['payouts','💰 PAYOUTS']]
+    : [['scorecard','📊 SCORES'],['payouts','💰 PAYOUTS'],['actions','📤 SEND']];
 
   return (
     <div style={sumS.root}>
       {/* Hero / Leaderboard */}
       <div style={sumS.hero}>
-        <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:3, color:'#3DCB6C'}}>ROUND COMPLETE</div>
+        {readOnly
+          ? <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:3, color:'#7A98BC'}}>COMPLETED ROUND</div>
+          : <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:3, color:'#3DCB6C'}}>ROUND COMPLETE</div>
+        }
         <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:26, color:'#fff', marginTop:2}}>{course.name}</div>
-        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC'}}>{new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC'}}>
+          {round.date || new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
+        </div>
 
         <div style={{display:'flex', gap:8, marginTop:14, flexWrap:'wrap', justifyContent:'center'}}>
           {leaderboard.map((p,i)=>(
@@ -158,6 +164,14 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
             </div>
           ))}
         </div>
+
+        {readOnly && syncCode && (
+          <div style={{marginTop:8, background:'rgba(122,152,188,0.08)', border:'1px solid rgba(122,152,188,0.2)',
+            borderRadius:6, padding:'4px 12px', fontFamily:'Barlow Condensed', fontWeight:700,
+            fontSize:10, letterSpacing:1.5, color:'#4A6890'}}>
+            READ-ONLY · CODE {syncCode}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -203,7 +217,13 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                       {course.holes.map((h,i)=>{
                         const s=scores[p.id]?.[i]; const d=s?s-h.par:null;
                         const c=d===null?'#1E3A6E':d<=-2?'#FFD700':d===-1?'#3DCB6C':d===0?'#9BB4D4':d===1?'#E5534B':'#C0392B';
-                        return <td key={i} style={{...sumS.td, color:c, fontFamily:'Barlow Condensed', fontWeight:700, fontSize:14}}>{s||'·'}</td>;
+                        const hasPop = !!(popFlags?.[p.id]?.[i]);
+                        return (
+                          <td key={i} style={{...sumS.td, color:c, fontFamily:'Barlow Condensed', fontWeight:700, fontSize:14}}>
+                            {s||'·'}
+                            {hasPop && <span style={{display:'inline-block',marginLeft:1,fontSize:7,color:'#C9A84C',verticalAlign:'super'}}>●</span>}
+                          </td>
+                        );
                       })}
                       <td style={{...sumS.td, fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15, color:'#fff'}}>{totalScore(scores,p.id)||'—'}</td>
                       <td style={{...sumS.td, fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15, color:vs<0?'#3DCB6C':vs===0?'#7A98BC':'#E5534B'}}>{vs===0?'E':vs>0?`+${vs}`:vs}</td>
@@ -296,11 +316,15 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 ))
               }
             </div>
+
+            {!readOnly && onNewRound && (
+              <Btn onClick={onNewRound} variant="ghost" style={{width:'100%', marginTop:4, fontSize:15}}>⛳ START NEW ROUND</Btn>
+            )}
           </div>
         )}
 
-        {/* ── SEND / ACTIONS ────────────────────────────────────────── */}
-        {tab==='actions' && (
+        {/* ── SEND / ACTIONS — hidden in readOnly mode ──────────────── */}
+        {tab==='actions' && !readOnly && (
           <div style={{display:'flex', flexDirection:'column', gap:10}}>
             <div style={{background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'16px'}}>
               <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', marginBottom:4}}>✉️ EMAIL SCORECARD</div>
