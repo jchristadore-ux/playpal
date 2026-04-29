@@ -260,22 +260,16 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
 };
 
 // ─── NASSAU TRACKER ──────────────────────────────────────────────────────────
-// nassauConfig is passed from ScoreEntry so segment status uses nassauConfig.popHoles
-// for isolated Nassau scoring. popFlags here IS nassauPopFlags (pre-configured Nassau pops).
-const NassauTracker = ({ players, scores, popFlags, course, holeIdx, presses, onPress, format, nassauConfig }) => {
+const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nassauConfig }) => {
   const { nassauSegmentStatus } = window;
   const stake = format?.stakes || 5;
 
-  // nassauSegmentStatus will use nassauConfig.popHoles if present
   const front = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),   holeIdx, popFlags, nassauConfig);
   const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9), holeIdx, popFlags, nassauConfig);
   const full  = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),  holeIdx, popFlags, nassauConfig);
 
-  const canPressF9 = holeIdx < 9  && front !== 'EVEN';
-  const canPressB9 = holeIdx >= 9 && back  !== 'EVEN';
-  const statusColor = s => s==='EVEN' ? '#7A98BC' : '#C9A84C';
+  const statusColor = s => s === 'EVEN' ? '#7A98BC' : '#C9A84C';
 
-  // Show which Nassau players have pops on this hole
   const nassauPlayers = (nassauConfig?.playersInMatch || [])
     .map(id => players.find(p => p.id === id))
     .filter(Boolean);
@@ -285,12 +279,12 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, presses, on
     <div style={trS.section}>
       <div style={trS.head}>
         <span>💰</span><Label>NASSAU</Label>
-        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake}/BET</span>
+        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake}·${stake}·${stake*2}</span>
       </div>
 
-      {/* Nassau match players */}
+      {/* Match players + pop indicator */}
       {nassauPlayers.length >= 2 && (
-        <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:2}}>
+        <div style={{display:'flex', alignItems:'center', gap:6}}>
           <Label style={{fontSize:9, color:'#4A6890'}}>MATCH</Label>
           {nassauPlayers.map((p, i) => (
             <React.Fragment key={p.id}>
@@ -313,29 +307,18 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, presses, on
         </div>
       )}
 
+      {/* Three fixed bets — no press buttons */}
       <div style={{display:'flex', gap:8}}>
-        {[['FRONT 9',front,canPressF9,'front'],['BACK 9',back,canPressB9,'back'],['18 HOLES',full,false,'full']].map(([lbl,status,canPress,seg])=>(
+        {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake * 2]].map(([lbl, status, betStake]) => (
           <div key={lbl} style={{flex:1, background:'#162950', borderRadius:10, padding:'10px 12px', border:'1px solid #1E3A6E'}}>
-            <Label style={{fontSize:9, color:'#4A6890', display:'block', marginBottom:4}}>{lbl}</Label>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
+              <Label style={{fontSize:9, color:'#4A6890'}}>{lbl}</Label>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#4A6890'}}>${betStake}</span>
+            </div>
             <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15, color:statusColor(status)}}>{status}</div>
-            {canPress && (
-              <button onClick={()=>onPress(seg, holeIdx, stake)}
-                style={{marginTop:6, width:'100%', padding:'4px 0', borderRadius:6, border:'1px solid rgba(201,168,76,0.4)', background:'rgba(201,168,76,0.08)', color:'#C9A84C', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, cursor:'pointer', letterSpacing:1}}>
-                PRESS
-              </button>
-            )}
           </div>
         ))}
       </div>
-      {presses.length>0 && (
-        <div style={{display:'flex', flexWrap:'wrap', gap:5}}>
-          {presses.map((pr,i)=>(
-            <span key={i} style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#C9A84C', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', padding:'2px 8px', borderRadius:5}}>
-              PRESS {pr.segment.toUpperCase()} H{pr.startHole+1}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
