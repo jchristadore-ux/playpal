@@ -37,6 +37,26 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         )}
       </div>
 
+      {/* Wolf pick required warning */}
+      {isWolf && hasWolf && !wolfData?.[holeIdx]?.confirmed && (
+        <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
+          background:'rgba(229,83,75,0.08)', borderTop:'1px solid rgba(229,83,75,0.2)'}}>
+          <span style={{fontSize:11}}>⚠️</span>
+          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
+            color:'#E5534B', letterSpacing:0.8}}>PICK PARTNER OR GO LONE WOLF TO ADVANCE</span>
+        </div>
+      )}
+
+      {/* PTM putt required warning */}
+      {isPTMHolder && !(putts[p.id]?.[holeIdx] > 0) && (
+        <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
+          background:'rgba(201,168,76,0.08)', borderTop:'1px solid rgba(201,168,76,0.2)'}}>
+          <span style={{fontSize:11}}>⚠️</span>
+          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
+            color:'#C9A84C', letterSpacing:0.8}}>ENTER PUTTS TO ADVANCE</span>
+        </div>
+      )}
+
       {/* Format stat pills */}
       {formatStats && formatStats.length > 0 && (
         <div style={{display:'flex', gap:6, padding:'0 12px 10px', flexWrap:'wrap'}}>
@@ -532,6 +552,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
 
+  // ── Guards for next-hole advancement ──────────────────────────────────────
+  // PTM: money holder must have putts entered before advancing
+  const ptmPuttRequired = hasPTM && !!ptmState.holderId && !(putts[ptmState.holderId]?.[holeIdx] > 0);
+  // Wolf: wolf must have picked partner or gone lone before advancing
+  const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
+  // Combined: all scores entered AND both guards satisfied
+  const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
+
   const handleFinish = () => {
     // Merge nassauPopFlags into popFlags for Nassau scoring at summary/payout time
     // Nassau players' nassauPopFlags take precedence for Nassau calculations
@@ -689,8 +717,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
         </div>
       </div>
 
-      {/* Next hole button — fixed at bottom when not on last hole */}
-      {currentHoleScored && holeIdx < 17 && (
+      {/* Next hole button — fixed at bottom, only shows when canAdvance and not on last hole */}
+      {canAdvance && holeIdx < 17 && (
         <div style={{flexShrink:0, padding:'10px 12px', background:'#050E1C', borderTop:'1px solid #1E3A6E'}}>
           <Btn onClick={nextHole} variant="green" style={{width:'100%', padding:'13px', fontSize:16}}>
             NEXT HOLE {holeIdx + 2} →
