@@ -947,7 +947,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                     {on && (
                       <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
                         <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:8}}>
-                          STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet (3 bets total)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
+                          STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet — Front 9 + Back 9 + Overall (2×)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
                         </div>
                         <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
                         {key === 'nassau' && (
