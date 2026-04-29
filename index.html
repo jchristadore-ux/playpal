@@ -96,7 +96,6 @@ var PLAYPAL_FIREBASE_CONFIG = {
 
 /* ============================================================
    FIREBASE INIT
-   Queues callbacks while anonymous auth resolves. No call dropped.
    ============================================================ */
 var _fbApp       = null;
 var _fbDb        = null;
@@ -134,23 +133,10 @@ function _fbInit(cb) {
 }
 
 /* ============================================================
-   PLAYER SYNC SERVICE  (Realtime Database → /players)
-
-   FIX 1: subscribe() stores its callback reference and calls
-           .off(ref, cb) before re-attaching — prevents duplicate
-           listeners on StrictMode double-invoke or remount.
-
-   FIX 2: unsubscribe() detaches only this service's specific
-           callback, not all listeners on the ref. This prevents
-           one component's cleanup from killing another component's
-           active listener.
-
-   FIX 3: load() is kept for external callers but is NO LONGER
-           called alongside subscribe() in App — that race condition
-           was the primary cross-device sync bug.
+   PLAYER SYNC SERVICE
    ============================================================ */
 var PlayerSyncService = (function() {
-  var _cb = null; // stored callback reference for safe detach
+  var _cb = null;
 
   function save(players, cb) {
     _fbInit(function(ok) {
@@ -179,12 +165,9 @@ var PlayerSyncService = (function() {
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
-      // Detach previous listener before re-attaching.
-      // Prevents duplicate listeners from StrictMode double-invoke.
       if (_cb) { _fbDb.ref('players').off('value', _cb); }
       _cb = function(snap) {
         var val = snap.val();
-        // Always call cb — empty array is a valid state (all players deleted).
         cb(val ? Object.values(val) : []);
       };
       _fbDb.ref('players').on('value', _cb);
@@ -192,7 +175,6 @@ var PlayerSyncService = (function() {
   }
 
   function unsubscribe() {
-    // Detach only this service's callback, not all value listeners on the ref.
     if (_fbDb && _cb) { _fbDb.ref('players').off('value', _cb); }
     _cb = null;
   }
@@ -201,24 +183,10 @@ var PlayerSyncService = (function() {
 })();
 
 /* ============================================================
-   CUSTOM COURSE SYNC SERVICE  (Realtime Database → /courses)
-
-   Same fixes as PlayerSyncService above.
-
-   FIX 4: App now owns the course subscription (lifted from
-           SetupScreen and HomeScreen). Both components previously
-           subscribed and called unsubscribe() on cleanup —
-           .off('value') without a callback reference killed ALL
-           listeners on /courses globally. When Home unmounted
-           (user navigated to Setup), its cleanup was silently
-           killing Setup's live listener. Courses then stopped
-           updating until the component remounted.
-
-           Solution: store the callback reference, use named
-           .off(ref, cb), and keep the single subscription in App.
+   CUSTOM COURSE SYNC SERVICE
    ============================================================ */
 var CourseSyncService = (function() {
-  var _cb = null; // stored callback reference for safe detach
+  var _cb = null;
 
   function save(courses, cb) {
     _fbInit(function(ok) {
@@ -246,11 +214,9 @@ var CourseSyncService = (function() {
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
-      // Detach previous listener before re-attaching.
       if (_cb) { _fbDb.ref('courses').off('value', _cb); }
       _cb = function(snap) {
         var val = snap.val();
-        // Always call cb — empty array is valid (all courses deleted).
         cb(val ? Object.values(val) : []);
       };
       _fbDb.ref('courses').on('value', _cb);
@@ -258,7 +224,6 @@ var CourseSyncService = (function() {
   }
 
   function unsubscribe() {
-    // Detach only this service's callback.
     if (_fbDb && _cb) { _fbDb.ref('courses').off('value', _cb); }
     _cb = null;
   }
@@ -267,7 +232,7 @@ var CourseSyncService = (function() {
 })();
 
 /* ============================================================
-   ROUND SYNC SERVICE  (Firestore → /playpal_rounds/{syncCode})
+   ROUND SYNC SERVICE
    ============================================================ */
 var RoundSyncService = (function() {
   var COLLECTION = 'playpal_rounds';
@@ -409,18 +374,6 @@ const App = () => {
     return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
   });
 
-  // FIX: Course subscription lifted to App level.
-  // Previously, both HomeScreen and SetupScreen each subscribed to
-  // CourseSyncService independently. Both also called unsubscribe() on
-  // cleanup. Because unsubscribe() was calling .off('value') without a
-  // callback reference, it removed ALL value listeners on /courses globally.
-  // When the user navigated from Home → Setup, Home's cleanup killed Setup's
-  // newly-attached listener. Courses then stopped receiving real-time updates
-  // until the component fully remounted.
-  //
-  // Now: one subscription lives in App for the entire session. customCourses
-  // state is passed down as a prop to HomeScreen and SetupScreen. Neither
-  // component subscribes or unsubscribes independently.
   const [customCourses, setCustomCourses] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
   });
@@ -439,23 +392,29 @@ const App = () => {
     return null;
   });
 
-  const [finalScores,   setFinalScores]   = React.useState(null);
-  const [finalWolf,     setFinalWolf]     = React.useState(null);
-  const [finalPutts,    setFinalPutts]    = React.useState(null);
-  const [finalPresses,  setFinalPresses]  = React.useState([]);
-  const [finalChips,    setFinalChips]    = React.useState({});
-  const [finalPopFlags, setFinalPopFlags] = React.useState(null);
-  const [viewSyncCode,  setViewSyncCode]  = React.useState(null);
-  const [tweaks,        setTweaks]        = React.useState(TWEAK_DEFAULTS);
-  const [tweaksOpen,    setTweaksOpen]    = React.useState(false);
+  const [finalScores,    setFinalScores]    = React.useState(null);
+  const [finalWolf,      setFinalWolf]      = React.useState(null);
+  const [finalPutts,     setFinalPutts]     = React.useState(null);
+  const [finalPresses,   setFinalPresses]   = React.useState([]);
+  const [finalChips,     setFinalChips]     = React.useState({});
+  const [finalPopFlags,  setFinalPopFlags]  = React.useState(null);
 
+  // Viewed round — loaded from local snapshot for read-only replay
+  const [viewedRoundData, setViewedRoundData] = React.useState(null);
+  const [viewSyncCode,    setViewSyncCode]    = React.useState(null);
+
+  const [tweaks,     setTweaks]     = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+  // Re-read recent rounds whenever screen changes so new rounds appear immediately
+  const [recentRoundsKey, setRecentRoundsKey] = React.useState(0);
   const recentRounds = React.useMemo(() => {
     const saved = localStorage.getItem('pp_recent');
     return saved ? JSON.parse(saved) : [
       { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Stableford' },
       { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Wolf · Pass the Money' },
     ];
-  }, []);
+  }, [recentRoundsKey]);
 
   React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
 
@@ -469,21 +428,6 @@ const App = () => {
     return () => { window.__pp_deeplink_ready = null; };
   }, []);
 
-  // FIX: Removed PlayerSyncService.load() call.
-  //
-  // The previous code called both load() and subscribe() in the same useEffect:
-  //
-  //   PlayerSyncService.load(cb)       ← once('value'), resolves async ~50-200ms later
-  //   PlayerSyncService.subscribe(cb)  ← on('value'), fires immediately on attach
-  //
-  // RTDB's on('value') fires synchronously on first attach with the current snapshot,
-  // correctly setting state. Then load()'s once('value') Promise resolves slightly later
-  // and calls setPlayers() again with a STALE pre-write snapshot — overwriting the
-  // subscription's correct real-time state. Any player added by another device would
-  // appear briefly (from the subscription firing), then disappear (load() overwrote it).
-  //
-  // Fix: subscribe() alone is sufficient. on('value') fires immediately with current
-  // data on attach, making load() 100% redundant. Removing load() eliminates the race.
   React.useEffect(() => {
     PlayerSyncService.subscribe(function(remotePlayers) {
       if (remotePlayers && remotePlayers.length > 0) {
@@ -494,8 +438,6 @@ const App = () => {
     return () => { PlayerSyncService.unsubscribe(); };
   }, []);
 
-  // Course subscription — single listener for the entire app session.
-  // Merge strategy: RTDB is authoritative; keep any local-only courses not yet synced.
   React.useEffect(() => {
     CourseSyncService.subscribe(function(remoteCourses) {
       setCustomCourses(function(prev) {
@@ -533,13 +475,8 @@ const App = () => {
     });
   };
 
-  // Called by CourseBuilder (via SetupScreen or HomeScreen) after saving a course.
-  // The RTDB write in CourseBuilder.handleSave triggers the App-level subscription,
-  // which updates customCourses state automatically. This handler just syncs the
-  // prop back down so SetupScreen's selected course state stays consistent.
   const handleCourseSaved = (newCourse, fullUpdatedArray) => {
-    // State will arrive via the subscription callback. No manual setCustomCourses needed.
-    // This is intentionally a no-op — it exists so child components have a stable callback.
+    // no-op — subscription callback handles state update
   };
 
   const handleStartRound = (config) => {
@@ -555,8 +492,13 @@ const App = () => {
   };
 
   const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}, popFlags={}) => {
-    setFinalScores(scores); setFinalWolf(wolfData); setFinalPutts(putts);
-    setFinalPresses(presses); setFinalChips(chips); setFinalPopFlags(popFlags);
+    setFinalScores(scores);
+    setFinalWolf(wolfData);
+    setFinalPutts(putts);
+    setFinalPresses(presses);
+    setFinalChips(chips);
+    setFinalPopFlags(popFlags);
+
     const holeScores = {};
     round.players.forEach(function(player) {
       holeScores[player.id] = round.course.holes.map(function(_, i) {
@@ -567,28 +509,85 @@ const App = () => {
         };
       });
     });
-    RoundSyncService.saveRound({ ...round, holeScores }, function() {});
+
+    const completedRound = {
+      ...round,
+      holeScores,
+      date: new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }),
+    };
+
+    RoundSyncService.saveRound(completedRound, function() {});
+
+    // Persist full snapshot locally so Recent Rounds can replay without network
+    if (round.syncCode) {
+      const snapshot = {
+        round:         completedRound,
+        scores,
+        wolfData,
+        putts,
+        nassauPresses: presses,
+        popFlags,
+        savedAt:       Date.now(),
+      };
+      try {
+        localStorage.setItem('pp_round_snap_' + round.syncCode, JSON.stringify(snapshot));
+      } catch(e) {
+        console.warn('[PlayPal] Could not save round snapshot locally:', e);
+      }
+    }
+
+    // Update recent rounds list
     const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
     recent.unshift({
       courseName: round.course.name,
-      date: new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
-      players: round.players.length,
-      formats: round.formats.map(f => FORMAT_INFO[f.type].label).join(' · '),
-      syncCode: round.syncCode || null,
+      date:       new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+      players:    round.players.length,
+      formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' · '),
+      syncCode:   round.syncCode || null,
     });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
+
+    setRecentRoundsKey(k => k + 1);
     setScreen('summary');
   };
 
+  // Load a completed round from Recent Rounds for read-only replay.
+  // Checks localStorage snapshot first (instant, offline).
+  // Falls back to Firestore-backed RoundViewer if no local snapshot exists.
   const handleViewRound = (syncCode) => {
+    if (!syncCode) return;
+    try {
+      const raw = localStorage.getItem('pp_round_snap_' + syncCode);
+      if (raw) {
+        const snap = JSON.parse(raw);
+        setViewedRoundData(snap);
+        setViewSyncCode(syncCode);
+        setScreen('viewround');
+        return;
+      }
+    } catch(e) {
+      console.warn('[PlayPal] Could not read local round snapshot:', e);
+    }
+    // No local snapshot — fall back to Firestore viewer
+    setViewedRoundData(null);
     setViewSyncCode(syncCode);
     setScreen('viewround');
   };
 
+  const handleBackFromView = () => {
+    setViewedRoundData(null);
+    setViewSyncCode(null);
+    setScreen('home');
+  };
+
   const handleNewRound = () => {
-    setRound(null); setFinalScores(null);
+    setRound(null);
+    setFinalScores(null);
+    setViewedRoundData(null);
+    setViewSyncCode(null);
     localStorage.removeItem('pp_round');
     sessionStorage.removeItem('pp_screen');
+    setRecentRoundsKey(k => k + 1);
     setScreen('home');
   };
 
@@ -613,11 +612,13 @@ const App = () => {
   return (
     <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
       <NavBar
-        syncCode={tweaks.showSyncCode && round ? round.syncCode : null}
-        onHome={() => setScreen(round ? 'score' : 'home')}
-        currentScreen={screen} />
+        syncCode={tweaks.showSyncCode && round && screen === 'score' ? round.syncCode : null}
+        onHome={() => setScreen(round && screen === 'score' ? 'score' : 'home')}
+        currentScreen={screen}
+      />
 
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
+
         {screen === 'home' &&
           <HomeScreen
             onStartRound={() => setScreen('setup')}
@@ -627,25 +628,74 @@ const App = () => {
             onJoinRound={handleJoinRound}
             onViewRound={handleViewRound}
             customCourses={customCourses}
-            onCourseSaved={handleCourseSaved} />
+            onCourseSaved={handleCourseSaved}
+          />
         }
+
         {screen === 'setup' &&
           <SetupScreen
             allPlayers={players}
             customCourses={customCourses}
-            onStart={handleStartRound} />
+            onStart={handleStartRound}
+          />
         }
+
         {screen === 'score' && round &&
           <ScoreEntry
             round={round}
             onSaveRound={handleSaveRound}
-            onExitRound={handleExitRound} />
+            onExitRound={handleExitRound}
+          />
         }
-        {screen === 'viewround' && viewSyncCode &&
-          <RoundViewer
-            syncCode={viewSyncCode}
-            onBack={() => setScreen('home')} />
-        }
+
+        {/* ── View completed round from Recent Rounds ── */}
+        {screen === 'viewround' && (
+          viewedRoundData ? (
+            // Local snapshot found — render SummaryScreen in readOnly mode
+            <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
+              <div style={{
+                flexShrink:0, display:'flex', alignItems:'center', height:48,
+                background:'#050E1C', borderBottom:'1px solid #1E3A6E', padding:'0 12px',
+              }}>
+                <button onClick={handleBackFromView} style={{
+                  background:'none', border:'none', cursor:'pointer',
+                  fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16,
+                  letterSpacing:1, color:'#7A98BC', padding:'8px 4px',
+                  WebkitTapHighlightColor:'transparent',
+                }}>
+                  ‹ BACK
+                </button>
+                <span style={{
+                  flex:1, textAlign:'center', fontFamily:'Barlow Condensed',
+                  fontWeight:800, fontSize:16, letterSpacing:2, color:'#C9A84C',
+                }}>
+                  ROUND HISTORY
+                </span>
+                <span style={{width:60}}/>
+              </div>
+              <div style={{flex:1, overflow:'hidden', display:'flex', flexDirection:'column'}}>
+                <SummaryScreen
+                  round={viewedRoundData.round}
+                  scores={viewedRoundData.scores}
+                  wolfData={viewedRoundData.wolfData}
+                  putts={viewedRoundData.putts}
+                  nassauPresses={viewedRoundData.nassauPresses || []}
+                  manualChips={{}}
+                  popFlags={viewedRoundData.popFlags || {}}
+                  onNewRound={null}
+                  readOnly={true}
+                />
+              </div>
+            </div>
+          ) : (
+            // No local snapshot — fall back to Firestore-based RoundViewer
+            <RoundViewer
+              syncCode={viewSyncCode}
+              onBack={handleBackFromView}
+            />
+          )
+        )}
+
         {screen === 'summary' && round && finalScores &&
           <SummaryScreen
             round={round}
@@ -655,19 +705,22 @@ const App = () => {
             nassauPresses={finalPresses}
             manualChips={finalChips}
             popFlags={finalPopFlags || {}}
-            onNewRound={handleNewRound} />
+            onNewRound={handleNewRound}
+            readOnly={false}
+          />
         }
+
       </div>
 
       {/* Bottom Tab Nav — hidden on score and viewround screens */}
       {screen !== 'score' && screen !== 'viewround' &&
         <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
           {[
-            { id:'home',     icon:'🏠', label:'HOME' },
-            { id:'setup',    icon:'⛳', label:'NEW ROUND' },
-            ...(round        ? [{ id:'score',   icon:'🏌️', label:'SCORING'  }] : []),
-            ...(finalScores  ? [{ id:'summary', icon:'📊', label:'RESULTS'  }] : []),
-            ...(round        ? [{ id:'__exit',  icon:'🚪', label:'EXIT'     }] : []),
+            { id:'home',    icon:'🏠', label:'HOME' },
+            { id:'setup',   icon:'⛳', label:'NEW ROUND' },
+            ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }] : []),
+            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : []),
+            ...(round       ? [{ id:'__exit',  icon:'🚪', label:'EXIT'    }] : []),
           ].map(tab =>
             <div key={tab.id}
               onClick={() => tab.id === '__exit' ? handleExitRound() : setScreen(tab.id)}
