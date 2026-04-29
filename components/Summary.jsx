@@ -273,7 +273,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                     <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:13, color:'#C9A84C'}}>
                       {f.type==='wolf'      ? `$${f.stakes} round pot` :
                        f.type==='passmoney' ? `$${f.stakes} round pot` :
-                       f.type==='nassau'    ? `$${f.stakes}/bet` :
+                       f.type==='nassau'    ? `$${f.stakes}·$${f.stakes}·$${f.stakes*2}` :
                        f.type==='skins'     ? `$${f.stakes}/skin` :
                        f.type==='stableford'? `$${f.stakes} winner takes all` : ''}
                     </span>
