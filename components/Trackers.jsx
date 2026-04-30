@@ -1,30 +1,28 @@
-// Trackers.jsx v6 — MultiNassauTracker: one section per Nassau match
-//                   NassauTracker kept as legacy single-match component (backward compat)
+// Trackers.jsx v6 — updated design system
 
-// ─── ROUND TRACKER ───────────────────────────────────────────────────────────
 const RoundTracker = ({ players, scores, course, holeIdx }) => {
   const { totalScore, totalVsPar } = window;
   return (
     <div style={trS.section}>
-      <div style={trS.head}><span>📊</span><Label>ROUND TRACKER</Label></div>
+      <div style={trS.head}><span style={{fontSize:14}}>📊</span><Label>ROUND TRACKER</Label></div>
       <div style={trS.row}>
         {players.map(p => {
           const gross = totalScore(scores, p.id);
           const vs    = totalVsPar(scores, p.id, course.holes);
           const holesPlayed = (scores[p.id]||[]).filter(Boolean).length;
-          const vsColor = vs < 0 ? '#3DCB6C' : vs > 0 ? '#E5534B' : '#7A98BC';
+          const vsColor = vs < 0 ? '#2DD97A' : vs > 0 ? '#E5534B' : '#7A9EBF';
           return (
             <div key={p.id} style={trS.card}>
               <div style={{display:'flex', alignItems:'center', gap:5, marginBottom:5}}>
-                <div style={{width:7, height:7, borderRadius:'50%', background:p.color}}/>
-                <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
+                <div style={{width:6, height:6, borderRadius:'50%', background:p.color, flexShrink:0}}/>
+                <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
               </div>
               <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:26, color:'#fff', lineHeight:1}}>
                 {holesPlayed === 0 ? '—' : gross}
               </div>
               <div style={{fontFamily:'Barlow Condensed', fontSize:11, color:vsColor, marginTop:2}}>
                 {holesPlayed === 0 ? '—' : (vs === 0 ? 'E' : vs > 0 ? `+${vs}` : String(vs))}
-                {holesPlayed > 0 && <span style={{color:'#4A6890', marginLeft:4}}>{holesPlayed}H</span>}
+                {holesPlayed > 0 && <span style={{color:'#3A5880', marginLeft:4}}>{holesPlayed}H</span>}
               </div>
             </div>
           );
@@ -34,15 +32,13 @@ const RoundTracker = ({ players, scores, course, holeIdx }) => {
   );
 };
 
-// ─── WOLF TRACKER ────────────────────────────────────────────────────────────
 const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner, onLoneWolf, onResetWolf, format }) => {
   const { getWolfForHole, calcWolfStandings, resolveWolfHole } = window;
   const stake      = format?.stakes || 1;
   const wolfPlayer = getWolfForHole(players, holeIdx);
   const wd         = wolfData[holeIdx] || { wolfId:wolfPlayer.id, partnerId:null, confirmed:false, lone:false };
   const standings  = calcWolfStandings(scores, wolfData, players, course);
-
-  const ranked = [...players].sort((a,b) => (standings[b.id]||0) - (standings[a.id]||0));
+  const ranked     = [...players].sort((a,b) => (standings[b.id]||0) - (standings[a.id]||0));
 
   const holeResult = React.useMemo(() => {
     if (!wd.confirmed) return null;
@@ -56,8 +52,8 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
   return (
     <div style={trS.section}>
       <div style={trS.head}>
-        <span>🐺</span><Label>WOLF</Label>
-        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake} ROUND POT</span>
+        <span style={{fontSize:14}}>🐺</span><Label>WOLF</Label>
+        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A9EBF', letterSpacing:1}}>${stake} ROUND POT</span>
       </div>
 
       <div style={trS.row}>
@@ -67,25 +63,25 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
           const isLeader = soleLeader?.id === p.id;
           return (
             <div key={p.id} style={{...trS.card,
-              border: isWolf?'1px solid #E5534B': isLeader?'1px solid #C9A84C':'1px solid #1E3A6E',
-              background: isWolf?'rgba(229,83,75,0.06)': isLeader?'rgba(201,168,76,0.04)':'#162950'}}>
-              <div style={{display:'flex', alignItems:'center', gap:5, marginBottom:5}}>
-                <div style={{width:7,height:7,borderRadius:'50%',background:p.color}}/>
+              border: isWolf?'1px solid #E5534B44': isLeader?'1px solid #D4AF4744':'1px solid #1F3354',
+              background: isWolf?'rgba(229,83,75,0.04)': isLeader?'rgba(212,175,71,0.04)':'#0B0F1A'}}>
+              <div style={{display:'flex', alignItems:'center', gap:4, marginBottom:5}}>
+                <div style={{width:6,height:6,borderRadius:'50%',background:p.color,flexShrink:0}}/>
                 <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:isWolf?'#E5534B':'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
               </div>
-              <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:26, color:pts>0?'#3DCB6C':pts<0?'#E5534B':'#7A98BC', lineHeight:1}}>
+              <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:24, color:pts>0?'#2DD97A':pts<0?'#E5534B':'#7A9EBF', lineHeight:1}}>
                 {pts>0?`+${pts}`:pts}
               </div>
-              <div style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890', marginTop:2}}>pts</div>
-              {isWolf    && <div style={{fontSize:9, fontFamily:'Barlow Condensed', fontWeight:700, color:'#E5534B', letterSpacing:0.5, marginTop:2}}>🐺 WOLF</div>}
-              {isLeader  && <div style={{fontSize:9, fontFamily:'Barlow Condensed', fontWeight:700, color:'#C9A84C', marginTop:2}}>★ LEAD</div>}
+              <div style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#3A5880', marginTop:2}}>pts</div>
+              {isWolf   && <div style={{fontSize:8, fontFamily:'Barlow Condensed', fontWeight:700, color:'#E5534B', letterSpacing:0.5, marginTop:2}}>🐺 WOLF</div>}
+              {isLeader && <div style={{fontSize:8, fontFamily:'Barlow Condensed', fontWeight:700, color:'#D4AF47', marginTop:2}}>★ LEAD</div>}
             </div>
           );
         })}
       </div>
 
       {soleLeader && (
-        <div style={{fontSize:11, color:'#C9A84C', fontFamily:'Barlow Condensed', fontWeight:700, background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:7, padding:'5px 10px'}}>
+        <div style={{fontSize:11, color:'#D4AF47', fontFamily:'Barlow Condensed', fontWeight:700, background:'rgba(212,175,71,0.06)', border:'1px solid rgba(212,175,71,0.2)', borderRadius:7, padding:'5px 10px'}}>
           {soleLeader.name.split(' ')[0]} LEADS — wins ${stake} from each player (${stake*(players.length-1)} total) if held
         </div>
       )}
@@ -100,17 +96,17 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
             {players.filter(p=>p.id!==wolfPlayer.id).map(p=>(
               <button key={p.id} onClick={()=>onSetPartner(p.id)}
                 style={{flex:1, minWidth:80, padding:'10px 8px', borderRadius:9,
-                  border:`1px solid ${p.color}55`, background:`${p.color}11`,
+                  border:`1px solid ${p.color}44`, background:`${p.color}0A`,
                   color:p.color, fontFamily:'Barlow Condensed', fontWeight:700,
                   fontSize:13, cursor:'pointer', letterSpacing:0.5,
                   display:'flex', alignItems:'center', justifyContent:'center', gap:5}}>
-                <div style={{width:16,height:16,borderRadius:'50%',background:`${p.color}33`,border:`1px solid ${p.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800}}>{p.initials}</div>
+                <div style={{width:16,height:16,borderRadius:'50%',background:`${p.color}22`,border:`1px solid ${p.color}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800}}>{p.initials}</div>
                 {p.name.split(' ')[0].toUpperCase()}
               </button>
             ))}
             <button onClick={onLoneWolf}
               style={{flex:1, minWidth:80, padding:'10px 8px', borderRadius:9,
-                border:'1px solid rgba(229,83,75,0.5)', background:'rgba(229,83,75,0.1)',
+                border:'1px solid rgba(229,83,75,0.4)', background:'rgba(229,83,75,0.08)',
                 color:'#E5534B', fontFamily:'Barlow Condensed', fontWeight:800,
                 fontSize:13, cursor:'pointer', letterSpacing:0.5}}>
               🐺 LONE WOLF
@@ -119,19 +115,17 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
         ) : (
           <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
             <span style={{fontSize:12, color:'#9BB4D4', fontFamily:'DM Sans', flex:1}}>
-              {wd.lone
-                ? `★ Lone Wolf — wolf score ×2 vs 2 lowest others`
-                : `Partnered with ${players.find(p=>p.id===wd.partnerId)?.name.split(' ')[0]}`}
+              {wd.lone ? `★ Lone Wolf — wolf score ×2 vs 2 lowest others` : `Partnered with ${players.find(p=>p.id===wd.partnerId)?.name.split(' ')[0]}`}
             </span>
             {holeResult && (
               <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, padding:'3px 9px', borderRadius:6,
-                color: holeResult.wolfWins?'#3DCB6C':holeResult.tied?'#7A98BC':'#E5534B',
-                background: holeResult.wolfWins?'rgba(61,203,108,0.1)':holeResult.tied?'rgba(122,152,188,0.1)':'rgba(229,83,75,0.1)',
-                border:`1px solid ${holeResult.wolfWins?'rgba(61,203,108,0.3)':holeResult.tied?'rgba(122,152,188,0.3)':'rgba(229,83,75,0.3)'}`}}>
+                color: holeResult.wolfWins?'#2DD97A':holeResult.tied?'#7A9EBF':'#E5534B',
+                background: holeResult.wolfWins?'rgba(45,217,122,0.08)':holeResult.tied?'rgba(122,152,188,0.08)':'rgba(229,83,75,0.08)',
+                border:`1px solid ${holeResult.wolfWins?'rgba(45,217,122,0.25)':holeResult.tied?'rgba(122,152,188,0.25)':'rgba(229,83,75,0.25)'}`}}>
                 {holeResult.wolfWins?'WOLF WINS':holeResult.tied?'TIED':'WOLF LOSES'}
               </span>
             )}
-            <button onClick={onResetWolf} style={{fontSize:11, color:'#4A6890', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', whiteSpace:'nowrap'}}>change</button>
+            <button onClick={onResetWolf} style={{fontSize:11, color:'#3A5880', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', whiteSpace:'nowrap'}}>change</button>
           </div>
         )}
       </div>
@@ -139,7 +133,6 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
   );
 };
 
-// ─── PASS THE MONEY TRACKER ──────────────────────────────────────────────────
 const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder, format }) => {
   const { computePTMState, checkPTMPass, checkPTMWin18, ptmNextPlayer } = window;
   const stake = format?.stakes || 5;
@@ -149,12 +142,10 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
     [JSON.stringify(scores), JSON.stringify(putts)]
   );
 
-  const holder     = players.find(p => p.id === currentHolder) || players[0];
-  const isHole18   = holeIdx === 17;
-  const par        = course.holes[holeIdx]?.par;
-
+  const holder   = players.find(p => p.id === currentHolder) || players[0];
+  const isHole18 = holeIdx === 17;
+  const par      = course.holes[holeIdx]?.par;
   const hole18Passes = log.filter(l => l.holeIdx === 17).length;
-
   const curScore = scores[currentHolder]?.[holeIdx];
   const curPutts = (putts[currentHolder]?.[holeIdx]) || 0;
 
@@ -164,24 +155,19 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
     if (isHole18) {
       const wins = checkPTMWin18(curScore, par, curPutts);
       if (wins) {
-        preview = { outcome: 'win', label: `${holder.name.split(' ')[0].toUpperCase()} WINS THE POT`, detail: `Bogey or better · ≤2 putts`, color: '#3DCB6C', icon: '🏆' };
+        preview = { outcome:'win', label:`${holder.name.split(' ')[0].toUpperCase()} WINS THE POT`, detail:`Bogey or better · ≤2 putts`, color:'#2DD97A', icon:'🏆' };
       } else if (passes) {
         const nextP = ptmNextPlayer(players, currentHolder);
         const final = hole18Passes >= 3;
-        const toName = final ? (players.find(p => p.id === log.find(l=>l.holeIdx===17)?.fromId)?.name || holder.name) : nextP.name;
-        preview = {
-          outcome: 'pass',
-          label: final ? `RETURNS TO ${toName.split(' ')[0].toUpperCase()}` : `PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`,
-          detail: curScore >= par + 2 ? `Double bogey (${curScore})` : '3-putt or worse',
-          color: '#E5534B', icon: '➡️'
-        };
+        const toName = final ? (players.find(p=>p.id===log.find(l=>l.holeIdx===17)?.fromId)?.name||holder.name) : nextP.name;
+        preview = { outcome:'pass', label:final?`RETURNS TO ${toName.split(' ')[0].toUpperCase()}`:`PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail:curScore>=par+2?`Double bogey (${curScore})`:'3-putt or worse', color:'#E5534B', icon:'➡️' };
       }
     } else {
       if (!passes) {
-        preview = { outcome: 'keep', label: `${holder.name.split(' ')[0].toUpperCase()} KEEPS THE MONEY`, detail: `Bogey or better · ≤2 putts`, color: '#3DCB6C', icon: '✅' };
+        preview = { outcome:'keep', label:`${holder.name.split(' ')[0].toUpperCase()} KEEPS THE MONEY`, detail:`Bogey or better · ≤2 putts`, color:'#2DD97A', icon:'✅' };
       } else {
         const nextP = ptmNextPlayer(players, currentHolder);
-        preview = { outcome: 'pass', label: `PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail: curScore >= par + 2 ? `Double bogey (${curScore})` : '3-putt or worse', color: '#E5534B', icon: '➡️' };
+        preview = { outcome:'pass', label:`PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail:curScore>=par+2?`Double bogey (${curScore})`:'3-putt or worse', color:'#E5534B', icon:'➡️' };
       }
     }
   }
@@ -191,46 +177,46 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   return (
     <div style={trS.section}>
       <div style={trS.head}>
-        <span>💸</span><Label>PASS THE MONEY</Label>
-        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake} POT</span>
+        <span style={{fontSize:14}}>💸</span><Label>PASS THE MONEY</Label>
+        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A9EBF', letterSpacing:1}}>${stake} POT</span>
       </div>
 
-      <div style={{background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', gap:14}}>
-        <div style={{fontSize:28}}>💰</div>
+      <div style={{background:'rgba(212,175,71,0.05)', border:'1px solid rgba(212,175,71,0.2)', borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', gap:14}}>
+        <div style={{fontSize:26}}>💰</div>
         <div style={{flex:1}}>
-          <div style={{fontFamily:'Barlow Condensed', fontSize:11, fontWeight:600, letterSpacing:2, color:'#C9A84C', marginBottom:2}}>
+          <div style={{fontFamily:'Barlow Condensed', fontSize:10, fontWeight:700, letterSpacing:2.5, color:'#D4AF47', marginBottom:2}}>
             {isHole18 ? 'HOLDS THE MONEY — HOLE 18' : 'HOLDS THE MONEY'}
           </div>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:22, color:'#fff', letterSpacing:1}}>{holder.name.toUpperCase()}</div>
+          <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:20, color:'#fff', letterSpacing:1}}>{holder.name.toUpperCase()}</div>
           {isHole18 && (
-            <div style={{fontFamily:'DM Sans', fontSize:11, color: hole18Passes >= 3 ? '#E5534B' : '#7A98BC', marginTop:2}}>
+            <div style={{fontFamily:'DM Sans', fontSize:11, color: hole18Passes >= 3 ? '#E5534B' : '#7A9EBF', marginTop:2}}>
               {hole18Passes}/3 passes used on H18{hole18Passes >= 3 ? ' — final chance' : ''}
             </div>
           )}
         </div>
-        <Avatar player={holder} size={40}/>
+        <Avatar player={holder} size={38}/>
       </div>
 
       {preview && (
         <div style={{borderRadius:10, padding:'10px 12px', display:'flex', alignItems:'center', gap:10,
-          background: preview.outcome==='win' ? 'rgba(201,168,76,0.08)' : preview.outcome==='keep' ? 'rgba(61,203,108,0.06)' : 'rgba(229,83,75,0.08)',
-          border: `1px solid ${preview.outcome==='win' ? 'rgba(201,168,76,0.3)' : preview.outcome==='keep' ? 'rgba(61,203,108,0.25)' : 'rgba(229,83,75,0.3)'}`}}>
-          <span style={{fontSize:16}}>{preview.icon}</span>
+          background: preview.outcome==='win'?'rgba(212,175,71,0.06)':preview.outcome==='keep'?'rgba(45,217,122,0.05)':'rgba(229,83,75,0.06)',
+          border:`1px solid ${preview.outcome==='win'?'rgba(212,175,71,0.25)':preview.outcome==='keep'?'rgba(45,217,122,0.2)':'rgba(229,83,75,0.25)'}`}}>
+          <span style={{fontSize:15}}>{preview.icon}</span>
           <div style={{flex:1}}>
             <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color:preview.color}}>{preview.label}</div>
-            <div style={{fontSize:11, color:'#7A98BC', fontFamily:'DM Sans', marginTop:1}}>{preview.detail}</div>
+            <div style={{fontSize:11, color:'#7A9EBF', fontFamily:'DM Sans', marginTop:1}}>{preview.detail}</div>
           </div>
         </div>
       )}
 
       <div style={{display:'flex', gap:8}}>
-        <div style={{flex:1, background:'rgba(229,83,75,0.06)', border:'1px solid rgba(229,83,75,0.2)', borderRadius:8, padding:'8px 10px'}}>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#E5534B', letterSpacing:1, marginBottom:3}}>PASS</div>
+        <div style={{flex:1, background:'rgba(229,83,75,0.05)', border:'1px solid rgba(229,83,75,0.15)', borderRadius:8, padding:'8px 10px'}}>
+          <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:10, color:'#E5534B', letterSpacing:1.5, marginBottom:3}}>PASS</div>
           <div style={{fontFamily:'DM Sans', fontSize:11, color:'#9BB4D4'}}>Double bogey or worse</div>
           <div style={{fontFamily:'DM Sans', fontSize:11, color:'#9BB4D4'}}>3-putt or worse</div>
         </div>
-        <div style={{flex:1, background:'rgba(61,203,108,0.04)', border:'1px solid rgba(61,203,108,0.2)', borderRadius:8, padding:'8px 10px'}}>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color: isHole18 ? '#C9A84C' : '#3DCB6C', letterSpacing:1, marginBottom:3}}>{isHole18 ? 'WIN' : 'KEEP'}</div>
+        <div style={{flex:1, background:'rgba(45,217,122,0.04)', border:'1px solid rgba(45,217,122,0.15)', borderRadius:8, padding:'8px 10px'}}>
+          <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:10, color:isHole18?'#D4AF47':'#2DD97A', letterSpacing:1.5, marginBottom:3}}>{isHole18?'WIN':'KEEP'}</div>
           <div style={{fontFamily:'DM Sans', fontSize:11, color:'#9BB4D4'}}>Bogey or better</div>
           <div style={{fontFamily:'DM Sans', fontSize:11, color:'#9BB4D4'}}>2 putts or fewer</div>
         </div>
@@ -244,12 +230,12 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
               const from = players.find(p => p.id === e.fromId);
               const to   = players.find(p => p.id === e.toId);
               return from && to ? (
-                <div key={i} style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#7A98BC', fontFamily:'DM Sans'}}>
-                  <span style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#4A6890', minWidth:22}}>H{e.holeIdx+1}</span>
+                <div key={i} style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#7A9EBF', fontFamily:'DM Sans'}}>
+                  <span style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#3A5880', minWidth:22}}>H{e.holeIdx+1}</span>
                   <span style={{color:from.color, fontWeight:600}}>{from.name.split(' ')[0]}</span>
                   <span>→</span>
                   <span style={{color:to.color, fontWeight:600}}>{to.name.split(' ')[0]}</span>
-                  <span style={{marginLeft:'auto', fontSize:10, color:e.final?'#E5534B':'#4A6890'}}>{e.final ? '↩ RETURNED' : e.reason}</span>
+                  <span style={{marginLeft:'auto', fontSize:10, color:e.final?'#E5534B':'#3A5880'}}>{e.final ? '↩ RETURNED' : e.reason}</span>
                 </div>
               ) : null;
             })}
@@ -260,59 +246,47 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   );
 };
 
-// ─── NASSAU TRACKER (legacy single-match) ────────────────────────────────────
 const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nassauConfig }) => {
   const { nassauSegmentStatus } = window;
   const stake = format?.stakes || 5;
-
   const front = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),   holeIdx, popFlags, nassauConfig);
   const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9), holeIdx, popFlags, nassauConfig);
   const full  = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),  holeIdx, popFlags, nassauConfig);
-
-  const statusColor = s => s === 'EVEN' ? '#7A98BC' : '#C9A84C';
-
-  const nassauPlayers = (nassauConfig?.playersInMatch || [])
-    .map(id => players.find(p => p.id === id))
-    .filter(Boolean);
-  const popThisHole = nassauPlayers.filter(p => !!(nassauConfig?.popHoles?.[p.id]?.[holeIdx]));
+  const statusColor = s => s === 'EVEN' ? '#7A9EBF' : '#D4AF47';
+  const nassauPlayers = (nassauConfig?.playersInMatch||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);
+  const popThisHole  = nassauPlayers.filter(p=>!!(nassauConfig?.popHoles?.[p.id]?.[holeIdx]));
 
   return (
     <div style={trS.section}>
       <div style={trS.head}>
-        <span>💰</span><Label>NASSAU</Label>
-        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake}·${stake}·${stake*2}</span>
+        <span style={{fontSize:14}}>💰</span><Label>NASSAU</Label>
+        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A9EBF', letterSpacing:1}}>${stake}·${stake}·${stake*2}</span>
       </div>
-
       {nassauPlayers.length >= 2 && (
         <div style={{display:'flex', alignItems:'center', gap:6}}>
-          <Label style={{fontSize:9, color:'#4A6890'}}>MATCH</Label>
+          <Label style={{fontSize:9, color:'#3A5880'}}>MATCH</Label>
           {nassauPlayers.map((p, i) => (
             <React.Fragment key={p.id}>
-              {i > 0 && <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#4A6890'}}>vs</span>}
+              {i > 0 && <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#3A5880'}}>vs</span>}
               <div style={{display:'flex', alignItems:'center', gap:4}}>
-                <div style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
+                <div style={{width:5, height:5, borderRadius:'50%', background:p.color}}/>
                 <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p.name.split(' ')[0]}</span>
               </div>
             </React.Fragment>
           ))}
           {popThisHole.length > 0 && (
-            <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:4,
-              background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)',
-              borderRadius:5, padding:'1px 6px'}}>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#C9A84C', letterSpacing:0.5}}>
-                💰 {popThisHole.map(p => p.name.split(' ')[0]).join(', ')} +1
-              </span>
+            <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:4, background:'rgba(212,175,71,0.08)', border:'1px solid rgba(212,175,71,0.25)', borderRadius:5, padding:'1px 6px'}}>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#D4AF47', letterSpacing:0.5}}>💰 {popThisHole.map(p=>p.name.split(' ')[0]).join(', ')} +1</span>
             </div>
           )}
         </div>
       )}
-
       <div style={{display:'flex', gap:8}}>
-        {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake * 2]].map(([lbl, status, betStake]) => (
-          <div key={lbl} style={{flex:1, background:'#162950', borderRadius:10, padding:'10px 12px', border:'1px solid #1E3A6E'}}>
+        {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake*2]].map(([lbl, status, betStake]) => (
+          <div key={lbl} style={{flex:1, background:'#0B0F1A', borderRadius:10, padding:'10px 12px', border:'1px solid #1F3354'}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
-              <Label style={{fontSize:9, color:'#4A6890'}}>{lbl}</Label>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#4A6890'}}>${betStake}</span>
+              <Label style={{fontSize:9, color:'#3A5880'}}>{lbl}</Label>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#3A5880'}}>${betStake}</span>
             </div>
             <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15, color:statusColor(status)}}>{status}</div>
           </div>
@@ -322,155 +296,103 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nas
   );
 };
 
-// ─── MULTI-NASSAU TRACKER ─────────────────────────────────────────────────────
-// Renders one collapsible section per Nassau match.
-// nassauMatches: [{ id, matchType, playersInMatch, popHoles, stakes }, ...]
-const MULTI_NASSAU_MATCH_COLORS = ['#C9A84C', '#7B9FE0', '#E07BE0'];
+const MULTI_NASSAU_MATCH_COLORS = ['#D4AF47', '#7B9FE0', '#E07BE0'];
 
 const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, nassauFmt }) => {
   const { nassauSegmentStatus } = window;
   const [expandedMatch, setExpandedMatch] = React.useState(null);
-
   if (!nassauMatches || nassauMatches.length === 0) return null;
 
   return (
     <div style={trS.section}>
       <div style={trS.head}>
-        <span>💰</span><Label>NASSAU</Label>
-        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>
+        <span style={{fontSize:14}}>💰</span><Label>NASSAU</Label>
+        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A9EBF', letterSpacing:1}}>
           {nassauMatches.length} MATCH{nassauMatches.length > 1 ? 'ES' : ''}
         </span>
       </div>
 
       <div style={{display:'flex', flexDirection:'column', gap:8}}>
         {nassauMatches.map((match, idx) => {
-          const matchColor   = MULTI_NASSAU_MATCH_COLORS[idx] || '#C9A84C';
-          const stake        = match.stakes || nassauFmt?.stakes || 5;
-          const matchCfg     = {
-            playersInMatch: match.playersInMatch,
-            matchType:      match.matchType,
-            popHoles:       match.popHoles || {},
-          };
-
-          const nassauPlayers = (match.playersInMatch || [])
-            .map(id => players.find(p => p.id === id))
-            .filter(Boolean);
-
+          const matchColor = MULTI_NASSAU_MATCH_COLORS[idx] || '#D4AF47';
+          const stake      = match.stakes || nassauFmt?.stakes || 5;
+          const matchCfg   = { playersInMatch:match.playersInMatch, matchType:match.matchType, popHoles:match.popHoles||{} };
+          const nassauPlayers = (match.playersInMatch||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);
           if (nassauPlayers.length < 2) return null;
 
           const p1 = nassauPlayers[0];
           const p2 = nassauPlayers[1];
-
           const front  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),    holeIdx, {}, matchCfg);
           const back   = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9),  holeIdx, {}, matchCfg);
           const full   = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),   holeIdx, {}, matchCfg);
-
-          const statusColor = s => s === 'EVEN' ? '#7A98BC' : matchColor;
-
+          const statusColor = s => s === 'EVEN' ? '#7A9EBF' : matchColor;
           const popThisHole = nassauPlayers.filter(p => !!(match.popHoles?.[p.id]?.[holeIdx]));
           const isExpanded  = expandedMatch === match.id;
 
           return (
-            <div key={match.id} style={{
-              background:'#0A1628',
-              border:`1px solid ${matchColor}33`,
-              borderRadius:12,
-              overflow:'hidden',
-            }}>
-              {/* Match header — always visible */}
-              <div
-                onClick={() => setExpandedMatch(isExpanded ? null : match.id)}
-                style={{
-                  display:'flex', alignItems:'center', gap:8,
-                  padding:'10px 12px',
-                  background:`${matchColor}0A`,
-                  cursor:'pointer',
-                  WebkitTapHighlightColor:'transparent',
-                }}>
-                <div style={{width:8, height:8, borderRadius:'50%', background:matchColor, flexShrink:0}}/>
+            <div key={match.id} style={{background:'#0B0F1A', border:`1px solid ${matchColor}2A`, borderRadius:12, overflow:'hidden'}}>
+              <div onClick={() => setExpandedMatch(isExpanded ? null : match.id)}
+                style={{display:'flex', alignItems:'center', gap:8, padding:'10px 12px', background:`${matchColor}08`, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                <div style={{width:7, height:7, borderRadius:'50%', background:matchColor, flexShrink:0}}/>
                 <div style={{flex:1, display:'flex', alignItems:'center', gap:6, minWidth:0}}>
-                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:13, color:matchColor, letterSpacing:1, whiteSpace:'nowrap'}}>
-                    MATCH {idx+1}
-                  </span>
+                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, color:matchColor, letterSpacing:1.5, whiteSpace:'nowrap'}}>MATCH {idx+1}</span>
                   <div style={{display:'flex', alignItems:'center', gap:4, minWidth:0}}>
                     <div style={{width:5, height:5, borderRadius:'50%', background:p1.color, flexShrink:0}}/>
                     <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff', whiteSpace:'nowrap'}}>{p1.name.split(' ')[0]}</span>
-                    <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890'}}>vs</span>
+                    <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#3A5880'}}>vs</span>
                     <div style={{width:5, height:5, borderRadius:'50%', background:p2.color, flexShrink:0}}/>
                     <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff', whiteSpace:'nowrap'}}>{p2.name.split(' ')[0]}</span>
                   </div>
                   {popThisHole.length > 0 && (
-                    <div style={{
-                      background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)',
-                      borderRadius:4, padding:'1px 5px', flexShrink:0,
-                    }}>
-                      <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#C9A84C'}}>
-                        💰 {popThisHole.map(p => p.name.split(' ')[0]).join(',')} +1
-                      </span>
+                    <div style={{background:'rgba(212,175,71,0.08)', border:'1px solid rgba(212,175,71,0.25)', borderRadius:4, padding:'1px 5px', flexShrink:0}}>
+                      <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#D4AF47'}}>💰 {popThisHole.map(p=>p.name.split(' ')[0]).join(',')} +1</span>
                     </div>
                   )}
                 </div>
-
-                {/* Live status summary — always shown in header */}
                 <div style={{display:'flex', gap:5, flexShrink:0}}>
                   {[['F', front], ['B', back], ['18', full]].map(([lbl, status]) => (
-                    <div key={lbl} style={{
-                      display:'flex', flexDirection:'column', alignItems:'center',
-                      background:'#162950', borderRadius:6, padding:'3px 6px', minWidth:32,
-                    }}>
-                      <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#4A6890', letterSpacing:0.5}}>{lbl}</span>
+                    <div key={lbl} style={{display:'flex', flexDirection:'column', alignItems:'center', background:'#112240', borderRadius:6, padding:'3px 6px', minWidth:30}}>
+                      <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#3A5880', letterSpacing:0.5}}>{lbl}</span>
                       <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10, color:statusColor(status), whiteSpace:'nowrap'}}>
                         {status === 'EVEN' ? 'AS' : status.replace(p1.name.split(' ')[0], p1.initials).replace(p2.name.split(' ')[0], p2.initials)}
                       </span>
                     </div>
                   ))}
                 </div>
-
-                <span style={{fontSize:12, color:'#4A6890', display:'inline-block',
-                  transform: isExpanded ? 'rotate(180deg)' : 'none', transition:'transform 0.2s', flexShrink:0}}>▾</span>
+                <span style={{fontSize:12, color:'#3A5880', display:'inline-block', transform:isExpanded?'rotate(180deg)':'none', transition:'transform 0.2s', flexShrink:0}}>▾</span>
               </div>
 
-              {/* Expanded detail */}
               {isExpanded && (
-                <div style={{padding:'10px 12px', display:'flex', flexDirection:'column', gap:8, borderTop:`1px solid ${matchColor}22`}}>
-                  {/* Full segment cards */}
+                <div style={{padding:'10px 12px', display:'flex', flexDirection:'column', gap:8, borderTop:`1px solid ${matchColor}18`}}>
                   <div style={{display:'flex', gap:8}}>
-                    {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake * 2]].map(([lbl, status, betStake]) => (
-                      <div key={lbl} style={{flex:1, background:'#162950', borderRadius:10, padding:'10px 12px', border:'1px solid #1E3A6E'}}>
+                    {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake*2]].map(([lbl, status, betStake]) => (
+                      <div key={lbl} style={{flex:1, background:'#112240', borderRadius:10, padding:'10px 12px', border:'1px solid #1F3354'}}>
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
-                          <Label style={{fontSize:9, color:'#4A6890'}}>{lbl}</Label>
-                          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#4A6890'}}>${betStake}</span>
+                          <Label style={{fontSize:9, color:'#3A5880'}}>{lbl}</Label>
+                          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#3A5880'}}>${betStake}</span>
                         </div>
                         <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15, color:statusColor(status)}}>{status}</div>
                       </div>
                     ))}
                   </div>
-
-                  {/* Pop holes this round */}
                   {(() => {
                     const allPopHoles = {};
                     nassauPlayers.forEach(p => {
-                      const pops = (match.popHoles?.[p.id] || []);
-                      const holeNums = pops.map((v, i) => v ? i+1 : null).filter(Boolean);
+                      const pops = (match.popHoles?.[p.id]||[]);
+                      const holeNums = pops.map((v,i)=>v?i+1:null).filter(Boolean);
                       if (holeNums.length > 0) allPopHoles[p.name.split(' ')[0]] = holeNums;
                     });
                     const entries = Object.entries(allPopHoles);
                     if (entries.length === 0) return null;
                     return (
-                      <div style={{background:'rgba(201,168,76,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:8, padding:'8px 10px'}}>
-                        <Label style={{fontSize:9, color:'#C9A84C', display:'block', marginBottom:4}}>STROKE POPS</Label>
+                      <div style={{background:'rgba(212,175,71,0.04)', border:'1px solid rgba(212,175,71,0.15)', borderRadius:8, padding:'8px 10px'}}>
+                        <Label style={{fontSize:9, color:'#D4AF47', display:'block', marginBottom:4}}>STROKE POPS</Label>
                         {entries.map(([name, holes]) => (
                           <div key={name} style={{display:'flex', alignItems:'center', gap:8, marginBottom:2}}>
                             <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#fff', minWidth:50}}>{name}</span>
                             <div style={{display:'flex', gap:3, flexWrap:'wrap'}}>
                               {holes.map(h => (
-                                <span key={h} style={{
-                                  fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10,
-                                  color: h-1 === holeIdx ? '#0A1628' : '#C9A84C',
-                                  background: h-1 === holeIdx ? matchColor : 'rgba(201,168,76,0.15)',
-                                  border: `1px solid ${matchColor}55`,
-                                  borderRadius:4, padding:'1px 5px',
-                                }}>H{h}</span>
+                                <span key={h} style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10, color:h-1===holeIdx?'#0B0F1A':'#D4AF47', background:h-1===holeIdx?matchColor:'rgba(212,175,71,0.12)', border:`1px solid ${matchColor}44`, borderRadius:4, padding:'1px 5px'}}>H{h}</span>
                               ))}
                             </div>
                           </div>
@@ -489,11 +411,11 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
 };
 
 const trS = {
-  section: { padding:'12px 14px', borderTop:'1px solid #1E3A6E', display:'flex', flexDirection:'column', gap:10 },
+  section: { padding:'12px 14px', borderTop:'1px solid #1F3354', display:'flex', flexDirection:'column', gap:10, background:'#0B0F1A' },
   head:    { display:'flex', alignItems:'center', gap:8 },
   row:     { display:'flex', gap:8 },
-  card:    { flex:1, background:'#162950', border:'1px solid #1E3A6E', borderRadius:10, padding:'10px 10px 8px', display:'flex', flexDirection:'column', minWidth:0 },
-  wolfBox: { background:'rgba(229,83,75,0.05)', border:'1px solid rgba(229,83,75,0.2)', borderRadius:10, padding:'12px' },
+  card:    { flex:1, background:'#0B0F1A', border:'1px solid #1F3354', borderRadius:10, padding:'10px 10px 8px', display:'flex', flexDirection:'column', minWidth:0 },
+  wolfBox: { background:'rgba(229,83,75,0.04)', border:'1px solid rgba(229,83,75,0.15)', borderRadius:10, padding:'12px' },
 };
 
 Object.assign(window, { RoundTracker, WolfTracker, PTMTracker, NassauTracker, MultiNassauTracker });
