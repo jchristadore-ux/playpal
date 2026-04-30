@@ -1,4 +1,5 @@
-// gameUtils.js v8 — Nassau rebuilt: pure hole-by-hole, no presses, no carryovers
+// gameUtils.js v9 — Nassau rebuilt: pure hole-by-hole, no presses, no carryovers
+//                   Extended: nassauMatches[] array support (multi-match per round)
 
 function scoreName(gross, par) {
   const d = gross - par;
@@ -195,7 +196,11 @@ function calcPTMPayouts(holderId, players, stake) {
 
 // ─── NASSAU — pure hole-by-hole, no presses, no carryovers ───────────────────
 //
-// nassauConfig: { playersInMatch:[id,id], matchType:'1v1', teams:null, popHoles:{[pid]:bool[18]} }
+// nassauConfig shape (single match — legacy):
+//   { playersInMatch:[id,id], matchType:'1v1', teams:null, popHoles:{[pid]:bool[18]} }
+//
+// nassauMatches shape (multi-match — new):
+//   [ { id, stakes, matchType, playersInMatch, teams, popHoles }, ... ]
 //
 // Rules:
 //   • Each hole worth exactly 1 point
@@ -299,6 +304,32 @@ function calcNassauPayouts(scores, players, course, baseStake, _ignoredPresses, 
   return payouts;
 }
 
+// ─── MULTI-NASSAU: sum payouts across all matches ────────────────────────────
+// nassauMatches: array of { id, stakes, matchType, playersInMatch, popHoles, ... }
+// Returns { [playerId]: totalPayout } summed across all matches
+function calcMultiNassauPayouts(scores, players, course, nassauMatches, popFlags) {
+  const totals = Object.fromEntries(players.map(p => [p.id, 0]));
+  if (!nassauMatches || nassauMatches.length === 0) return totals;
+
+  nassauMatches.forEach(match => {
+    const matchCfg = {
+      playersInMatch: match.playersInMatch,
+      matchType:      match.matchType,
+      teams:          match.teams || null,
+      popHoles:       match.popHoles || {},
+    };
+    const matchPay = calcNassauPayouts(
+      scores, players, course,
+      match.stakes, [], popFlags || {}, matchCfg
+    );
+    players.forEach(p => {
+      totals[p.id] += (matchPay[p.id] || 0);
+    });
+  });
+
+  return totals;
+}
+
 // Legacy stub — kept so existing callers don't break
 function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
   let units = 0;
@@ -342,6 +373,9 @@ function totalVsPar(scores, pid, holes) {
   return (scores[pid] || []).reduce((acc, s, i) => acc + (s && holes[i] ? s - holes[i].par : 0), 0);
 }
 
+// ─── calcAllPayouts ───────────────────────────────────────────────────────────
+// Handles both single nassauConfig (legacy) and nassauMatches[] (new multi-match).
+// nassauConfig param is kept for backward compat but ignored when nassauMatches[] is present on the format object.
 function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPresses, ptmHolderId, popFlags, nassauConfig) {
   popFlags = popFlags || {};
   const totals = Object.fromEntries(players.map(p => [p.id, 0]));
@@ -351,8 +385,14 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
       const pts = calcWolfStandings(scores, wolfData, players, course);
       pay = calcWolfPayouts(pts, players, f.stakes, scores, course);
     } else if (f.type === 'nassau') {
-      const cfg = f.nassauConfig || nassauConfig || null;
-      pay = calcNassauPayouts(scores, players, course, f.stakes, [], popFlags, cfg);
+      // Multi-match path: nassauMatches array present on format object
+      if (f.nassauMatches && f.nassauMatches.length > 0) {
+        pay = calcMultiNassauPayouts(scores, players, course, f.nassauMatches, popFlags);
+      } else {
+        // Single-match legacy path
+        const cfg = f.nassauConfig || nassauConfig || null;
+        pay = calcNassauPayouts(scores, players, course, f.stakes, [], popFlags, cfg);
+      }
     } else if (f.type === 'passmoney') {
       const holder = ptmHolderId || players[0].id;
       pay = calcPTMPayouts(holder, players, f.stakes);
@@ -386,7 +426,7 @@ if (typeof window !== 'undefined') {
     scoreName, calcStablefordPoints, resolveTiebreaker,
     getWolfForHole, resolveWolfHole, calcWolfStandings, calcWolfPayouts,
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
-    calcNassauUnits, nassauSegmentStatus, calcNassauPayouts,
+    calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
   });
 }
