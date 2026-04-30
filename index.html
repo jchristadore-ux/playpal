@@ -9,6 +9,9 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
+<!-- QR Code canvas library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth-compat.js"></script>
@@ -58,13 +61,13 @@
 </head>
 <body>
 
-<!-- Deep-link join overlay -->
+<!-- Deep-link join overlay — visual only, React does the actual Firebase fetch -->
 <div id="pp-join-overlay" style="display:none;">
-  <div class="pp-join-logo">🏌️</div>
+  <div class="pp-join-logo">&#127948;</div>
   <div class="pp-join-title">JOINING ROUND</div>
   <div class="pp-join-code" id="pp-join-code-display">------</div>
   <div class="pp-join-spinner" id="pp-join-spinner"></div>
-  <div class="pp-join-status" id="pp-join-status">Connecting…</div>
+  <div class="pp-join-status" id="pp-join-status">Connecting&#8230;</div>
   <div class="pp-join-error" id="pp-join-error" style="display:none;"></div>
   <button class="pp-join-dismiss" id="pp-join-dismiss" style="display:none;" onclick="dismissJoinOverlay()">GO TO HOME</button>
 </div>
@@ -82,7 +85,7 @@
 
 <script>
 /* ============================================================
-   FIREBASE CONFIG — playpal-sync project
+   FIREBASE CONFIG
    ============================================================ */
 var PLAYPAL_FIREBASE_CONFIG = {
   apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
@@ -137,7 +140,6 @@ function _fbInit(cb) {
    ============================================================ */
 var PlayerSyncService = (function() {
   var _cb = null;
-
   function save(players, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -148,7 +150,6 @@ var PlayerSyncService = (function() {
         .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
     });
   }
-
   function load(cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null); return; }
@@ -161,7 +162,6 @@ var PlayerSyncService = (function() {
         .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
     });
   }
-
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
@@ -173,12 +173,10 @@ var PlayerSyncService = (function() {
       _fbDb.ref('players').on('value', _cb);
     });
   }
-
   function unsubscribe() {
     if (_fbDb && _cb) { _fbDb.ref('players').off('value', _cb); }
     _cb = null;
   }
-
   return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
@@ -187,7 +185,6 @@ var PlayerSyncService = (function() {
    ============================================================ */
 var CourseSyncService = (function() {
   var _cb = null;
-
   function save(courses, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -198,7 +195,6 @@ var CourseSyncService = (function() {
         .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
     });
   }
-
   function load(cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null); return; }
@@ -210,7 +206,6 @@ var CourseSyncService = (function() {
         .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
     });
   }
-
   function subscribe(cb) {
     _fbInit(function(ok) {
       if (!ok) return;
@@ -222,12 +217,10 @@ var CourseSyncService = (function() {
       _fbDb.ref('courses').on('value', _cb);
     });
   }
-
   function unsubscribe() {
     if (_fbDb && _cb) { _fbDb.ref('courses').off('value', _cb); }
     _cb = null;
   }
-
   return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
@@ -267,7 +260,9 @@ window.CourseSyncService = CourseSyncService;
 window.RoundSyncService  = RoundSyncService;
 
 /* ============================================================
-   DEEP-LINK DETECTION
+   DEEP-LINK DETECTION — visual only, no Firebase here.
+   The actual Firebase fetch happens inside React useEffect to
+   eliminate the auth/mount race condition.
    ============================================================ */
 (function() {
   var params   = new URLSearchParams(window.location.search);
@@ -275,81 +270,42 @@ window.RoundSyncService  = RoundSyncService;
   var joinCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
   if (!joinCode || joinCode.length < 4) return;
 
-  var overlay   = document.getElementById('pp-join-overlay');
-  var codeEl    = document.getElementById('pp-join-code-display');
-  var statusEl  = document.getElementById('pp-join-status');
-  var spinnerEl = document.getElementById('pp-join-spinner');
-  var errorEl   = document.getElementById('pp-join-error');
-  var dismissEl = document.getElementById('pp-join-dismiss');
+  // Stash for React to consume after mount
+  window.__pp_pending_join_code = joinCode;
 
-  overlay.style.display = 'flex';
-  if (codeEl) codeEl.textContent = joinCode;
-
-  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
-  function showError(msg) {
-    if (spinnerEl)  spinnerEl.style.display  = 'none';
-    if (errorEl)  { errorEl.style.display   = 'block'; errorEl.textContent = msg; }
-    if (dismissEl)  dismissEl.style.display  = 'block';
-    setStatus('Could not join round');
-  }
-
-  setStatus('Connecting to Firebase…');
-
-  try {
-    var local = localStorage.getItem('pp_round');
-    if (local) {
-      var r = JSON.parse(local);
-      if (r.syncCode === joinCode) {
-        setStatus('Round found! Loading…');
-        sessionStorage.setItem('pp_screen', 'score');
-        window.__pp_deeplink_round = r;
-        _clearJoinParam();
-        setTimeout(function() { overlay.style.display = 'none'; }, 300);
-        return;
-      }
-    }
-  } catch(e) { /* fall through */ }
-
-  RoundSyncService.fetchRound(joinCode, function(round, err) {
-    if (!round) {
-      showError(
-        err === 'Round not found'
-          ? 'No active round found for code "' + joinCode + '".\nMake sure the host has started the round.'
-          : 'Connection error: ' + (err || 'Unknown') + '\nCheck your internet and try again.'
-      );
-      return;
-    }
-    setStatus('Round found! Loading…');
-    localStorage.setItem('pp_round', JSON.stringify(round));
-    sessionStorage.setItem('pp_screen', 'score');
-    _clearJoinParam();
-    if (window.__pp_deeplink_ready) {
-      window.__pp_deeplink_ready(round);
-    } else {
-      window.__pp_deeplink_round = round;
-    }
-    setTimeout(function() { overlay.style.display = 'none'; }, 400);
-  });
-
-  function _clearJoinParam() {
-    try {
-      var u = new URL(window.location.href);
-      u.searchParams.delete('join');
-      u.searchParams.delete('code');
-      window.history.replaceState({}, '', u.toString());
-    } catch(e) {}
-  }
-})();
-
-function dismissJoinOverlay() {
+  // Show overlay immediately for instant visual feedback
   var overlay = document.getElementById('pp-join-overlay');
-  if (overlay) overlay.style.display = 'none';
+  var codeEl  = document.getElementById('pp-join-code-display');
+  if (overlay) overlay.style.display = 'flex';
+  if (codeEl)  codeEl.textContent    = joinCode;
+
+  // Remove from URL so back/refresh doesn't re-trigger
   try {
     var u = new URL(window.location.href);
     u.searchParams.delete('join');
     u.searchParams.delete('code');
     window.history.replaceState({}, '', u.toString());
   } catch(e) {}
+})();
+
+function dismissJoinOverlay() {
+  var overlay = document.getElementById('pp-join-overlay');
+  if (overlay) overlay.style.display = 'none';
+  window.__pp_pending_join_code = null;
+}
+
+function _updateJoinOverlay(status, error) {
+  var statusEl  = document.getElementById('pp-join-status');
+  var spinnerEl = document.getElementById('pp-join-spinner');
+  var errorEl   = document.getElementById('pp-join-error');
+  var dismissEl = document.getElementById('pp-join-dismiss');
+  if (status && statusEl) statusEl.textContent = status;
+  if (error) {
+    if (spinnerEl)  spinnerEl.style.display  = 'none';
+    if (errorEl)  { errorEl.style.display   = 'block'; errorEl.textContent = error; }
+    if (dismissEl)  dismissEl.style.display  = 'block';
+    if (statusEl)   statusEl.textContent     = 'Could not join round';
+  }
 }
 </script>
 
@@ -364,8 +320,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 } /*EDITMODE-END*/;
 
 const App = () => {
+  // If a join code is pending, always start at 'home' — join happens in useEffect
   const [screen, setScreen] = React.useState(() => {
-    if (window.__pp_deeplink_round) return 'score';
+    if (window.__pp_pending_join_code) return 'home';
     return sessionStorage.getItem('pp_screen') || 'home';
   });
 
@@ -379,11 +336,8 @@ const App = () => {
   });
 
   const [round, setRound] = React.useState(() => {
-    if (window.__pp_deeplink_round) {
-      const r = window.__pp_deeplink_round;
-      window.__pp_deeplink_round = null;
-      return r;
-    }
+    // Never restore a stale round when joining a new one
+    if (window.__pp_pending_join_code) return null;
     const savedScreen = sessionStorage.getItem('pp_screen');
     if (savedScreen === 'score') {
       const saved = localStorage.getItem('pp_round');
@@ -392,21 +346,19 @@ const App = () => {
     return null;
   });
 
-  const [finalScores,    setFinalScores]    = React.useState(null);
-  const [finalWolf,      setFinalWolf]      = React.useState(null);
-  const [finalPutts,     setFinalPutts]     = React.useState(null);
-  const [finalPresses,   setFinalPresses]   = React.useState([]);
-  const [finalChips,     setFinalChips]     = React.useState({});
-  const [finalPopFlags,  setFinalPopFlags]  = React.useState(null);
+  const [finalScores,   setFinalScores]   = React.useState(null);
+  const [finalWolf,     setFinalWolf]     = React.useState(null);
+  const [finalPutts,    setFinalPutts]    = React.useState(null);
+  const [finalPresses,  setFinalPresses]  = React.useState([]);
+  const [finalChips,    setFinalChips]    = React.useState({});
+  const [finalPopFlags, setFinalPopFlags] = React.useState(null);
 
-  // Viewed round — loaded from local snapshot for read-only replay
   const [viewedRoundData, setViewedRoundData] = React.useState(null);
   const [viewSyncCode,    setViewSyncCode]    = React.useState(null);
 
   const [tweaks,     setTweaks]     = React.useState(TWEAK_DEFAULTS);
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
 
-  // Re-read recent rounds whenever screen changes so new rounds appear immediately
   const [recentRoundsKey, setRecentRoundsKey] = React.useState(0);
   const recentRounds = React.useMemo(() => {
     const saved = localStorage.getItem('pp_recent');
@@ -418,15 +370,51 @@ const App = () => {
 
   React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
 
+  // ── FIXED JOIN FLOW ──────────────────────────────────────────────────────────
+  // Runs after React mounts, eliminating the race condition where Firebase auth
+  // could resolve before React's useEffect registered __pp_deeplink_ready.
+  // Now the fetch happens here — React is guaranteed to be mounted and able
+  // to call setRound / setScreen directly.
   React.useEffect(() => {
-    window.__pp_deeplink_ready = (incomingRound) => {
-      setRound(incomingRound);
+    const code = window.__pp_pending_join_code;
+    if (!code) return;
+    window.__pp_pending_join_code = null; // consume once
+
+    _updateJoinOverlay('Looking up round\u2026', null);
+
+    // Check local snapshot first (same device / offline resilience)
+    try {
+      const localRaw = localStorage.getItem('pp_round');
+      if (localRaw) {
+        const localRound = JSON.parse(localRaw);
+        if (localRound.syncCode === code) {
+          _completeJoin(localRound);
+          return;
+        }
+      }
+    } catch(e) { /* fall through to Firebase */ }
+
+    // Fetch from Firestore — guaranteed post-mount, no race condition
+    window.RoundSyncService.fetchRound(code, function(fetchedRound, err) {
+      if (!fetchedRound) {
+        const msg = err === 'Round not found'
+          ? 'Round "' + code + '" not found or no longer active.\nAsk the host to share their code again.'
+          : 'Connection error. Check your internet and try again.';
+        _updateJoinOverlay(null, msg);
+        return;
+      }
+      _completeJoin(fetchedRound);
+    });
+
+    function _completeJoin(r) {
+      localStorage.setItem('pp_round', JSON.stringify(r));
+      sessionStorage.setItem('pp_screen', 'score');
+      setRound(r);
       setScreen('score');
       const overlay = document.getElementById('pp-join-overlay');
       if (overlay) overlay.style.display = 'none';
-    };
-    return () => { window.__pp_deeplink_ready = null; };
-  }, []);
+    }
+  }, []); // runs exactly once on mount
 
   React.useEffect(() => {
     PlayerSyncService.subscribe(function(remotePlayers) {
@@ -443,7 +431,7 @@ const App = () => {
       setCustomCourses(function(prev) {
         const remoteIds = new Set(remoteCourses.map(function(c) { return c.id; }));
         const localOnly = prev.filter(function(c) { return !remoteIds.has(c.id); });
-        const merged = remoteCourses.concat(localOnly);
+        const merged    = remoteCourses.concat(localOnly);
         localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
         return merged;
       });
@@ -475,9 +463,7 @@ const App = () => {
     });
   };
 
-  const handleCourseSaved = (newCourse, fullUpdatedArray) => {
-    // no-op — subscription callback handles state update
-  };
+  const handleCourseSaved = () => {};
 
   const handleStartRound = (config) => {
     const r = { ...config, id: Date.now() };
@@ -491,7 +477,7 @@ const App = () => {
     });
   };
 
-  const handleSaveRound = (scores, wolfData, putts, presses=[], chips={}, popFlags={}) => {
+  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}) => {
     setFinalScores(scores);
     setFinalWolf(wolfData);
     setFinalPutts(putts);
@@ -513,12 +499,13 @@ const App = () => {
     const completedRound = {
       ...round,
       holeScores,
-      date: new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }),
+      date: new Date().toLocaleDateString('en-US', {
+        weekday:'long', month:'long', day:'numeric', year:'numeric',
+      }),
     };
 
     RoundSyncService.saveRound(completedRound, function() {});
 
-    // Persist full snapshot locally so Recent Rounds can replay without network
     if (round.syncCode) {
       const snapshot = {
         round:         completedRound,
@@ -536,13 +523,12 @@ const App = () => {
       }
     }
 
-    // Update recent rounds list
     const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
     recent.unshift({
       courseName: round.course.name,
       date:       new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
       players:    round.players.length,
-      formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' · '),
+      formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' \u00b7 '),
       syncCode:   round.syncCode || null,
     });
     localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
@@ -551,9 +537,6 @@ const App = () => {
     setScreen('summary');
   };
 
-  // Load a completed round from Recent Rounds for read-only replay.
-  // Checks localStorage snapshot first (instant, offline).
-  // Falls back to Firestore-backed RoundViewer if no local snapshot exists.
   const handleViewRound = (syncCode) => {
     if (!syncCode) return;
     try {
@@ -568,7 +551,6 @@ const App = () => {
     } catch(e) {
       console.warn('[PlayPal] Could not read local round snapshot:', e);
     }
-    // No local snapshot — fall back to Firestore viewer
     setViewedRoundData(null);
     setViewSyncCode(syncCode);
     setScreen('viewround');
@@ -606,7 +588,7 @@ const App = () => {
     '--green': tweaks.accentGreen,
     '--gold':  tweaks.accentGold,
     '--bg':    tweaks.bgColor,
-    '--card':  tweaks.cardBg
+    '--card':  tweaks.cardBg,
   };
 
   return (
@@ -648,10 +630,8 @@ const App = () => {
           />
         }
 
-        {/* ── View completed round from Recent Rounds ── */}
         {screen === 'viewround' && (
           viewedRoundData ? (
-            // Local snapshot found — render SummaryScreen in readOnly mode
             <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
               <div style={{
                 flexShrink:0, display:'flex', alignItems:'center', height:48,
@@ -663,7 +643,7 @@ const App = () => {
                   letterSpacing:1, color:'#7A98BC', padding:'8px 4px',
                   WebkitTapHighlightColor:'transparent',
                 }}>
-                  ‹ BACK
+                  &#8249; BACK
                 </button>
                 <span style={{
                   flex:1, textAlign:'center', fontFamily:'Barlow Condensed',
@@ -688,7 +668,6 @@ const App = () => {
               </div>
             </div>
           ) : (
-            // No local snapshot — fall back to Firestore-based RoundViewer
             <RoundViewer
               syncCode={viewSyncCode}
               onBack={handleBackFromView}
@@ -716,11 +695,11 @@ const App = () => {
       {screen !== 'score' && screen !== 'viewround' &&
         <div style={{ display:'flex', borderTop:'1px solid #1E3A6E', background:'#050E1C', flexShrink:0 }}>
           {[
-            { id:'home',    icon:'🏠', label:'HOME' },
-            { id:'setup',   icon:'⛳', label:'NEW ROUND' },
-            ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }] : []),
-            ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : []),
-            ...(round       ? [{ id:'__exit',  icon:'🚪', label:'EXIT'    }] : []),
+            { id:'home',    icon:'\uD83C\uDFE0', label:'HOME' },
+            { id:'setup',   icon:'\u26F3', label:'NEW ROUND' },
+            ...(round       ? [{ id:'score',   icon:'\uD83C\uDFCC\uFE0F', label:'SCORING' }] : []),
+            ...(finalScores ? [{ id:'summary', icon:'\uD83D\uDCCA', label:'RESULTS' }] : []),
+            ...(round       ? [{ id:'__exit',  icon:'\uD83D\uDEAA', label:'EXIT'    }] : []),
           ].map(tab =>
             <div key={tab.id}
               onClick={() => tab.id === '__exit' ? handleExitRound() : setScreen(tab.id)}
@@ -743,7 +722,11 @@ const App = () => {
       }
 
       {tweaksOpen && (
-        <div style={{ position:'fixed', bottom:20, right:20, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:16, zIndex:9998, minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.5)' }}>
+        <div style={{
+          position:'fixed', bottom:20, right:20, background:'#0F2040',
+          border:'1px solid #1E3A6E', borderRadius:12, padding:16, zIndex:9998,
+          minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+        }}>
           <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, color:'#C9A84C', letterSpacing:2, marginBottom:12 }}>APPEARANCE</div>
           {[['accentGreen','Green'],['accentGold','Gold'],['bgColor','Background'],['cardBg','Card']].map(([k,label]) =>
             <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
