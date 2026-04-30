@@ -1,7 +1,6 @@
 // Setup.jsx — Course persistence + scorecard image scan + realtime course sync
 //             Multi-Nassau: supports 1–3 independent Nassau matches per round
 
-// ─── Scorecard Scanner ────────────────────────────────────────────────────────
 const ScorecardScanner = ({ onResult, onCancel }) => {
   const [status, setStatus]     = React.useState('idle');
   const [preview, setPreview]   = React.useState(null);
@@ -9,158 +8,67 @@ const ScorecardScanner = ({ onResult, onCancel }) => {
   const fileRef = React.useRef(null);
 
   const handleFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      setErrorMsg('Please upload an image file (JPG, PNG, HEIC, etc.)');
-      setStatus('error');
-      return;
-    }
+    if (!file || !file.type.startsWith('image/')) { setErrorMsg('Please upload an image file (JPG, PNG, HEIC, etc.)'); setStatus('error'); return; }
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target.result);
     reader.readAsDataURL(file);
-    setStatus('scanning');
-    setErrorMsg('');
+    setStatus('scanning'); setErrorMsg('');
     const b64Reader = new FileReader();
-    b64Reader.onload = (e) => {
-      const b64 = e.target.result.split(',')[1];
-      callVision(b64, file.type || 'image/jpeg');
-    };
+    b64Reader.onload = (e) => { const b64 = e.target.result.split(',')[1]; callVision(b64, file.type || 'image/jpeg'); };
     b64Reader.readAsDataURL(file);
   };
 
   const callVision = async (b64, mediaType) => {
-    const prompt = `You are analyzing a golf scorecard image. Extract the data and return ONLY valid JSON — no markdown, no explanation, no code fences.
-
-Return exactly this structure:
-{
-  "name": "Full official course name",
-  "location": "City, State",
-  "rating": 72.0,
-  "slope": 113,
-  "holes": [
-    {"num": 1, "par": 4, "yds": 380, "hdcp": 7},
-    {"num": 2, "par": 4, "yds": 350, "hdcp": 11},
-    ... (exactly 18 entries)
-  ]
-}
-
-Rules:
-- name: official course name from the scorecard header
-- location: city and state abbreviation, e.g. "Bridgewater, NJ" — use "Unknown" if not visible
-- rating: course/scratch rating decimal number — default 72.0 if not visible
-- slope: slope rating integer — default 113 if not visible
-- holes: EXACTLY 18 entries numbered 1–18, each with:
-    num  = hole number (1–18)
-    par  = 3, 4, or 5 only
-    yds  = yardage integer (use 0 if unreadable)
-    hdcp = handicap/stroke index 1–18 (assign 1–18 sequentially if not visible)
-- If only a 9-hole scorecard is visible, fill holes 10–18 by repeating holes 1–9 par values with hdcp offset by 9
-- NEVER return fewer than 18 holes`;
-
+    const prompt = `You are analyzing a golf scorecard image. Extract the data and return ONLY valid JSON — no markdown, no explanation, no code fences.\n\nReturn exactly this structure:\n{\n  "name": "Full official course name",\n  "location": "City, State",\n  "rating": 72.0,\n  "slope": 113,\n  "holes": [\n    {"num": 1, "par": 4, "yds": 380, "hdcp": 7},\n    ... (exactly 18 entries)\n  ]\n}\n\nRules:\n- EXACTLY 18 holes numbered 1–18\n- par = 3, 4, or 5 only\n- If only 9 holes visible, repeat with hdcp offset by 9\n- NEVER return fewer than 18 holes`;
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1200,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-              { type: 'text', text: prompt }
-            ]
-          }]
-        })
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }, { type: 'text', text: prompt }] }] })
       });
       if (!resp.ok) throw new Error('API error ' + resp.status);
       const data = await resp.json();
       const raw  = data.content?.find(b => b.type === 'text')?.text || '';
       const clean = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(clean);
-      if (!parsed.name || !Array.isArray(parsed.holes) || parsed.holes.length !== 18) {
-        throw new Error('Could not read all 18 holes. Try a clearer, well-lit photo.');
-      }
+      if (!parsed.name || !Array.isArray(parsed.holes) || parsed.holes.length !== 18) throw new Error('Could not read all 18 holes. Try a clearer, well-lit photo.');
       parsed.rating = parseFloat(parsed.rating) || 72.0;
-      parsed.slope  = parseInt(parsed.slope)    || 113;
-      parsed.holes  = parsed.holes.map((h, i) => ({
-        num:  parseInt(h.num)  || i + 1,
-        par:  parseInt(h.par)  || 4,
-        yds:  parseInt(h.yds)  || 0,
-        hdcp: parseInt(h.hdcp) || i + 1,
-      }));
-      setStatus('done');
-      onResult(parsed);
+      parsed.slope  = parseInt(parsed.slope) || 113;
+      parsed.holes  = parsed.holes.map((h, i) => ({ num:parseInt(h.num)||i+1, par:parseInt(h.par)||4, yds:parseInt(h.yds)||0, hdcp:parseInt(h.hdcp)||i+1 }));
+      setStatus('done'); onResult(parsed);
     } catch (err) {
       console.error('[Scanner]', err);
-      setStatus('error');
-      setErrorMsg(err.message || 'Could not read scorecard. Try a clearer, well-lit photo.');
+      setStatus('error'); setErrorMsg(err.message || 'Could not read scorecard. Try a clearer, well-lit photo.');
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleFile(file);
-  };
-
-  const borderColor = status === 'error' ? '#E5534B' : status === 'done' ? '#3DCB6C' : '#1E3A6E';
+  const handleDrop = (e) => { e.preventDefault(); const file = e.dataTransfer?.files?.[0]; if (file) handleFile(file); };
+  const borderColor = status === 'error' ? '#E5534B' : status === 'done' ? '#2DD97A' : '#1F3354';
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, color:'#C9A84C', letterSpacing:1}}>
-        📸 SCAN SCORECARD
-      </div>
-      <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.6}}>
-        Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.
-      </div>
+      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, color:'#D4AF47', letterSpacing:1}}>📸 SCAN SCORECARD</div>
+      <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A9EBF', lineHeight:1.6}}>Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.</div>
       <div
         onClick={() => status !== 'scanning' && fileRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={e => e.preventDefault()}
-        style={{
-          border: `2px dashed ${borderColor}`,
-          borderRadius: 14, background: '#0A1628', minHeight: 180,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 10, cursor: status === 'scanning' ? 'default' : 'pointer',
-          overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s',
-        }}>
-        {preview && (
-          <img src={preview} alt="preview" style={{
-            position:'absolute', inset:0, width:'100%', height:'100%',
-            objectFit:'cover', opacity: status === 'scanning' ? 0.4 : 0.25,
-          }}/>
-        )}
+        onDrop={handleDrop} onDragOver={e => e.preventDefault()}
+        style={{ border:`2px dashed ${borderColor}`, borderRadius:14, background:'#0B0F1A', minHeight:180, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, cursor:status==='scanning'?'default':'pointer', overflow:'hidden', position:'relative', transition:'border-color 0.2s' }}>
+        {preview && <img src={preview} alt="preview" style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:status==='scanning'?0.4:0.25}}/>}
         <div style={{position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
           {status === 'scanning' ? (
-            <>
-              <div style={{width:36, height:36, border:'3px solid #1E3A6E', borderTopColor:'#3DCB6C', borderRadius:'50%', animation:'ppSpin 0.8s linear infinite'}}/>
-              <div style={{fontFamily:'Barlow Condensed', fontSize:14, letterSpacing:1, color:'#3DCB6C'}}>READING SCORECARD…</div>
-            </>
+            <><div style={{width:36, height:36, border:'3px solid #1F3354', borderTopColor:'#2DD97A', borderRadius:'50%', animation:'ppSpin 0.8s linear infinite'}}/><div style={{fontFamily:'Barlow Condensed', fontSize:14, letterSpacing:1, color:'#2DD97A'}}>READING SCORECARD…</div></>
           ) : status === 'error' ? (
-            <>
-              <div style={{fontSize:32}}>⚠️</div>
-              <div style={{fontFamily:'DM Sans', fontSize:13, color:'#E5534B', textAlign:'center', padding:'0 16px'}}>{errorMsg}</div>
-              <div style={{fontFamily:'Barlow Condensed', fontSize:12, color:'#7A98BC', letterSpacing:1}}>TAP TO TRY AGAIN</div>
-            </>
+            <><div style={{fontSize:32}}>⚠️</div><div style={{fontFamily:'DM Sans', fontSize:13, color:'#E5534B', textAlign:'center', padding:'0 16px'}}>{errorMsg}</div><div style={{fontFamily:'Barlow Condensed', fontSize:12, color:'#7A9EBF', letterSpacing:1}}>TAP TO TRY AGAIN</div></>
           ) : (
-            <>
-              <div style={{fontSize:40}}>📸</div>
-              <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', letterSpacing:1}}>TAP TO UPLOAD SCORECARD</div>
-              <div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A98BC'}}>or drag and drop an image</div>
-            </>
+            <><div style={{fontSize:40}}>📸</div><div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', letterSpacing:1}}>TAP TO UPLOAD SCORECARD</div><div style={{fontFamily:'DM Sans', fontSize:12, color:'#7A9EBF'}}>or drag and drop an image</div></>
           )}
         </div>
       </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}}
-        onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}
-      />
+      <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}/>
       <div style={{display:'flex', gap:10}}>
         <Btn onClick={onCancel} variant="ghost" style={{flex:1}}>CANCEL</Btn>
         {(status === 'error' || status === 'idle') && preview && (
-          <Btn onClick={() => { setStatus('idle'); setPreview(null); setErrorMsg(''); }} variant="surface" style={{flex:1}}>
-            CLEAR IMAGE
-          </Btn>
+          <Btn onClick={() => { setStatus('idle'); setPreview(null); setErrorMsg(''); }} variant="surface" style={{flex:1}}>CLEAR IMAGE</Btn>
         )}
       </div>
       <style>{`@keyframes ppSpin { to { transform: rotate(360deg); } }`}</style>
@@ -168,7 +76,6 @@ Rules:
   );
 };
 
-// ─── Custom Course Builder ────────────────────────────────────────────────────
 const BLANK_HOLES = Array.from({length:18}, (_,i) => ({ num:i+1, par:4, yds:'', hdcp:i+1 }));
 
 const CourseBuilder = ({ onSave, onCancel, prefill }) => {
@@ -177,116 +84,59 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
   const [rating,   setRating]   = React.useState(prefill?.rating   ? String(prefill.rating) : '');
   const [slope,    setSlope]    = React.useState(prefill?.slope    ? String(prefill.slope)  : '');
   const [holes,    setHoles]    = React.useState(() => {
-    if (prefill?.holes?.length === 18) {
-      return prefill.holes.map(h => ({ num:h.num, par:h.par||4, yds:h.yds||'', hdcp:h.hdcp||h.num }));
-    }
+    if (prefill?.holes?.length === 18) return prefill.holes.map(h => ({ num:h.num, par:h.par||4, yds:h.yds||'', hdcp:h.hdcp||h.num }));
     return BLANK_HOLES.map(h => ({...h}));
   });
 
   const setHoleField = (idx, field, val) => {
-    setHoles(prev => prev.map((h,i) =>
-      i === idx ? {...h, [field]: field === 'yds' ? val : Number(val)||0} : h
-    ));
+    setHoles(prev => prev.map((h,i) => i === idx ? {...h, [field]: field === 'yds' ? val : Number(val)||0} : h));
   };
 
   const totalPar = holes.reduce((a,h) => a + (h.par||0), 0);
   const valid    = name.trim() && holes.every(h => h.par >= 3 && h.par <= 6 && h.hdcp >= 1 && h.hdcp <= 18);
 
   const handleSave = () => {
-    const course = {
-      id:       'custom_' + Date.now(),
-      name:     name.trim(),
-      location: location.trim() || 'Custom Course',
-      rating:   parseFloat(rating) || 72.0,
-      slope:    parseInt(slope)    || 113,
-      custom:   true,
-      holes:    holes.map(h => ({...h, yds: parseInt(h.yds)||0})),
-    };
+    const course = { id:'custom_'+Date.now(), name:name.trim(), location:location.trim()||'Custom Course', rating:parseFloat(rating)||72.0, slope:parseInt(slope)||113, custom:true, holes:holes.map(h=>({...h, yds:parseInt(h.yds)||0})) };
     let existing = [];
     try { existing = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) {}
     const updated = [...existing, course];
     localStorage.setItem('pp_custom_courses', JSON.stringify(updated));
-    if (window.CourseSyncService) {
-      window.CourseSyncService.save(updated, function(ok) {
-        if (!ok) console.warn('[PlayPal] Course RTDB sync failed — saved locally only');
-      });
-    }
+    if (window.CourseSyncService) { window.CourseSyncService.save(updated, function(ok) { if (!ok) console.warn('[PlayPal] Course RTDB sync failed'); }); }
     onSave(course, updated);
   };
 
-  const inputStyle = {
-    background:'#162950', border:'1px solid #1E3A6E', borderRadius:8,
-    padding:'10px 12px', color:'#fff', fontFamily:'DM Sans', fontSize:14,
-    outline:'none', boxSizing:'border-box', width:'100%',
-  };
-  const holeInputStyle = {
-    background:'#162950', border:'1px solid #1E3A6E', color:'#fff', borderRadius:5,
-    padding:'5px 4px', fontFamily:'DM Sans', fontSize:13, width:'100%', outline:'none', textAlign:'center'
-  };
+  const inputStyle = { background:'#0B0F1A', border:'1px solid #1F3354', borderRadius:8, padding:'10px 12px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box', width:'100%' };
+  const holeInputStyle = { background:'#0B0F1A', border:'1px solid #1F3354', color:'#fff', borderRadius:5, padding:'5px 4px', fontFamily:'DM Sans', fontSize:13, width:'100%', outline:'none', textAlign:'center' };
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, color:'#C9A84C', letterSpacing:1}}>
-        {prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}
-      </div>
-      {prefill && (
-        <div style={{background:'rgba(61,203,108,0.06)', border:'1px solid rgba(61,203,108,0.25)', borderRadius:10, padding:'10px 14px', fontFamily:'DM Sans', fontSize:12, color:'#3DCB6C'}}>
-          Scorecard scanned successfully — review and correct any values before saving.
-        </div>
-      )}
+      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, color:'#D4AF47', letterSpacing:1}}>{prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}</div>
+      {prefill && <div style={{background:'rgba(45,217,122,0.05)', border:'1px solid rgba(45,217,122,0.2)', borderRadius:10, padding:'10px 14px', fontFamily:'DM Sans', fontSize:12, color:'#2DD97A'}}>Scorecard scanned successfully — review and correct any values before saving.</div>}
       <div style={{display:'flex', flexDirection:'column', gap:10}}>
-        <div>
-          <Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label>
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/>
-        </div>
-        <div>
-          <Label style={{display:'block', marginBottom:4}}>LOCATION</Label>
-          <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/>
-        </div>
+        <div><Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/></div>
+        <div><Label style={{display:'block', marginBottom:4}}>LOCATION</Label><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/></div>
         <div style={{display:'flex', gap:10}}>
-          <div style={{flex:1}}>
-            <Label style={{display:'block', marginBottom:4}}>COURSE RATING</Label>
-            <input value={rating} onChange={e=>setRating(e.target.value)} placeholder="e.g. 70.1" style={inputStyle}/>
-          </div>
-          <div style={{flex:1}}>
-            <Label style={{display:'block', marginBottom:4}}>SLOPE</Label>
-            <input value={slope} onChange={e=>setSlope(e.target.value)} placeholder="e.g. 121" style={inputStyle}/>
-          </div>
+          <div style={{flex:1}}><Label style={{display:'block', marginBottom:4}}>COURSE RATING</Label><input value={rating} onChange={e=>setRating(e.target.value)} placeholder="e.g. 70.1" style={inputStyle}/></div>
+          <div style={{flex:1}}><Label style={{display:'block', marginBottom:4}}>SLOPE</Label><input value={slope} onChange={e=>setSlope(e.target.value)} placeholder="e.g. 121" style={inputStyle}/></div>
         </div>
       </div>
       <div>
         <div style={{display:'flex', alignItems:'baseline', gap:10, marginBottom:8}}>
           <Label>SCORECARD — 18 HOLES</Label>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:12,
-            color: totalPar >= 68 && totalPar <= 76 ? '#3DCB6C' : '#E5534B'}}>
-            Total par: {totalPar}
-          </span>
+          <span style={{fontFamily:'Barlow Condensed', fontSize:12, color:totalPar>=68&&totalPar<=76?'#2DD97A':'#E5534B'}}>Total par: {totalPar}</span>
         </div>
         <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
           <table style={{borderCollapse:'collapse', width:'100%', minWidth:300}}>
             <thead>
-              <tr>
-                {['#','PAR','YDS','HCP'].map(h=>(
-                  <th key={h} style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:1, color:'#4A6890', textAlign:'center', borderBottom:'1px solid #1E3A6E'}}>{h}</th>
-                ))}
-              </tr>
+              <tr>{['#','PAR','YDS','HCP'].map(h=><th key={h} style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:1.5, color:'#3A5880', textAlign:'center', borderBottom:'1px solid #1F3354'}}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {holes.map((h, i) => (
-                <tr key={i} style={{background: i%2===0 ? '#0A1628' : '#0F2040'}}>
-                  <td style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color: i<9 ? '#7A98BC' : '#9BB4D4', textAlign:'center'}}>{h.num}</td>
-                  <td style={{padding:'3px 4px'}}>
-                    <input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)}
-                      type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/>
-                  </td>
-                  <td style={{padding:'3px 4px'}}>
-                    <input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)}
-                      placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/>
-                  </td>
-                  <td style={{padding:'3px 4px'}}>
-                    <input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)}
-                      type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/>
-                  </td>
+                <tr key={i} style={{background:i%2===0?'#0B0F1A':'#0F1D35'}}>
+                  <td style={{padding:'4px 6px', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color:i<9?'#7A9EBF':'#9BB4D4', textAlign:'center'}}>{h.num}</td>
+                  <td style={{padding:'3px 4px'}}><input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)} type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/></td>
+                  <td style={{padding:'3px 4px'}}><input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)} placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/></td>
+                  <td style={{padding:'3px 4px'}}><input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)} type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/></td>
                 </tr>
               ))}
             </tbody>
@@ -295,25 +145,18 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
       </div>
       <div style={{display:'flex', gap:10}}>
         <Btn onClick={onCancel} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-        <Btn onClick={handleSave} variant="gold" disabled={!valid} style={{flex:2}}>
-          💾 SAVE COURSE
-        </Btn>
+        <Btn onClick={handleSave} variant="gold" disabled={!valid} style={{flex:2}}>💾 SAVE COURSE</Btn>
       </div>
     </div>
   );
 };
 
-// ─── Stakes Input ─────────────────────────────────────────────────────────────
 const StakesInput = ({ value, onChange }) => {
   const presets = [1, 2, 5, 10, 20, 25, 50];
   const [custom, setCustom] = React.useState(!presets.includes(value));
   const [customVal, setCustomVal] = React.useState(presets.includes(value) ? '' : String(value));
 
-  const handleCustomChange = (v) => {
-    setCustomVal(v);
-    const n = parseFloat(v);
-    if (!isNaN(n) && n > 0) onChange(n);
-  };
+  const handleCustomChange = (v) => { setCustomVal(v); const n = parseFloat(v); if (!isNaN(n) && n > 0) onChange(n); };
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:8}}>
@@ -321,276 +164,155 @@ const StakesInput = ({ value, onChange }) => {
         {presets.map(v => (
           <div key={v} onClick={() => { setCustom(false); onChange(v); }}
             style={{padding:'6px 13px', borderRadius:7, cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15,
-              background: !custom && value===v ? '#3DCB6C' : '#162950',
-              color:      !custom && value===v ? '#0A1628'  : '#9BB4D4',
-              border:     !custom && value===v ? 'none'     : '1px solid #1E3A6E'}}>
+              background:!custom&&value===v?'#2DD97A':'#112240', color:!custom&&value===v?'#0B0F1A':'#9BB4D4', border:!custom&&value===v?'none':'1px solid #1F3354'}}>
             ${v}
           </div>
         ))}
         <div onClick={()=>setCustom(true)}
           style={{padding:'6px 13px', borderRadius:7, cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15,
-            background: custom ? '#C9A84C' : '#162950', color: custom ? '#0A1628' : '#9BB4D4',
-            border: custom ? 'none' : '1px solid #1E3A6E'}}>
+            background:custom?'#D4AF47':'#112240', color:custom?'#0B0F1A':'#9BB4D4', border:custom?'none':'1px solid #1F3354'}}>
           OTHER
         </div>
       </div>
       {custom && (
         <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:20, color:'#C9A84C', fontWeight:800}}>$</span>
-          <input autoFocus value={customVal} onChange={e=>handleCustomChange(e.target.value)}
-            type="number" min="0.5" step="0.5" placeholder="Enter amount"
-            style={{flex:1, background:'#162950', border:'1px solid #C9A84C', borderRadius:8, padding:'10px 12px',
-              color:'#fff', fontFamily:'Barlow Condensed', fontSize:18, fontWeight:700, outline:'none'}}/>
+          <span style={{fontFamily:'Barlow Condensed', fontSize:20, color:'#D4AF47', fontWeight:800}}>$</span>
+          <input autoFocus value={customVal} onChange={e=>handleCustomChange(e.target.value)} type="number" min="0.5" step="0.5" placeholder="Enter amount"
+            style={{flex:1, background:'#0B0F1A', border:'1px solid #D4AF47', borderRadius:8, padding:'10px 12px', color:'#fff', fontFamily:'Barlow Condensed', fontSize:18, fontWeight:700, outline:'none'}}/>
         </div>
       )}
     </div>
   );
 };
 
-// ─── Nassau Pop Hole Selector ─────────────────────────────────────────────────
 const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
   if (!nassauPlayers || nassauPlayers.length < 2) return null;
-
   const [activePlayer, setActivePlayer] = React.useState(nassauPlayers[0].id);
 
   const toggleHole = (holeIdx) => {
     const current = popHoles[activePlayer] || Array(18).fill(false);
-    const next = [...current];
-    next[holeIdx] = !next[holeIdx];
+    const next = [...current]; next[holeIdx] = !next[holeIdx];
     onChange({ ...popHoles, [activePlayer]: next });
   };
 
-  const clearAll = () => {
-    onChange({ ...popHoles, [activePlayer]: Array(18).fill(false) });
-  };
-
+  const clearAll = () => onChange({ ...popHoles, [activePlayer]: Array(18).fill(false) });
   const popCount = (popHoles[activePlayer] || []).filter(Boolean).length;
 
   return (
-    <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>STROKE POPS (OPTIONAL)</div>
-      <div style={{fontFamily:'DM Sans', fontSize:12, color:'#4A6890', lineHeight:1.5}}>
-        Select which player is getting strokes and tap the holes they receive them on.
-      </div>
-
+    <div style={{borderTop:'1px solid rgba(212,175,71,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
+      <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF'}}>STROKE POPS (OPTIONAL)</div>
+      <div style={{fontFamily:'DM Sans', fontSize:12, color:'#3A5880', lineHeight:1.5}}>Select which player is getting strokes and tap the holes they receive them on.</div>
       <div style={{display:'flex', gap:8}}>
         {nassauPlayers.map(p => (
           <div key={p.id} onClick={() => setActivePlayer(p.id)}
-            style={{
-              flex:1, display:'flex', alignItems:'center', gap:8,
-              padding:'8px 10px', borderRadius:9, cursor:'pointer',
-              background: activePlayer === p.id ? `${p.color}18` : '#0A1628',
-              border: activePlayer === p.id ? `1px solid ${p.color}` : '1px solid #1E3A6E',
-            }}>
-            <div style={{width:8, height:8, borderRadius:'50%', background:p.color, flexShrink:0}}/>
-            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13,
-              color: activePlayer === p.id ? p.color : '#9BB4D4', flex:1}}>
-              {p.name.split(' ')[0].toUpperCase()}
-            </span>
-            {(popHoles[p.id] || []).filter(Boolean).length > 0 && (
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11,
-                color:'#C9A84C', background:'rgba(201,168,76,0.15)', borderRadius:4, padding:'1px 5px'}}>
-                {(popHoles[p.id] || []).filter(Boolean).length}
-              </span>
+            style={{flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:9, cursor:'pointer',
+              background:activePlayer===p.id?`${p.color}12`:'#0B0F1A', border:activePlayer===p.id?`1px solid ${p.color}`:'1px solid #1F3354'}}>
+            <div style={{width:7, height:7, borderRadius:'50%', background:p.color, flexShrink:0}}/>
+            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, color:activePlayer===p.id?p.color:'#9BB4D4', flex:1}}>{p.name.split(' ')[0].toUpperCase()}</span>
+            {(popHoles[p.id]||[]).filter(Boolean).length > 0 && (
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, color:'#D4AF47', background:'rgba(212,175,71,0.12)', borderRadius:4, padding:'1px 5px'}}>{(popHoles[p.id]||[]).filter(Boolean).length}</span>
             )}
           </div>
         ))}
       </div>
-
       <div>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
-          <Label style={{fontSize:10}}>
-            {nassauPlayers.find(p => p.id === activePlayer)?.name.split(' ')[0].toUpperCase()} — SELECT POP HOLES
-            {popCount > 0 && <span style={{color:'#C9A84C', marginLeft:6}}>{popCount} SELECTED</span>}
-          </Label>
-          {popCount > 0 && (
-            <button onClick={clearAll}
-              style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed',
-                fontWeight:700, fontSize:10, letterSpacing:1, color:'#4A6890',
-                WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>
-              CLEAR
-            </button>
-          )}
+          <Label style={{fontSize:10}}>{nassauPlayers.find(p=>p.id===activePlayer)?.name.split(' ')[0].toUpperCase()} — SELECT POP HOLES{popCount>0&&<span style={{color:'#D4AF47', marginLeft:6}}>{popCount} SELECTED</span>}</Label>
+          {popCount > 0 && <button onClick={clearAll} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:10, letterSpacing:1, color:'#3A5880', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>CLEAR</button>}
         </div>
-
-        <div style={{marginBottom:6}}>
-          <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1.5, color:'#4A6890', marginBottom:4}}>FRONT 9</div>
-          <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
-            {Array.from({length:9}, (_, i) => {
-              const active = !!(popHoles[activePlayer]?.[i]);
-              const activeP = nassauPlayers.find(p => p.id === activePlayer);
-              return (
-                <div key={i} onClick={() => toggleHole(i)}
-                  style={{
-                    flex:1, minWidth:28, height:34, borderRadius:6, cursor:'pointer',
-                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                    background: active ? (activeP?.color || '#C9A84C') : '#162950',
-                    border: active ? 'none' : '1px solid #1E3A6E',
-                    WebkitTapHighlightColor:'transparent', userSelect:'none',
-                    transition:'background 0.12s',
-                  }}>
-                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12,
-                    color: active ? '#0A1628' : '#4A6890', lineHeight:1}}>{i+1}</span>
-                  {active && <span style={{fontSize:6, color:'#0A1628', marginTop:1}}>POP</span>}
-                </div>
-              );
-            })}
+        {['FRONT 9', 'BACK 9'].map((label, half) => (
+          <div key={label} style={{marginBottom:6}}>
+            <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:2, color:'#3A5880', marginBottom:4}}>{label}</div>
+            <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
+              {Array.from({length:9}, (_, i) => {
+                const holeIdx = i + (half * 9);
+                const active = !!(popHoles[activePlayer]?.[holeIdx]);
+                const activeP = nassauPlayers.find(p => p.id === activePlayer);
+                return (
+                  <div key={holeIdx} onClick={() => toggleHole(holeIdx)}
+                    style={{flex:1, minWidth:28, height:34, borderRadius:6, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                      background:active?(activeP?.color||'#D4AF47'):'#112240', border:active?'none':'1px solid #1F3354',
+                      WebkitTapHighlightColor:'transparent', userSelect:'none', transition:'background 0.12s'}}>
+                    <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, color:active?'#0B0F1A':'#3A5880', lineHeight:1}}>{holeIdx+1}</span>
+                    {active && <span style={{fontSize:6, color:'#0B0F1A', marginTop:1}}>POP</span>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-
-        <div>
-          <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1.5, color:'#4A6890', marginBottom:4}}>BACK 9</div>
-          <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
-            {Array.from({length:9}, (_, i) => {
-              const holeIdx = i + 9;
-              const active = !!(popHoles[activePlayer]?.[holeIdx]);
-              const activeP = nassauPlayers.find(p => p.id === activePlayer);
-              return (
-                <div key={holeIdx} onClick={() => toggleHole(holeIdx)}
-                  style={{
-                    flex:1, minWidth:28, height:34, borderRadius:6, cursor:'pointer',
-                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                    background: active ? (activeP?.color || '#C9A84C') : '#162950',
-                    border: active ? 'none' : '1px solid #1E3A6E',
-                    WebkitTapHighlightColor:'transparent', userSelect:'none',
-                    transition:'background 0.12s',
-                  }}>
-                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12,
-                    color: active ? '#0A1628' : '#4A6890', lineHeight:1}}>{holeIdx+1}</span>
-                  {active && <span style={{fontSize:6, color:'#0A1628', marginTop:1}}>POP</span>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
 };
 
-// ─── Single Nassau Match Config ───────────────────────────────────────────────
-// Used by multi-match manager for each individual match slot.
 const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLabel }) => {
   const matchType      = matchConfig.matchType || '1v1';
   const playersInMatch = matchConfig.playersInMatch || [];
   const teams          = matchConfig.teams || null;
   const popHoles       = matchConfig.popHoles || {};
   const stakes         = matchConfig.stakes || 5;
-
   const can2v2 = roundPlayers.length >= 4;
 
-  const setMatchType = (t) => {
-    onChange({ ...matchConfig, matchType: t, playersInMatch: [], teams: null, popHoles: {} });
-  };
+  const setMatchType = (t) => onChange({ ...matchConfig, matchType:t, playersInMatch:[], teams:null, popHoles:{} });
 
   const togglePlayer = (id) => {
     const max = matchType === '2v2' ? 4 : 2;
-    const next = playersInMatch.includes(id)
-      ? playersInMatch.filter(x => x !== id)
-      : playersInMatch.length < max ? [...playersInMatch, id] : playersInMatch;
-    if (matchType === '2v2' && next.length === 4) {
-      onChange({ ...matchConfig, playersInMatch: next, teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] } });
-    } else {
-      onChange({ ...matchConfig, playersInMatch: next, teams: null });
-    }
+    const next = playersInMatch.includes(id) ? playersInMatch.filter(x=>x!==id) : playersInMatch.length<max?[...playersInMatch,id]:playersInMatch;
+    if (matchType==='2v2'&&next.length===4) onChange({...matchConfig,playersInMatch:next,teams:{team1:[next[0],next[1]],team2:[next[2],next[3]]}});
+    else onChange({...matchConfig,playersInMatch:next,teams:null});
   };
 
   const moveToTeam = (id, teamKey) => {
     if (!teams) return;
-    const newT1 = (teams.team1 || []).filter(x => x !== id);
-    const newT2 = (teams.team2 || []).filter(x => x !== id);
-    if (teamKey === 'team1') newT1.push(id);
-    else newT2.push(id);
-    onChange({ ...matchConfig, teams: { team1: newT1, team2: newT2 } });
-  };
-
-  const handlePopChange = (nextPopHoles) => {
-    onChange({ ...matchConfig, popHoles: nextPopHoles });
-  };
-
-  const handleStakeChange = (v) => {
-    onChange({ ...matchConfig, stakes: v });
+    const newT1=(teams.team1||[]).filter(x=>x!==id); const newT2=(teams.team2||[]).filter(x=>x!==id);
+    if (teamKey==='team1') newT1.push(id); else newT2.push(id);
+    onChange({...matchConfig,teams:{team1:newT1,team2:newT2}});
   };
 
   const playerById = (id) => roundPlayers.find(p => p.id === id);
-  const isValid1v1 = matchType === '1v1' && playersInMatch.length === 2;
-  const isValid2v2 = matchType === '2v2' && teams &&
-    (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
+  const isValid1v1 = matchType==='1v1'&&playersInMatch.length===2;
+  const isValid2v2 = matchType==='2v2'&&teams&&(teams.team1||[]).length===2&&(teams.team2||[]).length===2;
   const isValid = isValid1v1 || isValid2v2;
-
-  const nassauPlayersForPop = playersInMatch.map(id => playerById(id)).filter(Boolean);
+  const nassauPlayersForPop = playersInMatch.map(id=>playerById(id)).filter(Boolean);
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:10}}>
-      {/* Match label */}
-      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:2,
-        color:'#C9A84C', marginBottom:2}}>{matchLabel}</div>
-
-      {/* Stakes */}
+      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:2, color:'#D4AF47', marginBottom:2}}>{matchLabel}</div>
       <div>
-        <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:6}}>
-          STAKE (per bet — Front 9 + Back 9 + Overall 2×)
-        </div>
-        <StakesInput value={stakes} onChange={handleStakeChange}/>
+        <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF', marginBottom:6}}>STAKE (per bet — Front 9 + Back 9 + Overall 2×)</div>
+        <StakesInput value={stakes} onChange={v=>onChange({...matchConfig,stakes:v})}/>
       </div>
-
-      {/* Match type */}
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:2}}>MATCH FORMAT</div>
+      <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF', marginBottom:2}}>MATCH FORMAT</div>
       <div style={{display:'flex', gap:8}}>
-        {['1v1', ...(can2v2 ? ['2v2'] : [])].map(t => (
+        {['1v1',...(can2v2?['2v2']:[])].map(t => (
           <div key={t} onClick={() => setMatchType(t)}
-            style={{
-              flex:1, textAlign:'center', padding:'8px 0', borderRadius:8, cursor:'pointer',
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15,
-              background: matchType === t ? '#C9A84C' : '#162950',
-              color:      matchType === t ? '#0A1628'  : '#9BB4D4',
-              border:     matchType === t ? 'none'     : '1px solid #1E3A6E',
-            }}>
+            style={{flex:1, textAlign:'center', padding:'8px 0', borderRadius:8, cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15,
+              background:matchType===t?'#D4AF47':'#112240', color:matchType===t?'#0B0F1A':'#9BB4D4', border:matchType===t?'none':'1px solid #1F3354'}}>
             {t}
           </div>
         ))}
       </div>
-
-      {/* Player selection */}
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
-        SELECT {matchType === '2v2' ? '4' : '2'} PLAYERS
-      </div>
+      <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF'}}>SELECT {matchType==='2v2'?'4':'2'} PLAYERS</div>
       <div style={{display:'flex', flexDirection:'column', gap:6}}>
         {roundPlayers.map(p => {
-          const selected = playersInMatch.includes(p.id);
-          const inTeam1  = teams?.team1?.includes(p.id);
-          const inTeam2  = teams?.team2?.includes(p.id);
+          const selected=playersInMatch.includes(p.id); const inTeam1=teams?.team1?.includes(p.id); const inTeam2=teams?.team2?.includes(p.id);
           return (
-            <div key={p.id} onClick={() => togglePlayer(p.id)}
-              style={{
-                display:'flex', alignItems:'center', gap:10,
-                borderRadius:10, padding:'10px 12px', cursor:'pointer',
-                background: selected ? `${p.color}11` : '#0A1628',
-                border: selected ? `1px solid ${p.color}` : '1px solid #1E3A6E',
-              }}>
-              <div style={{
-                width:20, height:20, borderRadius:6, border:`2px solid ${selected ? p.color : '#1E3A6E'}`,
-                background: selected ? p.color : 'transparent', flexShrink:0,
-                display:'flex', alignItems:'center', justifyContent:'center',
-              }}>
-                {selected && <span style={{color:'#0A1628', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
+            <div key={p.id} onClick={()=>togglePlayer(p.id)}
+              style={{display:'flex', alignItems:'center', gap:10, borderRadius:10, padding:'10px 12px', cursor:'pointer',
+                background:selected?`${p.color}0A`:'#0B0F1A', border:selected?`1px solid ${p.color}`:'1px solid #1F3354'}}>
+              <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${selected?p.color:'#1F3354'}`, background:selected?p.color:'transparent', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {selected && <span style={{color:'#0B0F1A', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
               </div>
               <Avatar player={p} size={28}/>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color: selected ? '#fff' : '#9BB4D4', flex:1}}>
-                {p.name}
-              </span>
-              {matchType === '2v2' && selected && (
-                <div style={{display:'flex', gap:4}} onClick={e => e.stopPropagation()}>
-                  {['team1', 'team2'].map((tk, ti) => (
-                    <div key={tk} onClick={() => moveToTeam(p.id, tk)}
-                      style={{
-                        padding:'3px 8px', borderRadius:6, cursor:'pointer',
-                        fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
-                        background: (tk === 'team1' ? inTeam1 : inTeam2) ? p.color : '#162950',
-                        color:      (tk === 'team1' ? inTeam1 : inTeam2) ? '#0A1628' : '#4A6890',
-                        border:     (tk === 'team1' ? inTeam1 : inTeam2) ? 'none' : '1px solid #1E3A6E',
-                      }}>
-                      T{ti + 1}
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color:selected?'#fff':'#9BB4D4', flex:1}}>{p.name}</span>
+              {matchType==='2v2'&&selected&&(
+                <div style={{display:'flex', gap:4}} onClick={e=>e.stopPropagation()}>
+                  {['team1','team2'].map((tk,ti)=>(
+                    <div key={tk} onClick={()=>moveToTeam(p.id,tk)}
+                      style={{padding:'3px 8px', borderRadius:6, cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
+                        background:(tk==='team1'?inTeam1:inTeam2)?p.color:'#112240', color:(tk==='team1'?inTeam1:inTeam2)?'#0B0F1A':'#3A5880', border:(tk==='team1'?inTeam1:inTeam2)?'none':'1px solid #1F3354'}}>
+                      T{ti+1}
                     </div>
                   ))}
                 </div>
@@ -599,60 +321,14 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
           );
         })}
       </div>
-
-      {matchType === '2v2' && teams && (teams.team1||[]).length > 0 && (
-        <div style={{display:'flex', gap:8}}>
-          {['team1','team2'].map((tk, ti) => {
-            const members = (teams[tk] || []).map(playerById).filter(Boolean);
-            return (
-              <div key={tk} style={{flex:1, background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:8, padding:'8px 10px'}}>
-                <div style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890', letterSpacing:1, marginBottom:4}}>TEAM {ti+1}</div>
-                {members.map(p => (
-                  <div key={p.id} style={{display:'flex', alignItems:'center', gap:5, marginBottom:2}}>
-                    <div style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
-                    <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p.name.split(' ')[0]}</span>
-                  </div>
-                ))}
-                {members.length === 0 && (
-                  <div style={{fontFamily:'DM Sans', fontSize:11, color:'#4A6890'}}>No players</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!isValid && (
-        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#E5534B'}}>
-          {matchType === '1v1'
-            ? `Select exactly 2 players for the match (${playersInMatch.length}/2)`
-            : `Select 4 players and assign 2 to each team`}
-        </div>
-      )}
-      {isValid && (
-        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#3DCB6C'}}>
-          {matchType === '1v1'
-            ? `✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`
-            : `✓ Team match configured`}
-        </div>
-      )}
-
-      {isValid && matchType === '1v1' && nassauPlayersForPop.length === 2 && (
-        <NassauPopConfig
-          nassauPlayers={nassauPlayersForPop}
-          popHoles={popHoles}
-          onChange={handlePopChange}
-        />
-      )}
+      {!isValid && <div style={{fontFamily:'DM Sans', fontSize:11, color:'#E5534B'}}>{matchType==='1v1'?`Select exactly 2 players (${playersInMatch.length}/2)`:`Select 4 players and assign 2 to each team`}</div>}
+      {isValid && <div style={{fontFamily:'DM Sans', fontSize:11, color:'#2DD97A'}}>{matchType==='1v1'?`✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`:`✓ Team match configured`}</div>}
+      {isValid && matchType==='1v1' && nassauPlayersForPop.length===2 && <NassauPopConfig nassauPlayers={nassauPlayersForPop} popHoles={popHoles} onChange={v=>onChange({...matchConfig,popHoles:v})}/>}
     </div>
   );
 };
 
-// ─── Multi-Nassau Match Manager ───────────────────────────────────────────────
-// Manages 1–3 independent Nassau matches for a single round.
-// Each match has its own stakes, players, pops.
-// nassauMatches: [{ id, matchType, playersInMatch, teams, popHoles, stakes }, ...]
-const MATCH_COLORS = ['#C9A84C', '#7B9FE0', '#E07BE0'];
+const MATCH_COLORS = ['#D4AF47', '#7B9FE0', '#E07BE0'];
 const MATCH_LABELS = ['MATCH 1', 'MATCH 2', 'MATCH 3'];
 
 const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
@@ -660,105 +336,36 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
 
   const addMatch = () => {
     if (nassauMatches.length >= MAX_MATCHES) return;
-    const newMatch = {
-      id:             'nm_' + Date.now(),
-      matchType:      '1v1',
-      playersInMatch: [],
-      teams:          null,
-      popHoles:       {},
-      stakes:         5,
-    };
-    onChange([...nassauMatches, newMatch]);
+    onChange([...nassauMatches, { id:'nm_'+Date.now(), matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:5 }]);
   };
 
-  const removeMatch = (idx) => {
-    const next = nassauMatches.filter((_, i) => i !== idx);
-    onChange(next);
-  };
-
-  const updateMatch = (idx, updated) => {
-    const next = nassauMatches.map((m, i) => i === idx ? { ...m, ...updated } : m);
-    onChange(next);
-  };
+  const removeMatch  = (idx) => onChange(nassauMatches.filter((_,i)=>i!==idx));
+  const updateMatch  = (idx, updated) => onChange(nassauMatches.map((m,i)=>i===idx?{...m,...updated}:m));
 
   return (
-    <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:14}}>
+    <div style={{borderTop:'1px solid rgba(212,175,71,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:14}}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-        <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
-          NASSAU MATCHES ({nassauMatches.length}/{MAX_MATCHES})
-        </div>
+        <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF'}}>NASSAU MATCHES ({nassauMatches.length}/{MAX_MATCHES})</div>
         {nassauMatches.length < MAX_MATCHES && (
           <button onClick={addMatch}
-            style={{
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:1,
-              color:'#3DCB6C', background:'rgba(61,203,108,0.08)',
-              border:'1px solid rgba(61,203,108,0.3)', borderRadius:7,
-              padding:'4px 12px', cursor:'pointer',
-              WebkitTapHighlightColor:'transparent',
-            }}>
+            style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:1, color:'#2DD97A', background:'rgba(45,217,122,0.07)', border:'1px solid rgba(45,217,122,0.2)', borderRadius:7, padding:'4px 12px', cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
             + ADD MATCH
           </button>
         )}
       </div>
-
-      {nassauMatches.length === 0 && (
-        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#4A6890', textAlign:'center', padding:'12px 0'}}>
-          No matches configured. Tap + ADD MATCH to begin.
-        </div>
-      )}
-
+      {nassauMatches.length===0 && <div style={{fontFamily:'DM Sans', fontSize:12, color:'#3A5880', textAlign:'center', padding:'12px 0'}}>No matches configured. Tap + ADD MATCH to begin.</div>}
       {nassauMatches.map((match, idx) => (
-        <div key={match.id}
-          style={{
-            background:'#0A1628',
-            border:`1px solid ${MATCH_COLORS[idx]}44`,
-            borderRadius:12,
-            overflow:'hidden',
-          }}>
-          {/* Match header */}
-          <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'10px 14px',
-            background:`${MATCH_COLORS[idx]}0A`,
-            borderBottom:`1px solid ${MATCH_COLORS[idx]}33`,
-          }}>
+        <div key={match.id} style={{background:'#0B0F1A', border:`1px solid ${MATCH_COLORS[idx]}33`, borderRadius:12, overflow:'hidden'}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:`${MATCH_COLORS[idx]}08`, borderBottom:`1px solid ${MATCH_COLORS[idx]}22`}}>
             <div style={{display:'flex', alignItems:'center', gap:8}}>
-              <div style={{width:8, height:8, borderRadius:'50%', background:MATCH_COLORS[idx]}}/>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14,
-                letterSpacing:1.5, color:MATCH_COLORS[idx]}}>
-                {MATCH_LABELS[idx]}
-              </span>
-              {match.playersInMatch.length === 2 && (() => {
-                const p1 = roundPlayers.find(p => p.id === match.playersInMatch[0]);
-                const p2 = roundPlayers.find(p => p.id === match.playersInMatch[1]);
-                return p1 && p2 ? (
-                  <span style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC'}}>
-                    {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]}
-                  </span>
-                ) : null;
-              })()}
+              <div style={{width:7, height:7, borderRadius:'50%', background:MATCH_COLORS[idx]}}/>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, letterSpacing:1.5, color:MATCH_COLORS[idx]}}>{MATCH_LABELS[idx]}</span>
+              {match.playersInMatch.length===2&&(()=>{const p1=roundPlayers.find(p=>p.id===match.playersInMatch[0]);const p2=roundPlayers.find(p=>p.id===match.playersInMatch[1]);return p1&&p2?<span style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#7A9EBF'}}>{p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]}</span>:null;})()}
             </div>
-            {nassauMatches.length > 1 && (
-              <button onClick={() => removeMatch(idx)}
-                style={{
-                  background:'none', border:'none', cursor:'pointer',
-                  fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12,
-                  letterSpacing:1, color:'#4A6890',
-                  WebkitTapHighlightColor:'transparent', padding:'2px 6px',
-                }}>
-                REMOVE
-              </button>
-            )}
+            {nassauMatches.length>1&&<button onClick={()=>removeMatch(idx)} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, letterSpacing:1, color:'#3A5880', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>REMOVE</button>}
           </div>
-
-          {/* Match body */}
           <div style={{padding:'12px 14px'}}>
-            <NassauSingleMatchConfig
-              roundPlayers={roundPlayers}
-              matchConfig={match}
-              onChange={(updated) => updateMatch(idx, updated)}
-              matchLabel=""
-            />
+            <NassauSingleMatchConfig roundPlayers={roundPlayers} matchConfig={match} onChange={updated=>updateMatch(idx,updated)} matchLabel=""/>
           </div>
         </div>
       ))}
@@ -766,161 +373,6 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
   );
 };
 
-// ─── Legacy NassauMatchConfig (kept for backward compat — not used in new flow) ─
-const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
-  const matchType      = config.matchType || '1v1';
-  const playersInMatch = config.playersInMatch || [];
-  const teams          = config.teams || null;
-  const popHoles       = config.popHoles || {};
-  const can2v2 = roundPlayers.length >= 4;
-
-  const setMatchType = (t) => {
-    onChange({ matchType: t, playersInMatch: [], teams: null, popHoles: {} });
-  };
-
-  const togglePlayer = (id) => {
-    const max = matchType === '2v2' ? 4 : 2;
-    const next = playersInMatch.includes(id)
-      ? playersInMatch.filter(x => x !== id)
-      : playersInMatch.length < max ? [...playersInMatch, id] : playersInMatch;
-    if (matchType === '2v2' && next.length === 4) {
-      onChange({ matchType, playersInMatch: next, teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] }, popHoles });
-    } else {
-      onChange({ matchType, playersInMatch: next, teams: null, popHoles });
-    }
-  };
-
-  const moveToTeam = (id, teamKey) => {
-    if (!teams) return;
-    const newT1 = (teams.team1 || []).filter(x => x !== id);
-    const newT2 = (teams.team2 || []).filter(x => x !== id);
-    if (teamKey === 'team1') newT1.push(id);
-    else newT2.push(id);
-    onChange({ matchType, playersInMatch, teams: { team1: newT1, team2: newT2 }, popHoles });
-  };
-
-  const handlePopChange = (nextPopHoles) => {
-    onChange({ matchType, playersInMatch, teams, popHoles: nextPopHoles });
-  };
-
-  const playerById = (id) => roundPlayers.find(p => p.id === id);
-  const isValid1v1 = matchType === '1v1' && playersInMatch.length === 2;
-  const isValid2v2 = matchType === '2v2' && teams &&
-    (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
-  const isValid = isValid1v1 || isValid2v2;
-  const nassauPlayersForPop = playersInMatch.map(id => playerById(id)).filter(Boolean);
-
-  return (
-    <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:2}}>MATCH FORMAT</div>
-      <div style={{display:'flex', gap:8}}>
-        {['1v1', ...(can2v2 ? ['2v2'] : [])].map(t => (
-          <div key={t} onClick={() => setMatchType(t)}
-            style={{
-              flex:1, textAlign:'center', padding:'8px 0', borderRadius:8, cursor:'pointer',
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15,
-              background: matchType === t ? '#C9A84C' : '#162950',
-              color:      matchType === t ? '#0A1628'  : '#9BB4D4',
-              border:     matchType === t ? 'none'     : '1px solid #1E3A6E',
-            }}>
-            {t}
-          </div>
-        ))}
-      </div>
-      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
-        SELECT {matchType === '2v2' ? '4' : '2'} PLAYERS
-      </div>
-      <div style={{display:'flex', flexDirection:'column', gap:6}}>
-        {roundPlayers.map(p => {
-          const selected = playersInMatch.includes(p.id);
-          const inTeam1  = teams?.team1?.includes(p.id);
-          const inTeam2  = teams?.team2?.includes(p.id);
-          return (
-            <div key={p.id} onClick={() => togglePlayer(p.id)}
-              style={{
-                display:'flex', alignItems:'center', gap:10,
-                borderRadius:10, padding:'10px 12px', cursor:'pointer',
-                background: selected ? `${p.color}11` : '#0A1628',
-                border: selected ? `1px solid ${p.color}` : '1px solid #1E3A6E',
-              }}>
-              <div style={{
-                width:20, height:20, borderRadius:6, border:`2px solid ${selected ? p.color : '#1E3A6E'}`,
-                background: selected ? p.color : 'transparent', flexShrink:0,
-                display:'flex', alignItems:'center', justifyContent:'center',
-              }}>
-                {selected && <span style={{color:'#0A1628', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
-              </div>
-              <Avatar player={p} size={28}/>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color: selected ? '#fff' : '#9BB4D4', flex:1}}>
-                {p.name}
-              </span>
-              {matchType === '2v2' && selected && (
-                <div style={{display:'flex', gap:4}} onClick={e => e.stopPropagation()}>
-                  {['team1', 'team2'].map((tk, ti) => (
-                    <div key={tk} onClick={() => moveToTeam(p.id, tk)}
-                      style={{
-                        padding:'3px 8px', borderRadius:6, cursor:'pointer',
-                        fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
-                        background: (tk === 'team1' ? inTeam1 : inTeam2) ? p.color : '#162950',
-                        color:      (tk === 'team1' ? inTeam1 : inTeam2) ? '#0A1628' : '#4A6890',
-                        border:     (tk === 'team1' ? inTeam1 : inTeam2) ? 'none' : '1px solid #1E3A6E',
-                      }}>
-                      T{ti + 1}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {matchType === '2v2' && teams && (teams.team1||[]).length > 0 && (
-        <div style={{display:'flex', gap:8}}>
-          {['team1','team2'].map((tk, ti) => {
-            const members = (teams[tk] || []).map(playerById).filter(Boolean);
-            return (
-              <div key={tk} style={{flex:1, background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:8, padding:'8px 10px'}}>
-                <div style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890', letterSpacing:1, marginBottom:4}}>TEAM {ti+1}</div>
-                {members.map(p => (
-                  <div key={p.id} style={{display:'flex', alignItems:'center', gap:5, marginBottom:2}}>
-                    <div style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
-                    <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p.name.split(' ')[0]}</span>
-                  </div>
-                ))}
-                {members.length === 0 && (
-                  <div style={{fontFamily:'DM Sans', fontSize:11, color:'#4A6890'}}>No players</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {!isValid && (
-        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#E5534B'}}>
-          {matchType === '1v1'
-            ? `Select exactly 2 players for the match (${playersInMatch.length}/2)`
-            : `Select 4 players and assign 2 to each team`}
-        </div>
-      )}
-      {isValid && (
-        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#3DCB6C'}}>
-          {matchType === '1v1'
-            ? `✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`
-            : `✓ Team match configured`}
-        </div>
-      )}
-      {isValid && matchType === '1v1' && nassauPlayersForPop.length === 2 && (
-        <NassauPopConfig
-          nassauPlayers={nassauPlayersForPop}
-          popHoles={popHoles}
-          onChange={handlePopChange}
-        />
-      )}
-    </div>
-  );
-};
-
-// ─── Collapsible Course Group ─────────────────────────────────────────────────
 const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
   const [open, setOpen] = React.useState(defaultOpen || false);
   if (list.length === 0) return null;
@@ -929,31 +381,14 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
 
   return (
     <div style={{marginBottom:4}}>
-      <div onClick={() => setOpen(v => !v)}
-        style={{
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'9px 2px', cursor:'pointer', userSelect:'none',
-          WebkitTapHighlightColor:'transparent',
-        }}>
+      <div onClick={() => setOpen(v=>!v)}
+        style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 2px', cursor:'pointer', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
         <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2,
-            color: hasSelected ? '#C9A84C' : '#7A98BC', fontWeight:700}}>{label}</span>
-          <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890',
-            background:'#162950', border:'1px solid #1E3A6E', borderRadius:10,
-            padding:'1px 7px'}}>{list.length}</span>
-          {hasSelected && (
-            <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:0.5,
-              color:'#C9A84C', background:'rgba(201,168,76,0.12)',
-              border:'1px solid rgba(201,168,76,0.3)', borderRadius:4, padding:'1px 6px'}}>
-              SELECTED
-            </span>
-          )}
+          <span style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2.5, color:hasSelected?'#D4AF47':'#7A9EBF', fontWeight:700}}>{label}</span>
+          <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#3A5880', background:'#112240', border:'1px solid #1F3354', borderRadius:10, padding:'1px 7px'}}>{list.length}</span>
+          {hasSelected && <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:0.5, color:'#D4AF47', background:'rgba(212,175,71,0.1)', border:'1px solid rgba(212,175,71,0.25)', borderRadius:4, padding:'1px 6px'}}>SELECTED</span>}
         </div>
-        <span style={{
-          fontSize:14, color:'#4A6890',
-          transform: isOpen ? 'rotate(180deg)' : 'none',
-          transition:'transform 0.2s', display:'inline-block',
-        }}>▾</span>
+        <span style={{fontSize:14, color:'#3A5880', transform:isOpen?'rotate(180deg)':'none', transition:'transform 0.2s', display:'inline-block'}}>▾</span>
       </div>
       {isOpen && (
         <div style={{display:'flex', flexDirection:'column', gap:8, paddingBottom:4}}>
@@ -961,25 +396,16 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
             const sel = course?.id === c.id;
             return (
               <div key={c.id} onClick={() => onSelect(c)}
-                style={{...setupS.courseCard,
-                  border: sel ? '1px solid #C9A84C' : '1px solid #1E3A6E',
-                  background: sel ? 'rgba(201,168,76,0.08)' : '#0F2040'}}>
+                style={{...setupS.courseCard, border:sel?'1px solid #D4AF47':'1px solid #1F3354', background:sel?'rgba(212,175,71,0.06)':'#0F1D35'}}>
                 <div style={{flex:1}}>
                   <div style={{display:'flex', alignItems:'center', gap:8}}>
-                    <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16,
-                      color: sel ? '#C9A84C' : '#fff'}}>{c.name}</div>
-                    {c.custom && (
-                      <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1,
-                        color:'#3DCB6C', background:'rgba(61,203,108,0.12)',
-                        border:'1px solid rgba(61,203,108,0.3)', padding:'1px 6px', borderRadius:4}}>
-                        CUSTOM
-                      </span>
-                    )}
+                    <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:sel?'#D4AF47':'#fff'}}>{c.name}</div>
+                    {c.custom && <span style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1, color:'#2DD97A', background:'rgba(45,217,122,0.1)', border:'1px solid rgba(45,217,122,0.2)', padding:'1px 6px', borderRadius:4}}>CUSTOM</span>}
                   </div>
-                  <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
-                  <div style={{fontSize:10, color:'#4A6890', marginTop:1}}>Rating {c.rating} · Slope {c.slope}</div>
+                  <div style={{fontSize:11, color:'#7A9EBF', marginTop:2, fontFamily:'DM Sans'}}>{c.location}</div>
+                  <div style={{fontSize:10, color:'#3A5880', marginTop:1, fontFamily:'DM Sans'}}>Rating {c.rating} · Slope {c.slope}</div>
                 </div>
-                {sel && <span style={{color:'#C9A84C', fontSize:20, flexShrink:0}}>✓</span>}
+                {sel && <span style={{color:'#D4AF47', fontSize:20, flexShrink:0}}>✓</span>}
               </div>
             );
           })}
@@ -995,97 +421,57 @@ function _extractState(location) {
   return m ? m[1] : 'OTHER';
 }
 
-const _stateNames = {
-  NJ:'New Jersey', CA:'California', NY:'New York', PA:'Pennsylvania',
-  FL:'Florida', GA:'Georgia', TX:'Texas', IL:'Illinois', AZ:'Arizona',
-  NC:'North Carolina', SC:'South Carolina', VA:'Virginia', MA:'Massachusetts',
-  OH:'Ohio', MI:'Michigan', WI:'Wisconsin', MN:'Minnesota', CO:'Colorado',
-  OR:'Oregon', WA:'Washington', OTHER:'Other',
-};
+const _stateNames = { NJ:'New Jersey', CA:'California', NY:'New York', PA:'Pennsylvania', FL:'Florida', GA:'Georgia', TX:'Texas', IL:'Illinois', AZ:'Arizona', NC:'North Carolina', SC:'South Carolina', VA:'Virginia', MA:'Massachusetts', OH:'Ohio', MI:'Michigan', WI:'Wisconsin', MN:'Minnesota', CO:'Colorado', OR:'Oregon', WA:'Washington', OTHER:'Other' };
 
-// ─── Setup Screen ─────────────────────────────────────────────────────────────
 const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
-  const [step, setStep]                         = React.useState(1);
-  const [selectedPlayers, setSelectedPlayers]   = React.useState(allPlayers.slice(0,4).map(p=>p.id));
-  const [course, setCourse]                     = React.useState(null);
-  const [courseSearch, setCourseSearch]         = React.useState('');
-  const [addMode, setAddMode]                   = React.useState('list');
-  const [scanPrefill, setScanPrefill]           = React.useState(null);
-  const [formats, setFormats]                   = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
-  const [stakes,  setStakes]                    = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
-
-  // Multi-Nassau: array of match configs
-  const [nassauMatches, setNassauMatches] = React.useState([{
-    id:             'nm_init',
-    matchType:      '1v1',
-    playersInMatch: [],
-    teams:          null,
-    popHoles:       {},
-    stakes:         5,
-  }]);
+  const [step, setStep]                       = React.useState(1);
+  const [selectedPlayers, setSelectedPlayers] = React.useState(allPlayers.slice(0,4).map(p=>p.id));
+  const [course, setCourse]                   = React.useState(null);
+  const [courseSearch, setCourseSearch]       = React.useState('');
+  const [addMode, setAddMode]                 = React.useState('list');
+  const [scanPrefill, setScanPrefill]         = React.useState(null);
+  const [formats, setFormats]                 = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
+  const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
+  const [nassauMatches, setNassauMatches]     = React.useState([{ id:'nm_init', matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:5 }]);
 
   const localCourses = customCourses || [];
 
-  // Reset nassauMatches when selected players change
   React.useEffect(() => {
     setNassauMatches(prev => prev.map(match => ({
       ...match,
       playersInMatch: match.playersInMatch.filter(id => selectedPlayers.includes(id)),
-      teams: match.teams ? {
-        team1: (match.teams.team1 || []).filter(id => selectedPlayers.includes(id)),
-        team2: (match.teams.team2 || []).filter(id => selectedPlayers.includes(id)),
-      } : null,
-      popHoles: Object.fromEntries(
-        Object.entries(match.popHoles || {}).filter(([id]) => selectedPlayers.includes(id))
-      ),
+      teams: match.teams ? { team1:(match.teams.team1||[]).filter(id=>selectedPlayers.includes(id)), team2:(match.teams.team2||[]).filter(id=>selectedPlayers.includes(id)) } : null,
+      popHoles: Object.fromEntries(Object.entries(match.popHoles||{}).filter(([id])=>selectedPlayers.includes(id))),
     })));
   }, [selectedPlayers.join(',')]);
 
-  const togglePlayer = (id) => {
-    setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length < 6 ? [...prev,id] : prev);
-  };
-  const toggleFormat = (f) => setFormats(prev => ({...prev, [f]:!prev[f]}));
+  const togglePlayer = (id) => setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length<6?[...prev,id]:prev);
+  const toggleFormat = (f) => setFormats(prev => ({...prev,[f]:!prev[f]}));
 
   const allCourses    = [...localCourses, ...COURSES];
   const query         = courseSearch.toLowerCase();
-  const filtered      = allCourses.filter(c =>
-    !query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query)
-  );
+  const filtered      = allCourses.filter(c => !query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query));
 
-  // Nassau validity: all matches must be valid
   const nassauValid = (() => {
     if (!formats.nassau) return true;
     if (nassauMatches.length === 0) return false;
     return nassauMatches.every(match => {
       const { matchType, playersInMatch, teams } = match;
-      if (matchType === '1v1') return playersInMatch.length === 2;
-      if (matchType === '2v2') return (
-        playersInMatch.length === 4 &&
-        teams && (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2
-      );
+      if (matchType==='1v1') return playersInMatch.length===2;
+      if (matchType==='2v2') return playersInMatch.length===4&&teams&&(teams.team1||[]).length===2&&(teams.team2||[]).length===2;
       return false;
     });
   })();
 
-  // Build active formats — nassau format carries nassauMatches array (new) instead of nassauConfig (legacy)
   const activeFormats = Object.entries(formats).filter(([,v])=>v).map(([k])=>({
-    type: k,
-    stakes: k === 'nassau' ? nassauMatches[0]?.stakes || stakes[k] : stakes[k],
-    ...(k === 'nassau' ? { nassauMatches } : {}),
+    type:k, stakes:k==='nassau'?nassauMatches[0]?.stakes||stakes[k]:stakes[k],
+    ...(k==='nassau'?{nassauMatches}:{}),
   }));
 
   const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid;
 
-  const handleSaveCourse = (newCourse, fullUpdatedArray) => {
-    setCourse(newCourse);
-    setAddMode('list');
-    setScanPrefill(null);
-  };
-
-  const handleScanResult = (scannedData) => {
-    setScanPrefill(scannedData);
-    setAddMode('builder');
-  };
+  const handleSaveCourse = (newCourse) => { setCourse(newCourse); setAddMode('list'); setScanPrefill(null); };
+  const handleScanResult = (scannedData) => { setScanPrefill(scannedData); setAddMode('builder'); };
 
   const handleStart = () => {
     const players = allPlayers.filter(p => selectedPlayers.includes(p.id));
@@ -1094,121 +480,88 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
 
   const buildStateGroups = (list) => {
     const groups = {};
-    list.forEach(c => {
-      const state = _extractState(c.location);
-      if (!groups[state]) groups[state] = [];
-      groups[state].push(c);
-    });
-    const order = Object.keys(groups).sort((a, b) => {
-      if (a === 'NJ') return -1;
-      if (b === 'NJ') return 1;
-      if (a === 'OTHER') return 1;
-      if (b === 'OTHER') return -1;
-      return a.localeCompare(b);
-    });
-    return order.map(state => ({ state, label: _stateNames[state] || state, list: groups[state] }));
+    list.forEach(c => { const state=_extractState(c.location); if (!groups[state]) groups[state]=[]; groups[state].push(c); });
+    const order = Object.keys(groups).sort((a,b) => { if(a==='NJ')return -1;if(b==='NJ')return 1;if(a==='OTHER')return 1;if(b==='OTHER')return -1;return a.localeCompare(b); });
+    return order.map(state => ({ state, label:_stateNames[state]||state, list:groups[state] }));
   };
 
   const customFiltered  = filtered.filter(c => c.custom);
   const builtinFiltered = filtered.filter(c => !c.custom);
   const stateGroups     = buildStateGroups(builtinFiltered);
   const isSearching     = !!courseSearch;
-
   const roundPlayersForNassau = allPlayers.filter(p => selectedPlayers.includes(p.id));
   const steps = ['Players','Course','Formats'];
 
+  const inputBase = { width:'100%', background:'#0B0F1A', border:'1px solid #1F3354', borderRadius:10, padding:'11px 14px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box' };
+
   return (
     <div style={setupS.root}>
-      {/* Step indicator */}
       <div style={setupS.stepBar}>
         {steps.map((s,i) => (
           <React.Fragment key={s}>
             <div style={setupS.stepItem} onClick={()=> i+1 < step && setStep(i+1)}>
-              <div style={{...setupS.stepDot, background: step>i+1?'#3DCB6C': step===i+1?'#C9A84C':'#1E3A6E', color: step>=i+1?'#0A1628':'#4A6890'}}>
+              <div style={{...setupS.stepDot, background:step>i+1?'#2DD97A':step===i+1?'#D4AF47':'#1F3354', color:step>=i+1?'#0B0F1A':'#3A5880'}}>
                 {step>i+1 ? '✓' : i+1}
               </div>
-              <span style={{...setupS.stepLabel, color: step===i+1?'#fff': step>i+1?'#3DCB6C':'#4A6890'}}>{s}</span>
+              <span style={{...setupS.stepLabel, color:step===i+1?'#fff':step>i+1?'#2DD97A':'#3A5880'}}>{s}</span>
             </div>
-            {i<2 && <div style={{flex:1, height:1, background: step>i+1?'#3DCB6C':'#1E3A6E', margin:'0 8px', marginBottom:12}}/>}
+            {i<2 && <div style={{flex:1, height:1, background:step>i+1?'#2DD97A':'#1F3354', margin:'0 8px', marginBottom:12}}/>}
           </React.Fragment>
         ))}
       </div>
 
       <div style={setupS.content}>
 
-        {/* ── STEP 1: Players ── */}
         {step===1 && (
           <div>
-            <div style={setupS.stepTitle}>SELECT PLAYERS <span style={{color:'#7A98BC', fontSize:13, fontWeight:400}}>({selectedPlayers.length} selected)</span></div>
+            <div style={setupS.stepTitle}>SELECT PLAYERS <span style={{color:'#7A9EBF', fontSize:13, fontWeight:400}}>({selectedPlayers.length} selected)</span></div>
             <div style={setupS.stepSub}>Choose 2–6 players for this round</div>
             <div style={{display:'flex', flexDirection:'column', gap:10, marginTop:16}}>
               {allPlayers.map(p => {
                 const sel = selectedPlayers.includes(p.id);
                 return (
                   <div key={p.id} onClick={()=>togglePlayer(p.id)}
-                    style={{...setupS.playerRow, border: sel?`1px solid ${p.color}`:'1px solid #1E3A6E', background: sel?`${p.color}11`:'#0F2040'}}>
+                    style={{...setupS.playerRow, border:sel?`1px solid ${p.color}`:'1px solid #1F3354', background:sel?`${p.color}0A`:'#0F1D35'}}>
                     <Avatar player={p} size={42}/>
                     <div style={{flex:1}}>
                       <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:17, color:'#fff'}}>{p.name}</div>
-                      <div style={{fontSize:11, color:'#7A98BC'}}>HCP {p.handicap} · GHIN {p.ghin}</div>
+                      <div style={{fontSize:11, color:'#7A9EBF', fontFamily:'DM Sans'}}>HCP {p.handicap} · GHIN {p.ghin}</div>
                     </div>
-                    <div style={{...setupS.check, background: sel?p.color:'transparent', border:`2px solid ${sel?p.color:'#1E3A6E'}`}}>
-                      {sel && <span style={{color:'#0A1628', fontSize:14, fontWeight:900}}>✓</span>}
+                    <div style={{...setupS.check, background:sel?p.color:'transparent', border:`2px solid ${sel?p.color:'#1F3354'}`}}>
+                      {sel && <span style={{color:'#0B0F1A', fontSize:14, fontWeight:900}}>✓</span>}
                     </div>
                   </div>
                 );
               })}
             </div>
-            <Btn onClick={()=>setStep(2)} variant="gold" disabled={selectedPlayers.length<2} style={{width:'100%', marginTop:24, padding:'15px', fontSize:17}}>
-              NEXT: SELECT COURSE →
-            </Btn>
+            <Btn onClick={()=>setStep(2)} variant="gold" disabled={selectedPlayers.length<2} style={{width:'100%', marginTop:24, padding:'15px', fontSize:17}}>NEXT: SELECT COURSE →</Btn>
           </div>
         )}
 
-        {/* ── STEP 2: Course ── */}
         {step===2 && (
-          addMode === 'scanner' ? (
-            <ScorecardScanner
-              onResult={handleScanResult}
-              onCancel={() => { setAddMode('list'); setScanPrefill(null); }}
-            />
-          ) : addMode === 'builder' ? (
-            <CourseBuilder
-              onSave={handleSaveCourse}
-              onCancel={() => { setAddMode('list'); setScanPrefill(null); }}
-              prefill={scanPrefill}
-            />
+          addMode==='scanner' ? (
+            <ScorecardScanner onResult={handleScanResult} onCancel={()=>{setAddMode('list');setScanPrefill(null);}}/>
+          ) : addMode==='builder' ? (
+            <CourseBuilder onSave={handleSaveCourse} onCancel={()=>{setAddMode('list');setScanPrefill(null);}} prefill={scanPrefill}/>
           ) : (
             <div>
               <div style={setupS.stepTitle}>SELECT COURSE</div>
               <div style={setupS.stepSub}>Search, scan a scorecard, or enter manually</div>
               <div style={{marginTop:16, marginBottom:10}}>
-                <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)}
-                  placeholder="Search courses…"
-                  style={{width:'100%', background:'#162950', border:'1px solid #1E3A6E', borderRadius:10,
-                    padding:'11px 14px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box'}}/>
+                <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)} placeholder="Search courses…" style={inputBase}/>
               </div>
               <div style={{display:'flex', gap:8, marginBottom:6}}>
-                <Btn onClick={()=>setAddMode('scanner')} variant="green" style={{flex:1, padding:'11px 10px', fontSize:13}}>
-                  📸 SCAN SCORECARD
-                </Btn>
-                <Btn onClick={()=>{ setScanPrefill(null); setAddMode('builder'); }} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>
-                  ✏️ ENTER MANUALLY
-                </Btn>
+                <Btn onClick={()=>setAddMode('scanner')} variant="green" style={{flex:1, padding:'11px 10px', fontSize:13}}>📸 SCAN SCORECARD</Btn>
+                <Btn onClick={()=>{setScanPrefill(null);setAddMode('builder');}} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>✏️ ENTER MANUALLY</Btn>
               </div>
               <div style={{display:'flex', flexDirection:'column'}}>
-                {customFiltered.length > 0 && (
-                  <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={setCourse} defaultOpen={true}/>
-                )}
-                {stateGroups.map(({ state, label, list }) => (
-                  <CourseGroup key={state} label={label.toUpperCase()} list={list} course={course} onSelect={setCourse} defaultOpen={isSearching}/>
-                ))}
-                {filtered.length === 0 && (
-                  <div style={{textAlign:'center', padding:'32px 0', color:'#4A6890', fontFamily:'DM Sans', fontSize:13}}>
+                {customFiltered.length > 0 && <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={setCourse} defaultOpen={true}/>}
+                {stateGroups.map(({state, label, list}) => <CourseGroup key={state} label={label.toUpperCase()} list={list} course={course} onSelect={setCourse} defaultOpen={isSearching}/>)}
+                {filtered.length===0 && (
+                  <div style={{textAlign:'center', padding:'32px 0', color:'#3A5880', fontFamily:'DM Sans', fontSize:13}}>
                     No courses match "{courseSearch}"<br/>
-                    <span onClick={()=>setAddMode('scanner')} style={{color:'#3DCB6C', cursor:'pointer', fontWeight:600}}>📸 Scan a scorecard →</span>
-                    {' · '}
-                    <span onClick={()=>{ setScanPrefill(null); setAddMode('builder'); }} style={{color:'#C9A84C', cursor:'pointer', fontWeight:600}}>enter manually →</span>
+                    <span onClick={()=>setAddMode('scanner')} style={{color:'#2DD97A', cursor:'pointer', fontWeight:600}}>📸 Scan a scorecard →</span>{' · '}
+                    <span onClick={()=>{setScanPrefill(null);setAddMode('builder');}} style={{color:'#D4AF47', cursor:'pointer', fontWeight:600}}>enter manually →</span>
                   </div>
                 )}
               </div>
@@ -1220,7 +573,6 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
           )
         )}
 
-        {/* ── STEP 3: Formats & Stakes ── */}
         {step===3 && (
           <div>
             <div style={setupS.stepTitle}>FORMATS & STAKES</div>
@@ -1229,32 +581,28 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
               {Object.entries(FORMAT_INFO).map(([key, info]) => {
                 const on = formats[key];
                 return (
-                  <div key={key} style={{...setupS.formatCard, border: on?'1px solid #3DCB6C':'1px solid #1E3A6E', background: on?'rgba(61,203,108,0.05)':'#0F2040'}}>
+                  <div key={key} style={{...setupS.formatCard, border:on?'1px solid #2DD97A':'1px solid #1F3354', background:on?'rgba(45,217,122,0.04)':'#0F1D35'}}>
                     <div style={{display:'flex', alignItems:'center', gap:12}} onClick={()=>toggleFormat(key)}>
-                      <span style={{fontSize:24, flexShrink:0}}>{info.icon}</span>
+                      <span style={{fontSize:22, flexShrink:0}}>{info.icon}</span>
                       <div style={{flex:1}}>
-                        <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:17, color: on?'#3DCB6C':'#fff'}}>{info.label}</div>
-                        <div style={{fontSize:12, color:'#7A98BC', marginTop:2, lineHeight:1.4}}>{info.desc}</div>
+                        <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:17, color:on?'#2DD97A':'#fff'}}>{info.label}</div>
+                        <div style={{fontSize:12, color:'#7A9EBF', marginTop:2, lineHeight:1.4, fontFamily:'DM Sans'}}>{info.desc}</div>
                       </div>
-                      <div style={{...setupS.check, flexShrink:0, background: on?'#3DCB6C':'transparent', border:`2px solid ${on?'#3DCB6C':'#1E3A6E'}`}}>
-                        {on && <span style={{color:'#0A1628', fontSize:14, fontWeight:900}}>✓</span>}
+                      <div style={{...setupS.check, flexShrink:0, background:on?'#2DD97A':'transparent', border:`2px solid ${on?'#2DD97A':'#1F3354'}`}}>
+                        {on && <span style={{color:'#0B0F1A', fontSize:14, fontWeight:900}}>✓</span>}
                       </div>
                     </div>
                     {on && key !== 'nassau' && (
-                      <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
-                        <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:8}}>
+                      <div style={{borderTop:'1px solid rgba(45,217,122,0.12)', marginTop:12, paddingTop:12}}>
+                        <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF', marginBottom:8}}>
                           STAKE ({key==='wolf'?'pot ante per player':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
                         </div>
                         <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
                       </div>
                     )}
                     {on && key === 'nassau' && (
-                      <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
-                        <NassauMultiMatchConfig
-                          roundPlayers={roundPlayersForNassau}
-                          nassauMatches={nassauMatches}
-                          onChange={setNassauMatches}
-                        />
+                      <div style={{borderTop:'1px solid rgba(45,217,122,0.12)', marginTop:12, paddingTop:12}}>
+                        <NassauMultiMatchConfig roundPlayers={roundPlayersForNassau} nassauMatches={nassauMatches} onChange={setNassauMatches}/>
                       </div>
                     )}
                   </div>
@@ -1263,28 +611,24 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
             </div>
 
             {activeFormats.length > 0 && (
-              <div style={{marginTop:16, background:'rgba(201,168,76,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:10, padding:'12px 14px'}}>
-                <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#C9A84C', marginBottom:8}}>ROUND SUMMARY</div>
+              <div style={{marginTop:16, background:'rgba(212,175,71,0.04)', border:'1px solid rgba(212,175,71,0.15)', borderRadius:10, padding:'12px 14px'}}>
+                <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2.5, color:'#D4AF47', marginBottom:8}}>ROUND SUMMARY</div>
                 <div style={{fontFamily:'DM Sans', fontSize:12, color:'#9BB4D4'}}>
                   <div style={{marginBottom:2}}>📍 {course?.name}</div>
                   <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players</div>
                   {activeFormats.map(f => (
                     <div key={f.type}>
                       🎯 {FORMAT_INFO[f.type].label}
-                      {f.type !== 'nassau' && <span> — <span style={{color:'#C9A84C', fontWeight:700}}>${f.stakes}</span></span>}
+                      {f.type !== 'nassau' && <span> — <span style={{color:'#D4AF47', fontWeight:700}}>${f.stakes}</span></span>}
                       {f.type === 'nassau' && f.nassauMatches && f.nassauMatches.length > 0 && (
-                        <span style={{color:'#7A98BC', marginLeft:6}}>
-                          {f.nassauMatches.length} match{f.nassauMatches.length > 1 ? 'es' : ''}
-                          {f.nassauMatches.map((m, i) => {
-                            const p1 = roundPlayersForNassau.find(p => p.id === m.playersInMatch[0]);
-                            const p2 = roundPlayersForNassau.find(p => p.id === m.playersInMatch[1]);
-                            const popCount = Object.values(m.popHoles || {}).reduce((a, arr) => a + (arr||[]).filter(Boolean).length, 0);
-                            if (!p1 || !p2) return null;
-                            return (
-                              <span key={m.id} style={{display:'block', marginLeft:16, color:'#7A98BC', fontSize:11}}>
-                                · {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]} — ${m.stakes}{popCount > 0 ? ` · ${popCount} pops` : ''}
-                              </span>
-                            );
+                        <span style={{color:'#7A9EBF', marginLeft:6}}>
+                          {f.nassauMatches.length} match{f.nassauMatches.length>1?'es':''}
+                          {f.nassauMatches.map((m,i)=>{
+                            const p1=roundPlayersForNassau.find(p=>p.id===m.playersInMatch[0]);
+                            const p2=roundPlayersForNassau.find(p=>p.id===m.playersInMatch[1]);
+                            const popCount=Object.values(m.popHoles||{}).reduce((a,arr)=>a+(arr||[]).filter(Boolean).length,0);
+                            if(!p1||!p2)return null;
+                            return <span key={m.id} style={{display:'block', marginLeft:16, color:'#7A9EBF', fontSize:11}}>· {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]} — ${m.stakes}{popCount>0?` · ${popCount} pops`:''}</span>;
                           })}
                         </span>
                       )}
@@ -1296,16 +640,11 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
 
             <div style={{display:'flex', gap:10, marginTop:16}}>
               <Btn onClick={()=>setStep(2)} variant="ghost" style={{padding:'14px 20px'}}>← BACK</Btn>
-              <Btn onClick={handleStart} variant="gold" disabled={!canStart}
-                style={{flex:1, fontSize:17, padding:'15px', boxShadow: canStart?'0 4px 24px rgba(201,168,76,0.3)':'none'}}>
-                ⛳ TEE IT UP
-              </Btn>
+              <Btn onClick={handleStart} variant="gold" disabled={!canStart} style={{flex:1, fontSize:17, padding:'15px'}}>⛳ TEE IT UP</Btn>
             </div>
             {!canStart && (
-              <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#4A6890'}}>
-                {!nassauValid
-                  ? 'Complete all Nassau match setups to continue'
-                  : 'Select at least one format to continue'}
+              <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#3A5880', fontFamily:'DM Sans'}}>
+                {!nassauValid ? 'Complete all Nassau match setups to continue' : 'Select at least one format to continue'}
               </div>
             )}
           </div>
@@ -1316,18 +655,18 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
 };
 
 const setupS = {
-  root:       { flex:1, overflowY:'auto', display:'flex', flexDirection:'column' },
-  stepBar:    { display:'flex', alignItems:'flex-end', padding:'20px 24px 0', gap:0 },
-  stepItem:   { display:'flex', flexDirection:'column', alignItems:'center', gap:6, cursor:'pointer' },
-  stepDot:    { width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, transition:'all 0.2s' },
-  stepLabel:  { fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, fontWeight:600, marginBottom:12 },
-  content:    { padding:'24px 20px', flex:1 },
-  stepTitle:  { fontFamily:'Barlow Condensed', fontWeight:800, fontSize:24, color:'#fff', letterSpacing:1 },
-  stepSub:    { fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', marginTop:4 },
-  playerRow:  { display:'flex', alignItems:'center', gap:14, borderRadius:12, padding:'14px 16px', cursor:'pointer', transition:'all 0.15s' },
-  courseCard: { display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:12, padding:'14px 16px', cursor:'pointer' },
-  formatCard: { borderRadius:12, padding:'16px', cursor:'default' },
-  check:      { width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  root:      { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', background:'#0B0F1A' },
+  stepBar:   { display:'flex', alignItems:'flex-end', padding:'20px 24px 0', gap:0 },
+  stepItem:  { display:'flex', flexDirection:'column', alignItems:'center', gap:6, cursor:'pointer' },
+  stepDot:   { width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, transition:'all 0.2s' },
+  stepLabel: { fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, fontWeight:600, marginBottom:12 },
+  content:   { padding:'24px 20px', flex:1 },
+  stepTitle: { fontFamily:'Barlow Condensed', fontWeight:800, fontSize:24, color:'#fff', letterSpacing:1 },
+  stepSub:   { fontFamily:'DM Sans', fontSize:13, color:'#7A9EBF', marginTop:4 },
+  playerRow: { display:'flex', alignItems:'center', gap:14, borderRadius:12, padding:'14px 16px', cursor:'pointer', transition:'all 0.15s' },
+  courseCard:{ display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:12, padding:'14px 16px', cursor:'pointer' },
+  formatCard:{ borderRadius:12, padding:'16px', cursor:'default' },
+  check:     { width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
 };
 
 Object.assign(window, { SetupScreen, CourseBuilder, ScorecardScanner });
