@@ -1,4 +1,5 @@
-// Trackers.jsx v5 — NassauTracker uses nassauConfig for pop-aware isolated scoring
+// Trackers.jsx v6 — MultiNassauTracker: one section per Nassau match
+//                   NassauTracker kept as legacy single-match component (backward compat)
 
 // ─── ROUND TRACKER ───────────────────────────────────────────────────────────
 const RoundTracker = ({ players, scores, course, holeIdx }) => {
@@ -259,7 +260,7 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   );
 };
 
-// ─── NASSAU TRACKER ──────────────────────────────────────────────────────────
+// ─── NASSAU TRACKER (legacy single-match) ────────────────────────────────────
 const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nassauConfig }) => {
   const { nassauSegmentStatus } = window;
   const stake = format?.stakes || 5;
@@ -282,7 +283,6 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nas
         <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>${stake}·${stake}·${stake*2}</span>
       </div>
 
-      {/* Match players + pop indicator */}
       {nassauPlayers.length >= 2 && (
         <div style={{display:'flex', alignItems:'center', gap:6}}>
           <Label style={{fontSize:9, color:'#4A6890'}}>MATCH</Label>
@@ -307,7 +307,6 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nas
         </div>
       )}
 
-      {/* Three fixed bets — no press buttons */}
       <div style={{display:'flex', gap:8}}>
         {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake * 2]].map(([lbl, status, betStake]) => (
           <div key={lbl} style={{flex:1, background:'#162950', borderRadius:10, padding:'10px 12px', border:'1px solid #1E3A6E'}}>
@@ -323,6 +322,172 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nas
   );
 };
 
+// ─── MULTI-NASSAU TRACKER ─────────────────────────────────────────────────────
+// Renders one collapsible section per Nassau match.
+// nassauMatches: [{ id, matchType, playersInMatch, popHoles, stakes }, ...]
+const MULTI_NASSAU_MATCH_COLORS = ['#C9A84C', '#7B9FE0', '#E07BE0'];
+
+const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, nassauFmt }) => {
+  const { nassauSegmentStatus } = window;
+  const [expandedMatch, setExpandedMatch] = React.useState(null);
+
+  if (!nassauMatches || nassauMatches.length === 0) return null;
+
+  return (
+    <div style={trS.section}>
+      <div style={trS.head}>
+        <span>💰</span><Label>NASSAU</Label>
+        <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC', letterSpacing:1}}>
+          {nassauMatches.length} MATCH{nassauMatches.length > 1 ? 'ES' : ''}
+        </span>
+      </div>
+
+      <div style={{display:'flex', flexDirection:'column', gap:8}}>
+        {nassauMatches.map((match, idx) => {
+          const matchColor   = MULTI_NASSAU_MATCH_COLORS[idx] || '#C9A84C';
+          const stake        = match.stakes || nassauFmt?.stakes || 5;
+          const matchCfg     = {
+            playersInMatch: match.playersInMatch,
+            matchType:      match.matchType,
+            popHoles:       match.popHoles || {},
+          };
+
+          const nassauPlayers = (match.playersInMatch || [])
+            .map(id => players.find(p => p.id === id))
+            .filter(Boolean);
+
+          if (nassauPlayers.length < 2) return null;
+
+          const p1 = nassauPlayers[0];
+          const p2 = nassauPlayers[1];
+
+          const front  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),    holeIdx, {}, matchCfg);
+          const back   = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9),  holeIdx, {}, matchCfg);
+          const full   = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),   holeIdx, {}, matchCfg);
+
+          const statusColor = s => s === 'EVEN' ? '#7A98BC' : matchColor;
+
+          const popThisHole = nassauPlayers.filter(p => !!(match.popHoles?.[p.id]?.[holeIdx]));
+          const isExpanded  = expandedMatch === match.id;
+
+          return (
+            <div key={match.id} style={{
+              background:'#0A1628',
+              border:`1px solid ${matchColor}33`,
+              borderRadius:12,
+              overflow:'hidden',
+            }}>
+              {/* Match header — always visible */}
+              <div
+                onClick={() => setExpandedMatch(isExpanded ? null : match.id)}
+                style={{
+                  display:'flex', alignItems:'center', gap:8,
+                  padding:'10px 12px',
+                  background:`${matchColor}0A`,
+                  cursor:'pointer',
+                  WebkitTapHighlightColor:'transparent',
+                }}>
+                <div style={{width:8, height:8, borderRadius:'50%', background:matchColor, flexShrink:0}}/>
+                <div style={{flex:1, display:'flex', alignItems:'center', gap:6, minWidth:0}}>
+                  <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:13, color:matchColor, letterSpacing:1, whiteSpace:'nowrap'}}>
+                    MATCH {idx+1}
+                  </span>
+                  <div style={{display:'flex', alignItems:'center', gap:4, minWidth:0}}>
+                    <div style={{width:5, height:5, borderRadius:'50%', background:p1.color, flexShrink:0}}/>
+                    <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff', whiteSpace:'nowrap'}}>{p1.name.split(' ')[0]}</span>
+                    <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890'}}>vs</span>
+                    <div style={{width:5, height:5, borderRadius:'50%', background:p2.color, flexShrink:0}}/>
+                    <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff', whiteSpace:'nowrap'}}>{p2.name.split(' ')[0]}</span>
+                  </div>
+                  {popThisHole.length > 0 && (
+                    <div style={{
+                      background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)',
+                      borderRadius:4, padding:'1px 5px', flexShrink:0,
+                    }}>
+                      <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#C9A84C'}}>
+                        💰 {popThisHole.map(p => p.name.split(' ')[0]).join(',')} +1
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live status summary — always shown in header */}
+                <div style={{display:'flex', gap:5, flexShrink:0}}>
+                  {[['F', front], ['B', back], ['18', full]].map(([lbl, status]) => (
+                    <div key={lbl} style={{
+                      display:'flex', flexDirection:'column', alignItems:'center',
+                      background:'#162950', borderRadius:6, padding:'3px 6px', minWidth:32,
+                    }}>
+                      <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#4A6890', letterSpacing:0.5}}>{lbl}</span>
+                      <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10, color:statusColor(status), whiteSpace:'nowrap'}}>
+                        {status === 'EVEN' ? 'AS' : status.replace(p1.name.split(' ')[0], p1.initials).replace(p2.name.split(' ')[0], p2.initials)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <span style={{fontSize:12, color:'#4A6890', display:'inline-block',
+                  transform: isExpanded ? 'rotate(180deg)' : 'none', transition:'transform 0.2s', flexShrink:0}}>▾</span>
+              </div>
+
+              {/* Expanded detail */}
+              {isExpanded && (
+                <div style={{padding:'10px 12px', display:'flex', flexDirection:'column', gap:8, borderTop:`1px solid ${matchColor}22`}}>
+                  {/* Full segment cards */}
+                  <div style={{display:'flex', gap:8}}>
+                    {[['FRONT 9', front, stake], ['BACK 9', back, stake], ['18 HOLES', full, stake * 2]].map(([lbl, status, betStake]) => (
+                      <div key={lbl} style={{flex:1, background:'#162950', borderRadius:10, padding:'10px 12px', border:'1px solid #1E3A6E'}}>
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
+                          <Label style={{fontSize:9, color:'#4A6890'}}>{lbl}</Label>
+                          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#4A6890'}}>${betStake}</span>
+                        </div>
+                        <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15, color:statusColor(status)}}>{status}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pop holes this round */}
+                  {(() => {
+                    const allPopHoles = {};
+                    nassauPlayers.forEach(p => {
+                      const pops = (match.popHoles?.[p.id] || []);
+                      const holeNums = pops.map((v, i) => v ? i+1 : null).filter(Boolean);
+                      if (holeNums.length > 0) allPopHoles[p.name.split(' ')[0]] = holeNums;
+                    });
+                    const entries = Object.entries(allPopHoles);
+                    if (entries.length === 0) return null;
+                    return (
+                      <div style={{background:'rgba(201,168,76,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:8, padding:'8px 10px'}}>
+                        <Label style={{fontSize:9, color:'#C9A84C', display:'block', marginBottom:4}}>STROKE POPS</Label>
+                        {entries.map(([name, holes]) => (
+                          <div key={name} style={{display:'flex', alignItems:'center', gap:8, marginBottom:2}}>
+                            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#fff', minWidth:50}}>{name}</span>
+                            <div style={{display:'flex', gap:3, flexWrap:'wrap'}}>
+                              {holes.map(h => (
+                                <span key={h} style={{
+                                  fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10,
+                                  color: h-1 === holeIdx ? '#0A1628' : '#C9A84C',
+                                  background: h-1 === holeIdx ? matchColor : 'rgba(201,168,76,0.15)',
+                                  border: `1px solid ${matchColor}55`,
+                                  borderRadius:4, padding:'1px 5px',
+                                }}>H{h}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const trS = {
   section: { padding:'12px 14px', borderTop:'1px solid #1E3A6E', display:'flex', flexDirection:'column', gap:10 },
   head:    { display:'flex', alignItems:'center', gap:8 },
@@ -331,4 +496,4 @@ const trS = {
   wolfBox: { background:'rgba(229,83,75,0.05)', border:'1px solid rgba(229,83,75,0.2)', borderRadius:10, padding:'12px' },
 };
 
-Object.assign(window, { RoundTracker, WolfTracker, PTMTracker, NassauTracker });
+Object.assign(window, { RoundTracker, WolfTracker, PTMTracker, NassauTracker, MultiNassauTracker });
