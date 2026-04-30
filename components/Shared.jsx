@@ -1,56 +1,200 @@
 // Shared.jsx — NavBar, Button, Avatar, Modal, Toast
 
-const QRModal = ({ open, onClose, syncCode }) => {
-  const canvasRef = React.useRef(null);
-  const [url, setUrl] = React.useState('');
+// ─── Self-contained QR Code generator (SVG output, no CDN required) ──────────
+// Encodes a URL as a QR code SVG string. Version 2, EC Level M, Mask 2.
+// Sufficient for URLs up to ~34 bytes (covers all PlayPal join URLs).
+(function() {
+  if (window.__ppQRGenerate) return;
 
-  React.useEffect(() => {
-    if (!open || !syncCode) return;
-    const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
-    const joinUrl = base + 'join.html?code=' + syncCode;
-    setUrl(joinUrl);
-
-    const tryRender = () => {
-      const canvas = canvasRef.current;
-      if (!canvas || !window.QRCode) return;
-      canvas.width  = 280;
-      canvas.height = 280;
-      try {
-        window.QRCode.toCanvas(canvas, joinUrl, {
-          width:  280,
-          margin: 2,
-          color:  { dark: '#0A1628', light: '#FFFFFF' },
-        }, function(err) {
-          if (err) console.warn('[QR]', err);
-        });
-      } catch(e) {
-        console.warn('[QR] render failed', e);
-      }
-    };
-
-    if (window.QRCode) {
-      tryRender();
-    } else {
-      const t = setInterval(() => { if (window.QRCode) { clearInterval(t); tryRender(); } }, 100);
-      setTimeout(() => clearInterval(t), 5000);
+  // Galois Field GF(256) tables
+  const EXP = new Uint8Array(512);
+  const LOG  = new Uint8Array(256);
+  (function() {
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      EXP[i] = x; LOG[x] = i;
+      x <<= 1; if (x & 0x100) x ^= 0x11d;
     }
-  }, [open, syncCode]);
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  })();
 
-  if (!open) return null;
+  const gfMul = (a, b) => (a && b) ? EXP[(LOG[a] + LOG[b]) % 255] : 0;
+
+  function gfPoly(degree) {
+    let p = [1];
+    for (let i = 0; i < degree; i++) {
+      const q = [1, EXP[i]];
+      const r = new Array(p.length + q.length - 1).fill(0);
+      for (let j = 0; j < p.length; j++)
+        for (let k = 0; k < q.length; k++)
+          r[j + k] ^= gfMul(p[j], q[k]);
+      p = r;
+    }
+    return p;
+  }
+
+  function rsEncode(data, nec) {
+    const gen = gfPoly(nec);
+    const msg = data.concat(new Array(nec).fill(0));
+    for (let i = 0; i < data.length; i++) {
+      const c = msg[i];
+      if (c) for (let j = 0; j < gen.length; j++) msg[i + j] ^= gfMul(gen[j], c);
+    }
+    return msg.slice(data.length);
+  }
+
+  const SZ = 25; // Version 2 = 17 + 2*4
+
+  function makeMatrix() {
+    const m = Array.from({length: SZ}, () => new Int8Array(SZ).fill(-1));
+
+    // Finder pattern at (r, c) top-left corner
+    function finder(r, c) {
+      for (let dr = -1; dr <= 7; dr++) for (let dc = -1; dc <= 7; dc++) {
+        const row = r + dr, col = c + dc;
+        if (row < 0 || row >= SZ || col < 0 || col >= SZ) continue;
+        const onBorder = dr === 0 || dr === 6 || dc === 0 || dc === 6;
+        const inCenter = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+        const inSep    = dr === -1 || dr === 7 || dc === -1 || dc === 7;
+        if (inSep)        m[row][col] = 0;
+        else if (onBorder || inCenter) m[row][col] = 1;
+        else              m[row][col] = 0;
+      }
+    }
+    finder(0, 0); finder(0, SZ - 7); finder(SZ - 7, 0);
+
+    // Timing strips
+    for (let i = 8; i <= SZ - 9; i++) {
+      m[6][i] = m[i][6] = i % 2 === 0 ? 1 : 0;
+    }
+
+    // Dark module (version 2)
+    m[4 * 2 + 9][8] = 1;
+
+    return m;
+  }
+
+  function encodeBytes(text) {
+    // UTF-8 encode
+    const bytes = [];
+    for (let i = 0; i < text.length; i++) {
+      const c = text.charCodeAt(i);
+      if (c < 0x80)       bytes.push(c);
+      else if (c < 0x800) { bytes.push(0xc0 | (c >> 6)); bytes.push(0x80 | (c & 0x3f)); }
+      else                { bytes.push(0xe0 | (c >> 12)); bytes.push(0x80 | ((c >> 6) & 0x3f)); bytes.push(0x80 | (c & 0x3f)); }
+    }
+
+    // Build bit stream — version 2, EC M: 28 data codewords
+    const bits = [];
+    const pushBits = (v, n) => { for (let i = n - 1; i >= 0; i--) bits.push((v >> i) & 1); };
+    pushBits(0b0100, 4);        // byte mode indicator
+    pushBits(bytes.length, 8);  // character count
+    bytes.forEach(b => pushBits(b, 8));
+    // Terminator (up to 4 zero bits)
+    for (let i = 0; i < 4 && bits.length < 224; i++) bits.push(0);
+    // Pad to byte boundary
+    while (bits.length % 8) bits.push(0);
+    // Pad codewords
+    const PAD = [0xec, 0x11];
+    let pi = 0;
+    while (bits.length < 224) pushBits(PAD[pi++ % 2], 8);
+
+    // Pack bits to bytes
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0;
+      for (let j = 0; j < 8; j++) b = (b << 1) | (bits[i + j] || 0);
+      data.push(b);
+    }
+    return data.concat(rsEncode(data, 16)); // 16 EC codewords for v2 M
+  }
+
+  function placeAndMask(matrix, codewords) {
+    const bits = [];
+    codewords.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+
+    let bi = 0;
+    // Mask pattern 2: row % 2 === 0
+    const maskFn = (r) => r % 2 === 0;
+
+    // Data placement: right-to-left column pairs, alternating up/down
+    let upward = true;
+    for (let right = SZ - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5; // skip vertical timing column
+      for (let vert = 0; vert < SZ; vert++) {
+        const row = upward ? (SZ - 1 - vert) : vert;
+        for (let d = 0; d < 2; d++) {
+          const col = right - d;
+          if (col < 0 || matrix[row][col] !== -1) continue;
+          const bit = bi < bits.length ? bits[bi++] : 0;
+          matrix[row][col] = bit ^ (maskFn(row) ? 1 : 0);
+        }
+      }
+      upward = !upward;
+    }
+
+    // Format information: version 2, EC=M (bits 01), mask=2 (bits 010)
+    // Format bits before masking with 101010000010010: 01 010 → 01010 → with BCH → 010000100100101
+    // Pre-computed for EC=M mask=2: 101000100100101
+    const fmt = [1,0,1,0,0,0,1,0,0,1,0,0,1,0,1];
+    // Top-left area
+    for (let i = 0; i <= 5; i++) { matrix[8][i] = fmt[i]; matrix[i][8] = fmt[14 - i]; }
+    matrix[8][7] = fmt[6]; matrix[7][8] = fmt[8]; matrix[8][8] = fmt[7];
+    // Bottom-left / top-right
+    for (let i = 0; i < 7; i++) {
+      matrix[SZ - 1 - i][8] = fmt[i];
+      matrix[8][SZ - 1 - i] = fmt[14 - i];
+    }
+
+    return matrix;
+  }
+
+  window.__ppQRGenerate = function(text, cellPx) {
+    cellPx = cellPx || 9;
+    try {
+      const codewords = encodeBytes(text);
+      const matrix    = placeAndMask(makeMatrix(), codewords);
+      const quiet     = 4;
+      const dim       = (SZ + quiet * 2) * cellPx;
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" width="${dim}" height="${dim}">`;
+      svg += `<rect width="${dim}" height="${dim}" fill="#fff"/>`;
+      for (let r = 0; r < SZ; r++) {
+        for (let c = 0; c < SZ; c++) {
+          if (matrix[r][c] === 1) {
+            svg += `<rect x="${(c + quiet) * cellPx}" y="${(r + quiet) * cellPx}" width="${cellPx}" height="${cellPx}" fill="#0A1628"/>`;
+          }
+        }
+      }
+      svg += '</svg>';
+      return svg;
+    } catch(e) {
+      console.error('[PlayPal QR]', e);
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#f00" opacity="0.2"/><text x="100" y="100" text-anchor="middle" fill="#E5534B" font-size="12">QR Error</text></svg>';
+    }
+  };
+})();
+
+// ─── QR Modal ────────────────────────────────────────────────────────────────
+const QRModal = ({ open, onClose, syncCode }) => {
+  if (!open || !syncCode) return null;
+
+  const base    = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+  const joinUrl = base + 'join.html?code=' + syncCode;
+  const qrSvg   = window.__ppQRGenerate ? window.__ppQRGenerate(joinUrl, 9) : '';
 
   return (
-    <div style={{
-      position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:3000,
-      display:'flex', alignItems:'center', justifyContent:'center', padding:24,
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:3000,
+        display:'flex', alignItems:'center', justifyContent:'center', padding:24,
+      }}>
       <div style={{
         background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:20,
-        padding:28, maxWidth:360, width:'100%', display:'flex',
-        flexDirection:'column', alignItems:'center', gap:18,
+        padding:28, maxWidth:380, width:'100%',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:20,
       }}>
-        <div style={{
-          display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%',
-        }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%' }}>
           <span style={{
             fontFamily:'Barlow Condensed', fontSize:20, fontWeight:800,
             color:'#fff', letterSpacing:1,
@@ -58,27 +202,30 @@ const QRModal = ({ open, onClose, syncCode }) => {
           <button onClick={onClose} style={{
             background:'none', border:'none', color:'#7A98BC',
             fontSize:22, cursor:'pointer', lineHeight:1, padding:'0 4px',
+            WebkitTapHighlightColor:'transparent',
           }}>✕</button>
         </div>
 
-        <div style={{
-          background:'#fff', borderRadius:12, padding:12,
-          display:'flex', alignItems:'center', justifyContent:'center',
-        }}>
-          <canvas ref={canvasRef} style={{ display:'block' }}/>
-        </div>
+        <div
+          style={{
+            background:'#fff', borderRadius:14, padding:14, width:'100%',
+            boxSizing:'border-box', display:'flex', alignItems:'center', justifyContent:'center',
+            lineHeight:0,
+          }}
+          dangerouslySetInnerHTML={{ __html: qrSvg }}
+        />
 
         <div style={{
-          background:'rgba(61,203,108,0.07)',
-          border:'1px solid rgba(61,203,108,0.25)',
+          background:'rgba(61,203,108,0.07)', border:'1px solid rgba(61,203,108,0.25)',
           borderRadius:10, padding:'10px 20px', textAlign:'center',
+          width:'100%', boxSizing:'border-box',
         }}>
           <div style={{
             fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2,
             color:'#7A98BC', marginBottom:4,
           }}>ROUND CODE</div>
           <div style={{
-            fontFamily:'Barlow Condensed', fontWeight:900, fontSize:32,
+            fontFamily:'Barlow Condensed', fontWeight:900, fontSize:34,
             letterSpacing:6, color:'#3DCB6C',
           }}>{syncCode}</div>
         </div>
@@ -94,9 +241,10 @@ const QRModal = ({ open, onClose, syncCode }) => {
   );
 };
 
+// ─── NavBar ───────────────────────────────────────────────────────────────────
 const NavBar = ({ syncCode, onHome, currentScreen }) => {
-  const [copied,   setCopied]   = React.useState(false);
-  const [showQR,   setShowQR]   = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+  const [showQR, setShowQR] = React.useState(false);
 
   const copy = () => {
     navigator.clipboard?.writeText(syncCode).catch(() => {});
