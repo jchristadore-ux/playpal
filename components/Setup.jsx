@@ -1,4 +1,5 @@
 // Setup.jsx — Course persistence + scorecard image scan + realtime course sync
+//             Multi-Nassau: supports 1–3 independent Nassau matches per round
 
 // ─── Scorecard Scanner ────────────────────────────────────────────────────────
 const ScorecardScanner = ({ onResult, onCancel }) => {
@@ -347,14 +348,9 @@ const StakesInput = ({ value, onChange }) => {
 };
 
 // ─── Nassau Pop Hole Selector ─────────────────────────────────────────────────
-// Shown after player selection in NassauMatchConfig.
-// Allows selecting which holes one of the Nassau players is "getting a pop" on.
-// popHoles shape: { [playerId]: boolean[18] }
 const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
   if (!nassauPlayers || nassauPlayers.length < 2) return null;
 
-  // Which player is getting pops — only one player gets pops (the higher hcp player)
-  // but we let the user pick which player and which holes manually
   const [activePlayer, setActivePlayer] = React.useState(nassauPlayers[0].id);
 
   const toggleHole = (holeIdx) => {
@@ -377,7 +373,6 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
         Select which player is getting strokes and tap the holes they receive them on.
       </div>
 
-      {/* Player selector */}
       <div style={{display:'flex', gap:8}}>
         {nassauPlayers.map(p => (
           <div key={p.id} onClick={() => setActivePlayer(p.id)}
@@ -402,7 +397,6 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
         ))}
       </div>
 
-      {/* Hole grid */}
       <div>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
           <Label style={{fontSize:10}}>
@@ -419,7 +413,6 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
           )}
         </div>
 
-        {/* Front 9 */}
         <div style={{marginBottom:6}}>
           <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1.5, color:'#4A6890', marginBottom:4}}>FRONT 9</div>
           <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
@@ -445,7 +438,6 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
           </div>
         </div>
 
-        {/* Back 9 */}
         <div>
           <div style={{fontFamily:'Barlow Condensed', fontSize:9, letterSpacing:1.5, color:'#4A6890', marginBottom:4}}>BACK 9</div>
           <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
@@ -476,12 +468,309 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
   );
 };
 
-// ─── Nassau Match Config UI ───────────────────────────────────────────────────
+// ─── Single Nassau Match Config ───────────────────────────────────────────────
+// Used by multi-match manager for each individual match slot.
+const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLabel }) => {
+  const matchType      = matchConfig.matchType || '1v1';
+  const playersInMatch = matchConfig.playersInMatch || [];
+  const teams          = matchConfig.teams || null;
+  const popHoles       = matchConfig.popHoles || {};
+  const stakes         = matchConfig.stakes || 5;
+
+  const can2v2 = roundPlayers.length >= 4;
+
+  const setMatchType = (t) => {
+    onChange({ ...matchConfig, matchType: t, playersInMatch: [], teams: null, popHoles: {} });
+  };
+
+  const togglePlayer = (id) => {
+    const max = matchType === '2v2' ? 4 : 2;
+    const next = playersInMatch.includes(id)
+      ? playersInMatch.filter(x => x !== id)
+      : playersInMatch.length < max ? [...playersInMatch, id] : playersInMatch;
+    if (matchType === '2v2' && next.length === 4) {
+      onChange({ ...matchConfig, playersInMatch: next, teams: { team1: [next[0], next[1]], team2: [next[2], next[3]] } });
+    } else {
+      onChange({ ...matchConfig, playersInMatch: next, teams: null });
+    }
+  };
+
+  const moveToTeam = (id, teamKey) => {
+    if (!teams) return;
+    const newT1 = (teams.team1 || []).filter(x => x !== id);
+    const newT2 = (teams.team2 || []).filter(x => x !== id);
+    if (teamKey === 'team1') newT1.push(id);
+    else newT2.push(id);
+    onChange({ ...matchConfig, teams: { team1: newT1, team2: newT2 } });
+  };
+
+  const handlePopChange = (nextPopHoles) => {
+    onChange({ ...matchConfig, popHoles: nextPopHoles });
+  };
+
+  const handleStakeChange = (v) => {
+    onChange({ ...matchConfig, stakes: v });
+  };
+
+  const playerById = (id) => roundPlayers.find(p => p.id === id);
+  const isValid1v1 = matchType === '1v1' && playersInMatch.length === 2;
+  const isValid2v2 = matchType === '2v2' && teams &&
+    (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
+  const isValid = isValid1v1 || isValid2v2;
+
+  const nassauPlayersForPop = playersInMatch.map(id => playerById(id)).filter(Boolean);
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:10}}>
+      {/* Match label */}
+      <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:2,
+        color:'#C9A84C', marginBottom:2}}>{matchLabel}</div>
+
+      {/* Stakes */}
+      <div>
+        <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:6}}>
+          STAKE (per bet — Front 9 + Back 9 + Overall 2×)
+        </div>
+        <StakesInput value={stakes} onChange={handleStakeChange}/>
+      </div>
+
+      {/* Match type */}
+      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:2}}>MATCH FORMAT</div>
+      <div style={{display:'flex', gap:8}}>
+        {['1v1', ...(can2v2 ? ['2v2'] : [])].map(t => (
+          <div key={t} onClick={() => setMatchType(t)}
+            style={{
+              flex:1, textAlign:'center', padding:'8px 0', borderRadius:8, cursor:'pointer',
+              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:15,
+              background: matchType === t ? '#C9A84C' : '#162950',
+              color:      matchType === t ? '#0A1628'  : '#9BB4D4',
+              border:     matchType === t ? 'none'     : '1px solid #1E3A6E',
+            }}>
+            {t}
+          </div>
+        ))}
+      </div>
+
+      {/* Player selection */}
+      <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
+        SELECT {matchType === '2v2' ? '4' : '2'} PLAYERS
+      </div>
+      <div style={{display:'flex', flexDirection:'column', gap:6}}>
+        {roundPlayers.map(p => {
+          const selected = playersInMatch.includes(p.id);
+          const inTeam1  = teams?.team1?.includes(p.id);
+          const inTeam2  = teams?.team2?.includes(p.id);
+          return (
+            <div key={p.id} onClick={() => togglePlayer(p.id)}
+              style={{
+                display:'flex', alignItems:'center', gap:10,
+                borderRadius:10, padding:'10px 12px', cursor:'pointer',
+                background: selected ? `${p.color}11` : '#0A1628',
+                border: selected ? `1px solid ${p.color}` : '1px solid #1E3A6E',
+              }}>
+              <div style={{
+                width:20, height:20, borderRadius:6, border:`2px solid ${selected ? p.color : '#1E3A6E'}`,
+                background: selected ? p.color : 'transparent', flexShrink:0,
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                {selected && <span style={{color:'#0A1628', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
+              </div>
+              <Avatar player={p} size={28}/>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color: selected ? '#fff' : '#9BB4D4', flex:1}}>
+                {p.name}
+              </span>
+              {matchType === '2v2' && selected && (
+                <div style={{display:'flex', gap:4}} onClick={e => e.stopPropagation()}>
+                  {['team1', 'team2'].map((tk, ti) => (
+                    <div key={tk} onClick={() => moveToTeam(p.id, tk)}
+                      style={{
+                        padding:'3px 8px', borderRadius:6, cursor:'pointer',
+                        fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
+                        background: (tk === 'team1' ? inTeam1 : inTeam2) ? p.color : '#162950',
+                        color:      (tk === 'team1' ? inTeam1 : inTeam2) ? '#0A1628' : '#4A6890',
+                        border:     (tk === 'team1' ? inTeam1 : inTeam2) ? 'none' : '1px solid #1E3A6E',
+                      }}>
+                      T{ti + 1}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {matchType === '2v2' && teams && (teams.team1||[]).length > 0 && (
+        <div style={{display:'flex', gap:8}}>
+          {['team1','team2'].map((tk, ti) => {
+            const members = (teams[tk] || []).map(playerById).filter(Boolean);
+            return (
+              <div key={tk} style={{flex:1, background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:8, padding:'8px 10px'}}>
+                <div style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#4A6890', letterSpacing:1, marginBottom:4}}>TEAM {ti+1}</div>
+                {members.map(p => (
+                  <div key={p.id} style={{display:'flex', alignItems:'center', gap:5, marginBottom:2}}>
+                    <div style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
+                    <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p.name.split(' ')[0]}</span>
+                  </div>
+                ))}
+                {members.length === 0 && (
+                  <div style={{fontFamily:'DM Sans', fontSize:11, color:'#4A6890'}}>No players</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!isValid && (
+        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#E5534B'}}>
+          {matchType === '1v1'
+            ? `Select exactly 2 players for the match (${playersInMatch.length}/2)`
+            : `Select 4 players and assign 2 to each team`}
+        </div>
+      )}
+      {isValid && (
+        <div style={{fontFamily:'DM Sans', fontSize:11, color:'#3DCB6C'}}>
+          {matchType === '1v1'
+            ? `✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`
+            : `✓ Team match configured`}
+        </div>
+      )}
+
+      {isValid && matchType === '1v1' && nassauPlayersForPop.length === 2 && (
+        <NassauPopConfig
+          nassauPlayers={nassauPlayersForPop}
+          popHoles={popHoles}
+          onChange={handlePopChange}
+        />
+      )}
+    </div>
+  );
+};
+
+// ─── Multi-Nassau Match Manager ───────────────────────────────────────────────
+// Manages 1–3 independent Nassau matches for a single round.
+// Each match has its own stakes, players, pops.
+// nassauMatches: [{ id, matchType, playersInMatch, teams, popHoles, stakes }, ...]
+const MATCH_COLORS = ['#C9A84C', '#7B9FE0', '#E07BE0'];
+const MATCH_LABELS = ['MATCH 1', 'MATCH 2', 'MATCH 3'];
+
+const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
+  const MAX_MATCHES = 3;
+
+  const addMatch = () => {
+    if (nassauMatches.length >= MAX_MATCHES) return;
+    const newMatch = {
+      id:             'nm_' + Date.now(),
+      matchType:      '1v1',
+      playersInMatch: [],
+      teams:          null,
+      popHoles:       {},
+      stakes:         5,
+    };
+    onChange([...nassauMatches, newMatch]);
+  };
+
+  const removeMatch = (idx) => {
+    const next = nassauMatches.filter((_, i) => i !== idx);
+    onChange(next);
+  };
+
+  const updateMatch = (idx, updated) => {
+    const next = nassauMatches.map((m, i) => i === idx ? { ...m, ...updated } : m);
+    onChange(next);
+  };
+
+  return (
+    <div style={{borderTop:'1px solid rgba(201,168,76,0.2)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:14}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC'}}>
+          NASSAU MATCHES ({nassauMatches.length}/{MAX_MATCHES})
+        </div>
+        {nassauMatches.length < MAX_MATCHES && (
+          <button onClick={addMatch}
+            style={{
+              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:1,
+              color:'#3DCB6C', background:'rgba(61,203,108,0.08)',
+              border:'1px solid rgba(61,203,108,0.3)', borderRadius:7,
+              padding:'4px 12px', cursor:'pointer',
+              WebkitTapHighlightColor:'transparent',
+            }}>
+            + ADD MATCH
+          </button>
+        )}
+      </div>
+
+      {nassauMatches.length === 0 && (
+        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#4A6890', textAlign:'center', padding:'12px 0'}}>
+          No matches configured. Tap + ADD MATCH to begin.
+        </div>
+      )}
+
+      {nassauMatches.map((match, idx) => (
+        <div key={match.id}
+          style={{
+            background:'#0A1628',
+            border:`1px solid ${MATCH_COLORS[idx]}44`,
+            borderRadius:12,
+            overflow:'hidden',
+          }}>
+          {/* Match header */}
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'10px 14px',
+            background:`${MATCH_COLORS[idx]}0A`,
+            borderBottom:`1px solid ${MATCH_COLORS[idx]}33`,
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:8}}>
+              <div style={{width:8, height:8, borderRadius:'50%', background:MATCH_COLORS[idx]}}/>
+              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14,
+                letterSpacing:1.5, color:MATCH_COLORS[idx]}}>
+                {MATCH_LABELS[idx]}
+              </span>
+              {match.playersInMatch.length === 2 && (() => {
+                const p1 = roundPlayers.find(p => p.id === match.playersInMatch[0]);
+                const p2 = roundPlayers.find(p => p.id === match.playersInMatch[1]);
+                return p1 && p2 ? (
+                  <span style={{fontFamily:'Barlow Condensed', fontSize:11, color:'#7A98BC'}}>
+                    {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]}
+                  </span>
+                ) : null;
+              })()}
+            </div>
+            {nassauMatches.length > 1 && (
+              <button onClick={() => removeMatch(idx)}
+                style={{
+                  background:'none', border:'none', cursor:'pointer',
+                  fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12,
+                  letterSpacing:1, color:'#4A6890',
+                  WebkitTapHighlightColor:'transparent', padding:'2px 6px',
+                }}>
+                REMOVE
+              </button>
+            )}
+          </div>
+
+          {/* Match body */}
+          <div style={{padding:'12px 14px'}}>
+            <NassauSingleMatchConfig
+              roundPlayers={roundPlayers}
+              matchConfig={match}
+              onChange={(updated) => updateMatch(idx, updated)}
+              matchLabel=""
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── Legacy NassauMatchConfig (kept for backward compat — not used in new flow) ─
 const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
   const matchType      = config.matchType || '1v1';
   const playersInMatch = config.playersInMatch || [];
   const teams          = config.teams || null;
-  // popHoles: { [playerId]: boolean[18] }
   const popHoles       = config.popHoles || {};
   const can2v2 = roundPlayers.length >= 4;
 
@@ -519,8 +808,6 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
   const isValid2v2 = matchType === '2v2' && teams &&
     (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2;
   const isValid = isValid1v1 || isValid2v2;
-
-  // Nassau players for pop config
   const nassauPlayersForPop = playersInMatch.map(id => playerById(id)).filter(Boolean);
 
   return (
@@ -622,8 +909,6 @@ const NassauMatchConfig = ({ roundPlayers, config, onChange }) => {
             : `✓ Team match configured`}
         </div>
       )}
-
-      {/* Pop hole selector — only shown when players are selected */}
       {isValid && matchType === '1v1' && nassauPlayersForPop.length === 2 && (
         <NassauPopConfig
           nassauPlayers={nassauPlayersForPop}
@@ -728,26 +1013,32 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [scanPrefill, setScanPrefill]           = React.useState(null);
   const [formats, setFormats]                   = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
   const [stakes,  setStakes]                    = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
-  const [nassauMatchConfig, setNassauMatchConfig] = React.useState({ matchType:'1v1', playersInMatch:[], teams:null, popHoles:{} });
+
+  // Multi-Nassau: array of match configs
+  const [nassauMatches, setNassauMatches] = React.useState([{
+    id:             'nm_init',
+    matchType:      '1v1',
+    playersInMatch: [],
+    teams:          null,
+    popHoles:       {},
+    stakes:         5,
+  }]);
 
   const localCourses = customCourses || [];
 
-  // Reset nassauMatchConfig when selected players change (stale IDs)
+  // Reset nassauMatches when selected players change
   React.useEffect(() => {
-    setNassauMatchConfig(prev => ({
-      ...prev,
-      playersInMatch: prev.playersInMatch.filter(id => selectedPlayers.includes(id)),
-      teams: prev.teams ? {
-        team1: (prev.teams.team1 || []).filter(id => selectedPlayers.includes(id)),
-        team2: (prev.teams.team2 || []).filter(id => selectedPlayers.includes(id)),
+    setNassauMatches(prev => prev.map(match => ({
+      ...match,
+      playersInMatch: match.playersInMatch.filter(id => selectedPlayers.includes(id)),
+      teams: match.teams ? {
+        team1: (match.teams.team1 || []).filter(id => selectedPlayers.includes(id)),
+        team2: (match.teams.team2 || []).filter(id => selectedPlayers.includes(id)),
       } : null,
-      // Clear popHoles for players no longer in the match
       popHoles: Object.fromEntries(
-        Object.entries(prev.popHoles || {}).filter(([id]) =>
-          prev.playersInMatch.filter(pid => selectedPlayers.includes(pid)).includes(id)
-        )
+        Object.entries(match.popHoles || {}).filter(([id]) => selectedPlayers.includes(id))
       ),
-    }));
+    })));
   }, [selectedPlayers.join(',')]);
 
   const togglePlayer = (id) => {
@@ -761,21 +1052,26 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
     !query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query)
   );
 
+  // Nassau validity: all matches must be valid
   const nassauValid = (() => {
     if (!formats.nassau) return true;
-    const { matchType, playersInMatch, teams } = nassauMatchConfig;
-    if (matchType === '1v1') return playersInMatch.length === 2;
-    if (matchType === '2v2') return (
-      playersInMatch.length === 4 &&
-      teams && (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2
-    );
-    return false;
+    if (nassauMatches.length === 0) return false;
+    return nassauMatches.every(match => {
+      const { matchType, playersInMatch, teams } = match;
+      if (matchType === '1v1') return playersInMatch.length === 2;
+      if (matchType === '2v2') return (
+        playersInMatch.length === 4 &&
+        teams && (teams.team1||[]).length === 2 && (teams.team2||[]).length === 2
+      );
+      return false;
+    });
   })();
 
+  // Build active formats — nassau format carries nassauMatches array (new) instead of nassauConfig (legacy)
   const activeFormats = Object.entries(formats).filter(([,v])=>v).map(([k])=>({
     type: k,
-    stakes: stakes[k],
-    ...(k === 'nassau' ? { nassauConfig: nassauMatchConfig } : {}),
+    stakes: k === 'nassau' ? nassauMatches[0]?.stakes || stakes[k] : stakes[k],
+    ...(k === 'nassau' ? { nassauMatches } : {}),
   }));
 
   const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid;
@@ -944,19 +1240,21 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                         {on && <span style={{color:'#0A1628', fontSize:14, fontWeight:900}}>✓</span>}
                       </div>
                     </div>
-                    {on && (
+                    {on && key !== 'nassau' && (
                       <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
                         <div style={{fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:1.5, color:'#7A98BC', marginBottom:8}}>
-                          STAKE ({key==='wolf'?'pot ante per player':key==='nassau'?'per bet — Front 9 + Back 9 + Overall (2×)':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
+                          STAKE ({key==='wolf'?'pot ante per player':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
                         </div>
                         <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
-                        {key === 'nassau' && (
-                          <NassauMatchConfig
-                            roundPlayers={roundPlayersForNassau}
-                            config={nassauMatchConfig}
-                            onChange={setNassauMatchConfig}
-                          />
-                        )}
+                      </div>
+                    )}
+                    {on && key === 'nassau' && (
+                      <div style={{borderTop:'1px solid rgba(61,203,108,0.15)', marginTop:12, paddingTop:12}}>
+                        <NassauMultiMatchConfig
+                          roundPlayers={roundPlayersForNassau}
+                          nassauMatches={nassauMatches}
+                          onChange={setNassauMatches}
+                        />
                       </div>
                     )}
                   </div>
@@ -972,14 +1270,22 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                   <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players</div>
                   {activeFormats.map(f => (
                     <div key={f.type}>
-                      🎯 {FORMAT_INFO[f.type].label} — <span style={{color:'#C9A84C', fontWeight:700}}>${f.stakes}</span>
-                      {f.type === 'nassau' && f.nassauConfig?.playersInMatch?.length > 0 && (
+                      🎯 {FORMAT_INFO[f.type].label}
+                      {f.type !== 'nassau' && <span> — <span style={{color:'#C9A84C', fontWeight:700}}>${f.stakes}</span></span>}
+                      {f.type === 'nassau' && f.nassauMatches && f.nassauMatches.length > 0 && (
                         <span style={{color:'#7A98BC', marginLeft:6}}>
-                          ({f.nassauConfig.matchType === '2v2' ? '2v2' : '1v1'}
-                          {(() => {
-                            const popCount = Object.values(f.nassauConfig.popHoles || {}).reduce((a, arr) => a + (arr || []).filter(Boolean).length, 0);
-                            return popCount > 0 ? ` · ${popCount} pops` : '';
-                          })()})
+                          {f.nassauMatches.length} match{f.nassauMatches.length > 1 ? 'es' : ''}
+                          {f.nassauMatches.map((m, i) => {
+                            const p1 = roundPlayersForNassau.find(p => p.id === m.playersInMatch[0]);
+                            const p2 = roundPlayersForNassau.find(p => p.id === m.playersInMatch[1]);
+                            const popCount = Object.values(m.popHoles || {}).reduce((a, arr) => a + (arr||[]).filter(Boolean).length, 0);
+                            if (!p1 || !p2) return null;
+                            return (
+                              <span key={m.id} style={{display:'block', marginLeft:16, color:'#7A98BC', fontSize:11}}>
+                                · {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]} — ${m.stakes}{popCount > 0 ? ` · ${popCount} pops` : ''}
+                              </span>
+                            );
+                          })}
                         </span>
                       )}
                     </div>
@@ -998,7 +1304,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
             {!canStart && (
               <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#4A6890'}}>
                 {!nassauValid
-                  ? 'Complete Nassau match setup to continue'
+                  ? 'Complete all Nassau match setups to continue'
                   : 'Select at least one format to continue'}
               </div>
             )}
