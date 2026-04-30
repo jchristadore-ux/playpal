@@ -1,36 +1,173 @@
 // Shared.jsx — NavBar, Button, Avatar, Modal, Toast
 
-const NavBar = ({ syncCode, onHome, currentScreen }) => {
-  const [copied, setCopied] = React.useState(false);
-  const copy = () => {
-    navigator.clipboard?.writeText(syncCode).catch(()=>{});
-    setCopied(true); setTimeout(()=>setCopied(false), 2000);
-  };
+const QRModal = ({ open, onClose, syncCode }) => {
+  const canvasRef = React.useRef(null);
+  const [url, setUrl] = React.useState('');
+
+  React.useEffect(() => {
+    if (!open || !syncCode) return;
+    const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+    const joinUrl = base + 'join.html?code=' + syncCode;
+    setUrl(joinUrl);
+
+    const tryRender = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !window.QRCode) return;
+      canvas.width  = 280;
+      canvas.height = 280;
+      try {
+        window.QRCode.toCanvas(canvas, joinUrl, {
+          width:  280,
+          margin: 2,
+          color:  { dark: '#0A1628', light: '#FFFFFF' },
+        }, function(err) {
+          if (err) console.warn('[QR]', err);
+        });
+      } catch(e) {
+        console.warn('[QR] render failed', e);
+      }
+    };
+
+    if (window.QRCode) {
+      tryRender();
+    } else {
+      const t = setInterval(() => { if (window.QRCode) { clearInterval(t); tryRender(); } }, 100);
+      setTimeout(() => clearInterval(t), 5000);
+    }
+  }, [open, syncCode]);
+
+  if (!open) return null;
+
   return (
-    <nav style={navStyles.bar}>
-      <button onClick={onHome} style={navStyles.logo}>
-        <span style={{color:'#3DCB6C', fontFamily:'Barlow Condensed', fontSize:22, fontWeight:800, letterSpacing:1}}>🏌️ PLAYPAL</span>
-      </button>
-      <div style={navStyles.center} />
-      {syncCode && (
-        <button onClick={copy} style={navStyles.sync}>
-          <span style={{fontSize:10, color:'#7A98BC', letterSpacing:1}}>SYNC</span>
-          <span style={{fontSize:13, fontWeight:700, color:'#3DCB6C', fontFamily:'Barlow Condensed', letterSpacing:2}}>{syncCode}</span>
-          {copied && <span style={{fontSize:10, color:'#3DCB6C'}}>✓ COPIED</span>}
+    <div style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:3000,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:24,
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:20,
+        padding:28, maxWidth:360, width:'100%', display:'flex',
+        flexDirection:'column', alignItems:'center', gap:18,
+      }}>
+        <div style={{
+          display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%',
+        }}>
+          <span style={{
+            fontFamily:'Barlow Condensed', fontSize:20, fontWeight:800,
+            color:'#fff', letterSpacing:1,
+          }}>JOIN THIS ROUND</span>
+          <button onClick={onClose} style={{
+            background:'none', border:'none', color:'#7A98BC',
+            fontSize:22, cursor:'pointer', lineHeight:1, padding:'0 4px',
+          }}>✕</button>
+        </div>
+
+        <div style={{
+          background:'#fff', borderRadius:12, padding:12,
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>
+          <canvas ref={canvasRef} style={{ display:'block' }}/>
+        </div>
+
+        <div style={{
+          background:'rgba(61,203,108,0.07)',
+          border:'1px solid rgba(61,203,108,0.25)',
+          borderRadius:10, padding:'10px 20px', textAlign:'center',
+        }}>
+          <div style={{
+            fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2,
+            color:'#7A98BC', marginBottom:4,
+          }}>ROUND CODE</div>
+          <div style={{
+            fontFamily:'Barlow Condensed', fontWeight:900, fontSize:32,
+            letterSpacing:6, color:'#3DCB6C',
+          }}>{syncCode}</div>
+        </div>
+
+        <div style={{
+          fontFamily:'DM Sans', fontSize:12, color:'#7A98BC',
+          textAlign:'center', lineHeight:1.6,
+        }}>
+          Scan with any camera app — or share the code above.
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NavBar = ({ syncCode, onHome, currentScreen }) => {
+  const [copied,   setCopied]   = React.useState(false);
+  const [showQR,   setShowQR]   = React.useState(false);
+
+  const copy = () => {
+    navigator.clipboard?.writeText(syncCode).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <>
+      <nav style={navStyles.bar}>
+        <button onClick={onHome} style={navStyles.logo}>
+          <span style={{
+            color:'#3DCB6C', fontFamily:'Barlow Condensed',
+            fontSize:22, fontWeight:800, letterSpacing:1,
+          }}>🏌️ PLAYPAL</span>
         </button>
-      )}
-    </nav>
+        <div style={navStyles.center} />
+        {syncCode && (
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <button
+              onClick={() => setShowQR(true)}
+              title="Show QR code to join round"
+              style={{
+                background:'rgba(61,203,108,0.07)',
+                border:'1px solid rgba(61,203,108,0.2)',
+                borderRadius:8, padding:'6px 10px', cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                WebkitTapHighlightColor:'transparent',
+              }}>
+              <span style={{ fontSize:18, lineHeight:1 }}>📲</span>
+            </button>
+            <button onClick={copy} style={navStyles.sync}>
+              <span style={{ fontSize:10, color:'#7A98BC', letterSpacing:1 }}>SYNC</span>
+              <span style={{
+                fontSize:13, fontWeight:700, color:'#3DCB6C',
+                fontFamily:'Barlow Condensed', letterSpacing:2,
+              }}>{syncCode}</span>
+              {copied && <span style={{ fontSize:10, color:'#3DCB6C' }}>✓ COPIED</span>}
+            </button>
+          </div>
+        )}
+      </nav>
+
+      <QRModal
+        open={showQR}
+        onClose={() => setShowQR(false)}
+        syncCode={syncCode}
+      />
+    </>
   );
 };
 
 const navStyles = {
-  bar: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:48, background:'#050E1C', borderBottom:'1px solid #1E3A6E', flexShrink:0, zIndex:100, position:'relative' },
-  logo: { background:'none', border:'none', cursor:'pointer', padding:0, display:'flex', alignItems:'center', gap:6 },
+  bar: {
+    display:'flex', alignItems:'center', justifyContent:'space-between',
+    padding:'0 16px', height:48, background:'#050E1C',
+    borderBottom:'1px solid #1E3A6E', flexShrink:0, zIndex:100, position:'relative',
+  },
+  logo: {
+    background:'none', border:'none', cursor:'pointer',
+    padding:0, display:'flex', alignItems:'center', gap:6,
+  },
   center: { flex:1 },
-  sync: { display:'flex', flexDirection:'column', alignItems:'flex-end', background:'rgba(61,203,108,0.07)', border:'1px solid rgba(61,203,108,0.2)', borderRadius:8, padding:'4px 10px', cursor:'pointer', gap:1 },
+  sync: {
+    display:'flex', flexDirection:'column', alignItems:'flex-end',
+    background:'rgba(61,203,108,0.07)', border:'1px solid rgba(61,203,108,0.2)',
+    borderRadius:8, padding:'4px 10px', cursor:'pointer', gap:1,
+  },
 };
 
-const Btn = ({ children, onClick, variant='gold', style={}, disabled=false }) => {
+const Btn = ({ children, onClick, variant = 'gold', style = {}, disabled = false }) => {
   const variants = {
     gold:    { background:'linear-gradient(135deg,#C9A84C,#A8893A)', color:'#0A1628', fontWeight:800 },
     green:   { background:'linear-gradient(135deg,#3DCB6C,#2BA854)', color:'#0A1628', fontWeight:800 },
@@ -43,24 +180,26 @@ const Btn = ({ children, onClick, variant='gold', style={}, disabled=false }) =>
       display:'flex', alignItems:'center', justifyContent:'center', gap:6,
       minHeight:48, padding:'12px 20px', borderRadius:12, border:'none',
       cursor: disabled ? 'not-allowed' : 'pointer',
-      fontFamily:'Barlow Condensed', fontSize:16, letterSpacing:1, opacity: disabled ? 0.5 : 1,
-      transition:'transform 0.1s, opacity 0.1s', WebkitTapHighlightColor:'transparent',
+      fontFamily:'Barlow Condensed', fontSize:16, letterSpacing:1,
+      opacity: disabled ? 0.5 : 1,
+      transition:'transform 0.1s, opacity 0.1s',
+      WebkitTapHighlightColor:'transparent',
       ...variants[variant], ...style,
     }}
-    onMouseDown={e => { if(!disabled) e.currentTarget.style.transform='scale(0.97)'; }}
-    onMouseUp={e => { e.currentTarget.style.transform='scale(1)'; }}
-    onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; }}
+    onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = 'scale(0.97)'; }}
+    onMouseUp={e   => { e.currentTarget.style.transform = 'scale(1)'; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
     >{children}</button>
   );
 };
 
-const Avatar = ({ player, size=40 }) => (
+const Avatar = ({ player, size = 40 }) => (
   <div style={{
     width:size, height:size, borderRadius:'50%',
     background:`linear-gradient(135deg, ${player.color}33, ${player.color}66)`,
     border:`2px solid ${player.color}`,
     display:'flex', alignItems:'center', justifyContent:'center',
-    fontFamily:'Barlow Condensed', fontWeight:800, fontSize:size*0.35,
+    fontFamily:'Barlow Condensed', fontWeight:800, fontSize:size * 0.35,
     color:player.color, flexShrink:0, letterSpacing:0.5,
   }}>{player.initials}</div>
 );
@@ -68,11 +207,27 @@ const Avatar = ({ player, size=40 }) => (
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:16, padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-          <span style={{ fontFamily:'Barlow Condensed', fontSize:20, fontWeight:700, color:'#fff', letterSpacing:1 }}>{title}</span>
-          <button onClick={onClose} style={{ background:'none', border:'none', color:'#7A98BC', fontSize:22, cursor:'pointer' }}>✕</button>
+    <div style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.7)',
+      zIndex:1000, display:'flex', alignItems:'center',
+      justifyContent:'center', padding:20,
+    }}>
+      <div style={{
+        background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:16,
+        padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto',
+      }}>
+        <div style={{
+          display:'flex', justifyContent:'space-between',
+          alignItems:'center', marginBottom:20,
+        }}>
+          <span style={{
+            fontFamily:'Barlow Condensed', fontSize:20, fontWeight:700,
+            color:'#fff', letterSpacing:1,
+          }}>{title}</span>
+          <button onClick={onClose} style={{
+            background:'none', border:'none', color:'#7A98BC',
+            fontSize:22, cursor:'pointer',
+          }}>✕</button>
         </div>
         {children}
       </div>
@@ -80,19 +235,29 @@ const Modal = ({ open, onClose, title, children }) => {
   );
 };
 
-const Toast = ({ message, type='success' }) => {
+const Toast = ({ message, type = 'success' }) => {
   if (!message) return null;
   const colors = { success:'#3DCB6C', error:'#E5534B', info:'#C9A84C' };
   return (
-    <div style={{ position:'fixed', bottom:100, left:'50%', transform:'translateX(-50%)', background:'#0F2040', border:`1px solid ${colors[type]}`, borderRadius:10, padding:'12px 20px', color:'#fff', fontFamily:'DM Sans', fontSize:14, zIndex:2000, boxShadow:'0 4px 24px rgba(0,0,0,0.4)' }}>
-      <span style={{ color:colors[type], marginRight:8 }}>{type==='success'?'✓':type==='error'?'✕':'ℹ'}</span>
+    <div style={{
+      position:'fixed', bottom:100, left:'50%', transform:'translateX(-50%)',
+      background:'#0F2040', border:`1px solid ${colors[type]}`, borderRadius:10,
+      padding:'12px 20px', color:'#fff', fontFamily:'DM Sans', fontSize:14,
+      zIndex:2000, boxShadow:'0 4px 24px rgba(0,0,0,0.4)',
+    }}>
+      <span style={{ color:colors[type], marginRight:8 }}>
+        {type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}
+      </span>
       {message}
     </div>
   );
 };
 
-const Label = ({ children, style={} }) => (
-  <span style={{ fontFamily:'Barlow Condensed', fontSize:11, fontWeight:600, letterSpacing:2, color:'#7A98BC', textTransform:'uppercase', ...style }}>{children}</span>
+const Label = ({ children, style = {} }) => (
+  <span style={{
+    fontFamily:'Barlow Condensed', fontSize:11, fontWeight:600,
+    letterSpacing:2, color:'#7A98BC', textTransform:'uppercase', ...style,
+  }}>{children}</span>
 );
 
 const Divider = ({ label }) => (
@@ -104,14 +269,17 @@ const Divider = ({ label }) => (
 );
 
 const ScorePill = ({ diff }) => {
-  const s = scoreName(diff + 4, 4); // use fake par=4 since we pass diff
   const colors = diff <= -2 ? '#FFD700' : diff === -1 ? '#3DCB6C' : diff === 0 ? '#7A98BC' : diff === 1 ? '#E5534B' : '#8B0000';
   const labels = diff <= -3 ? 'ALB' : diff === -2 ? 'EGL' : diff === -1 ? 'BRD' : diff === 0 ? 'PAR' : diff === 1 ? 'BOG' : diff === 2 ? 'DBL' : `+${diff}`;
   return (
-    <span style={{ fontSize:10, fontFamily:'Barlow Condensed', fontWeight:700, letterSpacing:1, color:colors, background:`${colors}18`, padding:'2px 7px', borderRadius:4, border:`1px solid ${colors}44` }}>
+    <span style={{
+      fontSize:10, fontFamily:'Barlow Condensed', fontWeight:700, letterSpacing:1,
+      color:colors, background:`${colors}18`, padding:'2px 7px',
+      borderRadius:4, border:`1px solid ${colors}44`,
+    }}>
       {labels}
     </span>
   );
 };
 
-Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill });
+Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, QRModal });
