@@ -1,10 +1,10 @@
-// PlayerCard.jsx — Individual player score input card (stroke-only, no net score)
+// PlayerCard.jsx — Individual player score input card
 
 const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner, wolfPicked, holeIdx, par, isLandscape }) => {
   const diff = score ? score - par : null;
 
-  const relColor = diff === null ? '#7A98BC'
-    : diff <= -2 ? '#FFD700' : diff === -1 ? '#3DCB6C' : diff === 0 ? '#9BB4D4'
+  const relColor = diff === null ? '#7A9EBF'
+    : diff <= -2 ? '#FFD700' : diff === -1 ? '#2DD97A' : diff === 0 ? '#9BB4D4'
     : diff === 1 ? '#E5534B' : '#C0392B';
 
   const relLabel = diff === null ? '—'
@@ -13,25 +13,23 @@ const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner,
 
   const border = isWolf ? '2px solid #E5534B'
     : isPartner ? `2px solid ${player.color}`
-    : `1px solid #1E3A6E`;
-  const bg = isWolf ? 'rgba(229,83,75,0.06)'
-    : isPartner ? `${player.color}0A`
-    : '#0F2040';
+    : `1px solid #1F3354`;
+  const bg = isWolf ? 'rgba(229,83,75,0.05)'
+    : isPartner ? `${player.color}08`
+    : '#0F1D35';
 
   return (
     <div style={{...pcS.card, border, background:bg, flex:1, minWidth: isLandscape ? 0 : '100%'}}>
-      {/* Header */}
       <div style={pcS.header}>
         <Avatar player={player} size={32}/>
         <div style={{flex:1, minWidth:0}}>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color:'#fff', letterSpacing:0.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{player.name}</div>
-          <div style={{fontSize:10, color:'#7A98BC'}}>HCP {player.handicap}</div>
+          <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color:'#fff', letterSpacing:0.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{player.name}</div>
+          <div style={{fontSize:10, color:'#7A9EBF', fontFamily:'DM Sans'}}>HCP {player.handicap}</div>
         </div>
         {isWolf && <div style={pcS.wolfBadge}>🐺 WOLF</div>}
-        {isPartner && !isWolf && <div style={{...pcS.wolfBadge, background:'rgba(61,203,108,0.15)', color:'#3DCB6C', border:'1px solid rgba(61,203,108,0.3)'}}>⚑ PARTNER</div>}
+        {isPartner && !isWolf && <div style={{...pcS.wolfBadge, background:'rgba(45,217,122,0.12)', color:'#2DD97A', border:'1px solid rgba(45,217,122,0.25)'}}>⚑ PARTNER</div>}
       </div>
 
-      {/* Score Controls */}
       <div style={pcS.scoreRow}>
         <button
           onClick={() => score > 1 && onScore(score - 1)}
@@ -39,28 +37,27 @@ const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner,
         >−</button>
 
         <div style={pcS.scoreDisplay}>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:64, lineHeight:1, color: score ? relColor : '#2A4A6E'}}>{score || '—'}</div>
-          <div style={{fontFamily:'Barlow Condensed', fontSize:13, fontWeight:600, letterSpacing:1.5, color:relColor, marginTop:2}}>{relLabel}</div>
+          <div style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:64, lineHeight:1, color: score ? relColor : '#1F3354'}}>{score || '—'}</div>
+          <div style={{fontFamily:'Barlow Condensed', fontSize:12, fontWeight:700, letterSpacing:2, color:relColor, marginTop:2}}>{relLabel}</div>
         </div>
 
         <button
           onClick={() => onScore((score || par) + 1)}
-          style={{...pcS.scoreBtn, background:'linear-gradient(135deg,#C9A84C,#A8893A)', color:'#0A1628'}}
+          style={{...pcS.scoreBtn, background:'linear-gradient(135deg,#D4AF47,#B8962E)', color:'#0B0F1A'}}
         >+</button>
       </div>
 
-      {/* Putt tracker */}
       <div style={pcS.puttRow}>
         <Label>PUTTS</Label>
         <div style={{display:'flex', gap:6, marginLeft:8}}>
           {[1,2,3,4].map(n => (
             <div key={n} onClick={() => onPutts(putts === n ? 0 : n)}
-              style={{...pcS.puttBtn, background: putts===n ? '#162950':'transparent', border: putts===n?`1px solid ${player.color}`:'1px solid #1E3A6E', color: putts===n?player.color:'#4A6890'}}>
+              style={{...pcS.puttBtn, background: putts===n ? '#162950':'transparent', border: putts===n?`1px solid ${player.color}`:'1px solid #1F3354', color: putts===n?player.color:'#3A5880'}}>
               {n}
             </div>
           ))}
         </div>
-        {putts >= 3 && <span style={{fontSize:10, color:'#E5534B', marginLeft:4}}>3-PUTT</span>}
+        {putts >= 3 && <span style={{fontSize:10, color:'#E5534B', marginLeft:4, fontFamily:'Barlow Condensed', fontWeight:700}}>3-PUTT</span>}
       </div>
     </div>
   );
@@ -74,19 +71,19 @@ const pcS = {
   header: { display:'flex', alignItems:'center', gap:10 },
   wolfBadge: {
     fontSize:10, fontFamily:'Barlow Condensed', fontWeight:700, letterSpacing:1,
-    background:'rgba(229,83,75,0.15)', color:'#E5534B', border:'1px solid rgba(229,83,75,0.3)',
+    background:'rgba(229,83,75,0.12)', color:'#E5534B', border:'1px solid rgba(229,83,75,0.25)',
     padding:'2px 7px', borderRadius:5,
   },
   scoreRow: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 },
   scoreBtn: {
     width:60, height:60, borderRadius:12, border:'none', cursor:'pointer',
     fontFamily:'Barlow Condensed', fontSize:32, fontWeight:900, color:'#fff',
-    background:'#162950', display:'flex', alignItems:'center', justifyContent:'center',
+    background:'#112240', display:'flex', alignItems:'center', justifyContent:'center',
     flexShrink:0, transition:'transform 0.1s', userSelect:'none',
     WebkitTapHighlightColor:'transparent',
   },
   scoreDisplay: { flex:1, display:'flex', flexDirection:'column', alignItems:'center' },
-  puttRow: { display:'flex', alignItems:'center', borderTop:'1px solid #1E3A6E', paddingTop:10 },
+  puttRow: { display:'flex', alignItems:'center', borderTop:'1px solid #1F3354', paddingTop:10 },
   puttBtn: { width:28, height:28, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:13, userSelect:'none' },
 };
 
