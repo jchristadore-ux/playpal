@@ -229,18 +229,22 @@ var CourseSyncService = (function() {
    ============================================================ */
 var RoundSyncService = (function() {
   var COLLECTION = 'playpal_rounds';
+  var _roundUnsub = null;
+
   function saveRound(roundObj, cb) {
     _fbInit(function(ok) {
       if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
+      // merge:true preserves the liveScores field written by writeLiveScores
       _fbFs.collection(COLLECTION).doc(roundObj.syncCode).set({
         syncCode: roundObj.syncCode,
         round:    roundObj,
         savedAt:  Date.now()
-      })
+      }, { merge: true })
       .then(function() { cb && cb(true); })
       .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
     });
   }
+
   function fetchRound(syncCode, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb(null, 'Firebase unavailable'); return; }
@@ -252,7 +256,46 @@ var RoundSyncService = (function() {
         .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
     });
   }
-  return { saveRound: saveRound, fetchRound: fetchRound };
+
+  // Write live in-round scores. payload includes _writtenBy (device ID) so each
+  // device can ignore callbacks that echo its own writes and avoid update loops.
+  function writeLiveScores(syncCode, payload, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      _fbFs.collection(COLLECTION).doc(syncCode).set(
+        { liveScores: payload },
+        { merge: true }
+      )
+      .then(function() { cb && cb(true); })
+      .catch(function(e) { console.warn('[RoundSync] writeLiveScores failed:', e); cb && cb(false); });
+    });
+  }
+
+  // Real-time listener for live score updates. cb is called whenever another
+  // device writes new scores to the round document.
+  function subscribeRound(syncCode, deviceId, cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
+      _roundUnsub = _fbFs.collection(COLLECTION).doc(syncCode)
+        .onSnapshot(function(snap) {
+          if (!snap.exists) return;
+          var d = snap.data();
+          if (!d.liveScores) return;
+          // Skip updates written by this same device to prevent re-render loops
+          if (d.liveScores._writtenBy === deviceId) return;
+          cb(d.liveScores);
+        }, function(err) {
+          console.warn('[RoundSync] subscribeRound error:', err);
+        });
+    });
+  }
+
+  function unsubscribeRound() {
+    if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
+  }
+
+  return { saveRound: saveRound, fetchRound: fetchRound, writeLiveScores: writeLiveScores, subscribeRound: subscribeRound, unsubscribeRound: unsubscribeRound };
 })();
 
 window.PlayerSyncService = PlayerSyncService;

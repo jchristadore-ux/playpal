@@ -476,6 +476,41 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   React.useEffect(() => { localStorage.setItem('pp_pop_' + round.id, JSON.stringify(popFlags)); }, [popFlags]);
   React.useEffect(() => { localStorage.setItem('pp_wolf_' + round.id, JSON.stringify(wolfData)); }, [wolfData]);
 
+  // ── Firebase live score sync ───────────────────────────────────────────────
+  // Each ScoreEntry instance gets a unique device ID so we can tell apart our
+  // own writes from another device's writes and avoid infinite update loops.
+  const _deviceId      = React.useRef('dev_' + Math.random().toString(36).slice(2, 9));
+  const _skipFbWrite   = React.useRef(false);  // set true before applying remote state
+  const _fbFirstRender = React.useRef(true);   // skip writing on initial mount
+
+  // Subscribe to remote score changes from other devices.
+  React.useEffect(() => {
+    if (!round.syncCode || !window.RoundSyncService) return;
+    window.RoundSyncService.subscribeRound(round.syncCode, _deviceId.current, function(liveScores) {
+      _skipFbWrite.current = true;
+      if (liveScores.scores)   setScores(liveScores.scores);
+      if (liveScores.putts)    setPutts(liveScores.putts);
+      if (liveScores.popFlags) setPopFlags(liveScores.popFlags);
+      if (liveScores.wolfData) setWolfData(liveScores.wolfData);
+    });
+    return () => { window.RoundSyncService.unsubscribeRound(); };
+  }, []);
+
+  // Write local score changes to Firebase so other devices receive them.
+  React.useEffect(() => {
+    if (_fbFirstRender.current) { _fbFirstRender.current = false; return; }
+    if (_skipFbWrite.current)   { _skipFbWrite.current = false; return; }
+    if (!round.syncCode || !window.RoundSyncService) return;
+    window.RoundSyncService.writeLiveScores(round.syncCode, {
+      scores:      scores,
+      putts:       putts,
+      popFlags:    popFlags,
+      wolfData:    wolfData,
+      _writtenBy:  _deviceId.current,
+      _ts:         Date.now(),
+    }, null);
+  }, [scores, putts, popFlags, wolfData]);
+
   // Build per-player format stat pills
   // For Nassau: one pill per match the player is in, labeled "vs [Opponent]"
   const playerFormatStats = React.useMemo(() => {
