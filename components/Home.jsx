@@ -4,16 +4,12 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
   const [localPlayers,setLocalPlayers]  = React.useState(players);
-  const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#3DCB6C' });
+  const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#2DD97A' });
   const [joinError,   setJoinError]     = React.useState('');
   const [joining,     setJoining]       = React.useState(false);
   const [showCourses, setShowCourses]   = React.useState(false);
   const [addCourseOpen, setAddCourseOpen] = React.useState(false);
 
-  // customCourses is now owned by App and passed as a prop.
-  // HomeScreen no longer subscribes to CourseSyncService independently —
-  // that was causing the competing-unsubscribe race condition where this
-  // component's cleanup was killing SetupScreen's active listener on /courses.
   const courses = customCourses || [];
 
   const [showJoin, setShowJoin] = React.useState(() => {
@@ -29,9 +25,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('join') && !params.has('code')) {
-      setShowJoin(false);
-    }
+    if (!params.has('join') && !params.has('code')) setShowJoin(false);
   }, []);
 
   const handleJoin = () => {
@@ -41,9 +35,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     if (roundRaw) {
       try {
         const round = JSON.parse(roundRaw);
-        if (round.syncCode === code) {
-          onJoinRound(round); setShowJoin(false); _clearJoinParam(); return;
-        }
+        if (round.syncCode === code) { onJoinRound(round); setShowJoin(false); _clearJoinParam(); return; }
       } catch(e) {}
     }
     if (window.RoundSyncService) {
@@ -60,7 +52,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         }
       });
     } else {
-      setJoinError(`Round "${code}" not found on this device. Make sure you're on the same device or network.`);
+      setJoinError(`Round "${code}" not found on this device.`);
     }
   };
 
@@ -72,11 +64,11 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     } catch(e) {}
   }
 
-  const colors = ['#3DCB6C','#E5534B','#C9A84C','#7B9FE0','#E07BE0','#E0A87B','#7BE0D4'];
+  const colors = ['#2DD97A','#E5534B','#D4AF47','#7B9FE0','#E07BE0','#E0A87B','#7BE0D4'];
 
   const openEdit = (p) => {
     setEditPlayer(p);
-    setForm(p ? {...p} : {name:'',initials:'',ghin:'',ghinLogin:'',email:'',venmo:'',handicap:'',color:'#3DCB6C'});
+    setForm(p ? {...p} : {name:'',initials:'',ghin:'',ghinLogin:'',email:'',venmo:'',handicap:'',color:'#2DD97A'});
   };
 
   const savePlayer = () => {
@@ -97,9 +89,6 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   };
 
   const handleSaveCourse = (newCourse, allCourses) => {
-    // RTDB write already done in CourseBuilder.handleSave.
-    // App's subscription will update customCourses state automatically.
-    // Close the modal.
     setAddCourseOpen(false);
     setShowCourses(true);
     if (onCourseSaved) onCourseSaved(newCourse, allCourses);
@@ -107,49 +96,146 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
 
   const CourseBuilderComponent = window.CourseBuilder;
 
+  // Icon components from brand asset set
+  const IconStartRound = () => (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      {/* silhouette group of 4 golfers */}
+      <circle cx="4" cy="6" r="2" fill="#0B0F1A"/>
+      <path d="M3 9 Q4 15 4 15 L6 15 Q6 12 5.5 9Z" fill="#0B0F1A"/>
+      <circle cx="9" cy="6" r="2" fill="#0B0F1A"/>
+      <path d="M8 9 Q9 15 9 15 L11 15 Q11 12 10.5 9Z" fill="#0B0F1A"/>
+      <circle cx="14" cy="6" r="2" fill="#0B0F1A"/>
+      <path d="M13 9 Q14 15 14 15 L16 15 Q16 12 15.5 9Z" fill="#0B0F1A"/>
+      <circle cx="19" cy="6" r="2" fill="#0B0F1A"/>
+      <path d="M18 9 Q19 15 19 15 L21 15 Q21 12 20.5 9Z" fill="#0B0F1A"/>
+      {/* flag */}
+      <path d="M11 15 L11 20" stroke="#0B0F1A" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M11 16 L15 17.5 L11 19Z" fill="#0B0F1A"/>
+    </svg>
+  );
+
+  const IconCourses = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M1 14 Q5 8 9 10 Q13 12 17 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+      <circle cx="9" cy="10" r="1.5" fill="currentColor"/>
+      <path d="M13 5 L13 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M13 5.5 L16 7 L13 8Z" fill="currentColor"/>
+    </svg>
+  );
+
+  const IconJoin = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 1 L9 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M1 9 L17 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    </svg>
+  );
+
+  const inputStyle = {
+    width:'100%', background:'#0B0F1A', border:'1px solid #1F3354', borderRadius:10,
+    padding:'12px 14px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box',
+  };
+
   return (
     <div style={homeS.root}>
       {/* Hero */}
       <div style={homeS.hero}>
         <div style={homeS.logoWrap}>
-          <div style={homeS.logoIcon}>🏌️</div>
+          <div style={homeS.logoIconWrap}>
+            <PPLogo size={52} />
+          </div>
           <div>
             <div style={homeS.logoText}>PLAYPAL</div>
             <div style={homeS.logoSub}>YOUR GOLF COMPANION</div>
           </div>
         </div>
         <div style={homeS.tagline}>Track every stroke. Every format. Every dollar.</div>
+
+        {/* Primary CTA */}
+        <button
+          onClick={onStartRound}
+          style={{
+            width:'100%', maxWidth:360, padding:'16px 20px',
+            background:'linear-gradient(135deg,#D4AF47,#B8962E)',
+            border:'none', borderRadius:14, cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:12,
+            WebkitTapHighlightColor:'transparent', position:'relative', overflow:'hidden',
+          }}
+        >
+          {/* background silhouette texture */}
+          <div style={{position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', opacity:0.18, display:'flex', gap:6}}>
+            {[0,1,2,3].map(i => (
+              <svg key={i} width="14" height="22" viewBox="0 0 14 22" fill="none">
+                <circle cx="7" cy="4" r="3" fill="#0B0F1A"/>
+                <path d="M5 8 Q7 16 7 16 L10 16 Q10 12 9 8Z" fill="#0B0F1A"/>
+                <path d="M5 8 L2 13" stroke="#0B0F1A" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            ))}
+          </div>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="6" r="3" fill="#0B0F1A"/>
+            <rect x="9" y="9" width="2" height="8" rx="1" fill="#0B0F1A"/>
+            <rect x="5" y="17" width="10" height="1.5" rx="0.75" fill="#0B0F1A"/>
+          </svg>
+          <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:18, letterSpacing:1.5, color:'#0B0F1A', position:'relative', zIndex:1}}>START NEW ROUND</span>
+        </button>
+
+        {/* Secondary actions */}
         <div style={{display:'flex', gap:10, width:'100%', maxWidth:360}}>
-          <Btn onClick={onStartRound} variant="gold" style={{flex:1, padding:'16px 20px', fontSize:17, borderRadius:14, boxShadow:'0 4px 32px rgba(201,168,76,0.3)', whiteSpace:'nowrap'}}>
-            ⛳ START NEW ROUND
-          </Btn>
-          <Btn onClick={()=>setShowCourses(true)} variant="surface" style={{padding:'16px 14px', fontSize:15, borderRadius:14, flexShrink:0}}>
-            🗺️ COURSES
-          </Btn>
-          <Btn onClick={()=>setShowJoin(true)} variant="surface" style={{padding:'16px 14px', fontSize:15, borderRadius:14, flexShrink:0}}>
-            🔗 JOIN
-          </Btn>
+          <button
+            onClick={()=>setShowCourses(true)}
+            style={{
+              flex:1, padding:'13px 10px', background:'#112240',
+              border:'1px solid #1F3354', borderRadius:12, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              WebkitTapHighlightColor:'transparent',
+            }}
+          >
+            <span style={{color:'#2DD97A'}}><IconCourses /></span>
+            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:14, letterSpacing:1, color:'#fff'}}>COURSES</span>
+          </button>
+          <button
+            onClick={()=>setShowJoin(true)}
+            style={{
+              flex:1, padding:'13px 10px', background:'#112240',
+              border:'1px solid #1F3354', borderRadius:12, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              WebkitTapHighlightColor:'transparent',
+            }}
+          >
+            <span style={{color:'#7A9EBF'}}><IconJoin /></span>
+            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:14, letterSpacing:1, color:'#fff'}}>JOIN ROUND</span>
+          </button>
         </div>
       </div>
 
       {/* Recent Rounds */}
       {recentRounds.length > 0 && (
         <div style={homeS.section}>
-          <Label>Recent Rounds</Label>
-          <div style={homeS.roundList}>
+          <Label style={{marginBottom:12, display:'block'}}>Recent Rounds</Label>
+          <div style={{display:'flex', flexDirection:'column', gap:8}}>
             {recentRounds.map((r, i) => {
               const tappable = !!(r.syncCode && onViewRound);
               return (
                 <div key={i}
                   onClick={() => tappable && onViewRound(r.syncCode)}
                   style={{...homeS.roundCard, cursor: tappable ? 'pointer' : 'default'}}>
-                  <div>
-                    <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{r.courseName}</div>
-                    <div style={{fontSize:12, color:'#7A98BC', marginTop:2}}>{r.date} · {r.players} players</div>
+                  <div style={{display:'flex', alignItems:'center', gap:10}}>
+                    <div style={{width:36, height:36, borderRadius:10, background:'rgba(45,217,122,0.08)', border:'1px solid rgba(45,217,122,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <circle cx="9" cy="6" r="2.5" fill="#2DD97A"/>
+                        <rect x="8.25" y="8.5" width="1.5" height="6" rx="0.75" fill="#D4AF47"/>
+                        <rect x="5" y="16" width="8" height="1" rx="0.5" fill="#1F3354"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:15, color:'#fff', letterSpacing:0.3}}>{r.courseName}</div>
+                      <div style={{fontSize:11, color:'#7A9EBF', marginTop:2, fontFamily:'DM Sans'}}>{r.date} · {r.players} players</div>
+                    </div>
                   </div>
                   <div style={{textAlign:'right'}}>
-                    <div style={{fontFamily:'Barlow Condensed', fontSize:14, color:'#C9A84C'}}>{r.formats}</div>
-                    {tappable && <div style={{fontSize:11, color:'#3DCB6C', marginTop:2}}>VIEW →</div>}
+                    <div style={{fontFamily:'Barlow Condensed', fontSize:12, color:'#D4AF47', fontWeight:700, letterSpacing:0.5}}>{r.formats}</div>
+                    {tappable && <div style={{fontSize:10, color:'#2DD97A', marginTop:3, letterSpacing:0.5}}>VIEW →</div>}
                   </div>
                 </div>
               );
@@ -162,18 +248,25 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       <div style={homeS.section}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
           <Label>Player Profiles</Label>
-          <Btn onClick={()=>{openEdit(null); setShowPlayers(true);}} variant="ghost" style={{padding:'6px 14px', fontSize:13}}>+ ADD PLAYER</Btn>
+          <button
+            onClick={()=>{openEdit(null); setShowPlayers(true);}}
+            style={{
+              background:'rgba(45,217,122,0.08)', border:'1px solid rgba(45,217,122,0.2)',
+              borderRadius:8, padding:'5px 12px', cursor:'pointer',
+              fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, letterSpacing:1, color:'#2DD97A',
+            }}
+          >+ ADD PLAYER</button>
         </div>
-        <div style={homeS.playerGrid}>
+        <div style={{display:'flex', flexDirection:'column', gap:8}}>
           {localPlayers.map(p => (
             <div key={p.id} style={homeS.playerCard} onClick={()=>{ openEdit(p); setShowPlayers(true); }}>
               <Avatar player={p} size={44} />
               <div style={{flex:1, minWidth:0}}>
-                <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', letterSpacing:0.5}}>{p.name}</div>
-                <div style={{fontSize:11, color:'#7A98BC'}}>HCP {p.handicap} · GHIN {p.ghin}</div>
-                <div style={{fontSize:11, color:'#4A6890', marginTop:1}}>@{p.venmo}</div>
+                <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff', letterSpacing:0.3}}>{p.name}</div>
+                <div style={{fontSize:11, color:'#7A9EBF', fontFamily:'DM Sans', marginTop:1}}>HCP {p.handicap} · GHIN {p.ghin}</div>
+                <div style={{fontSize:10, color:'#3A5880', fontFamily:'DM Sans', marginTop:1}}>@{p.venmo}</div>
               </div>
-              <div style={{fontSize:18, color:'#1E3A6E'}}>›</div>
+              <div style={{color:'#1F3354', fontSize:20, fontWeight:400}}>›</div>
             </div>
           ))}
         </div>
@@ -182,8 +275,8 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       {/* Join Round Modal */}
       <Modal open={showJoin} onClose={()=>{ setShowJoin(false); setJoinError(''); setJoining(false); }} title="Join a Round">
         <div style={{display:'flex', flexDirection:'column', gap:14}}>
-          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.6}}>
-            Enter the 6-character code shown on the scorer's device, or scan their QR code.
+          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A9EBF', lineHeight:1.6}}>
+            Enter the 6-character code shown on the scorer's device.
           </div>
           <div>
             <Label style={{display:'block', marginBottom:6}}>ROUND CODE</Label>
@@ -192,7 +285,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
               onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
               onKeyDown={e => e.key === 'Enter' && !joining && handleJoin()}
               maxLength={8} placeholder="e.g. AB3X9K" autoFocus disabled={joining}
-              style={{width:'100%', background:'#162950', border:`1px solid ${joinError?'#E5534B':'#1E3A6E'}`, borderRadius:8,
+              style={{width:'100%', background:'#0B0F1A', border:`1px solid ${joinError?'#E5534B':'#1F3354'}`, borderRadius:10,
                 padding:'14px 16px', color:'#fff', fontFamily:'Barlow Condensed', fontWeight:800,
                 fontSize:28, letterSpacing:6, outline:'none', boxSizing:'border-box', textAlign:'center', textTransform:'uppercase',
                 opacity: joining ? 0.6 : 1}}
@@ -215,7 +308,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             <div key={key}>
               <Label style={{display:'block', marginBottom:4}}>{label}</Label>
               <input value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}
-                style={{width:'100%', background:'#162950', border:'1px solid #1E3A6E', borderRadius:8, padding:'10px 12px', color:'#fff', fontFamily:'DM Sans', fontSize:14, outline:'none', boxSizing:'border-box'}}/>
+                style={inputStyle}/>
             </div>
           ))}
           <div>
@@ -223,12 +316,13 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             <div style={{display:'flex', gap:8}}>
               {colors.map(c=>(
                 <div key={c} onClick={()=>setForm({...form, color:c})}
-                  style={{width:28, height:28, borderRadius:'50%', background:c, cursor:'pointer', border: form.color===c ? '3px solid #fff':'3px solid transparent', boxSizing:'border-box'}}/>
+                  style={{width:28, height:28, borderRadius:'50%', background:c, cursor:'pointer',
+                    border: form.color===c ? '3px solid #fff':'3px solid transparent', boxSizing:'border-box'}}/>
               ))}
             </div>
           </div>
           <div style={{display:'flex', gap:10, marginTop:8}}>
-            <Btn onClick={savePlayer} variant="green" style={{flex:1}}>SAVE PLAYER</Btn>
+            <Btn onClick={savePlayer} variant="gold" style={{flex:1}}>SAVE PLAYER</Btn>
             {editPlayer && <Btn onClick={()=>{deletePlayer(editPlayer.id); setShowPlayers(false);}} variant="danger" style={{padding:'12px 20px'}}>DELETE</Btn>}
           </div>
         </div>
@@ -237,21 +331,21 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       {/* Course Library Modal */}
       <Modal open={showCourses} onClose={()=>setShowCourses(false)} title="My Courses">
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
-          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A98BC', lineHeight:1.5}}>
+          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A9EBF', lineHeight:1.5}}>
             Add and manage custom courses before you start a round.
           </div>
           <Btn onClick={()=>setAddCourseOpen(true)} variant="gold" style={{width:'100%'}}>+ ADD COURSE</Btn>
           <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:360, overflowY:'auto'}}>
             {courses.length === 0 && (
-              <div style={{background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:10, padding:'14px 12px', color:'#7A98BC', fontSize:13}}>
+              <div style={{background:'#0B0F1A', border:'1px solid #1F3354', borderRadius:10, padding:'14px 12px', color:'#7A9EBF', fontSize:13, fontFamily:'DM Sans'}}>
                 No custom courses saved yet.
               </div>
             )}
             {courses.map((c) => (
-              <div key={c.id} style={{background:'#0A1628', border:'1px solid #1E3A6E', borderRadius:10, padding:'12px 14px'}}>
+              <div key={c.id} style={{background:'#0B0F1A', border:'1px solid #1F3354', borderRadius:10, padding:'12px 14px'}}>
                 <div style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16, color:'#fff'}}>{c.name}</div>
-                <div style={{fontSize:11, color:'#7A98BC', marginTop:2}}>{c.location}</div>
-                <div style={{fontSize:10, color:'#4A6890', marginTop:2}}>Rating {c.rating} · Slope {c.slope}</div>
+                <div style={{fontSize:11, color:'#7A9EBF', marginTop:2, fontFamily:'DM Sans'}}>{c.location}</div>
+                <div style={{fontSize:10, color:'#3A5880', marginTop:2, fontFamily:'DM Sans'}}>Rating {c.rating} · Slope {c.slope}</div>
               </div>
             ))}
           </div>
@@ -271,18 +365,16 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
 };
 
 const homeS = {
-  root:       { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:0 },
-  hero:       { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'48px 24px 40px', background:'radial-gradient(ellipse at 50% 0%, rgba(61,203,108,0.08) 0%, transparent 70%)', borderBottom:'1px solid #1E3A6E', gap:16, minHeight:240 },
+  root:       { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:0, background:'#0B0F1A' },
+  hero:       { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'40px 20px 32px', borderBottom:'1px solid #1F3354', gap:16 },
   logoWrap:   { display:'flex', alignItems:'center', gap:16 },
-  logoIcon:   { fontSize:48 },
-  logoText:   { fontFamily:'Barlow Condensed', fontSize:48, fontWeight:800, color:'#fff', letterSpacing:3, lineHeight:1 },
-  logoSub:    { fontFamily:'Barlow Condensed', fontSize:13, letterSpacing:4, color:'#3DCB6C', fontWeight:600 },
-  tagline:    { fontFamily:'DM Sans', fontSize:16, color:'#7A98BC', textAlign:'center' },
-  section:    { padding:'24px 20px', borderBottom:'1px solid #1E3A6E' },
-  roundList:  { display:'flex', flexDirection:'column', gap:10, marginTop:12 },
-  roundCard:  { display:'flex', justifyContent:'space-between', alignItems:'center', background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'14px 16px' },
-  playerGrid: { display:'flex', flexDirection:'column', gap:10 },
-  playerCard: { display:'flex', alignItems:'center', gap:14, background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:12, padding:'14px 16px', cursor:'pointer' },
+  logoIconWrap: { width:64, height:64, background:'#112240', border:'1px solid #1F3354', borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center' },
+  logoText:   { fontFamily:'Barlow Condensed', fontSize:42, fontWeight:900, color:'#fff', letterSpacing:3, lineHeight:1 },
+  logoSub:    { fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:3.5, color:'#2DD97A', fontWeight:700, marginTop:2 },
+  tagline:    { fontFamily:'DM Sans', fontSize:14, color:'#7A9EBF', textAlign:'center' },
+  section:    { padding:'20px 16px', borderBottom:'1px solid #1F3354' },
+  roundCard:  { display:'flex', justifyContent:'space-between', alignItems:'center', background:'#0F1D35', border:'1px solid #1F3354', borderRadius:12, padding:'12px 14px' },
+  playerCard: { display:'flex', alignItems:'center', gap:14, background:'#0F1D35', border:'1px solid #1F3354', borderRadius:12, padding:'12px 14px', cursor:'pointer' },
 };
 
 Object.assign(window, { HomeScreen });
