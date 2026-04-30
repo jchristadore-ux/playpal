@@ -1,50 +1,53 @@
 // Shared.jsx — NavBar, Button, Avatar, Modal, Toast
 
 // ─── QR Modal ────────────────────────────────────────────────────────────────
-// Uses the qrcode npm library (loaded in index.html via jsDelivr).
-// Calls QRCode.toDataURL() → PNG data URL → <img>. No canvas timing issues.
+// Uses qrcodejs (loaded in index.html via cdnjs).
+// API: new QRCode(domElement, { text, width, height, colorDark, colorLight })
+// The modal div is ALWAYS mounted so the ref is never null when QRCode runs.
 const QRModal = ({ open, onClose, syncCode }) => {
-  const [imgSrc, setImgSrc] = React.useState('');
+  const containerRef = React.useRef(null);
+  const qrInstanceRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (!open || !syncCode) { setImgSrc(''); return; }
+    if (!open || !syncCode || !containerRef.current) return;
 
     const base    = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
     const joinUrl = base + 'join.html?code=' + syncCode;
 
-    const generate = () => {
-      if (!window.QRCode) return false;
-      window.QRCode.toDataURL(joinUrl, {
-        width:         280,
-        margin:        2,
-        color:         { dark: '#000000', light: '#FFFFFF' },
-        errorCorrectionLevel: 'M',
-      }).then(function(url) {
-        setImgSrc(url);
-      }).catch(function(err) {
-        console.warn('[PlayPal QR]', err);
-      });
+    const run = () => {
+      if (!window.QRCode || !containerRef.current) return false;
+      // Clear any previous QR code
+      containerRef.current.innerHTML = '';
+      try {
+        qrInstanceRef.current = new window.QRCode(containerRef.current, {
+          text:          joinUrl,
+          width:         256,
+          height:        256,
+          colorDark:     '#000000',
+          colorLight:    '#ffffff',
+          correctLevel:  window.QRCode.CorrectLevel.M,
+        });
+      } catch(e) {
+        console.error('[PlayPal QR]', e);
+      }
       return true;
     };
 
-    if (!generate()) {
-      // Library still loading — poll until ready (max 5s)
-      const t = setInterval(function() {
-        if (generate()) clearInterval(t);
-      }, 100);
-      setTimeout(function() { clearInterval(t); }, 5000);
+    if (!run()) {
+      const t = setInterval(() => { if (run()) clearInterval(t); }, 150);
+      const timeout = setTimeout(() => clearInterval(t), 8000);
+      return () => { clearInterval(t); clearTimeout(timeout); };
     }
   }, [open, syncCode]);
 
-  if (!open) return null;
-
+  // Always mounted — visibility controlled by display style.
+  // This guarantees containerRef.current exists when useEffect fires.
   return (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:3000,
-        display:'flex', alignItems:'center', justifyContent:'center', padding:24,
-      }}>
+    <div style={{
+      display: open ? 'flex' : 'none',
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:3000,
+      alignItems:'center', justifyContent:'center', padding:24,
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
         background:'#0F2040', border:'1px solid #1E3A6E', borderRadius:16,
         padding:24, maxWidth:380, width:'100%',
@@ -63,36 +66,16 @@ const QRModal = ({ open, onClose, syncCode }) => {
           }}>✕</button>
         </div>
 
-        {/* QR Code image — black modules on white, universally scannable */}
+        {/* QR container — white background so modules are black on white */}
         <div style={{
-          background:'#fff', borderRadius:12, padding:12,
+          background:'#ffffff', borderRadius:12, padding:12,
           display:'flex', alignItems:'center', justifyContent:'center',
-          width:'100%', boxSizing:'border-box',
+          width:'100%', boxSizing:'border-box', minHeight:280,
         }}>
-          {imgSrc ? (
-            <img
-              src={imgSrc}
-              alt={'Scan to join round ' + syncCode}
-              style={{ display:'block', width:'100%', maxWidth:260, height:'auto' }}
-            />
-          ) : (
-            <div style={{
-              width:260, height:260, display:'flex', alignItems:'center',
-              justifyContent:'center', flexDirection:'column', gap:10,
-            }}>
-              <div style={{
-                width:32, height:32, border:'3px solid #1E3A6E',
-                borderTopColor:'#3DCB6C', borderRadius:'50%',
-                animation:'ppQRSpin 0.8s linear infinite',
-              }}/>
-              <span style={{ fontFamily:'Barlow Condensed', fontSize:12, color:'#4A6890', letterSpacing:1 }}>
-                GENERATING…
-              </span>
-            </div>
-          )}
+          <div ref={containerRef} style={{ lineHeight:0 }}/>
         </div>
 
-        {/* Round code display */}
+        {/* Round code */}
         <div style={{
           background:'rgba(61,203,108,0.07)', border:'1px solid rgba(61,203,108,0.25)',
           borderRadius:10, padding:'10px 20px', textAlign:'center',
@@ -115,7 +98,6 @@ const QRModal = ({ open, onClose, syncCode }) => {
           Scan with any camera app — or share the code above.
         </div>
       </div>
-      <style>{`@keyframes ppQRSpin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
@@ -167,11 +149,14 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
         )}
       </nav>
 
-      <QRModal
-        open={showQR}
-        onClose={() => setShowQR(false)}
-        syncCode={syncCode}
-      />
+      {/* QRModal always mounted while syncCode exists — avoids ref/timing issues */}
+      {syncCode && (
+        <QRModal
+          open={showQR}
+          onClose={() => setShowQR(false)}
+          syncCode={syncCode}
+        />
+      )}
     </>
   );
 };
