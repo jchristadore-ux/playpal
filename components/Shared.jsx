@@ -26,35 +26,215 @@ const PPLogo = ({ size = 36 }) => (
   </svg>
 );
 
+// ─── QR Modal ─────────────────────────────────────────────────────────────────
+// Uses qrcodejs (loaded in index.html via cdnjs).
+// API: new QRCode(domElement, { text, width, height, colorDark, colorLight })
+// The modal div is ALWAYS in the DOM (display:none when closed) so the ref
+// is never null when the QRCode constructor runs.
+const QRModal = ({ open, onClose, syncCode }) => {
+  const containerRef  = React.useRef(null);
+  const instanceRef   = React.useRef(null);
+  const lastCodeRef   = React.useRef(null);
+
+  React.useEffect(() => {
+    // Only re-render when opening or when syncCode changes while open
+    if (!open || !syncCode) return;
+    if (!containerRef.current) return;
+    if (lastCodeRef.current === syncCode && instanceRef.current) return;
+
+    const base    = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+    const joinUrl = base + 'join.html?code=' + syncCode;
+
+    const render = () => {
+      if (!window.QRCode) return false;
+      // Clear previous QR
+      containerRef.current.innerHTML = '';
+      instanceRef.current = null;
+      try {
+        instanceRef.current = new window.QRCode(containerRef.current, {
+          text:         joinUrl,
+          width:        256,
+          height:       256,
+          colorDark:    '#000000',
+          colorLight:   '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel.M,
+        });
+        lastCodeRef.current = syncCode;
+      } catch(e) {
+        console.error('[PlayPal QR]', e);
+      }
+      return true;
+    };
+
+    if (!render()) {
+      // qrcodejs not loaded yet — poll until available
+      const interval = setInterval(() => { if (render()) clearInterval(interval); }, 150);
+      const timeout  = setTimeout(() => clearInterval(interval), 10000);
+      return () => { clearInterval(interval); clearTimeout(timeout); };
+    }
+  }, [open, syncCode]);
+
+  return (
+    // Always mounted — visibility toggled via display style
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        display:        open ? 'flex' : 'none',
+        position:       'fixed',
+        inset:          0,
+        background:     'rgba(0,0,0,0.85)',
+        zIndex:         3000,
+        alignItems:     'center',
+        justifyContent: 'center',
+        padding:        24,
+      }}>
+      <div style={{
+        background:     '#0F1D35',
+        border:         '1px solid #1F3354',
+        borderRadius:   18,
+        padding:        24,
+        maxWidth:       360,
+        width:          '100%',
+        display:        'flex',
+        flexDirection:  'column',
+        alignItems:     'center',
+        gap:            18,
+      }}>
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%' }}>
+          <span style={{ fontFamily:'Barlow Condensed', fontSize:20, fontWeight:700, color:'#fff', letterSpacing:1 }}>
+            JOIN THIS ROUND
+          </span>
+          <button onClick={onClose} style={{
+            background: 'rgba(255,255,255,0.05)', border:'1px solid #1F3354', borderRadius:8,
+            color:'#7A9EBF', fontSize:18, cursor:'pointer', width:32, height:32,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            WebkitTapHighlightColor:'transparent',
+          }}>✕</button>
+        </div>
+
+        {/* QR code — white box so black modules are visible */}
+        <div style={{
+          background:     '#ffffff',
+          borderRadius:   12,
+          padding:        12,
+          width:          '100%',
+          boxSizing:      'border-box',
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+          lineHeight:     0,
+          minHeight:      280,
+        }}>
+          <div ref={containerRef} />
+        </div>
+
+        {/* Round code */}
+        <div style={{
+          background:   'rgba(45,217,122,0.07)',
+          border:       '1px solid rgba(45,217,122,0.25)',
+          borderRadius: 10,
+          padding:      '10px 20px',
+          textAlign:    'center',
+          width:        '100%',
+          boxSizing:    'border-box',
+        }}>
+          <div style={{ fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2.5, color:'#7A9EBF', marginBottom:4 }}>
+            ROUND CODE
+          </div>
+          <div style={{ fontFamily:'Barlow Condensed', fontWeight:900, fontSize:34, letterSpacing:6, color:'#2DD97A' }}>
+            {syncCode}
+          </div>
+        </div>
+
+        <div style={{ fontFamily:'DM Sans', fontSize:12, color:'#7A9EBF', textAlign:'center', lineHeight:1.6 }}>
+          Scan with any camera app — or share the code above.
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── NavBar ───────────────────────────────────────────────────────────────────
 const NavBar = ({ syncCode, onHome, currentScreen }) => {
   const [copied, setCopied] = React.useState(false);
+  const [showQR, setShowQR] = React.useState(false);
+
   const copy = () => {
-    navigator.clipboard?.writeText(syncCode).catch(()=>{});
-    setCopied(true); setTimeout(()=>setCopied(false), 2000);
+    navigator.clipboard?.writeText(syncCode).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
+
   return (
-    <nav style={navStyles.bar}>
-      <button onClick={onHome} style={navStyles.logo}>
-        <PPLogo size={30} />
-        <span style={{color:'#FFFFFF', fontFamily:'Barlow Condensed', fontSize:20, fontWeight:800, letterSpacing:2, marginLeft:6}}>PLAYPAL</span>
-      </button>
-      <div style={navStyles.center} />
-      {syncCode && (
-        <button onClick={copy} style={navStyles.sync}>
-          <span style={{fontSize:9, color:'#7A9EBF', letterSpacing:1.5}}>SYNC</span>
-          <span style={{fontSize:13, fontWeight:800, color:'#2DD97A', fontFamily:'Barlow Condensed', letterSpacing:2}}>{syncCode}</span>
-          {copied && <span style={{fontSize:9, color:'#2DD97A'}}>✓ COPIED</span>}
+    <>
+      <nav style={navStyles.bar}>
+        <button onClick={onHome} style={navStyles.logo}>
+          <PPLogo size={30} />
+          <span style={{ color:'#FFFFFF', fontFamily:'Barlow Condensed', fontSize:20, fontWeight:800, letterSpacing:2, marginLeft:6 }}>
+            PLAYPAL
+          </span>
         </button>
+        <div style={navStyles.center} />
+        {syncCode && (
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            {/* QR icon button */}
+            <button
+              onClick={() => setShowQR(true)}
+              title="Show QR code to join round"
+              style={{
+                background:  'rgba(45,217,122,0.07)',
+                border:      '1px solid rgba(45,217,122,0.2)',
+                borderRadius: 8,
+                padding:     '6px 10px',
+                cursor:      'pointer',
+                display:     'flex',
+                alignItems:  'center',
+                justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              <span style={{ fontSize:18, lineHeight:1 }}>📲</span>
+            </button>
+            {/* Sync code pill */}
+            <button onClick={copy} style={navStyles.sync}>
+              <span style={{ fontSize:9, color:'#7A9EBF', letterSpacing:1.5 }}>SYNC</span>
+              <span style={{ fontSize:13, fontWeight:800, color:'#2DD97A', fontFamily:'Barlow Condensed', letterSpacing:2 }}>
+                {syncCode}
+              </span>
+              {copied && <span style={{ fontSize:9, color:'#2DD97A' }}>✓ COPIED</span>}
+            </button>
+          </div>
+        )}
+      </nav>
+
+      {/* QRModal always mounted while syncCode exists */}
+      {syncCode && (
+        <QRModal
+          open={showQR}
+          onClose={() => setShowQR(false)}
+          syncCode={syncCode}
+        />
       )}
-    </nav>
+    </>
   );
 };
 
 const navStyles = {
-  bar: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:52, background:'#070C16', borderBottom:'1px solid #1F3354', flexShrink:0, zIndex:100, position:'relative' },
-  logo: { background:'none', border:'none', cursor:'pointer', padding:0, display:'flex', alignItems:'center' },
+  bar: {
+    display:'flex', alignItems:'center', justifyContent:'space-between',
+    padding:'0 16px', height:52, background:'#070C16',
+    borderBottom:'1px solid #1F3354', flexShrink:0, zIndex:100, position:'relative',
+  },
+  logo: {
+    background:'none', border:'none', cursor:'pointer',
+    padding:0, display:'flex', alignItems:'center',
+  },
   center: { flex:1 },
-  sync: { display:'flex', flexDirection:'column', alignItems:'flex-end', background:'rgba(45,217,122,0.07)', border:'1px solid rgba(45,217,122,0.2)', borderRadius:8, padding:'4px 10px', cursor:'pointer', gap:1 },
+  sync: {
+    display:'flex', flexDirection:'column', alignItems:'flex-end',
+    background:'rgba(45,217,122,0.07)', border:'1px solid rgba(45,217,122,0.2)',
+    borderRadius:8, padding:'4px 10px', cursor:'pointer', gap:1,
+  },
 };
 
 const Btn = ({ children, onClick, variant='gold', style={}, disabled=false }) => {
@@ -70,13 +250,15 @@ const Btn = ({ children, onClick, variant='gold', style={}, disabled=false }) =>
       display:'flex', alignItems:'center', justifyContent:'center', gap:6,
       minHeight:48, padding:'12px 20px', borderRadius:12,
       cursor: disabled ? 'not-allowed' : 'pointer',
-      fontFamily:'Barlow Condensed', fontSize:16, letterSpacing:1, opacity: disabled ? 0.45 : 1,
-      transition:'transform 0.1s, opacity 0.1s', WebkitTapHighlightColor:'transparent',
+      fontFamily:'Barlow Condensed', fontSize:16, letterSpacing:1,
+      opacity: disabled ? 0.45 : 1,
+      transition:'transform 0.1s, opacity 0.1s',
+      WebkitTapHighlightColor:'transparent',
       ...variants[variant], ...style,
     }}
-    onMouseDown={e => { if(!disabled) e.currentTarget.style.transform='scale(0.97)'; }}
-    onMouseUp={e => { e.currentTarget.style.transform='scale(1)'; }}
-    onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; }}
+    onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = 'scale(0.97)'; }}
+    onMouseUp={e   => { e.currentTarget.style.transform = 'scale(1)'; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
     >{children}</button>
   );
 };
@@ -140,4 +322,4 @@ const ScorePill = ({ diff }) => {
   );
 };
 
-Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo });
+Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal });
