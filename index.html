@@ -9,8 +9,8 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<!-- QR Code library — qrcode npm package, provides QRCode.toDataURL() -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" crossorigin="anonymous"></script>
+<!-- QR Code library — qrcodejs (browser-native DOM API, confirmed working) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
@@ -234,7 +234,6 @@ var RoundSyncService = (function() {
   function saveRound(roundObj, cb) {
     _fbInit(function(ok) {
       if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
-      // merge:true preserves liveScores field written during play
       _fbFs.collection(COLLECTION).doc(roundObj.syncCode).set({
         syncCode: roundObj.syncCode,
         round:    roundObj,
@@ -257,8 +256,6 @@ var RoundSyncService = (function() {
     });
   }
 
-  // Write live in-round scores so other devices receive them in real time.
-  // payload includes _writtenBy (device ID) so each device ignores its own echoes.
   function writeLiveScores(syncCode, payload, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
@@ -271,7 +268,6 @@ var RoundSyncService = (function() {
     });
   }
 
-  // Real-time listener — fires whenever another device writes scores.
   function subscribeRound(syncCode, deviceId, cb) {
     _fbInit(function(ok) {
       if (!ok) return;
@@ -281,7 +277,7 @@ var RoundSyncService = (function() {
           if (!snap.exists) return;
           var d = snap.data();
           if (!d.liveScores) return;
-          if (d.liveScores._writtenBy === deviceId) return; // skip own writes
+          if (d.liveScores._writtenBy === deviceId) return;
           cb(d.liveScores);
         }, function(err) {
           console.warn('[RoundSync] subscribeRound error:', err);
@@ -442,7 +438,6 @@ const App = () => {
     }
   }, []);
 
-  // ── Player sync ──────────────────────────────────────────────────────────
   React.useEffect(() => {
     PlayerSyncService.subscribe(function(remotePlayers) {
       if (remotePlayers && remotePlayers.length > 0) {
@@ -453,7 +448,6 @@ const App = () => {
     return () => { PlayerSyncService.unsubscribe(); };
   }, []);
 
-  // ── Course sync ──────────────────────────────────────────────────────────
   React.useEffect(() => {
     CourseSyncService.subscribe(function(remoteCourses) {
       setCustomCourses(function(prev) {
@@ -467,7 +461,6 @@ const App = () => {
     return () => { CourseSyncService.unsubscribe(); };
   }, []);
 
-  // ── Tweaks edit-mode bridge ──────────────────────────────────────────────
   React.useEffect(() => {
     const handler = (e) => {
       if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
