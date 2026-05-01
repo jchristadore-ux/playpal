@@ -389,43 +389,40 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id, JSON.stringify(popFlags)); }, [popFlags]);
   React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id, JSON.stringify(wolfData)); }, [wolfData]);
 
-  // ── Live cross-device sync ────────────────────────────────────────────────────
-  const deviceId = React.useRef(
-    sessionStorage.getItem('pp_device_id') || (() => {
-      const id = 'dev_' + Math.random().toString(36).slice(2, 10);
-      sessionStorage.setItem('pp_device_id', id);
-      return id;
-    })()
-  );
-  const syncTimer = React.useRef(null);
+  // ── Firebase live score sync ───────────────────────────────────────────────
+  // Each ScoreEntry instance gets a unique device ID so we can tell apart our
+  // own writes from another device's writes and avoid infinite update loops.
+  const _deviceId      = React.useRef('dev_' + Math.random().toString(36).slice(2, 9));
+  const _skipFbWrite   = React.useRef(false);  // set true before applying remote state
+  const _fbFirstRender = React.useRef(true);   // skip writing on initial mount
 
-  // Subscribe on mount, receive updates from other devices
+  // Subscribe to remote score changes from other devices.
   React.useEffect(() => {
     if (!round.syncCode || !window.RoundSyncService) return;
-    window.RoundSyncService.subscribeRound(round.syncCode, deviceId.current, function(payload) {
-      if (payload.scores)                      setScores(payload.scores);
-      if (payload.putts)                       setPutts(payload.putts);
-      if (payload.wolfData)                    setWolfData(payload.wolfData);
-      if (payload.popFlags)                    setPopFlags(payload.popFlags);
-      if (typeof payload.holeIdx === 'number') setHoleIdx(payload.holeIdx);
+    window.RoundSyncService.subscribeRound(round.syncCode, _deviceId.current, function(liveScores) {
+      _skipFbWrite.current = true;
+      if (liveScores.scores)   setScores(liveScores.scores);
+      if (liveScores.putts)    setPutts(liveScores.putts);
+      if (liveScores.popFlags) setPopFlags(liveScores.popFlags);
+      if (liveScores.wolfData) setWolfData(liveScores.wolfData);
     });
-    return () => { if (window.RoundSyncService) window.RoundSyncService.unsubscribeRound(); };
+    return () => { window.RoundSyncService.unsubscribeRound(); };
   }, []);
 
-  // Broadcast local changes to Firestore (debounced 800 ms)
+  // Write local score changes to Firebase so other devices receive them.
   React.useEffect(() => {
+    if (_fbFirstRender.current) { _fbFirstRender.current = false; return; }
+    if (_skipFbWrite.current)   { _skipFbWrite.current = false; return; }
     if (!round.syncCode || !window.RoundSyncService) return;
-    if (syncTimer.current) clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(() => {
-      const payload = {
-        scores, putts, wolfData, popFlags, holeIdx,
-        _writtenBy: deviceId.current,
-        _ts: Date.now(),
-      };
-      window.RoundSyncService.writeLiveScores(round.syncCode, payload, null);
-    }, 800);
-    return () => clearTimeout(syncTimer.current);
-  }, [JSON.stringify(scores), JSON.stringify(putts), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx]);
+    window.RoundSyncService.writeLiveScores(round.syncCode, {
+      scores:      scores,
+      putts:       putts,
+      popFlags:    popFlags,
+      wolfData:    wolfData,
+      _writtenBy:  _deviceId.current,
+      _ts:         Date.now(),
+    }, null);
+  }, [scores, putts, popFlags, wolfData]);
 
   const playerFormatStats = React.useMemo(() => {
     const result = {};
