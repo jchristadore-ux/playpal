@@ -1,604 +1,775 @@
-// ScoreEntry.jsx — Full Score Entry Screen with Nassau pop isolation and tracker pills
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>PlayPal — Golf Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
-  const diff     = score ? score - hole.par : null;
-  const relColor = diff===null?'#1F3354':diff<=-2?'#FFD700':diff===-1?'#2DD97A':diff===0?'#9BB4D4':diff===1?'#E5534B':'#C0392B';
-  const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
-  const puttVal  = putts[p.id]?.[holeIdx] || 0;
+<!-- QR Code library — qrcodejs (browser-native DOM API, confirmed working) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 
-  const cardBorder = isWolf ? '1.5px solid rgba(229,83,75,0.4)' : isPartner ? `1.5px solid ${p.color}44` : '1px solid #1F3354';
-  const cardBg     = isWolf ? 'rgba(229,83,75,0.04)' : '#0F1D35';
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
 
-  return (
-    <div style={{background:cardBg, border:cardBorder, borderRadius:18, overflow:'hidden', flexShrink:0}}>
+<script src="components/gameData.js?v=2"></script>
+<script src="components/gameUtils.js?v=2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0B0F1A; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  #root { height: 100%; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1F3354; border-radius: 4px; }
+  input::placeholder { color: #3A5880; }
+  button { font-family: 'DM Sans', sans-serif; }
+  * { -webkit-tap-highlight-color: transparent; }
 
-      {/* Player header */}
-      <div style={{display:'flex', alignItems:'center', padding:'12px 16px 8px', gap:10}}>
-        <Avatar player={p} size={36}/>
-        <div style={{flex:1, minWidth:0}}>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:20, color:'#fff', letterSpacing:0.3, lineHeight:1}}>{p.name}</div>
-          <div style={{fontSize:11, color:'#7A9EBF', marginTop:3, fontFamily:'DM Sans'}}>HCP {p.handicap}</div>
-        </div>
-        {isWolf && !hasWolf && <span style={{fontSize:18}}>🐺</span>}
-        {isPartner && !isWolf && <span style={{fontSize:16, opacity:0.8}}>⚑</span>}
-        {hasWolf && isWolf && (
-          <button onClick={onWolfTap} style={{
-            background: !wolfData?.[holeIdx]?.confirmed ? '#E5534B' : 'rgba(45,217,122,0.12)',
-            border: !wolfData?.[holeIdx]?.confirmed ? 'none' : '1px solid rgba(45,217,122,0.3)',
-            color: !wolfData?.[holeIdx]?.confirmed ? '#fff' : '#2DD97A',
-            borderRadius:20, padding:'5px 12px 5px 8px', cursor:'pointer',
-            fontFamily:'Barlow Condensed', fontWeight:800, fontSize:12, letterSpacing:0.8,
-            display:'flex', alignItems:'center', gap:5,
-            WebkitTapHighlightColor:'transparent', flexShrink:0,
-          }}>
-            <span style={{fontSize:14}}>🐺</span>
-            {!wolfData?.[holeIdx]?.confirmed ? 'PICK →' : wolfData[holeIdx]?.lone ? 'LONE 🐺' : '✓ SET'}
-          </button>
-        )}
-      </div>
+  #pp-join-overlay {
+    position: fixed; inset: 0; background: #0B0F1A; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; font-family: 'Barlow Condensed', sans-serif;
+  }
+  #pp-join-overlay .pp-join-logo { font-size: 52px; line-height: 1; }
+  #pp-join-overlay .pp-join-title { font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff; }
+  #pp-join-overlay .pp-join-code {
+    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #2DD97A;
+    background: rgba(45,217,122,0.08); border: 1px solid rgba(45,217,122,0.3);
+    border-radius: 10px; padding: 10px 24px;
+  }
+  #pp-join-overlay .pp-join-status { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A9EBF; font-family: 'DM Sans', sans-serif; }
+  #pp-join-overlay .pp-join-spinner {
+    width: 36px; height: 36px; border: 3px solid #1F3354;
+    border-top-color: #2DD97A; border-radius: 50%;
+    animation: pp-spin 0.8s linear infinite;
+  }
+  #pp-join-overlay .pp-join-error { font-size: 14px; color: #E5534B; text-align: center; max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+  #pp-join-overlay .pp-join-dismiss {
+    margin-top: 8px; background: transparent; border: 1px solid #1F3354;
+    color: #7A9EBF; border-radius: 8px; padding: 10px 24px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px;
+    font-weight: 700; letter-spacing: 1px; cursor: pointer;
+  }
+  @keyframes pp-spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
 
-      {/* Wolf pick required warning */}
-      {isWolf && hasWolf && !wolfData?.[holeIdx]?.confirmed && (
-        <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
-          background:'rgba(229,83,75,0.06)', borderTop:'1px solid rgba(229,83,75,0.15)'}}>
-          <span style={{fontSize:11}}>⚠️</span>
-          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#E5534B', letterSpacing:0.8}}>PICK PARTNER OR GO LONE WOLF TO ADVANCE</span>
-        </div>
-      )}
+<!-- Deep-link join overlay — visual only, React does the actual Firebase fetch -->
+<div id="pp-join-overlay" style="display:none;">
+  <div class="pp-join-logo">&#127948;</div>
+  <div class="pp-join-title">JOINING ROUND</div>
+  <div class="pp-join-code" id="pp-join-code-display">------</div>
+  <div class="pp-join-spinner" id="pp-join-spinner"></div>
+  <div class="pp-join-status" id="pp-join-status">Connecting&#8230;</div>
+  <div class="pp-join-error" id="pp-join-error" style="display:none;"></div>
+  <button class="pp-join-dismiss" id="pp-join-dismiss" style="display:none;" onclick="dismissJoinOverlay()">GO TO HOME</button>
+</div>
 
-      {/* PTM putt required warning */}
-      {isPTMHolder && !(putts[p.id]?.[holeIdx] > 0) && (
-        <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
-          background:'rgba(212,175,71,0.06)', borderTop:'1px solid rgba(212,175,71,0.15)'}}>
-          <span style={{fontSize:11}}>⚠️</span>
-          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#D4AF47', letterSpacing:0.8}}>ENTER PUTTS TO ADVANCE</span>
-        </div>
-      )}
+<div id="root"></div>
 
-      {/* Format stat pills */}
-      {formatStats && formatStats.length > 0 && (
-        <div style={{display:'flex', gap:6, padding:'0 12px 10px', flexWrap:'wrap'}}>
-          {formatStats.map((s,i) => (
-            <div key={i} style={{
-              display:'flex', alignItems:'center', gap:4,
-              background:'#0B0F1A', border:'1px solid #1F3354',
-              borderRadius:20, padding:'3px 10px 3px 8px',
-            }}>
-              {s.icon && <span style={{fontSize:11, lineHeight:1}}>{s.icon}</span>}
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:13, color:s.color, lineHeight:1}}>{s.value}</span>
-              <span style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#3A5880', letterSpacing:0.5, marginLeft:2}}>{s.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+<script type="text/babel" src="components/Shared.jsx"></script>
+<script type="text/babel" src="components/Home.jsx"></script>
+<script type="text/babel" src="components/Setup.jsx"></script>
+<script type="text/babel" src="components/PlayerCard.jsx"></script>
+<script type="text/babel" src="components/Trackers.jsx"></script>
+<script type="text/babel" src="components/ScoreEntry.jsx"></script>
+<script type="text/babel" src="components/Summary.jsx"></script>
+<script type="text/babel" src="components/RoundViewer.jsx"></script>
 
-      {/* Score stepper */}
-      <div style={{display:'flex', alignItems:'center', padding:'0 12px 12px', gap:8}}>
-        <button
-          onClick={()=>onScore(p.id, (score||hole.par)-1)}
-          disabled={score<=1}
-          style={{width:52, height:52, borderRadius:10, border:'none', background:'#112240',
-            color:'#fff', fontSize:28, fontFamily:'Barlow Condensed', fontWeight:900,
-            cursor:'pointer', flexShrink:0, opacity:score>1?1:0.3,
-            WebkitTapHighlightColor:'transparent', userSelect:'none',
-            display:'flex', alignItems:'center', justifyContent:'center'}}>
-          −
-        </button>
-
-        <div
-          onClick={onScoreTap}
-          style={{flex:1, cursor:'pointer', borderRadius:12,
-            background:'#0B0F1A', border:'1px solid #1F3354',
-            minHeight:72, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            WebkitTapHighlightColor:'transparent', userSelect:'none', gap:2}}>
-          <div style={{fontFamily:'Barlow Condensed', fontWeight:900, lineHeight:1,
-            fontSize:64, color:score?relColor:'#1F3354', transition:'color 0.15s'}}>
-            {score||'—'}
-          </div>
-          {score
-            ? <div style={{fontFamily:'Barlow Condensed', fontSize:11, fontWeight:700, letterSpacing:2, color:relColor}}>{relLabel}</div>
-            : <div style={{fontFamily:'DM Sans', fontSize:10, color:'#1F3354', letterSpacing:0.5}}>TAP TO ENTER</div>
-          }
-        </div>
-
-        <button
-          onClick={()=>onScore(p.id, (score||hole.par)+1)}
-          style={{width:52, height:52, borderRadius:10, border:'none',
-            background:'linear-gradient(135deg,#D4AF47,#B8962E)',
-            color:'#0B0F1A', fontSize:28, fontFamily:'Barlow Condensed', fontWeight:900,
-            cursor:'pointer', flexShrink:0,
-            WebkitTapHighlightColor:'transparent', userSelect:'none',
-            display:'flex', alignItems:'center', justifyContent:'center'}}>
-          +
-        </button>
-      </div>
-
-      {/* Pop pill row */}
-      {(isNassauPlayer ? nassauPopActive : true) && (
-        <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
-          {isNassauPlayer ? (
-            <div style={{
-              borderRadius:999, padding:'5px 10px', minHeight:28,
-              border:'1px solid rgba(212,175,71,0.45)',
-              background:'rgba(212,175,71,0.12)', color:'#D4AF47',
-              fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
-              display:'flex', alignItems:'center', gap:4,
-            }}>
-              <span>💰</span> POP ON
-            </div>
-          ) : (
-            <button
-              onClick={()=>onPopToggle(p.id)}
-              style={{
-                borderRadius:999, padding:'5px 10px', minHeight:28,
-                border:gettingPop ? '1px solid rgba(212,175,71,0.45)' : '1px solid #1F3354',
-                background:gettingPop ? 'rgba(212,175,71,0.12)' : '#0B0F1A',
-                color:gettingPop ? '#D4AF47' : '#7A9EBF',
-                fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, letterSpacing:1,
-                cursor:'pointer', WebkitTapHighlightColor:'transparent'
-              }}>
-              {gettingPop ? 'POP ON' : 'POP'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Putt tracker */}
-      <div style={{display:'flex', alignItems:'center', padding:'8px 14px 12px',
-        borderTop: isPTMHolder && puttVal === 0 ? '1px solid rgba(212,175,71,0.4)' : '1px solid #1F3354',
-        gap:10,
-        background: isPTMHolder && puttVal === 0 ? 'rgba(212,175,71,0.04)' : 'transparent'}}>
-        <div style={{display:'flex', flexDirection:'column', gap:1, flexShrink:0}}>
-          <Label style={{flexShrink:0}}>PUTTS</Label>
-          {isPTMHolder && puttVal === 0 && (
-            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:9, color:'#D4AF47', letterSpacing:0.5}}>💰 REQUIRED</span>
-          )}
-        </div>
-        <div style={{display:'flex', gap:6, marginLeft:2}}>
-          {[1,2,3,4].map(n=>(
-            <button key={n}
-              onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
-              style={{width:40, height:40, borderRadius:9,
-                border: puttVal===n ? 'none' : '1px solid #1F3354',
-                background: puttVal===n ? p.color : '#112240',
-                color: puttVal===n ? '#0B0F1A' : '#7A9EBF',
-                fontFamily:'Barlow Condensed', fontWeight:800, fontSize:17,
-                cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                display:'flex', alignItems:'center', justifyContent:'center'}}>
-              {n}
-            </button>
-          ))}
-        </div>
-        {puttVal >= 3 && <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#E5534B', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>}
-      </div>
-    </div>
-  );
+<script>
+/* ============================================================
+   FIREBASE CONFIG
+   ============================================================ */
+var PLAYPAL_FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
+  authDomain:        "playpal-sync.firebaseapp.com",
+  databaseURL:       "https://playpal-sync-default-rtdb.firebaseio.com",
+  projectId:         "playpal-sync",
+  storageBucket:     "playpal-sync.firebasestorage.app",
+  messagingSenderId: "97913885953",
+  appId:             "1:97913885953:web:0e42ee9dbca2c346c0f700"
 };
 
-// ── Score Name Grid Modal ─────────────────────────────────────────────────────
-const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
-  const scoreName = (strokes, par) => {
-    const d = strokes - par;
-    if (strokes === 1)  return { label:'ACE',    color:'#FFD700' };
-    if (d <= -3)        return { label:'ALB',    color:'#FFD700' };
-    if (d === -2)       return { label:'EAGLE',  color:'#FFD700' };
-    if (d === -1)       return { label:'BIRDIE', color:'#2DD97A' };
-    if (d === 0)        return { label:'PAR',    color:'#9BB4D4' };
-    if (d === 1)        return { label:'BOGEY',  color:'#E5534B' };
-    if (d === 2)        return { label:'DOUBLE', color:'#C0392B' };
-    if (d === 3)        return { label:'TRIPLE', color:'#8B0000' };
-    return               { label:`+${d}`,       color:'#8B0000' };
-  };
+/* ============================================================
+   FIREBASE INIT
+   ============================================================ */
+var _fbApp       = null;
+var _fbDb        = null;
+var _fbFs        = null;
+var _fbAuthReady = false;
+var _fbPending   = [];
 
-  const tiles = Array.from({length:9}, (_,i) => i+1);
-
-  return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',zIndex:2000,
-      display:'flex',alignItems:'center',justifyContent:'center', padding:'20px'}}
-      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:'#0F1D35',borderRadius:18,padding:'20px',width:'100%',maxWidth:380, border:'1px solid #1F3354'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-          <div style={{fontFamily:'Barlow Condensed',fontWeight:800,fontSize:16,color:'#fff',letterSpacing:0.5}}>
-            {player.name.toUpperCase()} — HOLE {hole.num} (PAR {hole.par})
-          </div>
-          <button onClick={onClose}
-            style={{background:'rgba(255,255,255,0.05)',border:'1px solid #1F3354',borderRadius:8,color:'#7A9EBF',fontSize:18,cursor:'pointer',
-              width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}>✕</button>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-          {tiles.map(n => {
-            const s = scoreName(n, hole.par);
-            const isCurrent = current === n;
-            return (
-              <button key={n}
-                onClick={()=>{ onConfirm(player.id, n); onClose(); }}
-                style={{
-                  height:68, borderRadius:12, cursor:'pointer',
-                  border:`2px solid ${isCurrent ? s.color : s.color+'33'}`,
-                  background: isCurrent ? `${s.color}18` : '#0B0F1A',
-                  display:'flex', flexDirection:'column',
-                  alignItems:'center', justifyContent:'center', gap:2,
-                  WebkitTapHighlightColor:'transparent', userSelect:'none',
-                }}>
-                <span style={{fontFamily:'Barlow Condensed',fontWeight:900,fontSize:28,color:s.color,lineHeight:1}}>{n}</span>
-                <span style={{fontFamily:'Barlow Condensed',fontWeight:700,fontSize:10,color:s.color,letterSpacing:1}}>{s.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ── Wolf Team Picker Modal ────────────────────────────────────────────────────
-const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) => (
-  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:2000,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
-    onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:'#0F1D35',borderRadius:'20px 20px 0 0',padding:'20px 20px 32px',width:'100%',maxWidth:420, border:'1px solid #1F3354', borderBottom:'none'}}>
-      <div style={{fontFamily:'Barlow Condensed',fontWeight:800,fontSize:20,color:'#E5534B',marginBottom:4}}>
-        🐺 {wolfPlayer.name.toUpperCase()} IS WOLF
-      </div>
-      <div style={{fontFamily:'DM Sans',fontSize:13,color:'#7A9EBF',marginBottom:16}}>Pick a partner or go lone wolf for hole {holeIdx+1}</div>
-      <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:12}}>
-        {players.filter(p=>p.id!==wolfPlayer.id).map(p=>(
-          <button key={p.id} onClick={()=>onPick(p.id)}
-            style={{width:'100%',padding:'14px 16px',borderRadius:12,border:`1px solid ${p.color}44`,
-              background:`${p.color}0A`,color:p.color,fontFamily:'Barlow Condensed',
-              fontWeight:700,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',gap:12,
-              WebkitTapHighlightColor:'transparent'}}>
-            <Avatar player={p} size={32}/>
-            {p.name.toUpperCase()}
-          </button>
-        ))}
-        <button onClick={onLone}
-          style={{width:'100%',padding:'14px 16px',borderRadius:12,
-            border:'1px solid rgba(229,83,75,0.4)',background:'rgba(229,83,75,0.08)',
-            color:'#E5534B',fontFamily:'Barlow Condensed',fontWeight:800,fontSize:16,
-            cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
-          🐺 GO LONE WOLF
-        </button>
-      </div>
-      <button onClick={onClose} style={{width:'100%',height:44,borderRadius:10,border:'1px solid #1F3354',background:'transparent',color:'#7A9EBF',fontFamily:'Barlow Condensed',fontWeight:700,fontSize:14,cursor:'pointer',letterSpacing:1}}>CANCEL</button>
-    </div>
-  </div>
-);
-
-// ── Collapsible Game Trackers Drawer ─────────────────────────────────────────
-const TrackersDrawer = ({ open, onToggle, formats, children }) => {
-  const formatIcons = { wolf:'🐺', nassau:'💰', stableford:'⭐', passmoney:'💸', skins:'🎯' };
-  const activeTypes = formats.map(f => f.type);
-
-  return (
-    <div style={{borderTop:'1px solid #1F3354'}}>
-      <button
-        onClick={onToggle}
-        style={{
-          width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'11px 16px', background:'#070C16', border:'none', cursor:'pointer',
-          WebkitTapHighlightColor:'transparent',
-        }}>
-        <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11,
-            letterSpacing:2.5, color: open ? '#D4AF47' : '#7A9EBF'}}>
-            GAME TRACKERS
-          </span>
-          <div style={{display:'flex', gap:4}}>
-            {activeTypes.map(t => (
-              <span key={t} style={{fontSize:12}}>{formatIcons[t] || '🎯'}</span>
-            ))}
-          </div>
-        </div>
-        <span style={{
-          fontSize:14, color:'#3A5880',
-          display:'inline-block',
-          transform: open ? 'rotate(180deg)' : 'none',
-          transition:'transform 0.2s',
-        }}>▾</span>
-      </button>
-
-      {open && <div>{children}</div>}
-    </div>
-  );
-};
-
-// ── Nassau Hole Status Helper ─────────────────────────────────────────────────
-function _nassauLiveStatusForMatch(scores, nassauConfig, players, course, currentHoleIdx) {
-  const { nassauSegmentStatus } = window;
-  const front = nassauSegmentStatus(scores, players, course, Array.from({length:9}, (_, i) => i), currentHoleIdx, {}, nassauConfig);
-  const back  = nassauSegmentStatus(scores, players, course, Array.from({length:9}, (_, i) => i + 9), currentHoleIdx, {}, nassauConfig);
-  const overall = nassauSegmentStatus(scores, players, course, Array.from({length:18}, (_, i) => i), currentHoleIdx, {}, nassauConfig);
-  return { front, back, overall };
+function _fbInit(cb) {
+  if (_fbAuthReady) { cb && cb(true); return; }
+  if (_fbApp) { _fbPending.push(cb); return; }
+  try {
+    _fbApp = !window.firebase.apps.length
+      ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
+      : window.firebase.apps[0];
+    _fbDb = window.firebase.database();
+    _fbFs = window.firebase.firestore();
+    window.firebase.auth().signInAnonymously()
+      .then(function() {
+        _fbAuthReady = true;
+        var q = _fbPending.slice(); _fbPending = [];
+        q.forEach(function(fn) { fn && fn(true); });
+        cb && cb(true);
+      })
+      .catch(function(err) {
+        console.warn('[PlayPal] Firebase auth failed:', err.message);
+        _fbAuthReady = true;
+        var q = _fbPending.slice(); _fbPending = [];
+        q.forEach(function(fn) { fn && fn(false); });
+        cb && cb(false);
+      });
+  } catch(e) {
+    console.warn('[PlayPal] Firebase init failed:', e.message);
+    cb && cb(false);
+  }
 }
 
-// ── Main ScoreEntry Screen ────────────────────────────────────────────────────
-const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
-  const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
-
-  const { players, course, formats } = round;
-
-  const nassauFmtObj = formats.find(f => f.type === 'nassau');
-
-  const nassauMatches = React.useMemo(() => {
-    if (!nassauFmtObj) return [];
-    if (nassauFmtObj.nassauMatches && nassauFmtObj.nassauMatches.length > 0) return nassauFmtObj.nassauMatches;
-    if (nassauFmtObj.nassauConfig) {
-      return [{ id:'legacy_nm', matchType:nassauFmtObj.nassauConfig.matchType||'1v1', playersInMatch:nassauFmtObj.nassauConfig.playersInMatch||[], teams:nassauFmtObj.nassauConfig.teams||null, popHoles:nassauFmtObj.nassauConfig.popHoles||{}, stakes:nassauFmtObj.stakes||5 }];
-    }
-    return [];
-  }, []);
-
-  const matchPopFlagsMap = React.useMemo(() => {
-    const map = {};
-    nassauMatches.forEach(match => {
-      const flags = {};
-      (match.playersInMatch || []).forEach(pid => { flags[pid] = Array.from({length:18}, (_, i) => !!(match.popHoles?.[pid]?.[i])); });
-      map[match.id] = flags;
+/* ============================================================
+   PLAYER SYNC SERVICE
+   ============================================================ */
+var PlayerSyncService = (function() {
+  var _cb = null;
+  function save(players, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      var obj = {};
+      players.forEach(function(p) { obj[p.id] = p; });
+      _fbDb.ref('players').set(obj)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[PlayerSync] save failed:', e); cb && cb(false); });
     });
-    return map;
-  }, []);
-
-  const allNassauPlayerIds = React.useMemo(() => {
-    const ids = new Set();
-    nassauMatches.forEach(m => (m.playersInMatch || []).forEach(id => ids.add(id)));
-    return ids;
-  }, []);
-
-  const [scores,   setScores]   = React.useState(() => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } });
-  const [putts,    setPutts]    = React.useState(() => { try { const s = localStorage.getItem('pp_putts_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)])); } });
-  const [popFlags, setPopFlags] = React.useState(() => { try { const s = localStorage.getItem('pp_pop_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } });
-  const [wolfData, setWolfData] = React.useState(() => { try { const s = localStorage.getItem('pp_wolf_'+round.id); return s ? JSON.parse(s) : {}; } catch(e) { return {}; } });
-
-  const [holeIdx,  setHoleIdx]  = React.useState(0);
-  const [keypad,   setKeypad]   = React.useState(null);
-  const [wolfPicker, setWolfPicker] = React.useState(false);
-  const [showFinish, setShowFinish] = React.useState(false);
-  const [showExit,   setShowExit]   = React.useState(false);
-  const [trackersOpen, setTrackersOpen] = React.useState(false);
-
-  const hasWolf   = formats.some(f => f.type === 'wolf');
-  const hasPTM    = formats.some(f => f.type === 'passmoney');
-  const hasNassau = nassauMatches.length > 0;
-  const hasStable = formats.some(f => f.type === 'stableford');
-  const hasSkins  = formats.some(f => f.type === 'skins');
-  const wolfFmt   = formats.find(f => f.type === 'wolf');
-  const ptmFmt    = formats.find(f => f.type === 'passmoney');
-  const skinsFmt  = formats.find(f => f.type === 'skins');
-
-  const hole       = course.holes[holeIdx];
-  const wolfPlayer = hasWolf ? getWolfForHole(players, holeIdx) : null;
-  const wolfHoleData = wolfData[holeIdx] || { wolfId: wolfPlayer?.id, partnerId: null, confirmed: false, lone: false };
-
-  const ptmState = React.useMemo(() => {
-    if (!hasPTM) return { holderId: players[0]?.id, log: [] };
-    return computePTMState(scores, putts, players, course, players[0]?.id);
-  }, [JSON.stringify(scores), JSON.stringify(putts)]);
-
-  const matchLiveStatuses = React.useMemo(() => {
-    if (!hasNassau) return [];
-    const MATCH_COLORS_LOCAL = ['#D4AF47', '#7B9FE0', '#E07BE0'];
-    return nassauMatches.map((match, idx) => {
-      const matchCfg = { playersInMatch:match.playersInMatch, matchType:match.matchType, teams:match.teams||null, popHoles:match.popHoles||{} };
-      const status = _nassauLiveStatusForMatch(scores, matchCfg, players, course, holeIdx);
-      return { matchId:match.id, matchColor:MATCH_COLORS_LOCAL[idx]||'#D4AF47', playersInMatch:match.playersInMatch, stakes:match.stakes, front:status.front, back:status.back, overall:status.overall };
+  }
+  function load(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null); return; }
+      _fbDb.ref('players').once('value')
+        .then(function(snap) {
+          var val = snap.val();
+          if (!val) { cb(null); return; }
+          cb(Object.values(val));
+        })
+        .catch(function(e) { console.warn('[PlayerSync] load failed:', e); cb(null); });
     });
-  }, [JSON.stringify(scores), holeIdx]);
+  }
+  function subscribe(cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      if (_cb) { _fbDb.ref('players').off('value', _cb); }
+      _cb = function(snap) {
+        var val = snap.val();
+        cb(val ? Object.values(val) : []);
+      };
+      _fbDb.ref('players').on('value', _cb);
+    });
+  }
+  function unsubscribe() {
+    if (_fbDb && _cb) { _fbDb.ref('players').off('value', _cb); }
+    _cb = null;
+  }
+  return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
+})();
 
-  React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id, JSON.stringify(scores)); }, [scores]);
-  React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id, JSON.stringify(putts)); }, [putts]);
-  React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id, JSON.stringify(popFlags)); }, [popFlags]);
-  React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id, JSON.stringify(wolfData)); }, [wolfData]);
+/* ============================================================
+   CUSTOM COURSE SYNC SERVICE
+   ============================================================ */
+var CourseSyncService = (function() {
+  var _cb = null;
+  function save(courses, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      var obj = {};
+      courses.forEach(function(c) { obj[c.id] = c; });
+      _fbDb.ref('courses').set(obj)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[CourseSync] save failed:', e); cb && cb(false); });
+    });
+  }
+  function load(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null); return; }
+      _fbDb.ref('courses').once('value')
+        .then(function(snap) {
+          var val = snap.val();
+          cb(val ? Object.values(val) : []);
+        })
+        .catch(function(e) { console.warn('[CourseSync] load failed:', e); cb(null); });
+    });
+  }
+  function subscribe(cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      if (_cb) { _fbDb.ref('courses').off('value', _cb); }
+      _cb = function(snap) {
+        var val = snap.val();
+        cb(val ? Object.values(val) : []);
+      };
+      _fbDb.ref('courses').on('value', _cb);
+    });
+  }
+  function unsubscribe() {
+    if (_fbDb && _cb) { _fbDb.ref('courses').off('value', _cb); }
+    _cb = null;
+  }
+  return { save: save, load: load, subscribe: subscribe, unsubscribe: unsubscribe };
+})();
 
-  const playerFormatStats = React.useMemo(() => {
-    const result = {};
-    players.forEach(p => {
-      const stats = [];
-      const holesPlayed = (scores[p.id]||[]).filter(Boolean).length;
-      if (hasWolf) { const wolfPts = calcWolfStandings(scores, wolfData, players, course); const pts = wolfPts[p.id]||0; stats.push({ icon:'🐺', label:'WOLF PTS', value:String(pts), color:pts>0?'#2DD97A':'#7A9EBF' }); }
-      if (hasStable) { const pts = course.holes.reduce((acc,h,i) => { const g=scores[p.id]?.[i]; return acc+(g?calcStablefordPoints(getAdjustedHoleScore(scores,popFlags,p.id,i),h.par):0); }, 0); stats.push({ icon:'⭐', label:'STBL PTS', value:String(pts), color:pts>=2?'#D4AF47':'#7A9EBF' }); }
-      if (hasPTM && ptmState.holderId===p.id) stats.push({ icon:'💰', label:'HOLDS', value:'', color:'#D4AF47' });
-      if (holesPlayed>0) { const total=(scores[p.id]||[]).reduce((acc,s)=>acc+(s||0),0); stats.push({ icon:'⛳', label:'STROKES', value:String(total), color:'#9BB4D4' }); }
-      if (hasSkins) { const {skins}=calcSkins(scores,players,course,skinsFmt?.stakes||1,popFlags); const won=skins[p.id]||0; stats.push({ icon:'🎯', label:'SKINS', value:String(won), color:won>0?'#D4AF47':'#7A9EBF' }); }
-      if (hasNassau) {
-        matchLiveStatuses.forEach((ms) => {
-          if (!ms.playersInMatch.includes(p.id)) return;
-          const opponentId = ms.playersInMatch.find(id => id !== p.id);
-          const opponent   = opponentId ? players.find(pl => pl.id === opponentId) : null;
-          const oppName    = opponent ? opponent.name.split(' ')[0] : '?';
-          stats.push({ icon:'💰', label:`vs ${oppName} F9`, value:ms.front, color:ms.front==='EVEN'?'#7A9EBF':ms.matchColor });
-          stats.push({ icon:'', label:`18`, value:ms.overall, color:ms.overall==='EVEN'?'#7A9EBF':ms.matchColor });
+/* ============================================================
+   ROUND SYNC SERVICE  (Firestore — keyed by syncCode)
+   ============================================================ */
+var RoundSyncService = (function() {
+  var COLLECTION  = 'playpal_rounds';
+  var _roundUnsub = null;
+
+  function saveRound(roundObj, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { console.warn('[RoundSync] Firebase unavailable'); cb && cb(false); return; }
+      _fbFs.collection(COLLECTION).doc(roundObj.syncCode).set({
+        syncCode: roundObj.syncCode,
+        round:    roundObj,
+        savedAt:  Date.now()
+      }, { merge: true })
+      .then(function() { cb && cb(true); })
+      .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
+    });
+  }
+
+  function fetchRound(syncCode, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb(null, 'Firebase unavailable'); return; }
+      _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
+        .then(function(snap) {
+          if (!snap.exists) { cb(null, 'Round not found'); }
+          else { var d = snap.data(); cb(d.round || null, null); }
+        })
+        .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
+    });
+  }
+
+  function writeLiveScores(syncCode, payload, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      _fbFs.collection(COLLECTION).doc(syncCode).set(
+        { liveScores: payload },
+        { merge: true }
+      )
+      .then(function() { cb && cb(true); })
+      .catch(function(e) { console.warn('[RoundSync] writeLiveScores failed:', e); cb && cb(false); });
+    });
+  }
+
+  function subscribeRound(syncCode, deviceId, cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
+      _roundUnsub = _fbFs.collection(COLLECTION).doc(syncCode)
+        .onSnapshot(function(snap) {
+          if (!snap.exists) return;
+          var d = snap.data();
+          if (!d.liveScores) return;
+          if (d.liveScores._writtenBy === deviceId) return;
+          cb(d.liveScores);
+        }, function(err) {
+          console.warn('[RoundSync] subscribeRound error:', err);
         });
-      }
-      result[p.id] = stats;
     });
-    return result;
-  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx, JSON.stringify(matchLiveStatuses)]);
+  }
 
-  const setScore = (playerId, val) => {
-    const clamped = Math.max(1, val);
-    setScores(prev => { const next={...prev,[playerId]:[...(prev[playerId]||Array(18).fill(null))]};next[playerId][holeIdx]=clamped;return next; });
+  function unsubscribeRound() {
+    if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
+  }
+
+  return { saveRound: saveRound, fetchRound: fetchRound, writeLiveScores: writeLiveScores, subscribeRound: subscribeRound, unsubscribeRound: unsubscribeRound };
+})();
+
+window.PlayerSyncService = PlayerSyncService;
+window.CourseSyncService = CourseSyncService;
+window.RoundSyncService  = RoundSyncService;
+
+/* ============================================================
+   DEEP-LINK DETECTION — visual only, no Firebase here.
+   Actual fetch happens in React useEffect after mount.
+   ============================================================ */
+(function() {
+  var params   = new URLSearchParams(window.location.search);
+  var rawCode  = params.get('join') || params.get('code') || '';
+  var joinCode = rawCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (!joinCode || joinCode.length < 4) return;
+
+  window.__pp_pending_join_code = joinCode;
+
+  var overlay = document.getElementById('pp-join-overlay');
+  var codeEl  = document.getElementById('pp-join-code-display');
+  if (overlay) overlay.style.display = 'flex';
+  if (codeEl)  codeEl.textContent    = joinCode;
+
+  try {
+    var u = new URL(window.location.href);
+    u.searchParams.delete('join');
+    u.searchParams.delete('code');
+    window.history.replaceState({}, '', u.toString());
+  } catch(e) {}
+})();
+
+function dismissJoinOverlay() {
+  var overlay = document.getElementById('pp-join-overlay');
+  if (overlay) overlay.style.display = 'none';
+  window.__pp_pending_join_code = null;
+}
+
+function _updateJoinOverlay(status, error) {
+  var statusEl  = document.getElementById('pp-join-status');
+  var spinnerEl = document.getElementById('pp-join-spinner');
+  var errorEl   = document.getElementById('pp-join-error');
+  var dismissEl = document.getElementById('pp-join-dismiss');
+  if (status && statusEl) statusEl.textContent = status;
+  if (error) {
+    if (spinnerEl)  spinnerEl.style.display  = 'none';
+    if (errorEl)  { errorEl.style.display   = 'block'; errorEl.textContent = error; }
+    if (dismissEl)  dismissEl.style.display  = 'block';
+    if (statusEl)   statusEl.textContent     = 'Could not join round';
+  }
+}
+</script>
+
+<script type="text/babel">
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentGreen": "#2DD97A",
+  "accentGold":  "#D4AF47",
+  "bgColor":     "#0B0F1A",
+  "cardBg":      "#0F1D35",
+  "showSyncCode": true
+} /*EDITMODE-END*/;
+
+const App = () => {
+  const [screen, setScreen] = React.useState(() => {
+    if (window.__pp_pending_join_code) return 'home';
+    return sessionStorage.getItem('pp_screen') || 'home';
+  });
+
+  const [players, setPlayers] = React.useState(() => {
+    const saved = localStorage.getItem('pp_players');
+    return saved ? JSON.parse(saved) : DEFAULT_PLAYERS;
+  });
+
+  const [customCourses, setCustomCourses] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) { return []; }
+  });
+
+  const [round, setRound] = React.useState(() => {
+    if (window.__pp_pending_join_code) return null;
+    const savedScreen = sessionStorage.getItem('pp_screen');
+    if (savedScreen === 'score') {
+      const saved = localStorage.getItem('pp_round');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+
+  const [finalScores,   setFinalScores]   = React.useState(null);
+  const [finalWolf,     setFinalWolf]     = React.useState(null);
+  const [finalPutts,    setFinalPutts]    = React.useState(null);
+  const [finalPresses,  setFinalPresses]  = React.useState([]);
+  const [finalChips,    setFinalChips]    = React.useState({});
+  const [finalPopFlags, setFinalPopFlags] = React.useState(null);
+
+  const [viewedRoundData, setViewedRoundData] = React.useState(null);
+  const [viewSyncCode,    setViewSyncCode]    = React.useState(null);
+
+  const [tweaks,     setTweaks]     = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+  const [recentRoundsKey, setRecentRoundsKey] = React.useState(0);
+  const recentRounds = React.useMemo(() => {
+    const saved = localStorage.getItem('pp_recent');
+    return saved ? JSON.parse(saved) : [
+      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Stableford' },
+      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Wolf · Pass the Money' },
+    ];
+  }, [recentRoundsKey]);
+
+  React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
+
+  // ── Deep-link join — runs exactly once on mount ──────────────────────────
+  React.useEffect(() => {
+    const code = window.__pp_pending_join_code;
+    if (!code) return;
+    window.__pp_pending_join_code = null;
+
+    _updateJoinOverlay('Looking up round\u2026', null);
+
+    try {
+      const localRaw = localStorage.getItem('pp_round');
+      if (localRaw) {
+        const localRound = JSON.parse(localRaw);
+        if (localRound.syncCode === code) { _completeJoin(localRound); return; }
+      }
+    } catch(e) {}
+
+    window.RoundSyncService.fetchRound(code, function(fetchedRound, err) {
+      if (!fetchedRound) {
+        const msg = err === 'Round not found'
+          ? 'Round "' + code + '" not found or no longer active.\nAsk the host to share their code again.'
+          : 'Connection error. Check your internet and try again.';
+        _updateJoinOverlay(null, msg);
+        return;
+      }
+      _completeJoin(fetchedRound);
+    });
+
+    function _completeJoin(r) {
+      localStorage.setItem('pp_round', JSON.stringify(r));
+      sessionStorage.setItem('pp_screen', 'score');
+      setRound(r);
+      setScreen('score');
+      const overlay = document.getElementById('pp-join-overlay');
+      if (overlay) overlay.style.display = 'none';
+    }
+  }, []);
+
+  React.useEffect(() => {
+    PlayerSyncService.subscribe(function(remotePlayers) {
+      if (remotePlayers && remotePlayers.length > 0) {
+        setPlayers(remotePlayers);
+        localStorage.setItem('pp_players', JSON.stringify(remotePlayers));
+      }
+    });
+    return () => { PlayerSyncService.unsubscribe(); };
+  }, []);
+
+  React.useEffect(() => {
+    CourseSyncService.subscribe(function(remoteCourses) {
+      setCustomCourses(function(prev) {
+        const remoteIds = new Set(remoteCourses.map(function(c) { return c.id; }));
+        const localOnly = prev.filter(function(c) { return !remoteIds.has(c.id); });
+        const merged    = remoteCourses.concat(localOnly);
+        localStorage.setItem('pp_custom_courses', JSON.stringify(merged));
+        return merged;
+      });
+    });
+    return () => { CourseSyncService.unsubscribe(); };
+  }, []);
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const saveTweakKey = (key, val) => {
+    const next = { ...tweaks, [key]: val };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
   };
 
-  const setPutt = (playerId, val) => {
-    setPutts(prev => { const next={...prev,[playerId]:[...(prev[playerId]||Array(18).fill(0))]};next[playerId][holeIdx]=val;return next; });
+  const handleManagePlayers = (updated) => {
+    setPlayers(updated);
+    localStorage.setItem('pp_players', JSON.stringify(updated));
+    PlayerSyncService.save(updated, function(ok) {
+      if (!ok) console.warn('[PlayPal] Player sync to RTDB failed — saved locally');
+    });
   };
 
-  const togglePop = (playerId) => {
-    setPopFlags(prev => { const next={...prev,[playerId]:[...(prev[playerId]||Array(18).fill(false))]};next[playerId][holeIdx]=!next[playerId][holeIdx];return next; });
+  const handleCourseSaved = () => {};
+
+  const handleStartRound = (config) => {
+    const r = { ...config, id: Date.now() };
+    setRound(r);
+    localStorage.setItem('pp_round', JSON.stringify(r));
+    sessionStorage.setItem('pp_screen', 'score');
+    setScreen('score');
+    RoundSyncService.saveRound(r, function(ok) {
+      if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
+      else    console.warn('[PlayPal] Cloud round save failed — works locally');
+    });
   };
 
-  const handleWolfPick = (partnerId) => { setWolfData(prev => ({...prev,[holeIdx]:{wolfId:wolfPlayer.id,partnerId,confirmed:true,lone:false}})); setWolfPicker(false); };
-  const handleLoneWolf  = () => { setWolfData(prev => ({...prev,[holeIdx]:{wolfId:wolfPlayer.id,partnerId:null,confirmed:true,lone:true}})); setWolfPicker(false); };
-  const handleResetWolf = () => { setWolfData(prev => { const next={...prev}; delete next[holeIdx]; return next; }); };
+  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}) => {
+    setFinalScores(scores);
+    setFinalWolf(wolfData);
+    setFinalPutts(putts);
+    setFinalPresses(presses);
+    setFinalChips(chips);
+    setFinalPopFlags(popFlags);
 
-  const prevHole = () => holeIdx > 0 && setHoleIdx(holeIdx - 1);
+    const holeScores = {};
+    round.players.forEach(function(player) {
+      holeScores[player.id] = round.course.holes.map(function(_, i) {
+        return {
+          strokes:    scores[player.id]?.[i] || null,
+          putts:      (putts[player.id]?.[i]) || 0,
+          gettingPop: !!(popFlags[player.id]?.[i]),
+        };
+      });
+    });
 
-  const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
-  const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
+    const completedRound = {
+      ...round,
+      holeScores,
+      date: new Date().toLocaleDateString('en-US', {
+        weekday:'long', month:'long', day:'numeric', year:'numeric',
+      }),
+    };
 
-  const ptmPuttRequired = hasPTM && !!ptmState.holderId && !(putts[ptmState.holderId]?.[holeIdx] > 0);
-  const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
-  const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
+    RoundSyncService.saveRound(completedRound, function() {});
 
-  const nextHole = () => canAdvance && holeIdx < 17 && setHoleIdx(holeIdx + 1);
+    if (round.syncCode) {
+      const snapshot = {
+        round:         completedRound,
+        scores,
+        wolfData,
+        putts,
+        nassauPresses: presses,
+        popFlags,
+        savedAt:       Date.now(),
+      };
+      try {
+        localStorage.setItem('pp_round_snap_' + round.syncCode, JSON.stringify(snapshot));
+      } catch(e) {
+        console.warn('[PlayPal] Could not save round snapshot locally:', e);
+      }
+    }
 
-  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags); };
+    const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
+    recent.unshift({
+      courseName: round.course.name,
+      date:       new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+      players:    round.players.length,
+      formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' \u00b7 '),
+      syncCode:   round.syncCode || null,
+    });
+    localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
 
-  const parColor = hole.par === 3 ? '#7B9FE0' : hole.par === 5 ? '#D4AF47' : '#9BB4D4';
-  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins;
+    setRecentRoundsKey(k => k + 1);
+    setScreen('summary');
+  };
+
+  const handleViewRound = (syncCode) => {
+    if (!syncCode) return;
+    try {
+      const raw = localStorage.getItem('pp_round_snap_' + syncCode);
+      if (raw) {
+        const snap = JSON.parse(raw);
+        setViewedRoundData(snap);
+        setViewSyncCode(syncCode);
+        setScreen('viewround');
+        return;
+      }
+    } catch(e) {
+      console.warn('[PlayPal] Could not read local round snapshot:', e);
+    }
+    setViewedRoundData(null);
+    setViewSyncCode(syncCode);
+    setScreen('viewround');
+  };
+
+  const handleBackFromView = () => {
+    setViewedRoundData(null);
+    setViewSyncCode(null);
+    setScreen('home');
+  };
+
+  const handleNewRound = () => {
+    setRound(null);
+    setFinalScores(null);
+    setViewedRoundData(null);
+    setViewSyncCode(null);
+    localStorage.removeItem('pp_round');
+    sessionStorage.removeItem('pp_screen');
+    setRecentRoundsKey(k => k + 1);
+    setScreen('home');
+  };
+
+  const handleExitRound = () => {
+    sessionStorage.removeItem('pp_screen');
+    setScreen('home');
+  };
+
+  const handleJoinRound = (savedRound) => {
+    setRound(savedRound);
+    sessionStorage.setItem('pp_screen', 'score');
+    setScreen('score');
+  };
+
+  const cssVars = {
+    '--green': tweaks.accentGreen,
+    '--gold':  tweaks.accentGold,
+    '--bg':    tweaks.bgColor,
+    '--card':  tweaks.cardBg,
+  };
 
   return (
-    <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0B0F1A'}}>
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
+      <NavBar
+        syncCode={tweaks.showSyncCode && round && screen === 'score' ? round.syncCode : null}
+        onHome={() => setScreen(round && screen === 'score' ? 'score' : 'home')}
+        currentScreen={screen}
+      />
 
-      {/* Hole header */}
-      <div style={{flexShrink:0, background:'#070C16', borderBottom:'1px solid #1F3354', padding:'12px 16px 10px'}}>
-        <div style={{display:'flex', alignItems:'center', gap:12}}>
-          <button onClick={prevHole} disabled={holeIdx===0}
-            style={{width:36, height:36, borderRadius:8, border:'none', background:holeIdx===0?'transparent':'#112240',
-              color:holeIdx===0?'#1F3354':'#9BB4D4', fontSize:20, cursor:holeIdx===0?'default':'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-              WebkitTapHighlightColor:'transparent'}}>
-            ‹
-          </button>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
 
-          <div style={{flex:1, textAlign:'center'}}>
-            <div style={{display:'flex', alignItems:'baseline', justifyContent:'center', gap:8}}>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:900, fontSize:32, color:'#fff', lineHeight:1}}>HOLE {hole.num}</span>
-              <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:18, color:parColor}}>PAR {hole.par}</span>
-            </div>
-            <div style={{display:'flex', justifyContent:'center', gap:16, marginTop:2}}>
-              <span style={{fontFamily:'DM Sans', fontSize:11, color:'#3A5880'}}>{hole.yds} yds</span>
-              <span style={{fontFamily:'DM Sans', fontSize:11, color:'#3A5880'}}>HCP {hole.hdcp}</span>
-            </div>
-          </div>
+        {screen === 'home' &&
+          <HomeScreen
+            onStartRound={() => setScreen('setup')}
+            players={players}
+            onManagePlayers={handleManagePlayers}
+            recentRounds={recentRounds}
+            onJoinRound={handleJoinRound}
+            onViewRound={handleViewRound}
+            customCourses={customCourses}
+            onCourseSaved={handleCourseSaved}
+          />
+        }
 
-          <button onClick={nextHole} disabled={holeIdx===17 || (currentHoleScored && !canAdvance)}
-            style={{width:36, height:36, borderRadius:8, border:'none',
-              background: holeIdx===17 ? 'transparent' : '#112240',
-              color: holeIdx===17 ? '#1F3354' : currentHoleScored && !canAdvance ? '#E5534B44' : '#9BB4D4',
-              fontSize:20, cursor: holeIdx===17 || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-              WebkitTapHighlightColor:'transparent'}}>
-            ›
-          </button>
-        </div>
+        {screen === 'setup' &&
+          <SetupScreen
+            allPlayers={players}
+            customCourses={customCourses}
+            onStart={handleStartRound}
+          />
+        }
 
-        {/* Hole dots */}
-        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:10, flexWrap:'wrap'}}>
-          {course.holes.map((h,i) => {
-            const allIn = players.every(p => scores[p.id]?.[i]);
-            const some  = players.some(p => scores[p.id]?.[i]);
-            return (
-              <div key={i} onClick={()=>setHoleIdx(i)}
-                style={{width:i===holeIdx?20:8, height:8, borderRadius:4, cursor:'pointer', transition:'all 0.2s',
-                  background:i===holeIdx?'#D4AF47':allIn?'#2DD97A':some?'#1F3354':'#112240',
-                  border:i===holeIdx?'none':`1px solid ${allIn?'#2DD97A33':'#1F3354'}`}}>
+        {screen === 'score' && round &&
+          <ScoreEntry
+            round={round}
+            onSaveRound={handleSaveRound}
+            onExitRound={handleExitRound}
+          />
+        }
+
+        {screen === 'viewround' && (
+          viewedRoundData ? (
+            <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
+              <div style={{
+                flexShrink:0, display:'flex', alignItems:'center', height:48,
+                background:'#070C16', borderBottom:'1px solid #1F3354', padding:'0 12px',
+              }}>
+                <button onClick={handleBackFromView} style={{
+                  background:'none', border:'none', cursor:'pointer',
+                  fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16,
+                  letterSpacing:1, color:'#7A9EBF', padding:'8px 4px',
+                  WebkitTapHighlightColor:'transparent',
+                }}>
+                  &#8249; BACK
+                </button>
+                <span style={{
+                  flex:1, textAlign:'center', fontFamily:'Barlow Condensed',
+                  fontWeight:800, fontSize:16, letterSpacing:2, color:'#D4AF47',
+                }}>
+                  ROUND HISTORY
+                </span>
+                <span style={{width:60}}/>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Scrollable body */}
-      <div style={{flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
-        <div style={{padding:'12px 12px 0', display:'flex', flexDirection:'column', gap:10}}>
-          {players.map(p => {
-            const isWolf       = hasWolf && wolfPlayer?.id === p.id;
-            const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
-            const isPTM        = hasPTM && ptmState.holderId === p.id;
-            const isNassauPlayer = allNassauPlayerIds.has(p.id);
-            const nassauPopActive = isNassauPlayer && nassauMatches.some(match => {
-              if (!match.playersInMatch.includes(p.id)) return false;
-              return !!(match.popHoles?.[p.id]?.[holeIdx]);
-            });
-            return (
-              <PlayerScoreCard
-                key={p.id}
-                p={p} score={scores[p.id]?.[holeIdx]||null} hole={hole} holeIdx={holeIdx}
-                putts={putts} gettingPop={!!popFlags[p.id]?.[holeIdx]}
-                nassauPopActive={nassauPopActive} isNassauPlayer={isNassauPlayer}
-                isWolf={isWolf} isPartner={isPartner} isPTMHolder={isPTM}
-                hasWolf={hasWolf} wolfData={wolfData} formatStats={playerFormatStats[p.id]||[]}
-                onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
-                onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
-              />
-            );
-          })}
-        </div>
-
-        <div style={{marginTop:12}}>
-          <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
-        </div>
-
-        {hasAnyTracker && (
-          <TrackersDrawer open={trackersOpen} onToggle={() => setTrackersOpen(v => !v)} formats={formats}>
-            {hasWolf && <WolfTracker players={players} scores={scores} wolfData={wolfData} course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
-            {hasPTM  && <PTMTracker players={players} scores={scores} putts={putts} course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
-            {hasNassau && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
-          </TrackersDrawer>
+              <div style={{flex:1, overflow:'hidden', display:'flex', flexDirection:'column'}}>
+                <SummaryScreen
+                  round={viewedRoundData.round}
+                  scores={viewedRoundData.scores}
+                  wolfData={viewedRoundData.wolfData}
+                  putts={viewedRoundData.putts}
+                  nassauPresses={viewedRoundData.nassauPresses || []}
+                  manualChips={{}}
+                  popFlags={viewedRoundData.popFlags || {}}
+                  onNewRound={null}
+                  readOnly={true}
+                />
+              </div>
+            </div>
+          ) : (
+            <RoundViewer
+              syncCode={viewSyncCode}
+              onBack={handleBackFromView}
+            />
+          )
         )}
 
-        <div style={{padding:'16px 12px 24px'}}>
-          {(allScored || holeIdx === 17) && (
-            <Btn onClick={() => setShowFinish(true)} variant="gold"
-              style={{width:'100%', padding:'16px', fontSize:18, letterSpacing:1}}>
-              🏁 FINISH ROUND
-            </Btn>
+        {screen === 'summary' && round && finalScores &&
+          <SummaryScreen
+            round={round}
+            scores={finalScores}
+            wolfData={finalWolf}
+            putts={finalPutts}
+            nassauPresses={finalPresses}
+            manualChips={finalChips}
+            popFlags={finalPopFlags || {}}
+            onNewRound={handleNewRound}
+            readOnly={false}
+          />
+        }
+
+      </div>
+
+      {/* Bottom Tab Nav — hidden on score and viewround screens */}
+      {screen !== 'score' && screen !== 'viewround' &&
+        <div style={{ display:'flex', borderTop:'1px solid #1F3354', background:'#070C16', flexShrink:0 }}>
+          {[
+            { id:'home',    icon:'\uD83C\uDFE0', label:'HOME' },
+            { id:'setup',   icon:'\u26F3', label:'NEW ROUND' },
+            ...(round       ? [{ id:'score',   icon:'\uD83C\uDFCC\uFE0F', label:'SCORING' }] : []),
+            ...(finalScores ? [{ id:'summary', icon:'\uD83D\uDCCA', label:'RESULTS' }] : []),
+            ...(round       ? [{ id:'__exit',  icon:'\uD83D\uDEAA', label:'EXIT'    }] : []),
+          ].map(tab =>
+            <div key={tab.id}
+              onClick={() => tab.id === '__exit' ? handleExitRound() : setScreen(tab.id)}
+              style={{
+                flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+                justifyContent:'center', padding:'10px 4px', cursor:'pointer',
+                color: tab.id === '__exit' ? '#E5534B'
+                     : screen === tab.id  ? tweaks.accentGold
+                     : '#3A5880',
+                borderTop: screen === tab.id && tab.id !== '__exit'
+                  ? `2px solid ${tweaks.accentGold}`
+                  : '2px solid transparent',
+                transition: 'color 0.15s',
+              }}>
+              <div style={{ fontSize:20, lineHeight:1 }}>{tab.icon}</div>
+              <div style={{ fontFamily:'Barlow Condensed', fontSize:10, fontWeight:700, letterSpacing:1, marginTop:3 }}>{tab.label}</div>
+            </div>
           )}
         </div>
-      </div>
+      }
 
-      {/* Next hole button */}
-      {canAdvance && holeIdx < 17 && (
-        <div style={{flexShrink:0, padding:'10px 12px', background:'#070C16', borderTop:'1px solid #1F3354'}}>
-          <Btn onClick={nextHole} variant="green" style={{width:'100%', padding:'13px', fontSize:16}}>
-            NEXT HOLE {holeIdx + 2} →
-          </Btn>
-        </div>
-      )}
-
-      <div style={{flexShrink:0, padding:'6px 12px 10px', background:'#070C16', borderTop:'1px solid #1F3354', display:'flex', justifyContent:'center'}}>
-        <button onClick={()=>setShowExit(true)}
-          style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed',
-            fontWeight:700, fontSize:12, letterSpacing:1.5, color:'#3A5880',
-            WebkitTapHighlightColor:'transparent', padding:'6px 16px'}}>
-          EXIT ROUND
-        </button>
-      </div>
-
-      {keypad && (
-        <ScoreKeypad player={players.find(p=>p.id===keypad)} hole={hole} current={scores[keypad]?.[holeIdx]}
-          onConfirm={setScore} onClose={()=>setKeypad(null)}/>
-      )}
-
-      {wolfPicker && wolfPlayer && (
-        <WolfPicker wolfPlayer={wolfPlayer} players={players} holeIdx={holeIdx}
-          onPick={handleWolfPick} onLone={handleLoneWolf} onClose={()=>setWolfPicker(false)}/>
-      )}
-
-      <Modal open={showExit} onClose={()=>setShowExit(false)} title="Exit Round?">
-        <div style={{display:'flex', flexDirection:'column', gap:14}}>
-          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A9EBF', lineHeight:1.6}}>Your scores are saved locally. You can resume this round from the home screen.</div>
-          <div style={{display:'flex', gap:10}}>
-            <Btn onClick={()=>setShowExit(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>
-            <Btn onClick={onExitRound} variant="danger" style={{flex:1}}>EXIT ROUND</Btn>
+      {tweaksOpen && (
+        <div style={{
+          position:'fixed', bottom:20, right:20, background:'#0F1D35',
+          border:'1px solid #1F3354', borderRadius:12, padding:16, zIndex:9998,
+          minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, color:'#D4AF47', letterSpacing:2, marginBottom:12 }}>APPEARANCE</div>
+          {[['accentGreen','Green'],['accentGold','Gold'],['bgColor','Background'],['cardBg','Card']].map(([k,label]) =>
+            <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+              <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>{label}</span>
+              <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, padding:'5px' }} />
+            </div>
+          )}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
+            <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>Show Sync Code</span>
+            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width:40, height:22, borderRadius:11, background:tweaks.showSyncCode ? tweaks.accentGreen : '#1F3354', cursor:'pointer', display:'flex', alignItems:'center', padding:2, transition:'background 0.2s' }}>
+              <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', transform:tweaks.showSyncCode ? 'translateX(18px)' : 'translateX(0)', transition:'transform 0.2s' }} />
+            </div>
           </div>
         </div>
-      </Modal>
-
-      <Modal open={showFinish} onClose={()=>setShowFinish(false)} title="Finish Round?">
-        <div style={{display:'flex', flexDirection:'column', gap:14}}>
-          <div style={{fontFamily:'DM Sans', fontSize:13, color:'#7A9EBF', lineHeight:1.6}}>
-            {!allScored ? `Some holes haven't been scored yet. You can still finish and view results.` : `All 18 holes complete. Ready to view the final results?`}
-          </div>
-          <div style={{display:'flex', gap:10}}>
-            <Btn onClick={()=>setShowFinish(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>
-            <Btn onClick={handleFinish} variant="gold" style={{flex:1}}>VIEW RESULTS</Btn>
-          </div>
-        </div>
-      </Modal>
+      )}
     </div>
   );
 };
 
-Object.assign(window, { ScoreEntry });
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
