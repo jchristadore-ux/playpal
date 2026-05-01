@@ -1,4 +1,4 @@
-// ScoreEntry.jsx — Full Score Entry Screen with Nassau pop isolation and tracker pills
+// ScoreEntry.jsx — Full Score Entry Screen with real-time cross-device sync
 
 const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
   const diff     = score ? score - hole.par : null;
@@ -311,11 +311,29 @@ function _nassauLiveStatusForMatch(scores, nassauConfig, players, course, curren
   return { front, back, overall };
 }
 
+// ── Sync indicator ────────────────────────────────────────────────────────────
+const SyncPulse = ({ syncing }) => {
+  if (!syncing) return null;
+  return (
+    <div style={{
+      position:'fixed', top:60, right:12, zIndex:500,
+      display:'flex', alignItems:'center', gap:6,
+      background:'rgba(45,217,122,0.1)', border:'1px solid rgba(45,217,122,0.3)',
+      borderRadius:20, padding:'4px 10px',
+      fontFamily:'Barlow Condensed', fontWeight:700, fontSize:10, letterSpacing:1.5, color:'#2DD97A',
+    }}>
+      <div style={{width:6, height:6, borderRadius:'50%', background:'#2DD97A', animation:'ppSyncPulse 0.8s ease-in-out infinite'}}/>
+      SYNCING
+      <style>{`@keyframes ppSyncPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  );
+};
+
 // ── Main ScoreEntry Screen ────────────────────────────────────────────────────
-const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
+const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
 
-  const { players, course, formats } = round;
+  const { players, course, formats, syncCode } = round;
 
   const nassauFmtObj = formats.find(f => f.type === 'nassau');
 
@@ -328,26 +346,22 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     return [];
   }, []);
 
-  const matchPopFlagsMap = React.useMemo(() => {
-    const map = {};
-    nassauMatches.forEach(match => {
-      const flags = {};
-      (match.playersInMatch || []).forEach(pid => { flags[pid] = Array.from({length:18}, (_, i) => !!(match.popHoles?.[pid]?.[i])); });
-      map[match.id] = flags;
-    });
-    return map;
-  }, []);
-
   const allNassauPlayerIds = React.useMemo(() => {
     const ids = new Set();
     nassauMatches.forEach(m => (m.playersInMatch || []).forEach(id => ids.add(id)));
     return ids;
   }, []);
 
-  const [scores,   setScores]   = React.useState(() => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } });
-  const [putts,    setPutts]    = React.useState(() => { try { const s = localStorage.getItem('pp_putts_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)])); } });
-  const [popFlags, setPopFlags] = React.useState(() => { try { const s = localStorage.getItem('pp_pop_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } });
-  const [wolfData, setWolfData] = React.useState(() => { try { const s = localStorage.getItem('pp_wolf_'+round.id); return s ? JSON.parse(s) : {}; } catch(e) { return {}; } });
+  // ── State initializers ────────────────────────────────────────────────────
+  const _initScores  = () => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
+  const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } };
+  const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } };
+  const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+
+  const [scores,   setScores]   = React.useState(_initScores);
+  const [putts,    setPutts]    = React.useState(_initPutts);
+  const [popFlags, setPopFlags] = React.useState(_initPop);
+  const [wolfData, setWolfData] = React.useState(_initWolf);
 
   const [holeIdx,  setHoleIdx]  = React.useState(0);
   const [keypad,   setKeypad]   = React.useState(null);
@@ -355,6 +369,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const [showFinish, setShowFinish] = React.useState(false);
   const [showExit,   setShowExit]   = React.useState(false);
   const [trackersOpen, setTrackersOpen] = React.useState(false);
+  const [syncing,  setSyncing]  = React.useState(false);
+
+  // Ref to hold pending write timer for debouncing
+  const syncTimerRef  = React.useRef(null);
+  // Track whether we're currently processing a remote update (to avoid echo)
+  const applyingRemoteRef = React.useRef(false);
 
   const hasWolf   = formats.some(f => f.type === 'wolf');
   const hasPTM    = formats.some(f => f.type === 'passmoney');
@@ -369,11 +389,72 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
   const wolfPlayer = hasWolf ? getWolfForHole(players, holeIdx) : null;
   const wolfHoleData = wolfData[holeIdx] || { wolfId: wolfPlayer?.id, partnerId: null, confirmed: false, lone: false };
 
+  // ── Live refs for sync reads (avoid stale closures) ───────────────────────
+  const scoresRef   = React.useRef(scores);
+  const puttsRef    = React.useRef(putts);
+  const popRef      = React.useRef(popFlags);
+  const wolfRef     = React.useRef(wolfData);
+
+  React.useEffect(() => { scoresRef.current = scores; }, [scores]);
+  React.useEffect(() => { puttsRef.current  = putts;  }, [putts]);
+  React.useEffect(() => { popRef.current    = popFlags; }, [popFlags]);
+  React.useEffect(() => { wolfRef.current   = wolfData; }, [wolfData]);
+
+  // ── Persist to localStorage ───────────────────────────────────────────────
+  React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id, JSON.stringify(scores)); }, [scores]);
+  React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id,  JSON.stringify(putts));  }, [putts]);
+  React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id,    JSON.stringify(popFlags)); }, [popFlags]);
+  React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,   JSON.stringify(wolfData)); }, [wolfData]);
+
+  // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
+  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf) => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      if (!window.RoundSyncService || !syncCode) return;
+      const payload = {
+        scores:   nextScores || scoresRef.current,
+        putts:    nextPutts  || puttsRef.current,
+        popFlags: nextPop    || popRef.current,
+        wolfData: nextWolf   || wolfRef.current,
+        _writtenBy: deviceId,
+        _ts: Date.now(),
+      };
+      setSyncing(true);
+      window.RoundSyncService.writeLiveScores(syncCode, payload, function() {
+        setSyncing(false);
+      });
+    }, 400);
+  }, [syncCode, deviceId]);
+
+  // ── Subscribe to remote updates ───────────────────────────────────────────
+  React.useEffect(() => {
+    if (!window.RoundSyncService || !syncCode) return;
+
+    window.RoundSyncService.subscribeRound(syncCode, deviceId, function(livePayload) {
+      if (!livePayload) return;
+      // Remote update: merge into local state
+      applyingRemoteRef.current = true;
+      if (livePayload.scores)   { setScores(livePayload.scores);   localStorage.setItem('pp_scores_'+round.id, JSON.stringify(livePayload.scores)); }
+      if (livePayload.putts)    { setPutts(livePayload.putts);     localStorage.setItem('pp_putts_'+round.id,  JSON.stringify(livePayload.putts)); }
+      if (livePayload.popFlags) { setPopFlags(livePayload.popFlags); localStorage.setItem('pp_pop_'+round.id,  JSON.stringify(livePayload.popFlags)); }
+      if (livePayload.wolfData) { setWolfData(livePayload.wolfData); localStorage.setItem('pp_wolf_'+round.id, JSON.stringify(livePayload.wolfData)); }
+      // Small delay before clearing flag to let React batch the state updates
+      setTimeout(() => { applyingRemoteRef.current = false; }, 50);
+    });
+
+    return () => {
+      window.RoundSyncService.unsubscribeRound();
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [syncCode, deviceId, round.id]);
+
+  // ── PTM state ─────────────────────────────────────────────────────────────
   const ptmState = React.useMemo(() => {
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
     return computePTMState(scores, putts, players, course, players[0]?.id);
   }, [JSON.stringify(scores), JSON.stringify(putts)]);
 
+  // ── Nassau live statuses ──────────────────────────────────────────────────
   const matchLiveStatuses = React.useMemo(() => {
     if (!hasNassau) return [];
     const MATCH_COLORS_LOCAL = ['#D4AF47', '#7B9FE0', '#E07BE0'];
@@ -384,11 +465,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     });
   }, [JSON.stringify(scores), holeIdx]);
 
-  React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id, JSON.stringify(scores)); }, [scores]);
-  React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id, JSON.stringify(putts)); }, [putts]);
-  React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id, JSON.stringify(popFlags)); }, [popFlags]);
-  React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id, JSON.stringify(wolfData)); }, [wolfData]);
-
+  // ── Format stat pills ─────────────────────────────────────────────────────
   const playerFormatStats = React.useMemo(() => {
     const result = {};
     players.forEach(p => {
@@ -414,22 +491,61 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
     return result;
   }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx, JSON.stringify(matchLiveStatuses)]);
 
+  // ── Score / putt / pop setters ────────────────────────────────────────────
   const setScore = (playerId, val) => {
     const clamped = Math.max(1, val);
-    setScores(prev => { const next={...prev,[playerId]:[...(prev[playerId]||Array(18).fill(null))]};next[playerId][holeIdx]=clamped;return next; });
+    setScores(prev => {
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      next[playerId][holeIdx] = clamped;
+      scheduleCloudWrite(next, null, null, null);
+      return next;
+    });
   };
 
   const setPutt = (playerId, val) => {
-    setPutts(prev => { const next={...prev,[playerId]:[...(prev[playerId]||Array(18).fill(0))]};next[playerId][holeIdx]=val;return next; });
+    setPutts(prev => {
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(0))]};
+      next[playerId][holeIdx] = val;
+      scheduleCloudWrite(null, next, null, null);
+      return next;
+    });
   };
 
   const togglePop = (playerId) => {
-    setPopFlags(prev => { const next={...prev,[playerId]:[...(prev[playerId]||Array(18).fill(false))]};next[playerId][holeIdx]=!next[playerId][holeIdx];return next; });
+    setPopFlags(prev => {
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(false))]};
+      next[playerId][holeIdx] = !next[playerId][holeIdx];
+      scheduleCloudWrite(null, null, next, null);
+      return next;
+    });
   };
 
-  const handleWolfPick = (partnerId) => { setWolfData(prev => ({...prev,[holeIdx]:{wolfId:wolfPlayer.id,partnerId,confirmed:true,lone:false}})); setWolfPicker(false); };
-  const handleLoneWolf  = () => { setWolfData(prev => ({...prev,[holeIdx]:{wolfId:wolfPlayer.id,partnerId:null,confirmed:true,lone:true}})); setWolfPicker(false); };
-  const handleResetWolf = () => { setWolfData(prev => { const next={...prev}; delete next[holeIdx]; return next; }); };
+  const handleWolfPick = (partnerId) => {
+    setWolfData(prev => {
+      const next = {...prev, [holeIdx]:{wolfId:wolfPlayer.id,partnerId,confirmed:true,lone:false}};
+      scheduleCloudWrite(null, null, null, next);
+      return next;
+    });
+    setWolfPicker(false);
+  };
+
+  const handleLoneWolf  = () => {
+    setWolfData(prev => {
+      const next = {...prev, [holeIdx]:{wolfId:wolfPlayer.id,partnerId:null,confirmed:true,lone:true}};
+      scheduleCloudWrite(null, null, null, next);
+      return next;
+    });
+    setWolfPicker(false);
+  };
+
+  const handleResetWolf = () => {
+    setWolfData(prev => {
+      const next = {...prev};
+      delete next[holeIdx];
+      scheduleCloudWrite(null, null, null, next);
+      return next;
+    });
+  };
 
   const prevHole = () => holeIdx > 0 && setHoleIdx(holeIdx - 1);
 
@@ -449,6 +565,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound }) => {
 
   return (
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0B0F1A'}}>
+
+      <SyncPulse syncing={syncing}/>
 
       {/* Hole header */}
       <div style={{flexShrink:0, background:'#070C16', borderBottom:'1px solid #1F3354', padding:'12px 16px 10px'}}>
