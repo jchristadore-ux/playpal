@@ -98,6 +98,19 @@ var PLAYPAL_FIREBASE_CONFIG = {
 };
 
 /* ============================================================
+   STABLE DEVICE ID  (persists for the browser session + localStorage)
+   Used to suppress echoing our own writes back to ourselves.
+   ============================================================ */
+(function () {
+  var stored = localStorage.getItem('pp_device_id');
+  if (!stored) {
+    stored = 'dev_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+    localStorage.setItem('pp_device_id', stored);
+  }
+  window.__PP_DEVICE_ID = stored;
+})();
+
+/* ============================================================
    FIREBASE INIT
    ============================================================ */
 var _fbApp       = null;
@@ -225,7 +238,21 @@ var CourseSyncService = (function() {
 })();
 
 /* ============================================================
-   ROUND SYNC SERVICE  (Firestore — keyed by syncCode)
+   ROUND SYNC SERVICE
+   ─────────────────────────────────────────────────────────────
+   Architecture:
+     Firestore document: playpal_rounds/{syncCode}
+     Fields:
+       round      — full round config (players, course, formats)
+       liveScores — { scores, putts, popFlags, wolfData, _writtenBy, _ts }
+       savedAt    — epoch ms
+
+   writeLiveScores  → merges liveScores into the document
+   subscribeRound   → real-time onSnapshot listener on the document
+                      fires whenever liveScores changes; skips updates
+                      written by this device (via _writtenBy == deviceId)
+   fetchRound       → one-time get of the round field
+   saveRound        → writes the round config field
    ============================================================ */
 var RoundSyncService = (function() {
   var COLLECTION  = 'playpal_rounds';
@@ -240,7 +267,7 @@ var RoundSyncService = (function() {
         savedAt:  Date.now()
       }, { merge: true })
       .then(function() { cb && cb(true); })
-      .catch(function(e) { console.warn('[RoundSync] save failed:', e); cb && cb(false); });
+      .catch(function(e) { console.warn('[RoundSync] saveRound failed:', e); cb && cb(false); });
     });
   }
 
@@ -250,16 +277,25 @@ var RoundSyncService = (function() {
       _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).get()
         .then(function(snap) {
           if (!snap.exists) { cb(null, 'Round not found'); }
-          else { var d = snap.data(); cb(d.round || null, null); }
+          else {
+            var d = snap.data();
+            // Return the round object; also expose full doc for viewer
+            cb(d.round || null, null, d);
+          }
         })
         .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
     });
   }
 
+  /*
+   * writeLiveScores — called by ScoreEntry on every score change (debounced).
+   * payload shape: { scores, putts, popFlags, wolfData, _writtenBy, _ts }
+   */
   function writeLiveScores(syncCode, payload, cb) {
+    if (!syncCode) { cb && cb(false); return; }
     _fbInit(function(ok) {
       if (!ok) { cb && cb(false); return; }
-      _fbFs.collection(COLLECTION).doc(syncCode).set(
+      _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase()).set(
         { liveScores: payload },
         { merge: true }
       )
@@ -268,28 +304,52 @@ var RoundSyncService = (function() {
     });
   }
 
+  /*
+   * subscribeRound — attaches a persistent real-time listener.
+   * Fires cb(livePayload) for every remote update that was NOT written by deviceId.
+   * Safe to call multiple times — old listener is torn down first.
+   */
   function subscribeRound(syncCode, deviceId, cb) {
+    if (!syncCode) return;
+    // Always tear down any existing listener first
+    if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
+
     _fbInit(function(ok) {
-      if (!ok) return;
-      if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
-      _roundUnsub = _fbFs.collection(COLLECTION).doc(syncCode)
-        .onSnapshot(function(snap) {
+      if (!ok) {
+        console.warn('[RoundSync] subscribeRound: Firebase unavailable');
+        return;
+      }
+      var docRef = _fbFs.collection(COLLECTION).doc(syncCode.trim().toUpperCase());
+      _roundUnsub = docRef.onSnapshot(
+        function(snap) {
           if (!snap.exists) return;
-          var d = snap.data();
-          if (!d.liveScores) return;
-          if (d.liveScores._writtenBy === deviceId) return;
-          cb(d.liveScores);
-        }, function(err) {
-          console.warn('[RoundSync] subscribeRound error:', err);
-        });
+          var data = snap.data();
+          var live = data.liveScores;
+          if (!live) return;
+          // Skip our own writes
+          if (live._writtenBy === deviceId) return;
+          cb(live);
+        },
+        function(err) {
+          console.warn('[RoundSync] subscribeRound listener error:', err);
+        }
+      );
+      console.log('[PlayPal] Real-time listener attached for round', syncCode);
     });
   }
 
   function unsubscribeRound() {
     if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
+    console.log('[PlayPal] Real-time listener detached');
   }
 
-  return { saveRound: saveRound, fetchRound: fetchRound, writeLiveScores: writeLiveScores, subscribeRound: subscribeRound, unsubscribeRound: unsubscribeRound };
+  return {
+    saveRound:        saveRound,
+    fetchRound:       fetchRound,
+    writeLiveScores:  writeLiveScores,
+    subscribeRound:   subscribeRound,
+    unsubscribeRound: unsubscribeRound,
+  };
 })();
 
 window.PlayerSyncService = PlayerSyncService;
@@ -297,8 +357,7 @@ window.CourseSyncService = CourseSyncService;
 window.RoundSyncService  = RoundSyncService;
 
 /* ============================================================
-   DEEP-LINK DETECTION — visual only, no Firebase here.
-   Actual fetch happens in React useEffect after mount.
+   DEEP-LINK DETECTION — visual only
    ============================================================ */
 (function() {
   var params   = new URLSearchParams(window.location.search);
@@ -353,6 +412,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 } /*EDITMODE-END*/;
 
 const App = () => {
+  // Stable device ID — persists across page reloads, unique per browser
+  const deviceId = React.useMemo(() => window.__PP_DEVICE_ID, []);
+
   const [screen, setScreen] = React.useState(() => {
     if (window.__pp_pending_join_code) return 'home';
     return sessionStorage.getItem('pp_screen') || 'home';
@@ -493,6 +555,7 @@ const App = () => {
     localStorage.setItem('pp_round', JSON.stringify(r));
     sessionStorage.setItem('pp_screen', 'score');
     setScreen('score');
+    // Save round config to Firestore so joiners can fetch it
     RoundSyncService.saveRound(r, function(ok) {
       if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
       else    console.warn('[PlayPal] Cloud round save failed — works locally');
@@ -506,6 +569,9 @@ const App = () => {
     setFinalPresses(presses);
     setFinalChips(chips);
     setFinalPopFlags(popFlags);
+
+    // Detach the real-time listener — round is over
+    RoundSyncService.unsubscribeRound();
 
     const holeScores = {};
     round.players.forEach(function(player) {
@@ -596,6 +662,8 @@ const App = () => {
   };
 
   const handleExitRound = () => {
+    // Detach listener when leaving the scoring screen
+    RoundSyncService.unsubscribeRound();
     sessionStorage.removeItem('pp_screen');
     setScreen('home');
   };
@@ -604,6 +672,7 @@ const App = () => {
     setRound(savedRound);
     sessionStorage.setItem('pp_screen', 'score');
     setScreen('score');
+    // ScoreEntry will attach the listener via useEffect on mount
   };
 
   const cssVars = {
@@ -649,6 +718,7 @@ const App = () => {
             round={round}
             onSaveRound={handleSaveRound}
             onExitRound={handleExitRound}
+            deviceId={deviceId}
           />
         }
 
