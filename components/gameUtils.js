@@ -360,7 +360,7 @@ function calcSkins(scores, players, course, stakes, popFlags) {
     else carryover++;
   }
   const total = Object.values(skins).reduce((a, b) => a + b, 0);
-  const pay   = Object.fromEntries(players.map(p => [p.id, skins[p.id] * stakes - (total > 0 ? stakes : 0)]));
+  const pay   = Object.fromEntries(players.map(p => [p.id, total > 0 ? stakes * (skins[p.id] * players.length - total) : 0]));
   return { skins, payouts: pay };
 }
 

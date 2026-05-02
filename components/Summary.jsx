@@ -21,6 +21,12 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses || [], ptmState.holderId, popFlags || {}),
   []);
 
+  const payoutsByFormat = React.useMemo(() =>
+    formats.map(f =>
+      calcAllPayouts(scores, wolfData, players, course, [f], nassauPresses || [], ptmState.holderId, popFlags || {})
+    ),
+  []);
+
   const wolfPts = React.useMemo(()=>
     formats.some(f=>f.type==='wolf') ? calcWolfStandings(scores, wolfData, players, course) : {},
   []);
@@ -231,8 +237,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         {/* PAYOUTS */}
         {tab==='payouts' && (
           <div style={{display:'flex', flexDirection:'column', gap:12}}>
-            {formats.map(f=>{
+            {formats.map((f,fi)=>{
               const info = FORMAT_INFO[f.type];
+              const fmtStake = f.nassauMatches?.[0]?.stakes ?? f.stakes;
               return (
                 <div key={f.type} style={{background:'#0F1D35', border:'1px solid #1F3354', borderRadius:14, overflow:'hidden'}}>
                   <div style={{display:'flex', alignItems:'center', gap:8, padding:'12px 16px', borderBottom:'1px solid #1F3354'}}>
@@ -241,13 +248,13 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                     <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:13, color:'#D4AF47'}}>
                       {f.type==='wolf'      ? `$${f.stakes} round pot` :
                        f.type==='passmoney' ? `$${f.stakes} round pot` :
-                       f.type==='nassau'    ? `$${f.stakes}·$${f.stakes}·$${f.stakes*2}` :
+                       f.type==='nassau'    ? `$${fmtStake}·$${fmtStake}·$${fmtStake*2}` :
                        f.type==='skins'     ? `$${f.stakes}/skin` :
-                       f.type==='stableford'? `$${f.stakes} winner takes all` : ''}
+                       f.type==='stableford'? `$${f.stakes} match` : ''}
                     </span>
                   </div>
                   {players.map(p=>{
-                    const v=payouts[p.id]||0;
+                    const v=(payoutsByFormat[fi]?.[p.id])||0;
                     const isWinner = v > 0;
                     const isPTMWinner = f.type==='passmoney' && ptmState.holderId===p.id;
                     return (
