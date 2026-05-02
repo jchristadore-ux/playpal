@@ -352,9 +352,45 @@ var RoundSyncService = (function() {
   };
 })();
 
-window.PlayerSyncService = PlayerSyncService;
-window.CourseSyncService = CourseSyncService;
-window.RoundSyncService  = RoundSyncService;
+/* ============================================================
+   SAVED ROUNDS SYNC SERVICE
+   ─────────────────────────────────────────────────────────────
+   Syncs completed round metadata across all devices via RTDB.
+   RTDB path: /saved_rounds/{syncCode}
+   Mirrors the PlayerSyncService / CourseSyncService pattern.
+   ============================================================ */
+var SavedRoundsSyncService = (function() {
+  var _cb = null;
+  function save(roundMeta, cb) {
+    if (!roundMeta.syncCode) { cb && cb(false); return; }
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      _fbDb.ref('saved_rounds/' + roundMeta.syncCode).set(roundMeta)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[SavedRoundsSync] save failed:', e); cb && cb(false); });
+    });
+  }
+  function subscribe(cb) {
+    _fbInit(function(ok) {
+      if (!ok) return;
+      if (_cb) { _fbDb.ref('saved_rounds').off('value', _cb); }
+      _cb = function(snap) {
+        var val = snap.val();
+        cb(val ? Object.values(val) : []);
+      };
+      _fbDb.ref('saved_rounds').on('value', _cb);
+    });
+  }
+  function unsubscribe() {
+    if (_fbDb && _cb) { _fbDb.ref('saved_rounds').off('value', _cb); _cb = null; }
+  }
+  return { save: save, subscribe: subscribe, unsubscribe: unsubscribe };
+})();
+
+window.PlayerSyncService      = PlayerSyncService;
+window.CourseSyncService      = CourseSyncService;
+window.RoundSyncService       = RoundSyncService;
+window.SavedRoundsSyncService = SavedRoundsSyncService;
 
 /* ============================================================
    DEEP-LINK DETECTION — visual only
@@ -452,14 +488,9 @@ const App = () => {
   const [tweaks,     setTweaks]     = React.useState(TWEAK_DEFAULTS);
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
 
-  const [recentRoundsKey, setRecentRoundsKey] = React.useState(0);
-  const recentRounds = React.useMemo(() => {
-    const saved = localStorage.getItem('pp_recent');
-    return saved ? JSON.parse(saved) : [
-      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Stableford' },
-      { courseName: 'Green Knoll Golf Course', date: 'Apr 25, 2026', players: 4, formats: 'Wolf · Pass the Money' },
-    ];
-  }, [recentRoundsKey]);
+  const [recentRounds, setRecentRounds] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('pp_recent') || '[]'); } catch(e) { return []; }
+  });
 
   React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
 
@@ -521,6 +552,27 @@ const App = () => {
       });
     });
     return () => { CourseSyncService.unsubscribe(); };
+  }, []);
+
+  React.useEffect(() => {
+    SavedRoundsSyncService.subscribe(function(remoteRounds) {
+      setRecentRounds(function(prev) {
+        // Build a map of remote rounds keyed by syncCode
+        const merged = {};
+        remoteRounds.forEach(function(r) { if (r.syncCode) merged[r.syncCode] = r; });
+        // Local rounds take precedence (they have fresher data for this device)
+        prev.forEach(function(r) { if (r.syncCode) merged[r.syncCode] = r; });
+        // Keep local-only entries that have no syncCode
+        const noCode = prev.filter(function(r) { return !r.syncCode; });
+        const result = Object.values(merged)
+          .concat(noCode)
+          .sort(function(a, b) { return (b.savedAt || 0) - (a.savedAt || 0); })
+          .slice(0, 20);
+        localStorage.setItem('pp_recent', JSON.stringify(result));
+        return result;
+      });
+    });
+    return () => { SavedRoundsSyncService.unsubscribe(); };
   }, []);
 
   React.useEffect(() => {
@@ -611,17 +663,27 @@ const App = () => {
       }
     }
 
-    const recent = JSON.parse(localStorage.getItem('pp_recent') || '[]');
-    recent.unshift({
+    const roundMeta = {
       courseName: round.course.name,
       date:       new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
       players:    round.players.length,
       formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' \u00b7 '),
       syncCode:   round.syncCode || null,
-    });
-    localStorage.setItem('pp_recent', JSON.stringify(recent.slice(0, 5)));
+      savedAt:    Date.now(),
+    };
 
-    setRecentRoundsKey(k => k + 1);
+    setRecentRounds(function(prev) {
+      const next = [roundMeta, ...prev.filter(r => r.syncCode !== roundMeta.syncCode)].slice(0, 20);
+      localStorage.setItem('pp_recent', JSON.stringify(next));
+      return next;
+    });
+
+    if (roundMeta.syncCode) {
+      SavedRoundsSyncService.save(roundMeta, function(ok) {
+        if (!ok) console.warn('[PlayPal] Saved round sync to RTDB failed \u2014 saved locally');
+      });
+    }
+
     setScreen('summary');
   };
 
@@ -657,7 +719,6 @@ const App = () => {
     setViewSyncCode(null);
     localStorage.removeItem('pp_round');
     sessionStorage.removeItem('pp_screen');
-    setRecentRoundsKey(k => k + 1);
     setScreen('home');
   };
 
