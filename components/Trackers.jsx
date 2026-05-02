@@ -292,6 +292,7 @@ const NassauTracker = ({ players, scores, popFlags, course, holeIdx, format, nas
           </div>
         ))}
       </div>
+      <NassauHoleGrid players={players} scores={scores} nassauConfig={nassauConfig} holeIdx={holeIdx} />
     </div>
   );
 };
@@ -375,6 +376,7 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
                       </div>
                     ))}
                   </div>
+                  <NassauHoleGrid players={players} scores={scores} nassauConfig={matchCfg} holeIdx={holeIdx} matchColor={matchColor} />
                   {(() => {
                     const allPopHoles = {};
                     nassauPlayers.forEach(p => {
@@ -405,6 +407,81 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+// Compact 18-cell hole-by-hole grid showing Nassau match winner per hole + pop badge.
+const NassauHoleGrid = ({ players, scores, nassauConfig, holeIdx, matchColor }) => {
+  const { getAdjustedHoleScore } = window;
+  const nassauPlayers = (nassauConfig?.playersInMatch || [])
+    .map(id => players.find(p => p.id === id)).filter(Boolean);
+  if (nassauPlayers.length < 2) return null;
+
+  const p1 = nassauPlayers[0];
+  const p2 = nassauPlayers[1];
+  const popFlags = {};
+  if (nassauConfig?.popHoles) {
+    Object.entries(nassauConfig.popHoles).forEach(([pid, arr]) => {
+      popFlags[pid] = Array.isArray(arr) ? arr : Array(18).fill(false);
+    });
+  }
+
+  const color = matchColor || '#D4AF47';
+  const cells = Array.from({ length: 18 }, (_, i) => {
+    const s1 = getAdjustedHoleScore(scores, popFlags, p1.id, i);
+    const s2 = getAdjustedHoleScore(scores, popFlags, p2.id, i);
+    const played = i <= holeIdx;
+    if (!played || !s1 || !s2) return { i, state: 'unplayed', winner: null, hadPop: false };
+    const r = s1 < s2 ? 1 : s2 < s1 ? -1 : 0;
+    const winner = r > 0 ? p1 : r < 0 ? p2 : null;
+    const hadPop = winner ? !!(popFlags[winner.id]?.[i]) : false;
+    return { i, state: r === 0 ? 'tied' : 'won', winner, hadPop };
+  });
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+        <Label style={{ fontSize: 9, color: '#3A5880' }}>HOLE BY HOLE</Label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <div style={{ width: 7, height: 7, borderRadius: 2, background: p1.color }} />
+          <span style={{ fontFamily: 'Barlow Condensed', fontSize: 9, color: '#7A9EBF' }}>{p1.name.split(' ')[0]}</span>
+          <span style={{ fontFamily: 'Barlow Condensed', fontSize: 9, color: '#3A5880', margin: '0 2px' }}>vs</span>
+          <div style={{ width: 7, height: 7, borderRadius: 2, background: p2.color }} />
+          <span style={{ fontFamily: 'Barlow Condensed', fontSize: 9, color: '#7A9EBF' }}>{p2.name.split(' ')[0]}</span>
+          <span style={{ marginLeft: 6, fontFamily: 'Barlow Condensed', fontSize: 8, color: '#D4AF47' }}>● = pop</span>
+        </div>
+      </div>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'flex', gap: 3, minWidth: 'max-content', padding: '2px 0 4px' }}>
+          {cells.map(({ i, state, winner, hadPop }) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontFamily: 'Barlow Condensed', fontSize: 8, color: i === holeIdx ? color : '#3A5880', fontWeight: i === holeIdx ? 800 : 400 }}>
+                {i + 1}
+              </span>
+              <div style={{
+                position: 'relative',
+                width: 20, height: 20, borderRadius: 4,
+                background: state === 'won' ? winner.color : state === 'tied' ? '#1F3354' : 'transparent',
+                border: state === 'unplayed' ? '1px solid #1F3354' : state === 'tied' ? '1px solid #1F3354' : `1px solid ${winner.color}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {state === 'won' && (
+                  <span style={{ fontFamily: 'Barlow Condensed', fontWeight: 800, fontSize: 9, color: '#fff', lineHeight: 1 }}>
+                    {winner.initials.charAt(0)}
+                  </span>
+                )}
+                {state === 'tied' && (
+                  <span style={{ fontFamily: 'Barlow Condensed', fontSize: 9, color: '#3A5880', lineHeight: 1 }}>—</span>
+                )}
+                {hadPop && (
+                  <span style={{ position: 'absolute', top: -4, right: -3, fontSize: 7, color: '#D4AF47', lineHeight: 1 }}>●</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
