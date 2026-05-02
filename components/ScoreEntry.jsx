@@ -394,11 +394,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const puttsRef    = React.useRef(putts);
   const popRef      = React.useRef(popFlags);
   const wolfRef     = React.useRef(wolfData);
+  const holeIdxRef  = React.useRef(holeIdx);
 
   React.useEffect(() => { scoresRef.current = scores; }, [scores]);
   React.useEffect(() => { puttsRef.current  = putts;  }, [putts]);
   React.useEffect(() => { popRef.current    = popFlags; }, [popFlags]);
   React.useEffect(() => { wolfRef.current   = wolfData; }, [wolfData]);
+  React.useEffect(() => { holeIdxRef.current = holeIdx; }, [holeIdx]);
 
   // ── Persist to localStorage ───────────────────────────────────────────────
   React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id, JSON.stringify(scores)); }, [scores]);
@@ -412,10 +414,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     syncTimerRef.current = setTimeout(() => {
       if (!window.RoundSyncService || !syncCode) return;
       const payload = {
-        scores:   nextScores || scoresRef.current,
-        putts:    nextPutts  || puttsRef.current,
-        popFlags: nextPop    || popRef.current,
-        wolfData: nextWolf   || wolfRef.current,
+        scores:         nextScores || scoresRef.current,
+        putts:          nextPutts  || puttsRef.current,
+        popFlags:       nextPop    || popRef.current,
+        wolfData:       nextWolf   || wolfRef.current,
+        currentHoleIdx: holeIdxRef.current,
         _writtenBy: deviceId,
         _ts: Date.now(),
       };
@@ -438,6 +441,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (livePayload.putts)    { setPutts(livePayload.putts);     localStorage.setItem('pp_putts_'+round.id,  JSON.stringify(livePayload.putts)); }
       if (livePayload.popFlags) { setPopFlags(livePayload.popFlags); localStorage.setItem('pp_pop_'+round.id,  JSON.stringify(livePayload.popFlags)); }
       if (livePayload.wolfData) { setWolfData(livePayload.wolfData); localStorage.setItem('pp_wolf_'+round.id, JSON.stringify(livePayload.wolfData)); }
+      if (livePayload.currentHoleIdx !== undefined) { holeIdxRef.current = livePayload.currentHoleIdx; setHoleIdx(livePayload.currentHoleIdx); }
       // Small delay before clearing flag to let React batch the state updates
       setTimeout(() => { applyingRemoteRef.current = false; }, 50);
     });
@@ -547,7 +551,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
-  const prevHole = () => holeIdx > 0 && setHoleIdx(holeIdx - 1);
+  const prevHole = () => {
+    if (holeIdx > 0) {
+      const newIdx = holeIdx - 1;
+      holeIdxRef.current = newIdx;
+      setHoleIdx(newIdx);
+      scheduleCloudWrite(null, null, null, null);
+    }
+  };
 
   const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
@@ -556,7 +567,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
 
-  const nextHole = () => canAdvance && holeIdx < 17 && setHoleIdx(holeIdx + 1);
+  const nextHole = () => {
+    if (canAdvance && holeIdx < 17) {
+      const newIdx = holeIdx + 1;
+      holeIdxRef.current = newIdx;
+      setHoleIdx(newIdx);
+      scheduleCloudWrite(null, null, null, null);
+    }
+  };
 
   const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags); };
 
@@ -607,7 +625,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             const allIn = players.every(p => scores[p.id]?.[i]);
             const some  = players.some(p => scores[p.id]?.[i]);
             return (
-              <div key={i} onClick={()=>setHoleIdx(i)}
+              <div key={i} onClick={()=>{ holeIdxRef.current=i; setHoleIdx(i); scheduleCloudWrite(null,null,null,null); }}
                 style={{width:i===holeIdx?20:8, height:8, borderRadius:4, cursor:'pointer', transition:'all 0.2s',
                   background:i===holeIdx?'#D4AF47':allIn?'#2DD97A':some?'#1F3354':'#112240',
                   border:i===holeIdx?'none':`1px solid ${allIn?'#2DD97A33':'#1F3354'}`}}>
