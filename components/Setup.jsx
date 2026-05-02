@@ -185,9 +185,24 @@ const StakesInput = ({ value, onChange }) => {
   );
 };
 
+function calcAutoPopHoles(p1, p2, courseHoles) {
+  const diff = Math.abs((p1.handicap || 0) - (p2.handicap || 0));
+  if (diff === 0) return {};
+  const receiver = (p1.handicap || 0) > (p2.handicap || 0) ? p1 : p2;
+  const strokes = Math.min(diff, 18);
+  const popArray = courseHoles.map(hole => hole.hdcp <= strokes);
+  return { [receiver.id]: popArray };
+}
+
 const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
   if (!nassauPlayers || nassauPlayers.length < 2) return null;
   const [activePlayer, setActivePlayer] = React.useState(nassauPlayers[0].id);
+
+  const p1 = nassauPlayers[0];
+  const p2 = nassauPlayers[1];
+  const hdcpDiff = Math.abs((p1.handicap || 0) - (p2.handicap || 0));
+  const autoReceiver = hdcpDiff > 0 ? ((p1.handicap || 0) > (p2.handicap || 0) ? p1 : p2) : null;
+  const autoStrokes = Math.min(hdcpDiff, 18);
 
   const toggleHole = (holeIdx) => {
     const current = popHoles[activePlayer] || Array(18).fill(false);
@@ -200,8 +215,17 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
 
   return (
     <div style={{borderTop:'1px solid rgba(212,175,71,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
-      <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF'}}>STROKE POPS (OPTIONAL)</div>
-      <div style={{fontFamily:'DM Sans', fontSize:12, color:'#3A5880', lineHeight:1.5}}>Select which player is getting strokes and tap the holes they receive them on.</div>
+      <div style={{display:'flex', alignItems:'center', gap:6}}>
+        <div style={{fontFamily:'Barlow Condensed', fontSize:10, letterSpacing:2, color:'#7A9EBF'}}>STROKE POPS</div>
+        {autoReceiver && <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:9, color:'#2DD97A', background:'rgba(45,217,122,0.1)', border:'1px solid rgba(45,217,122,0.2)', borderRadius:4, padding:'1px 5px', letterSpacing:0.5}}>AUTO</span>}
+      </div>
+      {autoReceiver ? (
+        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#3A5880', lineHeight:1.5}}>
+          {autoReceiver.name.split(' ')[0]} (HCP {autoReceiver.handicap}) gets {autoStrokes} pop{autoStrokes !== 1 ? 's' : ''} on the {autoStrokes} hardest hole{autoStrokes !== 1 ? 's' : ''}. Tap to adjust.
+        </div>
+      ) : (
+        <div style={{fontFamily:'DM Sans', fontSize:12, color:'#3A5880', lineHeight:1.5}}>Both players have the same handicap — no pops. Tap holes to add manually.</div>
+      )}
       <div style={{display:'flex', gap:8}}>
         {nassauPlayers.map(p => (
           <div key={p.id} onClick={() => setActivePlayer(p.id)}
@@ -246,7 +270,7 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
   );
 };
 
-const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLabel }) => {
+const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLabel, course }) => {
   const matchType      = matchConfig.matchType || '1v1';
   const playersInMatch = matchConfig.playersInMatch || [];
   const teams          = matchConfig.teams || null;
@@ -259,8 +283,18 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
   const togglePlayer = (id) => {
     const max = matchType === '2v2' ? 4 : 2;
     const next = playersInMatch.includes(id) ? playersInMatch.filter(x=>x!==id) : playersInMatch.length<max?[...playersInMatch,id]:playersInMatch;
-    if (matchType==='2v2'&&next.length===4) onChange({...matchConfig,playersInMatch:next,teams:{team1:[next[0],next[1]],team2:[next[2],next[3]]}});
-    else onChange({...matchConfig,playersInMatch:next,teams:null});
+    let updatedPopHoles = popHoles;
+    if (matchType === '1v1' && course?.holes) {
+      if (next.length === 2) {
+        const p1 = roundPlayers.find(p => p.id === next[0]);
+        const p2 = roundPlayers.find(p => p.id === next[1]);
+        if (p1 && p2) updatedPopHoles = calcAutoPopHoles(p1, p2, course.holes);
+      } else {
+        updatedPopHoles = {};
+      }
+    }
+    if (matchType==='2v2'&&next.length===4) onChange({...matchConfig,playersInMatch:next,teams:{team1:[next[0],next[1]],team2:[next[2],next[3]]},popHoles:updatedPopHoles});
+    else onChange({...matchConfig,playersInMatch:next,teams:null,popHoles:updatedPopHoles});
   };
 
   const moveToTeam = (id, teamKey) => {
@@ -331,7 +365,7 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
 const MATCH_COLORS = ['#D4AF47', '#7B9FE0', '#E07BE0'];
 const MATCH_LABELS = ['MATCH 1', 'MATCH 2', 'MATCH 3'];
 
-const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
+const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course }) => {
   const MAX_MATCHES = 3;
 
   const addMatch = () => {
@@ -365,7 +399,7 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
             {nassauMatches.length>1&&<button onClick={()=>removeMatch(idx)} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, letterSpacing:1, color:'#3A5880', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>REMOVE</button>}
           </div>
           <div style={{padding:'12px 14px'}}>
-            <NassauSingleMatchConfig roundPlayers={roundPlayers} matchConfig={match} onChange={updated=>updateMatch(idx,updated)} matchLabel=""/>
+            <NassauSingleMatchConfig roundPlayers={roundPlayers} matchConfig={match} onChange={updated=>updateMatch(idx,updated)} matchLabel="" course={course}/>
           </div>
         </div>
       ))}
@@ -602,7 +636,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                     )}
                     {on && key === 'nassau' && (
                       <div style={{borderTop:'1px solid rgba(45,217,122,0.12)', marginTop:12, paddingTop:12}}>
-                        <NassauMultiMatchConfig roundPlayers={roundPlayersForNassau} nassauMatches={nassauMatches} onChange={setNassauMatches}/>
+                        <NassauMultiMatchConfig roundPlayers={roundPlayersForNassau} nassauMatches={nassauMatches} onChange={setNassauMatches} course={course}/>
                       </div>
                     )}
                   </div>
