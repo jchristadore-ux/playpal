@@ -251,7 +251,7 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
   const playersInMatch = matchConfig.playersInMatch || [];
   const teams          = matchConfig.teams || null;
   const popHoles       = matchConfig.popHoles || {};
-  const stakes         = matchConfig.stakes || 5;
+  const stakes         = matchConfig.stakes || 2;
   const can2v2 = roundPlayers.length >= 4;
 
   const setMatchType = (t) => onChange({ ...matchConfig, matchType:t, playersInMatch:[], teams:null, popHoles:{} });
@@ -336,7 +336,7 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange }) => {
 
   const addMatch = () => {
     if (nassauMatches.length >= MAX_MATCHES) return;
-    onChange([...nassauMatches, { id:'nm_'+Date.now(), matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:5 }]);
+    onChange([...nassauMatches, { id:'nm_'+Date.now(), matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:2 }]);
   };
 
   const removeMatch  = (idx) => onChange(nassauMatches.filter((_,i)=>i!==idx));
@@ -431,8 +431,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [addMode, setAddMode]                 = React.useState('list');
   const [scanPrefill, setScanPrefill]         = React.useState(null);
   const [formats, setFormats]                 = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
-  const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:5, stableford:1, passmoney:5, skins:5 });
-  const [nassauMatches, setNassauMatches]     = React.useState([{ id:'nm_init', matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:5 }]);
+  const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:2, stableford:2, passmoney:2, skins:2 });
+  const [nassauMatches, setNassauMatches]     = React.useState([{ id:'nm_init', matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:2 }]);
 
   const localCourses = customCourses || [];
 
