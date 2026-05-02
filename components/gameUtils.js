@@ -343,9 +343,31 @@ function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
   return units;
 }
 
+// ─── NASSAU HOLE RESULT (public helper) ─────────────────────────────────────
+// Returns { winnerId, winnerHadPop, unscored } for a single hole in a match.
+function nassauHoleResult(scores, popFlags, nassauConfig, holeIdx) {
+  const nassauPopFlags = nassauConfig?.popHoles
+    ? _buildNassauPopFlags(nassauConfig)
+    : (popFlags || {});
+  const [p1id, p2id] = (nassauConfig?.playersInMatch || []);
+  if (!p1id || !p2id) return { winnerId: null, winnerHadPop: false, unscored: true };
+  const s1 = scores[p1id]?.[holeIdx];
+  const s2 = scores[p2id]?.[holeIdx];
+  if (!s1 || !s2) return { winnerId: null, winnerHadPop: false, unscored: true };
+  const r = _nassauHoleWinner(scores, nassauPopFlags, p1id, p2id, holeIdx);
+  const winnerId = r > 0 ? p1id : r < 0 ? p2id : null;
+  return {
+    winnerId,
+    winnerHadPop: winnerId ? !!(nassauPopFlags[winnerId]?.[holeIdx]) : false,
+    unscored: false,
+  };
+}
+
 // ─── SKINS (pop-aware) ───────────────────────────────────────────────────────
 function calcSkins(scores, players, course, stakes, popFlags) {
   const skins = Object.fromEntries(players.map(p => [p.id, 0]));
+  const holeWinners = Array(18).fill(null);
+  const holeHadPop  = Array(18).fill(false);
   let carryover = 0;
   for (let i = 0; i < 18; i++) {
     const raw = players.map(p => {
@@ -356,12 +378,16 @@ function calcSkins(scores, players, course, stakes, popFlags) {
     raw.sort((a, b) => a.strokes - b.strokes);
     const low     = raw[0].strokes;
     const winners = raw.filter(n => n.strokes === low);
-    if (winners.length === 1) { skins[winners[0].id] += 1 + carryover; carryover = 0; }
-    else carryover++;
+    if (winners.length === 1) {
+      skins[winners[0].id] += 1 + carryover;
+      holeWinners[i] = winners[0].id;
+      holeHadPop[i]  = !!(popFlags?.[winners[0].id]?.[i]);
+      carryover = 0;
+    } else carryover++;
   }
   const total = Object.values(skins).reduce((a, b) => a + b, 0);
   const pay   = Object.fromEntries(players.map(p => [p.id, total > 0 ? stakes * (skins[p.id] * players.length - total) : 0]));
-  return { skins, payouts: pay };
+  return { skins, payouts: pay, holeWinners, holeHadPop };
 }
 
 // ─── TOTALS ──────────────────────────────────────────────────────────────────
@@ -426,7 +452,7 @@ if (typeof window !== 'undefined') {
     scoreName, calcStablefordPoints, resolveTiebreaker,
     getWolfForHole, resolveWolfHole, calcWolfStandings, calcWolfPayouts,
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
-    calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
+    calcNassauUnits, nassauSegmentStatus, nassauHoleResult, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
   });
 }

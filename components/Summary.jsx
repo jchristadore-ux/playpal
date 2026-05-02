@@ -31,6 +31,12 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     formats.some(f=>f.type==='wolf') ? calcWolfStandings(scores, wolfData, players, course) : {},
   []);
 
+  const skinResults = React.useMemo(() => {
+    const sf = formats.find(f => f.type === 'skins');
+    if (!sf) return null;
+    return calcSkins(scores, players, course, sf.stakes, popFlags || {});
+  }, []);
+
   const stablefordPts = React.useMemo(() =>
     Object.fromEntries(players.map(p => [p.id, course.holes.reduce((a,h,i) => a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags||{}, p.id, i), h.par), 0)])),
   []);
@@ -71,10 +77,11 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const buildScorecardEmail = () => {
     const date = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
     const parTotal = course.holes.reduce((a,h)=>a+h.par,0);
-    let body = `SCORECARD — ${course.name}\n${date}\n${'─'.repeat(60)}\n\n`;
-    const nameW = Math.max(...players.map(p=>p.name.length), 6);
-    const pad = (s, w) => String(s).padStart(w);
+    const pad  = (s, w) => String(s).padStart(w);
     const lpad = (s, w) => String(s).padEnd(w);
+    const nameW = Math.max(...players.map(p=>p.name.length), 6);
+
+    let body = `SCORECARD — ${course.name}\n${date}\n${'─'.repeat(60)}\n\n`;
     body += lpad('HOLE', nameW+2);
     course.holes.forEach(h => { body += pad(h.num, 4); });
     body += pad('TOT', 6) + pad('+/-', 6) + '\n';
@@ -84,11 +91,90 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     body += `${'─'.repeat(nameW+2+course.holes.length*4+12)}\n`;
     players.forEach(p => {
       body += lpad(p.name, nameW+2);
-      course.holes.forEach((h,i) => { const s=scores[p.id]?.[i]; body += pad(s||'·', 4); });
+      course.holes.forEach((h,i) => {
+        const s = scores[p.id]?.[i];
+        const hasPop = !!(popFlags?.[p.id]?.[i]);
+        body += pad(s ? `${s}${hasPop?'*':''}` : '·', 4);
+      });
       const tot = totalScore(scores, p.id);
       const vs  = totalVsPar(scores, p.id, course.holes);
       body += pad(tot||'—', 6) + pad(vs===0?'E':vs>0?`+${vs}`:vs, 6) + '\n';
     });
+    body += `(* = handicap stroke received on that hole)\n`;
+
+    // ── Nassau match results ────────────────────────────────────────
+    const nassauFmt = formats.find(f => f.type === 'nassau');
+    if (nassauFmt) {
+      const { nassauHoleResult } = window;
+      const matches = nassauFmt.nassauMatches && nassauFmt.nassauMatches.length > 0
+        ? nassauFmt.nassauMatches.map(m => ({ label: null, cfg: { playersInMatch: m.playersInMatch, matchType: m.matchType, popHoles: m.popHoles || {} } }))
+        : [{ label: null, cfg: nassauFmt.nassauConfig || { playersInMatch: players.slice(0,2).map(p=>p.id), popHoles: popFlags || {} } }];
+
+      matches.forEach((m, idx) => {
+        const nassauPlayers = (m.cfg.playersInMatch || []).map(id => players.find(p => p.id === id)).filter(Boolean);
+        if (nassauPlayers.length < 2) return;
+        const p1 = nassauPlayers[0]; const p2 = nassauPlayers[1];
+        const matchLabel = matches.length > 1 ? `NASSAU MATCH ${idx+1}` : 'NASSAU';
+        body += `\n${'─'.repeat(60)}\n${matchLabel} — ${p1.name} vs ${p2.name}\n`;
+        body += lpad('HOLE', 6);
+        course.holes.forEach(h => { body += pad(h.num, 4); });
+        body += '\n';
+        body += lpad('WIN', 6);
+        course.holes.forEach((_, i) => {
+          const res = nassauHoleResult(scores, popFlags || {}, m.cfg, i);
+          if (res.unscored) { body += pad('·', 4); return; }
+          if (!res.winnerId) { body += pad('—', 4); return; }
+          const w = players.find(p => p.id === res.winnerId);
+          body += pad(`${w ? w.name.split(' ')[0].charAt(0) : '?'}${res.winnerHadPop ? '*' : ''}`, 4);
+        });
+        body += '\n';
+        // segment summary
+        let p1f=0,p2f=0,p1b=0,p2b=0,p1t=0,p2t=0;
+        course.holes.forEach((_,i) => {
+          const res = nassauHoleResult(scores, popFlags||{}, m.cfg, i);
+          if (res.winnerId === p1.id) { p1t++; if(i<9)p1f++; else p1b++; }
+          else if (res.winnerId === p2.id) { p2t++; if(i<9)p2f++; else p2b++; }
+        });
+        const segStr = (a,b,n1,n2) => a===b?'Even':`${a>b?n1:n2} +${Math.abs(a-b)}`;
+        body += `Front: ${segStr(p1f,p2f,p1.name.split(' ')[0],p2.name.split(' ')[0])}  Back: ${segStr(p1b,p2b,p1.name.split(' ')[0],p2.name.split(' ')[0])}  18: ${segStr(p1t,p2t,p1.name.split(' ')[0],p2.name.split(' ')[0])}\n`;
+        body += `(* = pop used)\n`;
+      });
+    }
+
+    // ── Skins results ───────────────────────────────────────────────
+    if (skinResults) {
+      body += `\n${'─'.repeat(60)}\nSKINS — HOLE BY HOLE\n`;
+      body += lpad('HOLE', 6);
+      course.holes.forEach(h => { body += pad(h.num, 4); });
+      body += '\n';
+      body += lpad('WIN', 6);
+      skinResults.holeWinners.forEach((winnerId, i) => {
+        if (!winnerId) { body += pad('·', 4); return; }
+        const w = players.find(p => p.id === winnerId);
+        body += pad(`${w ? w.name.split(' ')[0].charAt(0) : '?'}${skinResults.holeHadPop[i]?'*':''}`, 4);
+      });
+      body += '\n';
+      const skinSummary = players.filter(p=>(skinResults.skins[p.id]||0)>0)
+        .map(p=>`${p.name.split(' ')[0]}: ${skinResults.skins[p.id]} skin${skinResults.skins[p.id]>1?'s':''}`).join('  ');
+      if (skinSummary) body += `${skinSummary}\n(* = pop used)\n`;
+    }
+
+    // ── Wolf results ────────────────────────────────────────────────
+    if (Object.keys(wolfPts).length > 0 && wolfData) {
+      const { resolveWolfHole } = window;
+      body += `\n${'─'.repeat(60)}\nWOLF — HOLE RESULTS\n`;
+      const confirmedHoles = Array.from({length:18},(_,i)=>i).filter(i=>wolfData[i]?.confirmed);
+      confirmedHoles.forEach(i => {
+        const wd = wolfData[i];
+        const wolfPlayer = players.find(p=>p.id===wd.wolfId);
+        const result = resolveWolfHole(scores, i, wd.wolfId, wd.partnerId, !!wd.lone, players);
+        const outcome = result.wolfWins ? 'Wolf wins' : result.tied ? 'Tied' : 'Others win';
+        const partnerName = wd.lone ? 'Lone' : players.find(p=>p.id===wd.partnerId)?.name.split(' ')[0]||'?';
+        body += `  H${String(i+1).padStart(2)}: ${wolfPlayer?.name.split(' ')[0]||'?'} wolf${wd.lone?'(lone)':` + ${partnerName}`} — ${outcome}\n`;
+      });
+      body += `Standings: ${players.map(p=>`${p.name.split(' ')[0]} ${wolfPts[p.id]>0?'+':''}${wolfPts[p.id]||0}pts`).join('  ')}\n`;
+    }
+
     body += `\n${'─'.repeat(60)}\nSent via PlayPal Golf\n`;
     return body;
   };
@@ -228,6 +314,153 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── MATCH PLAY HOLE-BY-HOLE ────────────────────────────── */}
+            {(() => {
+              const nassauFmt = formats.find(f => f.type === 'nassau');
+              if (!nassauFmt) return null;
+              const matches = nassauFmt.nassauMatches && nassauFmt.nassauMatches.length > 0
+                ? nassauFmt.nassauMatches.map(m => ({ id: m.id, label: null, cfg: { playersInMatch: m.playersInMatch, matchType: m.matchType, popHoles: m.popHoles || {} } }))
+                : [{ id: 'single', label: null, cfg: nassauFmt.nassauConfig || { playersInMatch: players.slice(0,2).map(p=>p.id), popHoles: popFlags || {} } }];
+              const MATCH_COLORS = ['#D4AF47', '#7B9FE0', '#E07BE0'];
+              return (
+                <div style={{marginTop:16}}>
+                  <Label style={{padding:'0 4px'}}>NASSAU — HOLE BY HOLE</Label>
+                  {matches.map((m, idx) => {
+                    const mColor = MATCH_COLORS[idx] || '#D4AF47';
+                    const nassauPlayers = (m.cfg.playersInMatch || []).map(id => players.find(p => p.id === id)).filter(Boolean);
+                    if (nassauPlayers.length < 2) return null;
+                    const p1 = nassauPlayers[0]; const p2 = nassauPlayers[1];
+                    const nassauPopFlags = {};
+                    if (m.cfg.popHoles) Object.entries(m.cfg.popHoles).forEach(([pid, arr]) => { nassauPopFlags[pid] = Array.isArray(arr) ? arr : Array(18).fill(false); });
+                    const cells = Array.from({length:18}, (_,i) => {
+                      const { nassauHoleResult } = window;
+                      const res = nassauHoleResult(scores, popFlags || {}, m.cfg, i);
+                      return { i, ...res };
+                    });
+                    return (
+                      <div key={m.id} style={{marginTop:10, background:'#0F1D35', border:`1px solid ${mColor}2A`, borderRadius:12, padding:'12px 14px'}}>
+                        <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:8}}>
+                          <div style={{width:7, height:7, borderRadius:'50%', background:mColor}}/>
+                          {matches.length > 1 && <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:11, color:mColor, letterSpacing:1}}>MATCH {idx+1}</span>}
+                          <div style={{display:'flex', alignItems:'center', gap:4}}>
+                            <div style={{width:6,height:6,borderRadius:2,background:p1.color}}/>
+                            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p1.name.split(' ')[0]}</span>
+                            <span style={{fontFamily:'Barlow Condensed', fontSize:10, color:'#3A5880', margin:'0 2px'}}>vs</span>
+                            <div style={{width:6,height:6,borderRadius:2,background:p2.color}}/>
+                            <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:12, color:'#fff'}}>{p2.name.split(' ')[0]}</span>
+                          </div>
+                          <span style={{marginLeft:'auto', fontFamily:'Barlow Condensed', fontSize:8, color:'#D4AF47'}}>● = pop</span>
+                        </div>
+                        <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+                          <div style={{display:'flex', gap:3, minWidth:'max-content', padding:'2px 0 4px'}}>
+                            {cells.map(({i, winnerId, winnerHadPop, unscored}) => {
+                              const winner = winnerId ? players.find(p => p.id === winnerId) : null;
+                              const isTied = !unscored && !winnerId;
+                              return (
+                                <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2}}>
+                                  <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#3A5880'}}>{i+1}</span>
+                                  <div style={{position:'relative', width:22, height:22, borderRadius:4,
+                                    background: winner ? winner.color : isTied ? '#1F3354' : 'transparent',
+                                    border: `1px solid ${winner ? winner.color : '#1F3354'}`,
+                                    display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                    {winner && <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10, color:'#fff', lineHeight:1}}>{winner.initials.charAt(0)}</span>}
+                                    {isTied && <span style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#3A5880', lineHeight:1}}>—</span>}
+                                    {winnerHadPop && <span style={{position:'absolute', top:-4, right:-3, fontSize:7, color:'#D4AF47', lineHeight:1}}>●</span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* ── SKINS HOLE-BY-HOLE ─────────────────────────────────── */}
+            {skinResults && (
+              <div style={{marginTop:16}}>
+                <Label style={{padding:'0 4px'}}>SKINS — HOLE BY HOLE</Label>
+                <div style={{marginTop:10, background:'#0F1D35', border:'1px solid #1F335444', borderRadius:12, padding:'12px 14px'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:8}}>
+                    <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#D4AF47'}}>● = pop · filled = skin won · outlined = carried over or tied</span>
+                  </div>
+                  <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+                    <div style={{display:'flex', gap:3, minWidth:'max-content', padding:'2px 0 4px'}}>
+                      {skinResults.holeWinners.map((winnerId, i) => {
+                        const winner = winnerId ? players.find(p => p.id === winnerId) : null;
+                        const hadPop = skinResults.holeHadPop[i];
+                        return (
+                          <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2}}>
+                            <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#3A5880'}}>{i+1}</span>
+                            <div style={{position:'relative', width:22, height:22, borderRadius:4,
+                              background: winner ? winner.color : 'transparent',
+                              border: `1px solid ${winner ? winner.color : '#1F3354'}`,
+                              display:'flex', alignItems:'center', justifyContent:'center'}}>
+                              {winner && <span style={{fontFamily:'Barlow Condensed', fontWeight:800, fontSize:10, color:'#fff', lineHeight:1}}>{winner.initials.charAt(0)}</span>}
+                              {!winner && <span style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#1F3354', lineHeight:1}}>·</span>}
+                              {hadPop && <span style={{position:'absolute', top:-4, right:-3, fontSize:7, color:'#D4AF47', lineHeight:1}}>●</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{display:'flex', gap:6, flexWrap:'wrap', marginTop:8}}>
+                    {players.filter(p => (skinResults.skins[p.id]||0) > 0).map(p => (
+                      <div key={p.id} style={{display:'flex', alignItems:'center', gap:5, background:`${p.color}11`, border:`1px solid ${p.color}44`, borderRadius:6, padding:'3px 8px'}}>
+                        <div style={{width:6,height:6,borderRadius:'50%',background:p.color}}/>
+                        <span style={{fontFamily:'Barlow Condensed', fontWeight:700, fontSize:11, color:'#fff'}}>{p.name.split(' ')[0]}</span>
+                        <span style={{fontFamily:'Barlow Condensed', fontSize:11, color:p.color}}>{skinResults.skins[p.id]} skin{skinResults.skins[p.id]>1?'s':''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── WOLF HOLE-BY-HOLE ──────────────────────────────────── */}
+            {Object.keys(wolfPts).length > 0 && wolfData && (
+              <div style={{marginTop:16}}>
+                <Label style={{padding:'0 4px'}}>WOLF — HOLE RESULTS</Label>
+                <div style={{marginTop:10, background:'#0F1D35', border:'1px solid rgba(229,83,75,0.2)', borderRadius:12, padding:'12px 14px'}}>
+                  <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+                    <div style={{display:'flex', gap:3, minWidth:'max-content', padding:'2px 0 4px'}}>
+                      {Array.from({length:18}, (_,i) => {
+                        const wd = wolfData[i];
+                        if (!wd?.confirmed) return (
+                          <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2}}>
+                            <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#3A5880'}}>{i+1}</span>
+                            <div style={{width:22, height:22, borderRadius:4, background:'transparent', border:'1px solid #1F3354'}}/>
+                          </div>
+                        );
+                        const { resolveWolfHole } = window;
+                        const result = resolveWolfHole(scores, i, wd.wolfId, wd.partnerId, !!wd.lone, players);
+                        const wolfPlayer = players.find(p => p.id === wd.wolfId);
+                        const bgColor = result.wolfWins ? (wolfPlayer?.color || '#E5534B') : result.tied ? '#1F3354' : '#112240';
+                        const label = result.wolfWins ? '🐺' : result.tied ? '—' : '✗';
+                        return (
+                          <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2}}>
+                            <span style={{fontFamily:'Barlow Condensed', fontSize:8, color:'#3A5880'}}>{i+1}</span>
+                            <div style={{width:22, height:22, borderRadius:4, background:bgColor, border:`1px solid ${result.wolfWins?(wolfPlayer?.color||'#E5534B'):result.tied?'#1F3354':'#E5534B44'}`, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                              <span style={{fontSize:9, lineHeight:1}}>{label}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{display:'flex', gap:12, marginTop:8}}>
+                    <div style={{display:'flex', alignItems:'center', gap:4}}><div style={{width:10,height:10,borderRadius:2,background:'#3C7A5A'}}/><span style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#7A9EBF'}}>Wolf wins</span></div>
+                    <div style={{display:'flex', alignItems:'center', gap:4}}><div style={{width:10,height:10,borderRadius:2,background:'#112240',border:'1px solid rgba(229,83,75,0.3)'}}/><span style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#7A9EBF'}}>Others win</span></div>
+                    <div style={{display:'flex', alignItems:'center', gap:4}}><div style={{width:10,height:10,borderRadius:2,background:'#1F3354'}}/><span style={{fontFamily:'Barlow Condensed', fontSize:9, color:'#7A9EBF'}}>Tied</span></div>
+                  </div>
                 </div>
               </div>
             )}
