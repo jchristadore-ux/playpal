@@ -453,7 +453,11 @@ const App = () => {
 
   const [screen, setScreen] = React.useState(() => {
     if (window.__pp_pending_join_code) return 'home';
-    return sessionStorage.getItem('pp_screen') || 'home';
+    const ss = sessionStorage.getItem('pp_screen');
+    if (ss) return ss;
+    // Fallback: sessionStorage wiped by browser (e.g. iOS tab discard) but localStorage survived
+    if (localStorage.getItem('pp_active_round') === '1') return 'score';
+    return 'home';
   });
 
   const [players, setPlayers] = React.useState(() => {
@@ -468,9 +472,16 @@ const App = () => {
   const [round, setRound] = React.useState(() => {
     if (window.__pp_pending_join_code) return null;
     const savedScreen = sessionStorage.getItem('pp_screen');
-    if (savedScreen === 'score') {
-      const saved = localStorage.getItem('pp_round');
-      return saved ? JSON.parse(saved) : null;
+    const isActiveRound = savedScreen === 'score'
+      || localStorage.getItem('pp_active_round') === '1';
+    if (isActiveRound) {
+      try {
+        const saved = localStorage.getItem('pp_round');
+        return saved ? JSON.parse(saved) : null;
+      } catch(e) {
+        localStorage.removeItem('pp_active_round');
+        return null;
+      }
     }
     return null;
   });
@@ -524,6 +535,7 @@ const App = () => {
     function _completeJoin(r) {
       localStorage.setItem('pp_round', JSON.stringify(r));
       sessionStorage.setItem('pp_screen', 'score');
+      localStorage.setItem('pp_active_round', '1');
       setRound(r);
       setScreen('score');
       const overlay = document.getElementById('pp-join-overlay');
@@ -606,6 +618,7 @@ const App = () => {
     setRound(r);
     localStorage.setItem('pp_round', JSON.stringify(r));
     sessionStorage.setItem('pp_screen', 'score');
+    localStorage.setItem('pp_active_round', '1');
     setScreen('score');
     // Save round config to Firestore so joiners can fetch it
     RoundSyncService.saveRound(r, function(ok) {
@@ -684,6 +697,7 @@ const App = () => {
       });
     }
 
+    localStorage.removeItem('pp_active_round');
     setScreen('summary');
   };
 
@@ -718,6 +732,7 @@ const App = () => {
     setViewedRoundData(null);
     setViewSyncCode(null);
     localStorage.removeItem('pp_round');
+    localStorage.removeItem('pp_active_round');
     sessionStorage.removeItem('pp_screen');
     setScreen('home');
   };
@@ -726,12 +741,14 @@ const App = () => {
     // Detach listener when leaving the scoring screen
     RoundSyncService.unsubscribeRound();
     sessionStorage.removeItem('pp_screen');
+    localStorage.removeItem('pp_active_round');
     setScreen('home');
   };
 
   const handleJoinRound = (savedRound) => {
     setRound(savedRound);
     sessionStorage.setItem('pp_screen', 'score');
+    localStorage.setItem('pp_active_round', '1');
     setScreen('score');
     // ScoreEntry will attach the listener via useEffect on mount
   };
