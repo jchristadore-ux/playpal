@@ -487,7 +487,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           const opponent   = opponentId ? players.find(pl => pl.id === opponentId) : null;
           const oppName    = opponent ? opponent.name.split(' ')[0] : '?';
           stats.push({ icon:'💰', label:`vs ${oppName} F9`, value:ms.front, color:ms.front==='EVEN'?'#7A9EBF':ms.matchColor });
-          stats.push({ icon:'', label:`18`, value:ms.overall, color:ms.overall==='EVEN'?'#7A9EBF':ms.matchColor });
+          if (holeIdx >= 9) {
+            stats.push({ icon:'', label:`B9`, value:ms.back,    color:ms.back==='EVEN'?'#7A9EBF':ms.matchColor });
+            stats.push({ icon:'', label:`18`, value:ms.overall, color:ms.overall==='EVEN'?'#7A9EBF':ms.matchColor });
+          }
         });
       }
       result[p.id] = stats;
