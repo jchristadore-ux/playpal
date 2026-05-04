@@ -1,7 +1,7 @@
 // Summary.jsx — updated design system
 
 const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, onNewRound, readOnly }) => {
-  const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore } = window;
+  const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus } = window;
   const { players, course, formats, syncCode } = round;
   const [toast, setToast]       = React.useState(null);
   const [tab, setTab]           = React.useState('scorecard');
@@ -71,10 +71,12 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const buildScorecardEmail = () => {
     const date = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
     const parTotal = course.holes.reduce((a,h)=>a+h.par,0);
-    let body = `SCORECARD — ${course.name}\n${date}\n${'─'.repeat(60)}\n\n`;
     const nameW = Math.max(...players.map(p=>p.name.length), 6);
-    const pad = (s, w) => String(s).padStart(w);
+    const pad  = (s, w) => String(s).padStart(w);
     const lpad = (s, w) => String(s).padEnd(w);
+    const fmtPay = v => v > 0 ? `+$${Math.abs(v).toFixed(0)}` : v < 0 ? `-$${Math.abs(v).toFixed(0)}` : '—';
+
+    let body = `SCORECARD — ${course.name}\n${date}\n${'─'.repeat(60)}\n\n`;
     body += lpad('HOLE', nameW+2);
     course.holes.forEach(h => { body += pad(h.num, 4); });
     body += pad('TOT', 6) + pad('+/-', 6) + '\n';
@@ -89,6 +91,101 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
       const vs  = totalVsPar(scores, p.id, course.holes);
       body += pad(tot||'—', 6) + pad(vs===0?'E':vs>0?`+${vs}`:vs, 6) + '\n';
     });
+
+    if (formats.length > 0) {
+      body += `\n${'═'.repeat(60)}\nFORMAT RESULTS\n${'═'.repeat(60)}\n`;
+
+      formats.forEach((f, fi) => {
+        const info   = FORMAT_INFO[f.type];
+        const fPay   = payoutsByFormat[fi] || {};
+        const mStake = f.nassauMatches?.[0]?.stakes ?? f.stakes;
+        const stakeLabel =
+          f.type === 'nassau'     ? `$${mStake}·$${mStake}·$${mStake*2}` :
+          f.type === 'skins'      ? `$${f.stakes}/skin` :
+          f.type === 'wolf'       ? `$${f.stakes}/round` :
+          f.type === 'stableford' ? `$${f.stakes} match` :
+          f.type === 'passmoney'  ? `$${f.stakes} pot` : '';
+
+        body += `\n${info.label.toUpperCase()} — ${stakeLabel}\n${'─'.repeat(60)}\n`;
+
+        if (f.type === 'skins') {
+          const { skins } = calcSkins(scores, players, course, f.stakes, popFlags || {});
+          players.forEach(p => {
+            const n = skins[p.id] || 0;
+            const v = fPay[p.id]  || 0;
+            body += lpad(p.name, nameW+2) + lpad(`${n} skin${n!==1?'s':''}`, 12) + pad(fmtPay(v), 8) + '\n';
+          });
+
+        } else if (f.type === 'wolf') {
+          players.forEach(p => {
+            const pts = wolfPts[p.id] || 0;
+            const v   = fPay[p.id]   || 0;
+            body += lpad(p.name, nameW+2) + lpad(`${pts} pts`, 12) + pad(fmtPay(v), 8) + '\n';
+          });
+
+        } else if (f.type === 'nassau') {
+          const matches = f.nassauMatches?.length ? f.nassauMatches : [f.nassauConfig || null];
+          const range9f = Array.from({length:9}, (_,i)=>i);
+          const range9b = Array.from({length:9}, (_,i)=>i+9);
+          const range18 = Array.from({length:18},(_,i)=>i);
+          matches.forEach(match => {
+            if (!match) return;
+            const mPlayers = (match.playersInMatch || [])
+              .map(id => players.find(p => p.id === id)).filter(Boolean);
+            const mNames  = mPlayers.length >= 2
+              ? mPlayers.map(p => p.name.split(' ')[0]).join(' vs ')
+              : players.slice(0,2).map(p => p.name.split(' ')[0]).join(' vs ');
+            const ms = match.stakes ?? f.stakes;
+            body += `Match: ${mNames}\n`;
+            const front = nassauSegmentStatus(scores, players, course, range9f, 8,  popFlags||{}, match);
+            const back  = nassauSegmentStatus(scores, players, course, range9b, 17, popFlags||{}, match);
+            const total = nassauSegmentStatus(scores, players, course, range18, 17, popFlags||{}, match);
+            const segLine = (label, status, stake) => {
+              const result = status === 'EVEN' ? 'No exchange' : `${status.split(' ')[0]} wins $${stake}`;
+              return `  ${lpad(label+':', 12)}${lpad(status, 16)}${result}\n`;
+            };
+            body += segLine('Front 9', front, ms);
+            body += segLine('Back 9',  back,  ms);
+            body += segLine('Overall', total, ms*2);
+          });
+          players.forEach(p => {
+            const v = fPay[p.id] || 0;
+            body += lpad(p.name, nameW+2) + pad(fmtPay(v), 8) + '\n';
+          });
+
+        } else if (f.type === 'stableford') {
+          players.forEach(p => {
+            const pts = stablefordPts[p.id] || 0;
+            const v   = fPay[p.id]          || 0;
+            body += lpad(p.name, nameW+2) + lpad(`${pts} pts`, 12) + pad(fmtPay(v), 8) + '\n';
+          });
+
+        } else if (f.type === 'passmoney') {
+          if (ptmState.log.length > 0) {
+            body += `${ptmState.log.length} pass${ptmState.log.length!==1?'es':''} during round\n`;
+            ptmState.log.slice(0, 6).forEach(ev => {
+              const from = players.find(p => p.id === ev.fromId);
+              const to   = players.find(p => p.id === ev.toId);
+              if (from && to)
+                body += `  Hole ${ev.holeIdx+1}: ${from.name.split(' ')[0]} → ${to.name.split(' ')[0]} (${ev.reason})\n`;
+            });
+          }
+          const winner = players.find(p => p.id === ptmState.holderId);
+          const v = fPay[ptmState.holderId] || 0;
+          if (winner) body += `Final holder: ${winner.name} wins $${v.toFixed(0)}\n`;
+        }
+      });
+
+      body += `\n${'═'.repeat(60)}\nNET SETTLEMENT\n${'═'.repeat(60)}\n`;
+      if (debts.length === 0) {
+        body += 'All square — no money changes hands\n';
+      } else {
+        debts.forEach(d => {
+          body += `${d.from.name} owes $${d.amount.toFixed(0)} to ${d.to.name}\n`;
+        });
+      }
+    }
+
     body += `\n${'─'.repeat(60)}\nSent via PlayPal Golf\n`;
     return body;
   };
