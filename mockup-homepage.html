@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayPal — Augusta Redesign Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── Augusta Design Tokens ─────────────────────────────── */
+    :root {
+      --green-deep:    #1B4332;   /* Augusta dark green  */
+      --green-mid:     #2D6A4F;   /* Augusta mid green   */
+      --green-light:   #EAF2EC;   /* Tinted bg surface   */
+      --gold:          #C9A84C;   /* Masters gold        */
+      --gold-light:    #FBF6E9;   /* Gold-tinted surface */
+      --gold-deep:     #A07C2E;   /* Pressed/deep gold   */
+      --cream:         #F7F4EE;   /* App background      */
+      --white:         #FFFFFF;
+      --text-primary:  #1A1A1A;
+      --text-mid:      #3D5247;
+      --text-muted:    #7A8B7F;
+      --border:        #DDD8CE;
+      --border-light:  #EDE9E1;
+      --shadow-sm:     0 1px 3px rgba(27,67,50,.07), 0 1px 2px rgba(27,67,50,.06);
+      --shadow-md:     0 4px 12px rgba(27,67,50,.10), 0 2px 4px rgba(27,67,50,.06);
+      --shadow-lg:     0 8px 24px rgba(27,67,50,.14), 0 4px 8px rgba(27,67,50,.08);
+      --r-sm:  10px;
+      --r-md:  16px;
+      --r-lg:  20px;
+      --r-xl:  24px;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #D6D0C4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ─── Preview Frame ──────────────────────────────────────── */
+    .preview-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #6B6358;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .phone-frame {
+      width: 390px;
+      min-height: 844px;
+      background: var(--cream);
+      border-radius: 44px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 8px #1A1A1A,
+        0 0 0 10px #3A3530,
+        0 32px 64px rgba(0,0,0,.45),
+        0 16px 32px rgba(0,0,0,.25);
+      position: relative;
+    }
+    /* notch */
+    .phone-frame::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 126px; height: 34px;
+      background: #1A1A1A;
+      border-radius: 0 0 20px 20px;
+      z-index: 20;
+    }
+
+    /* ─── App Shell ──────────────────────────────────────────── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 844px;
+      background: var(--cream);
+      overflow: hidden;
+    }
+
+    /* ─── Hero / Header ──────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, #143627 0%, #1B4332 50%, #0E2B1E 100%);
+      padding: 60px 24px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle fairway texture stripes */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        100deg,
+        transparent 0px,
+        transparent 28px,
+        rgba(255,255,255,.018) 28px,
+        rgba(255,255,255,.018) 56px
+      );
+      pointer-events: none;
+    }
+
+    /* Gold top accent line */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .logo-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-icon {
+      width: 60px;
+      height: 60px;
+      background: rgba(201,168,76,.12);
+      border: 1.5px solid rgba(201,168,76,.35);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-text-wrap .brand {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 44px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: 4px;
+      line-height: 1;
+    }
+    .logo-text-wrap .sub {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--gold);
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+
+    .tagline {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: rgba(255,255,255,.55);
+      text-align: center;
+      margin-bottom: 24px;
+      letter-spacing: 0.2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── Primary CTA ────────────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 17px 20px;
+      background: linear-gradient(135deg, #D4AF52 0%, #C9A84C 50%, #A87C30 100%);
+      border: none;
+      border-radius: var(--r-lg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(201,168,76,.40), 0 1px 3px rgba(0,0,0,.2);
+      position: relative;
+      overflow: hidden;
+      transition: all .18s ease;
+      margin-bottom: 12px;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, transparent 60%);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    .btn-primary-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: var(--green-deep);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── Secondary Actions ──────────────────────────────────── */
+    .secondary-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+    .btn-secondary {
+      flex: 1;
+      padding: 13px 10px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      backdrop-filter: blur(8px);
+    }
+    .btn-secondary-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 1.2px;
+      color: rgba(255,255,255,.88);
+    }
+
+    /* ─── Body Content ───────────────────────────────────────── */
+    .body-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section {
+      padding: 20px 18px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .section-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .btn-add {
+      background: var(--green-light);
+      border: 1px solid rgba(45,106,79,.20);
+      border-radius: 8px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--green-mid);
+    }
+
+    /* ─── Round Cards ────────────────────────────────────────── */
+    .round-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 13px 14px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+    .round-card:last-child { margin-bottom: 0; }
+    .round-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--green-light);
+      border: 1px solid rgba(45,106,79,.18);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-right: 12px;
+    }
+    .round-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      letter-spacing: 0.3px;
+    }
+    .round-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .round-formats {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      color: var(--gold-deep);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-align: right;
+    }
+    .round-view {
+      font-size: 10px;
+      color: var(--green-mid);
+      margin-top: 3px;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    /* ─── Player Cards ───────────────────────────────────────── */
+    .player-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+    .player-card:last-child { margin-bottom: 0; }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .player-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text-primary);
+      letter-spacing: 0.3px;
+    }
+    .player-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif;
+      margin-top: 1px;
+    }
+    .player-venmo {
+      font-size: 10px;
+      color: #AAB0A8;
+      font-family: 'DM Sans', sans-serif;
+      margin-top: 1px;
+    }
+    .player-chevron {
+      margin-left: auto;
+      color: var(--border);
+      font-size: 20px;
+      font-weight: 300;
+    }
+
+    /* ─── Empty State ────────────────────────────────────────── */
+    .empty-hint {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ─── Bottom safe area ───────────────────────────────────── */
+    .safe-bottom {
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    /* ─── Design Token Legend (outside phone) ────────────────── */
+    .legend {
+      width: 390px;
+      margin-top: 40px;
+    }
+    .legend-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6B6358;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .swatch-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .swatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .swatch-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+      border: 1.5px solid rgba(0,0,0,.08);
+    }
+    .swatch-name {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 9px;
+      color: #6B6358;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="preview-label">Augusta / Masters Redesign — Homepage Mockup</div>
+
+  <!-- Phone Frame -->
+  <div class="phone-frame">
+    <div class="app">
+
+      <!-- ═══ Hero ═══════════════════════════════════════════════ -->
+      <div class="hero">
+
+        <!-- Logo lockup -->
+        <div class="logo-lockup">
+          <div class="logo-icon">
+            <!-- Golf flag SVG -->
+            <svg width="28" height="32" viewBox="0 0 28 32" fill="none">
+              <circle cx="14" cy="7" r="4" fill="rgba(201,168,76,.9)"/>
+              <rect x="13" y="11" width="2" height="13" rx="1" fill="rgba(201,168,76,.7)"/>
+              <rect x="8" y="23" width="12" height="1.5" rx="0.75" fill="rgba(201,168,76,.4)"/>
+              <path d="M15 13 L22 16 L15 19Z" fill="rgba(201,168,76,.9)"/>
+            </svg>
+          </div>
+          <div class="logo-text-wrap">
+            <div class="brand">PLAYPAL</div>
+            <div class="sub">Your Golf Companion</div>
+          </div>
+        </div>
+
+        <div class="tagline">Track every stroke. Every format. Every dollar.</div>
+
+        <!-- Primary CTA -->
+        <button class="btn-primary" style="position:relative;z-index:1;width:100%;">
+          <!-- Faint golfer silhouettes -->
+          <div style="position:absolute;right:14px;top:50%;transform:translateY(-50%);opacity:.14;display:flex;gap:5px;">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none">
+              <circle cx="6" cy="3.5" r="2.8" fill="#1B4332"/>
+              <path d="M4.5 7 Q6 14 6 14 L8.5 14 Q8.5 10 7.5 7Z" fill="#1B4332"/>
+              <path d="M4.5 7 L2 11" stroke="#1B4332" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none">
+              <circle cx="6" cy="3.5" r="2.8" fill="#1B4332"/>
+              <path d="M4.5 7 Q6 14 6 14 L8.5 14 Q8.5 10 7.5 7Z" fill="#1B4332"/>
+              <path d="M4.5 7 L2 11" stroke="#1B4332" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none">
+              <circle cx="6" cy="3.5" r="2.8" fill="#1B4332"/>
+              <path d="M4.5 7 Q6 14 6 14 L8.5 14 Q8.5 10 7.5 7Z" fill="#1B4332"/>
+              <path d="M4.5 7 L2 11" stroke="#1B4332" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none">
+              <circle cx="6" cy="3.5" r="2.8" fill="#1B4332"/>
+              <path d="M4.5 7 Q6 14 6 14 L8.5 14 Q8.5 10 7.5 7Z" fill="#1B4332"/>
+              <path d="M4.5 7 L2 11" stroke="#1B4332" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <!-- Golfer icon -->
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="position:relative;z-index:1;flex-shrink:0;">
+            <circle cx="10" cy="5" r="3" fill="#1B4332"/>
+            <rect x="9" y="8" width="2" height="8" rx="1" fill="#1B4332"/>
+            <rect x="5" y="17" width="10" height="1.5" rx=".75" fill="#1B4332"/>
+          </svg>
+          <span class="btn-primary-label">START NEW ROUND</span>
+        </button>
+
+        <!-- Secondary row -->
+        <div class="secondary-row">
+          <button class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M1 12 Q5 6 8 8 Q11 10 15 4" stroke="rgba(201,168,76,.8)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              <circle cx="8" cy="8" r="1.5" fill="rgba(201,168,76,.8)"/>
+              <path d="M11 3.5 L11 7" stroke="rgba(201,168,76,.8)" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M11 4 L14 5.5 L11 7Z" fill="rgba(201,168,76,.8)"/>
+            </svg>
+            <span class="btn-secondary-label">COURSES</span>
+          </button>
+          <button class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1 L8 15" stroke="rgba(255,255,255,.55)" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M1 8 L15 8" stroke="rgba(255,255,255,.55)" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="8" cy="8" r="6.5" stroke="rgba(255,255,255,.55)" stroke-width="1.5" fill="none"/>
+            </svg>
+            <span class="btn-secondary-label">JOIN ROUND</span>
+          </button>
+        </div>
+
+      </div><!-- /hero -->
+
+      <!-- ═══ Body ═══════════════════════════════════════════════ -->
+      <div class="body-content">
+
+        <!-- Recent Rounds -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-label">Recent Rounds</span>
+          </div>
+
+          <!-- Round card 1 -->
+          <div class="round-card">
+            <div style="display:flex;align-items:center;flex:1;min-width:0;">
+              <div class="round-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <circle cx="9" cy="6" r="2.5" fill="#2D6A4F"/>
+                  <rect x="8.25" y="8.5" width="1.5" height="6" rx=".75" fill="#C9A84C"/>
+                  <rect x="5" y="16" width="8" height="1" rx=".5" fill="#DDD8CE"/>
+                </svg>
+              </div>
+              <div>
+                <div class="round-name">Augusta National GC</div>
+                <div class="round-meta">Apr 12 · 4 players</div>
+              </div>
+            </div>
+            <div>
+              <div class="round-formats">Nassau · Wolf</div>
+              <div class="round-view">VIEW →</div>
+            </div>
+          </div>
+
+          <!-- Round card 2 -->
+          <div class="round-card">
+            <div style="display:flex;align-items:center;flex:1;min-width:0;">
+              <div class="round-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <circle cx="9" cy="6" r="2.5" fill="#2D6A4F"/>
+                  <rect x="8.25" y="8.5" width="1.5" height="6" rx=".75" fill="#C9A84C"/>
+                  <rect x="5" y="16" width="8" height="1" rx=".5" fill="#DDD8CE"/>
+                </svg>
+              </div>
+              <div>
+                <div class="round-name">Pebble Beach Golf Links</div>
+                <div class="round-meta">Apr 6 · 3 players</div>
+              </div>
+            </div>
+            <div>
+              <div class="round-formats">Skins · Stroke</div>
+              <div class="round-view">VIEW →</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player Profiles -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-label">Player Profiles</span>
+            <button class="btn-add">+ ADD PLAYER</button>
+          </div>
+
+          <!-- Player 1 -->
+          <div class="player-card">
+            <div class="avatar" style="background:rgba(45,106,79,.12);border:1.5px solid rgba(45,106,79,.25);color:#2D6A4F;">JC</div>
+            <div style="flex:1;min-width:0;">
+              <div class="player-name">Jake Christadore</div>
+              <div class="player-meta">HCP 8.4 · GHIN 1234567</div>
+              <div class="player-venmo">@jakec</div>
+            </div>
+            <div class="player-chevron">›</div>
+          </div>
+
+          <!-- Player 2 -->
+          <div class="player-card">
+            <div class="avatar" style="background:rgba(201,168,76,.10);border:1.5px solid rgba(201,168,76,.30);color:#A07C2E;">MR</div>
+            <div style="flex:1;min-width:0;">
+              <div class="player-name">Mike Reynolds</div>
+              <div class="player-meta">HCP 14.1 · GHIN 7654321</div>
+              <div class="player-venmo">@mreynolds</div>
+            </div>
+            <div class="player-chevron">›</div>
+          </div>
+
+          <!-- Player 3 -->
+          <div class="player-card">
+            <div class="avatar" style="background:rgba(229,83,75,.08);border:1.5px solid rgba(229,83,75,.22);color:#c04040;">TW</div>
+            <div style="flex:1;min-width:0;">
+              <div class="player-name">Tom Walsh</div>
+              <div class="player-meta">HCP 5.2 · GHIN 9876543</div>
+              <div class="player-venmo">@twalsh</div>
+            </div>
+            <div class="player-chevron">›</div>
+          </div>
+
+        </div>
+
+        <div class="safe-bottom"></div>
+
+      </div><!-- /body -->
+
+    </div><!-- /app -->
+  </div><!-- /phone-frame -->
+
+  <!-- ─── Color Palette Legend ─────────────────────────────────── -->
+  <div class="legend">
+    <div class="legend-title">Augusta Color Palette</div>
+    <div class="swatch-row">
+      <div class="swatch">
+        <div class="swatch-box" style="background:#1B4332;"></div>
+        <div class="swatch-name">Augusta<br>Deep</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#2D6A4F;"></div>
+        <div class="swatch-name">Augusta<br>Mid</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#EAF2EC;"></div>
+        <div class="swatch-name">Green<br>Tint</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#C9A84C;"></div>
+        <div class="swatch-name">Masters<br>Gold</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#A07C2E;"></div>
+        <div class="swatch-name">Gold<br>Deep</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#FBF6E9;"></div>
+        <div class="swatch-name">Gold<br>Tint</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#F7F4EE;border:1.5px solid #DDD8CE;"></div>
+        <div class="swatch-name">Cream<br>BG</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#FFFFFF;border:1.5px solid #DDD8CE;"></div>
+        <div class="swatch-name">Card<br>White</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#1A1A1A;"></div>
+        <div class="swatch-name">Text<br>Primary</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-box" style="background:#7A8B7F;"></div>
+        <div class="swatch-name">Text<br>Muted</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
