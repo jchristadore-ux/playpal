@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>PlayPal — Golf Companion</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -22,39 +22,39 @@
 <script src="components/gameUtils.js?v=2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #0B0F1A; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  html, body { height: 100%; background: #121212; color: #F5F5F5; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
   #root { height: 100%; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1F3354; border-radius: 4px; }
-  input::placeholder { color: #3A5880; }
-  button { font-family: 'DM Sans', sans-serif; }
+  ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 4px; }
+  input::placeholder { color: #666666; }
+  button { font-family: 'Inter', system-ui, sans-serif; }
   * { -webkit-tap-highlight-color: transparent; }
 
   #pp-join-overlay {
-    position: fixed; inset: 0; background: #0B0F1A; z-index: 9999;
+    position: fixed; inset: 0; background: #121212; z-index: 9999;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 20px; font-family: 'Barlow Condensed', sans-serif;
+    gap: 20px; font-family: 'Inter', system-ui, sans-serif;
   }
   #pp-join-overlay .pp-join-logo { font-size: 52px; line-height: 1; }
-  #pp-join-overlay .pp-join-title { font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #fff; }
+  #pp-join-overlay .pp-join-title { font-size: 32px; font-weight: 800; letter-spacing: 2px; color: #F5F5F5; }
   #pp-join-overlay .pp-join-code {
-    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #2DD97A;
-    background: rgba(45,217,122,0.08); border: 1px solid rgba(45,217,122,0.3);
-    border-radius: 10px; padding: 10px 24px;
+    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #00A86B;
+    background: rgba(0,168,107,0.08); border: 1px solid rgba(0,168,107,0.3);
+    border-radius: 12px; padding: 10px 24px;
   }
-  #pp-join-overlay .pp-join-status { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #7A9EBF; font-family: 'DM Sans', sans-serif; }
+  #pp-join-overlay .pp-join-status { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #A0A0A0; font-family: 'Inter', system-ui, sans-serif; }
   #pp-join-overlay .pp-join-spinner {
-    width: 36px; height: 36px; border: 3px solid #1F3354;
-    border-top-color: #2DD97A; border-radius: 50%;
+    width: 36px; height: 36px; border: 3px solid #2A2A2A;
+    border-top-color: #00A86B; border-radius: 50%;
     animation: pp-spin 0.8s linear infinite;
   }
-  #pp-join-overlay .pp-join-error { font-size: 14px; color: #E5534B; text-align: center; max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+  #pp-join-overlay .pp-join-error { font-size: 14px; color: #FF6B6B; text-align: center; max-width: 300px; line-height: 1.5; font-family: 'Inter', system-ui, sans-serif; }
   #pp-join-overlay .pp-join-dismiss {
-    margin-top: 8px; background: transparent; border: 1px solid #1F3354;
-    color: #7A9EBF; border-radius: 8px; padding: 10px 24px;
-    font-family: 'Barlow Condensed', sans-serif; font-size: 14px;
-    font-weight: 700; letter-spacing: 1px; cursor: pointer;
+    margin-top: 8px; background: transparent; border: 1px solid #2A2A2A;
+    color: #A0A0A0; border-radius: 10px; padding: 10px 24px;
+    font-family: 'Inter', system-ui, sans-serif; font-size: 14px;
+    font-weight: 700; letter-spacing: 0.5px; cursor: pointer;
   }
   @keyframes pp-spin { to { transform: rotate(360deg); } }
 </style>
@@ -440,10 +440,10 @@ function _updateJoinOverlay(status, error) {
 <script type="text/babel">
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "accentGreen": "#2DD97A",
-  "accentGold":  "#D4AF47",
-  "bgColor":     "#0B0F1A",
-  "cardBg":      "#0F1D35",
+  "accentGreen": "#00A86B",
+  "accentGold":  "#D4AF37",
+  "bgColor":     "#121212",
+  "cardBg":      "#1E1E1E",
   "showSyncCode": true
 } /*EDITMODE-END*/;
 
@@ -805,19 +805,19 @@ const App = () => {
             <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
               <div style={{
                 flexShrink:0, display:'flex', alignItems:'center', height:48,
-                background:'#070C16', borderBottom:'1px solid #1F3354', padding:'0 12px',
+                background:'#0D0D0D', borderBottom:'1px solid #2A2A2A', padding:'0 12px',
               }}>
                 <button onClick={handleBackFromView} style={{
                   background:'none', border:'none', cursor:'pointer',
-                  fontFamily:'Barlow Condensed', fontWeight:700, fontSize:16,
-                  letterSpacing:1, color:'#7A9EBF', padding:'8px 4px',
+                  fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:16,
+                  letterSpacing:0.5, color:'#A0A0A0', padding:'8px 4px',
                   WebkitTapHighlightColor:'transparent',
                 }}>
                   &#8249; BACK
                 </button>
                 <span style={{
-                  flex:1, textAlign:'center', fontFamily:'Barlow Condensed',
-                  fontWeight:800, fontSize:16, letterSpacing:2, color:'#D4AF47',
+                  flex:1, textAlign:'center', fontFamily:'Inter, system-ui, sans-serif',
+                  fontWeight:800, fontSize:16, letterSpacing:1, color:'#D4AF37',
                 }}>
                   ROUND HISTORY
                 </span>
@@ -863,7 +863,7 @@ const App = () => {
 
       {/* Bottom Tab Nav — hidden on score and viewround screens */}
       {screen !== 'score' && screen !== 'viewround' &&
-        <div style={{ display:'flex', borderTop:'1px solid #1F3354', background:'#070C16', flexShrink:0 }}>
+        <div style={{ display:'flex', borderTop:'1px solid #2A2A2A', background:'#0D0D0D', flexShrink:0 }}>
           {[
             { id:'home',    icon:'\uD83C\uDFE0', label:'HOME' },
             { id:'setup',   icon:'\u26F3', label:'NEW ROUND' },
@@ -876,16 +876,16 @@ const App = () => {
               style={{
                 flex:1, display:'flex', flexDirection:'column', alignItems:'center',
                 justifyContent:'center', padding:'10px 4px', cursor:'pointer',
-                color: tab.id === '__exit' ? '#E5534B'
+                color: tab.id === '__exit' ? '#FF6B6B'
                      : screen === tab.id  ? tweaks.accentGold
-                     : '#3A5880',
+                     : '#666666',
                 borderTop: screen === tab.id && tab.id !== '__exit'
                   ? `2px solid ${tweaks.accentGold}`
                   : '2px solid transparent',
                 transition: 'color 0.15s',
               }}>
               <div style={{ fontSize:20, lineHeight:1 }}>{tab.icon}</div>
-              <div style={{ fontFamily:'Barlow Condensed', fontSize:10, fontWeight:700, letterSpacing:1, marginTop:3 }}>{tab.label}</div>
+              <div style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:10, fontWeight:700, letterSpacing:0.5, marginTop:3 }}>{tab.label}</div>
             </div>
           )}
         </div>
@@ -893,20 +893,20 @@ const App = () => {
 
       {tweaksOpen && (
         <div style={{
-          position:'fixed', bottom:20, right:20, background:'#0F1D35',
-          border:'1px solid #1F3354', borderRadius:12, padding:16, zIndex:9998,
+          position:'fixed', bottom:20, right:20, background:'#1E1E1E',
+          border:'1px solid #2A2A2A', borderRadius:16, padding:16, zIndex:9998,
           minWidth:220, boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
         }}>
-          <div style={{ fontFamily:'Barlow Condensed', fontWeight:800, fontSize:14, color:'#D4AF47', letterSpacing:2, marginBottom:12 }}>APPEARANCE</div>
+          <div style={{ fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, color:'#D4AF37', letterSpacing:1, marginBottom:12 }}>APPEARANCE</div>
           {[['accentGreen','Green'],['accentGold','Gold'],['bgColor','Background'],['cardBg','Card']].map(([k,label]) =>
             <div key={k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-              <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>{label}</span>
+              <span style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:13, color:'#A0A0A0' }}>{label}</span>
               <input type="color" value={tweaks[k]} onChange={e => saveTweakKey(k, e.target.value)} style={{ border:'none', background:'none', cursor:'pointer', width:36, height:28, padding:'5px' }} />
             </div>
           )}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
-            <span style={{ fontFamily:'DM Sans', fontSize:13, color:'#9BB4D4' }}>Show Sync Code</span>
-            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width:40, height:22, borderRadius:11, background:tweaks.showSyncCode ? tweaks.accentGreen : '#1F3354', cursor:'pointer', display:'flex', alignItems:'center', padding:2, transition:'background 0.2s' }}>
+            <span style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:13, color:'#A0A0A0' }}>Show Sync Code</span>
+            <div onClick={() => saveTweakKey('showSyncCode', !tweaks.showSyncCode)} style={{ width:40, height:22, borderRadius:11, background:tweaks.showSyncCode ? tweaks.accentGreen : '#2A2A2A', cursor:'pointer', display:'flex', alignItems:'center', padding:2, transition:'background 0.2s' }}>
               <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', transform:tweaks.showSyncCode ? 'translateX(18px)' : 'translateX(0)', transition:'transform 0.2s' }} />
             </div>
           </div>
