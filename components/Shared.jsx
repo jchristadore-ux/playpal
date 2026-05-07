@@ -1,26 +1,41 @@
 // Shared.jsx — NavBar, Button, Avatar, Modal, Toast
 
-// PlayPal logo — premium emerald golf ball with gold coin shine
+// PlayPal logo — gold coin with golf cup and teal flag
 const PPLogo = ({ size = 36 }) => (
   <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Main golf ball — emerald green */}
-    <circle cx="18" cy="18" r="14" fill="#00A86B"/>
-    {/* Radial gold shimmer overlay */}
-    <circle cx="18" cy="18" r="14" fill="url(#ppBallShine)" opacity="0.9"/>
-    {/* Subtle dimple lines */}
-    <path d="M10 14 Q14 12 18 14 Q22 12 26 14" stroke="rgba(0,0,0,0.2)" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
-    <path d="M9 18 Q13 16 18 18 Q23 16 27 18" stroke="rgba(0,0,0,0.2)" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
-    <path d="M10 22 Q14 20 18 22 Q22 20 26 22" stroke="rgba(0,0,0,0.2)" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
-    {/* Gold coin highlight — top-right metallic shimmer */}
-    <ellipse cx="23.5" cy="12" rx="5.5" ry="3.5" fill="#D4AF37" opacity="0.5" transform="rotate(-22 23.5 12)"/>
-    <ellipse cx="24.5" cy="10.5" rx="2.5" ry="1.5" fill="#F5D76E" opacity="0.75" transform="rotate(-22 24.5 10.5)"/>
     <defs>
-      <radialGradient id="ppBallShine" cx="68%" cy="28%" r="65%">
-        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.5"/>
-        <stop offset="55%" stopColor="#00A86B" stopOpacity="0"/>
-        <stop offset="100%" stopColor="#005535" stopOpacity="0.3"/>
+      <radialGradient id="ppCoinGrad" cx="40%" cy="35%" r="65%">
+        <stop offset="0%"   stopColor="#F0C84A"/>
+        <stop offset="45%"  stopColor="#C8A84B"/>
+        <stop offset="100%" stopColor="#8A6A10"/>
+      </radialGradient>
+      <radialGradient id="ppCoinSheen" cx="30%" cy="25%" r="55%">
+        <stop offset="0%"   stopColor="#FFF1A0" stopOpacity="0.45"/>
+        <stop offset="100%" stopColor="#FFF1A0" stopOpacity="0"/>
       </radialGradient>
     </defs>
+    {/* Coin body */}
+    <circle cx="18" cy="18" r="15" fill="url(#ppCoinGrad)"/>
+    {/* Milled-edge notch marks */}
+    {Array.from({length:16}).map((_,i) => {
+      const angle = (i * 22.5 * Math.PI) / 180;
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      return <line key={i}
+        x1={18 + 12.8 * cos} y1={18 + 12.8 * sin}
+        x2={18 + 14.6 * cos} y2={18 + 14.6 * sin}
+        stroke="#7A5C08" strokeWidth="1.3" strokeLinecap="round"/>;
+    })}
+    {/* Coin sheen */}
+    <circle cx="18" cy="18" r="15" fill="url(#ppCoinSheen)"/>
+    {/* Rim */}
+    <circle cx="18" cy="18" r="15" stroke="#7A5C08" strokeWidth="0.5" fill="none"/>
+    {/* Golf cup/hole */}
+    <ellipse cx="18" cy="20" rx="5" ry="3.2" fill="#0A0A0A"/>
+    <ellipse cx="18" cy="20" rx="3.5" ry="2" fill="none" stroke="#2A2A2A" strokeWidth="0.5"/>
+    {/* Flagpole */}
+    <rect x="17.25" y="2" width="1.5" height="18" rx="0.75" fill="#2BBFB0"/>
+    {/* Flag */}
+    <polygon points="18.75,2 27,6 18.75,10" fill="#2BBFB0"/>
   </svg>
 );
 
@@ -158,8 +173,8 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
       <nav style={navStyles.bar}>
         <button onClick={onHome} style={navStyles.logo}>
           <PPLogo size={30} />
-          <span style={{ color:'#F5F5F5', fontFamily:'Inter, system-ui, sans-serif', fontSize:19, fontWeight:900, letterSpacing:1.5, marginLeft:8 }}>
-            PlayPal
+          <span style={{ marginLeft:8, lineHeight:1 }}>
+            <span style={{ color:'#C8A84B', fontFamily:"'Playfair Display', Georgia, serif", fontSize:19, fontWeight:800, letterSpacing:0.5 }}>Play</span><span style={{ color:'#8A95B0', fontFamily:"'Playfair Display', Georgia, serif", fontSize:19, fontWeight:800, letterSpacing:0.5 }}>Pal</span>
           </span>
         </button>
         <div style={navStyles.center} />
