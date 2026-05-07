@@ -3,31 +3,31 @@
 const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner, wolfPicked, holeIdx, par, isLandscape }) => {
   const diff = score ? score - par : null;
 
-  const relColor = diff === null ? '#A0A0A0'
-    : diff <= -2 ? '#D4AF37' : diff === -1 ? '#4ADE80' : diff === 0 ? '#A0A0A0'
-    : diff === 1 ? '#FF6B6B' : '#CC3333';
+  const relColor = diff === null ? '#6B7280'
+    : diff <= -2 ? '#C8A15A' : diff === -1 ? '#15803D' : diff === 0 ? '#6B7280'
+    : diff === 1 ? '#DC2626' : '#991B1B';
 
   const relLabel = diff === null ? '—'
     : diff <= -3 ? 'ALB' : diff === -2 ? 'EGL' : diff === -1 ? 'BRD'
     : diff === 0 ? 'PAR' : diff === 1 ? 'BOG' : diff === 2 ? 'DBL' : `+${diff}`;
 
-  const border = isWolf ? '2px solid #FF6B6B'
+  const border = isWolf ? '2px solid rgba(220,38,38,0.6)'
     : isPartner ? `2px solid ${player.color}`
-    : `1px solid #2A2A2A`;
-  const bg = isWolf ? 'rgba(255,107,107,0.05)'
+    : `1px solid #E7E3D9`;
+  const bg = isWolf ? 'rgba(220,38,38,0.03)'
     : isPartner ? `${player.color}08`
-    : '#1E1E1E';
+    : '#FFFFFF';
 
   return (
     <div style={{...pcS.card, border, background:bg, flex:1, minWidth: isLandscape ? 0 : '100%'}}>
       <div style={pcS.header}>
         <Avatar player={player} size={32}/>
         <div style={{flex:1, minWidth:0}}>
-          <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#F5F5F5', letterSpacing:0.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{player.name}</div>
-          <div style={{fontSize:10, color:'#A0A0A0', fontFamily:'Inter, system-ui, sans-serif'}}>HCP {player.handicap}</div>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20', letterSpacing:0.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{player.name}</div>
+          <div style={{fontSize:10, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>HCP {player.handicap}</div>
         </div>
         {isWolf && <div style={pcS.wolfBadge}>🐺 WOLF</div>}
-        {isPartner && !isWolf && <div style={{...pcS.wolfBadge, background:'rgba(0,168,107,0.12)', color:'#00A86B', border:'1px solid rgba(0,168,107,0.25)'}}>⚑ PARTNER</div>}
+        {isPartner && !isWolf && <div style={{...pcS.wolfBadge, background:`${player.color}12`, color:player.color, border:`1px solid ${player.color}44`}}>⚑ PARTNER</div>}
       </div>
 
       <div style={pcS.scoreRow}>
@@ -37,13 +37,13 @@ const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner,
         >−</button>
 
         <div style={pcS.scoreDisplay}>
-          <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:900, fontSize:64, lineHeight:1, color: score ? relColor : '#2A2A2A'}}>{score || '—'}</div>
-          <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:12, fontWeight:700, letterSpacing:1, color:relColor, marginTop:2}}>{relLabel}</div>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:64, lineHeight:1, color: score ? relColor : '#E7E3D9'}}>{score || '—'}</div>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, fontWeight:700, letterSpacing:1, color:relColor, marginTop:2}}>{relLabel}</div>
         </div>
 
         <button
           onClick={() => onScore((score || par) + 1)}
-          style={{...pcS.scoreBtn, background:'#D4AF37', color:'#0D0D0D', boxShadow:'0 2px 10px rgba(212,175,55,0.3)'}}
+          style={{...pcS.scoreBtn, background:'#C8A15A', color:'#0E2B20', boxShadow:'0 2px 10px rgba(200,161,90,0.25)'}}
         >+</button>
       </div>
 
@@ -52,12 +52,12 @@ const PlayerCard = ({ player, score, onScore, putts, onPutts, isWolf, isPartner,
         <div style={{display:'flex', gap:6, marginLeft:8}}>
           {[1,2,3,4].map(n => (
             <div key={n} onClick={() => onPutts(putts === n ? 0 : n)}
-              style={{...pcS.puttBtn, background: putts===n ? '#252525':'transparent', border: putts===n?`1px solid ${player.color}`:'1px solid #2A2A2A', color: putts===n?player.color:'#666666'}}>
+              style={{...pcS.puttBtn, background: putts===n ? `${player.color}18` : 'transparent', border: putts===n?`1px solid ${player.color}`:'1px solid #E7E3D9', color: putts===n?player.color:'#8A9E8A'}}>
               {n}
             </div>
           ))}
         </div>
-        {putts >= 3 && <span style={{fontSize:10, color:'#FF6B6B', marginLeft:4, fontFamily:'Inter, system-ui, sans-serif', fontWeight:700}}>3-PUTT</span>}
+        {putts >= 3 && <span style={{fontSize:10, color:'#DC2626', marginLeft:4, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700}}>3-PUTT</span>}
       </div>
     </div>
   );
@@ -70,21 +70,21 @@ const pcS = {
   },
   header: { display:'flex', alignItems:'center', gap:10 },
   wolfBadge: {
-    fontSize:10, fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, letterSpacing:0.5,
-    background:'rgba(255,107,107,0.12)', color:'#FF6B6B', border:'1px solid rgba(255,107,107,0.25)',
+    fontSize:10, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, letterSpacing:0.5,
+    background:'rgba(220,38,38,0.08)', color:'#DC2626', border:'1px solid rgba(220,38,38,0.25)',
     padding:'2px 7px', borderRadius:5,
   },
   scoreRow: { display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 },
   scoreBtn: {
     width:60, height:60, borderRadius:12, border:'none', cursor:'pointer',
-    fontFamily:'Inter, system-ui, sans-serif', fontSize:32, fontWeight:900, color:'#F5F5F5',
-    background:'#252525', display:'flex', alignItems:'center', justifyContent:'center',
+    fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:32, fontWeight:900, color:'#0E2B20',
+    background:'#EAE7DE', display:'flex', alignItems:'center', justifyContent:'center',
     flexShrink:0, transition:'transform 0.1s', userSelect:'none',
     WebkitTapHighlightColor:'transparent',
   },
   scoreDisplay: { flex:1, display:'flex', flexDirection:'column', alignItems:'center' },
-  puttRow: { display:'flex', alignItems:'center', borderTop:'1px solid #2A2A2A', paddingTop:10 },
-  puttBtn: { width:28, height:28, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, userSelect:'none' },
+  puttRow: { display:'flex', alignItems:'center', borderTop:'1px solid #E7E3D9', paddingTop:10 },
+  puttBtn: { width:28, height:28, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, userSelect:'none' },
 };
 
 Object.assign(window, { PlayerCard });

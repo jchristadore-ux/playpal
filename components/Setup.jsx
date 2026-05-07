@@ -43,24 +43,24 @@ const ScorecardScanner = ({ onResult, onCancel }) => {
   };
 
   const handleDrop = (e) => { e.preventDefault(); const file = e.dataTransfer?.files?.[0]; if (file) handleFile(file); };
-  const borderColor = status === 'error' ? '#FF6B6B' : status === 'done' ? '#00A86B' : '#2A2A2A';
+  const borderColor = status === 'error' ? '#DC2626' : status === 'done' ? '#15803D' : '#E7E3D9';
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#D4AF37', letterSpacing:1}}>📸 SCAN SCORECARD</div>
-      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:13, color:'#A0A0A0', lineHeight:1.6}}>Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.</div>
+      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#C8A15A', letterSpacing:1}}>📸 SCAN SCORECARD</div>
+      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.6}}>Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.</div>
       <div
         onClick={() => status !== 'scanning' && fileRef.current?.click()}
         onDrop={handleDrop} onDragOver={e => e.preventDefault()}
-        style={{ border:`2px dashed ${borderColor}`, borderRadius:14, background:'#121212', minHeight:180, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, cursor:status==='scanning'?'default':'pointer', overflow:'hidden', position:'relative', transition:'border-color 0.2s' }}>
+        style={{ border:`2px dashed ${borderColor}`, borderRadius:14, background:'#F6F4EE', minHeight:180, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, cursor:status==='scanning'?'default':'pointer', overflow:'hidden', position:'relative', transition:'border-color 0.2s' }}>
         {preview && <img src={preview} alt="preview" style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:status==='scanning'?0.4:0.25}}/>}
         <div style={{position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
           {status === 'scanning' ? (
-            <><div style={{width:36, height:36, border:'3px solid #2A2A2A', borderTopColor:'#00A86B', borderRadius:'50%', animation:'ppSpin 0.8s linear infinite'}}/><div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, letterSpacing:1, color:'#00A86B'}}>READING SCORECARD…</div></>
+            <><div style={{width:36, height:36, border:'3px solid #E7E3D9', borderTopColor:'#15803D', borderRadius:'50%', animation:'ppSpin 0.8s linear infinite'}}/><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, letterSpacing:1, color:'#15803D'}}>READING SCORECARD…</div></>
           ) : status === 'error' ? (
-            <><div style={{fontSize:32}}>⚠️</div><div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:13, color:'#FF6B6B', textAlign:'center', padding:'0 16px'}}>{errorMsg}</div><div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#A0A0A0', letterSpacing:1}}>TAP TO TRY AGAIN</div></>
+            <><div style={{fontSize:32}}>⚠️</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#DC2626', textAlign:'center', padding:'0 16px'}}>{errorMsg}</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#3F5F4A', letterSpacing:1}}>TAP TO TRY AGAIN</div></>
           ) : (
-            <><div style={{fontSize:40}}>📸</div><div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#F5F5F5', letterSpacing:1}}>TAP TO UPLOAD SCORECARD</div><div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#A0A0A0'}}>or drag and drop an image</div></>
+            <><div style={{fontSize:40}}>📸</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20', letterSpacing:1}}>TAP TO UPLOAD SCORECARD</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>or drag and drop an image</div></>
           )}
         </div>
       </div>
@@ -105,13 +105,13 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
     onSave(course, updated);
   };
 
-  const inputStyle = { background:'#121212', border:'1px solid #2A2A2A', borderRadius:10, padding:'10px 12px', color:'#F5F5F5', fontFamily:'Inter, system-ui, sans-serif', fontSize:14, outline:'none', boxSizing:'border-box', width:'100%' };
-  const holeInputStyle = { background:'#121212', border:'1px solid #2A2A2A', color:'#F5F5F5', borderRadius:6, padding:'5px 4px', fontFamily:'Inter, system-ui, sans-serif', fontSize:13, width:'100%', outline:'none', textAlign:'center' };
+  const inputStyle = { background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, outline:'none', boxSizing:'border-box', width:'100%' };
+  const holeInputStyle = { background:'#F6F4EE', border:'1px solid #E7E3D9', color:'#0E2B20', borderRadius:6, padding:'5px 4px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, width:'100%', outline:'none', textAlign:'center' };
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#D4AF37', letterSpacing:1}}>{prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}</div>
-      {prefill && <div style={{background:'rgba(0,168,107,0.05)', border:'1px solid rgba(0,168,107,0.2)', borderRadius:10, padding:'10px 14px', fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#00A86B'}}>Scorecard scanned successfully — review and correct any values before saving.</div>}
+      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#C8A15A', letterSpacing:1}}>{prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}</div>
+      {prefill && <div style={{background:'rgba(21,128,61,0.05)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:10, padding:'10px 14px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#15803D'}}>Scorecard scanned successfully — review and correct any values before saving.</div>}
       <div style={{display:'flex', flexDirection:'column', gap:10}}>
         <div><Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/></div>
         <div><Label style={{display:'block', marginBottom:4}}>LOCATION</Label><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/></div>
@@ -123,17 +123,17 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
       <div>
         <div style={{display:'flex', alignItems:'baseline', gap:10, marginBottom:8}}>
           <Label>SCORECARD — 18 HOLES</Label>
-          <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:totalPar>=68&&totalPar<=76?'#4ADE80':'#FF6B6B'}}>Total par: {totalPar}</span>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:totalPar>=68&&totalPar<=76?'#15803D':'#DC2626'}}>Total par: {totalPar}</span>
         </div>
         <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
           <table style={{borderCollapse:'collapse', width:'100%', minWidth:300}}>
             <thead>
-              <tr>{['#','PAR','YDS','HCP'].map(h=><th key={h} style={{padding:'4px 6px', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1.5, color:'#666666', textAlign:'center', borderBottom:'1px solid #2A2A2A'}}>{h}</th>)}</tr>
+              <tr>{['#','PAR','YDS','HCP'].map(h=><th key={h} style={{padding:'4px 6px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1.5, color:'#8A9E8A', textAlign:'center', borderBottom:'1px solid #E7E3D9'}}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {holes.map((h, i) => (
-                <tr key={i} style={{background:i%2===0?'#121212':'#1E1E1E'}}>
-                  <td style={{padding:'4px 6px', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#A0A0A0', textAlign:'center'}}>{h.num}</td>
+                <tr key={i} style={{background:i%2===0?'#F6F4EE':'#FFFFFF'}}>
+                  <td style={{padding:'4px 6px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#3F5F4A', textAlign:'center'}}>{h.num}</td>
                   <td style={{padding:'3px 4px'}}><input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)} type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/></td>
                   <td style={{padding:'3px 4px'}}><input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)} placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/></td>
                   <td style={{padding:'3px 4px'}}><input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)} type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/></td>
@@ -163,22 +163,22 @@ const StakesInput = ({ value, onChange }) => {
       <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
         {presets.map(v => (
           <div key={v} onClick={() => { setCustom(false); onChange(v); }}
-            style={{padding:'6px 13px', borderRadius:8, cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:15,
-              background:!custom&&value===v?'#00A86B':'#252525', color:!custom&&value===v?'#F5F5F5':'#A0A0A0', border:!custom&&value===v?'none':'1px solid #2A2A2A'}}>
+            style={{padding:'6px 13px', borderRadius:8, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15,
+              background:!custom&&value===v?'#0E2B20':'#F0EDE4', color:!custom&&value===v?'#F6F4EE':'#3F5F4A', border:!custom&&value===v?'none':'1px solid #E7E3D9'}}>
             ${v}
           </div>
         ))}
         <div onClick={()=>setCustom(true)}
-          style={{padding:'6px 13px', borderRadius:8, cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:15,
-            background:custom?'#D4AF37':'#252525', color:custom?'#0D0D0D':'#A0A0A0', border:custom?'none':'1px solid #2A2A2A'}}>
+          style={{padding:'6px 13px', borderRadius:8, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15,
+            background:custom?'#C8A15A':'#F0EDE4', color:custom?'#0E2B20':'#3F5F4A', border:custom?'none':'1px solid #E7E3D9'}}>
           OTHER
         </div>
       </div>
       {custom && (
         <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:20, color:'#D4AF37', fontWeight:800}}>$</span>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:20, color:'#C8A15A', fontWeight:800}}>$</span>
           <input autoFocus value={customVal} onChange={e=>handleCustomChange(e.target.value)} type="number" min="0.5" step="0.5" placeholder="Enter amount"
-            style={{flex:1, background:'#121212', border:'1px solid #D4AF37', borderRadius:10, padding:'10px 12px', color:'#F5F5F5', fontFamily:'Inter, system-ui, sans-serif', fontSize:18, fontWeight:700, outline:'none'}}/>
+            style={{flex:1, background:'#F6F4EE', border:'1px solid #C8A15A', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:18, fontWeight:700, outline:'none'}}/>
         </div>
       )}
     </div>
@@ -214,39 +214,39 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
   const popCount = (popHoles[activePlayer] || []).filter(Boolean).length;
 
   return (
-    <div style={{borderTop:'1px solid rgba(212,175,55,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
+    <div style={{borderTop:'1px solid rgba(200,161,90,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
       <div style={{display:'flex', alignItems:'center', gap:6}}>
-        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#A0A0A0'}}>STROKE POPS</div>
-        {autoReceiver && <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, color:'#00A86B', background:'rgba(0,168,107,0.1)', border:'1px solid rgba(0,168,107,0.2)', borderRadius:4, padding:'1px 5px', letterSpacing:0.5}}>AUTO</span>}
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>STROKE POPS</div>
+        {autoReceiver && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, color:'#15803D', background:'rgba(21,128,61,0.1)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:4, padding:'1px 5px', letterSpacing:0.5}}>AUTO</span>}
       </div>
       {autoReceiver ? (
-        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#666666', lineHeight:1.5}}>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#8A9E8A', lineHeight:1.5}}>
           {autoReceiver.name.split(' ')[0]} (HCP {autoReceiver.handicap}) gets {autoStrokes} pop{autoStrokes !== 1 ? 's' : ''} on the {autoStrokes} hardest hole{autoStrokes !== 1 ? 's' : ''}. Tap to adjust.
         </div>
       ) : (
-        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#666666', lineHeight:1.5}}>Both players have the same handicap — no pops. Tap holes to add manually.</div>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#8A9E8A', lineHeight:1.5}}>Both players have the same handicap — no pops. Tap holes to add manually.</div>
       )}
       <div style={{display:'flex', gap:8}}>
         {nassauPlayers.map(p => (
           <div key={p.id} onClick={() => setActivePlayer(p.id)}
             style={{flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:10, cursor:'pointer',
-              background:activePlayer===p.id?`${p.color}12`:'#121212', border:activePlayer===p.id?`1px solid ${p.color}`:'1px solid #2A2A2A'}}>
+              background:activePlayer===p.id?`${p.color}12`:'#FFFFFF', border:activePlayer===p.id?`1px solid ${p.color}`:'1px solid #E7E3D9'}}>
             <div style={{width:7, height:7, borderRadius:'50%', background:p.color, flexShrink:0}}/>
-            <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:activePlayer===p.id?p.color:'#A0A0A0', flex:1}}>{p.name.split(' ')[0].toUpperCase()}</span>
+            <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:activePlayer===p.id?p.color:'#3F5F4A', flex:1}}>{p.name.split(' ')[0].toUpperCase()}</span>
             {(popHoles[p.id]||[]).filter(Boolean).length > 0 && (
-              <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, color:'#D4AF37', background:'rgba(212,175,55,0.12)', borderRadius:4, padding:'1px 5px'}}>{(popHoles[p.id]||[]).filter(Boolean).length}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, color:'#C8A15A', background:'rgba(200,161,90,0.12)', borderRadius:4, padding:'1px 5px'}}>{(popHoles[p.id]||[]).filter(Boolean).length}</span>
             )}
           </div>
         ))}
       </div>
       <div>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
-          <Label style={{fontSize:10}}>{nassauPlayers.find(p=>p.id===activePlayer)?.name.split(' ')[0].toUpperCase()} — SELECT POP HOLES{popCount>0&&<span style={{color:'#D4AF37', marginLeft:6}}>{popCount} SELECTED</span>}</Label>
-          {popCount > 0 && <button onClick={clearAll} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1, color:'#666666', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>CLEAR</button>}
+          <Label style={{fontSize:10}}>{nassauPlayers.find(p=>p.id===activePlayer)?.name.split(' ')[0].toUpperCase()} — SELECT POP HOLES{popCount>0&&<span style={{color:'#C8A15A', marginLeft:6}}>{popCount} SELECTED</span>}</Label>
+          {popCount > 0 && <button onClick={clearAll} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1, color:'#8A9E8A', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>CLEAR</button>}
         </div>
         {['FRONT 9', 'BACK 9'].map((label, half) => (
           <div key={label} style={{marginBottom:6}}>
-            <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:9, letterSpacing:2, color:'#666666', marginBottom:4}}>{label}</div>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:9, letterSpacing:2, color:'#8A9E8A', marginBottom:4}}>{label}</div>
             <div style={{display:'flex', gap:4, flexWrap:'nowrap'}}>
               {Array.from({length:9}, (_, i) => {
                 const holeIdx = i + (half * 9);
@@ -255,10 +255,10 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, onChange }) => {
                 return (
                   <div key={holeIdx} onClick={() => toggleHole(holeIdx)}
                     style={{flex:1, minWidth:28, height:34, borderRadius:6, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                      background:active?(activeP?.color||'#D4AF37'):'#252525', border:active?'none':'1px solid #2A2A2A',
+                      background:active?(activeP?.color||'#C8A15A'):'#F0EDE4', border:active?'none':'1px solid #E7E3D9',
                       WebkitTapHighlightColor:'transparent', userSelect:'none', transition:'background 0.12s'}}>
-                    <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, color:active?'#0D0D0D':'#666666', lineHeight:1}}>{holeIdx+1}</span>
-                    {active && <span style={{fontSize:6, color:'#0D0D0D', marginTop:1}}>POP</span>}
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, color:active?'#FFFFFF':'#8A9E8A', lineHeight:1}}>{holeIdx+1}</span>
+                    {active && <span style={{fontSize:6, color:'#FFFFFF', marginTop:1}}>POP</span>}
                   </div>
                 );
               })}
@@ -312,40 +312,40 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:10}}>
-      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:2, color:'#D4AF37', marginBottom:2}}>{matchLabel}</div>
+      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:2, color:'#C8A15A', marginBottom:2}}>{matchLabel}</div>
       <div>
-        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#A0A0A0', marginBottom:6}}>STAKE (per bet — Front 9 + Back 9 + Overall 2×)</div>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', marginBottom:6}}>STAKE (per bet — Front 9 + Back 9 + Overall 2×)</div>
         <StakesInput value={stakes} onChange={v=>onChange({...matchConfig,stakes:v})}/>
       </div>
-      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#A0A0A0', marginBottom:2}}>MATCH FORMAT</div>
+      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', marginBottom:2}}>MATCH FORMAT</div>
       <div style={{display:'flex', gap:8}}>
         {['1v1',...(can2v2?['2v2']:[])].map(t => (
           <div key={t} onClick={() => setMatchType(t)}
-            style={{flex:1, textAlign:'center', padding:'8px 0', borderRadius:10, cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:15,
-              background:matchType===t?'#D4AF37':'#252525', color:matchType===t?'#0D0D0D':'#A0A0A0', border:matchType===t?'none':'1px solid #2A2A2A'}}>
+            style={{flex:1, textAlign:'center', padding:'8px 0', borderRadius:10, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15,
+              background:matchType===t?'#C8A15A':'#F0EDE4', color:matchType===t?'#0E2B20':'#3F5F4A', border:matchType===t?'none':'1px solid #E7E3D9'}}>
             {t}
           </div>
         ))}
       </div>
-      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#A0A0A0'}}>SELECT {matchType==='2v2'?'4':'2'} PLAYERS</div>
+      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>SELECT {matchType==='2v2'?'4':'2'} PLAYERS</div>
       <div style={{display:'flex', flexDirection:'column', gap:6}}>
         {roundPlayers.map(p => {
           const selected=playersInMatch.includes(p.id); const inTeam1=teams?.team1?.includes(p.id); const inTeam2=teams?.team2?.includes(p.id);
           return (
             <div key={p.id} onClick={()=>togglePlayer(p.id)}
               style={{display:'flex', alignItems:'center', gap:10, borderRadius:12, padding:'10px 12px', cursor:'pointer',
-                background:selected?`${p.color}0A`:'#121212', border:selected?`1px solid ${p.color}`:'1px solid #2A2A2A'}}>
-              <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${selected?p.color:'#2A2A2A'}`, background:selected?p.color:'transparent', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
-                {selected && <span style={{color:'#0D0D0D', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
+                background:selected?`${p.color}0A`:'#FFFFFF', border:selected?`1px solid ${p.color}`:'1px solid #E7E3D9'}}>
+              <div style={{width:20, height:20, borderRadius:6, border:`2px solid ${selected?p.color:'#E7E3D9'}`, background:selected?p.color:'transparent', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {selected && <span style={{color:'#FFFFFF', fontSize:12, fontWeight:900, lineHeight:1}}>✓</span>}
               </div>
               <Avatar player={p} size={28}/>
-              <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:selected?'#F5F5F5':'#A0A0A0', flex:1}}>{p.name}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:selected?'#0E2B20':'#3F5F4A', flex:1}}>{p.name}</span>
               {matchType==='2v2'&&selected&&(
                 <div style={{display:'flex', gap:4}} onClick={e=>e.stopPropagation()}>
                   {['team1','team2'].map((tk,ti)=>(
                     <div key={tk} onClick={()=>moveToTeam(p.id,tk)}
-                      style={{padding:'3px 8px', borderRadius:6, cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:11,
-                        background:(tk==='team1'?inTeam1:inTeam2)?p.color:'#252525', color:(tk==='team1'?inTeam1:inTeam2)?'#0D0D0D':'#666666', border:(tk==='team1'?inTeam1:inTeam2)?'none':'1px solid #2A2A2A'}}>
+                      style={{padding:'3px 8px', borderRadius:6, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11,
+                        background:(tk==='team1'?inTeam1:inTeam2)?p.color:'#F0EDE4', color:(tk==='team1'?inTeam1:inTeam2)?'#FFFFFF':'#8A9E8A', border:(tk==='team1'?inTeam1:inTeam2)?'none':'1px solid #E7E3D9'}}>
                       T{ti+1}
                     </div>
                   ))}
@@ -355,14 +355,14 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
           );
         })}
       </div>
-      {!isValid && <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:11, color:'#FF6B6B'}}>{matchType==='1v1'?`Select exactly 2 players (${playersInMatch.length}/2)`:`Select 4 players and assign 2 to each team`}</div>}
-      {isValid && <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:11, color:'#00A86B'}}>{matchType==='1v1'?`✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`:`✓ Team match configured`}</div>}
+      {!isValid && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#DC2626'}}>{matchType==='1v1'?`Select exactly 2 players (${playersInMatch.length}/2)`:`Select 4 players and assign 2 to each team`}</div>}
+      {isValid && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D'}}>{matchType==='1v1'?`✓ ${playerById(playersInMatch[0])?.name.split(' ')[0]} vs ${playerById(playersInMatch[1])?.name.split(' ')[0]}`:`✓ Team match configured`}</div>}
       {isValid && matchType==='1v1' && nassauPlayersForPop.length===2 && <NassauPopConfig nassauPlayers={nassauPlayersForPop} popHoles={popHoles} onChange={v=>onChange({...matchConfig,popHoles:v})}/>}
     </div>
   );
 };
 
-const MATCH_COLORS = ['#D4AF37', '#7B9FE0', '#E07BE0'];
+const MATCH_COLORS = ['#C8A15A', '#7B9FE0', '#E07BE0'];
 const MATCH_LABELS = ['MATCH 1', 'MATCH 2', 'MATCH 3'];
 
 const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course }) => {
@@ -377,26 +377,26 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course 
   const updateMatch  = (idx, updated) => onChange(nassauMatches.map((m,i)=>i===idx?{...m,...updated}:m));
 
   return (
-    <div style={{borderTop:'1px solid rgba(212,175,55,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:14}}>
+    <div style={{borderTop:'1px solid rgba(200,161,90,0.15)', marginTop:12, paddingTop:12, display:'flex', flexDirection:'column', gap:14}}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#A0A0A0'}}>NASSAU MATCHES ({nassauMatches.length}/{MAX_MATCHES})</div>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>NASSAU MATCHES ({nassauMatches.length}/{MAX_MATCHES})</div>
         {nassauMatches.length < MAX_MATCHES && (
           <button onClick={addMatch}
-            style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:1, color:'#00A86B', background:'rgba(0,168,107,0.07)', border:'1px solid rgba(0,168,107,0.2)', borderRadius:7, padding:'4px 12px', cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+            style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:1, color:'#15803D', background:'rgba(21,128,61,0.07)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:7, padding:'4px 12px', cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
             + ADD MATCH
           </button>
         )}
       </div>
-      {nassauMatches.length===0 && <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#666666', textAlign:'center', padding:'12px 0'}}>No matches configured. Tap + ADD MATCH to begin.</div>}
+      {nassauMatches.length===0 && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#8A9E8A', textAlign:'center', padding:'12px 0'}}>No matches configured. Tap + ADD MATCH to begin.</div>}
       {nassauMatches.map((match, idx) => (
-        <div key={match.id} style={{background:'#121212', border:`1px solid ${MATCH_COLORS[idx]}33`, borderRadius:14, overflow:'hidden'}}>
+        <div key={match.id} style={{background:'#FFFFFF', border:`1px solid ${MATCH_COLORS[idx]}33`, borderRadius:14, overflow:'hidden'}}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:`${MATCH_COLORS[idx]}08`, borderBottom:`1px solid ${MATCH_COLORS[idx]}22`}}>
             <div style={{display:'flex', alignItems:'center', gap:8}}>
               <div style={{width:7, height:7, borderRadius:'50%', background:MATCH_COLORS[idx]}}/>
-              <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, letterSpacing:1.5, color:MATCH_COLORS[idx]}}>{MATCH_LABELS[idx]}</span>
-              {match.playersInMatch.length===2&&(()=>{const p1=roundPlayers.find(p=>p.id===match.playersInMatch[0]);const p2=roundPlayers.find(p=>p.id===match.playersInMatch[1]);return p1&&p2?<span style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:11, color:'#A0A0A0'}}>{p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]}</span>:null;})()}
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, letterSpacing:1.5, color:MATCH_COLORS[idx]}}>{MATCH_LABELS[idx]}</span>
+              {match.playersInMatch.length===2&&(()=>{const p1=roundPlayers.find(p=>p.id===match.playersInMatch[0]);const p2=roundPlayers.find(p=>p.id===match.playersInMatch[1]);return p1&&p2?<span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]}</span>:null;})()}
             </div>
-            {nassauMatches.length>1&&<button onClick={()=>removeMatch(idx)} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, letterSpacing:1, color:'#666666', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>REMOVE</button>}
+            {nassauMatches.length>1&&<button onClick={()=>removeMatch(idx)} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, letterSpacing:1, color:'#8A9E8A', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>REMOVE</button>}
           </div>
           <div style={{padding:'12px 14px'}}>
             <NassauSingleMatchConfig roundPlayers={roundPlayers} matchConfig={match} onChange={updated=>updateMatch(idx,updated)} matchLabel="" course={course}/>
@@ -418,11 +418,11 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
       <div onClick={() => setOpen(v=>!v)}
         style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 2px', cursor:'pointer', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
         <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:10, letterSpacing:2.5, color:hasSelected?'#D4AF37':'#A0A0A0', fontWeight:700}}>{label}</span>
-          <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, color:'#666666', background:'#252525', border:'1px solid #2A2A2A', borderRadius:10, padding:'1px 7px'}}>{list.length}</span>
-          {hasSelected && <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:0.5, color:'#D4AF37', background:'rgba(212,175,55,0.1)', border:'1px solid rgba(212,175,55,0.25)', borderRadius:4, padding:'1px 6px'}}>SELECTED</span>}
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, letterSpacing:2.5, color:hasSelected?'#C8A15A':'#3F5F4A', fontWeight:700}}>{label}</span>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, color:'#8A9E8A', background:'#F0EDE4', border:'1px solid #E7E3D9', borderRadius:10, padding:'1px 7px'}}>{list.length}</span>
+          {hasSelected && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:0.5, color:'#C8A15A', background:'rgba(200,161,90,0.1)', border:'1px solid rgba(200,161,90,0.25)', borderRadius:4, padding:'1px 6px'}}>SELECTED</span>}
         </div>
-        <span style={{fontSize:14, color:'#666666', transform:isOpen?'rotate(180deg)':'none', transition:'transform 0.2s', display:'inline-block'}}>▾</span>
+        <span style={{fontSize:14, color:'#8A9E8A', transform:isOpen?'rotate(180deg)':'none', transition:'transform 0.2s', display:'inline-block'}}>▾</span>
       </div>
       {isOpen && (
         <div style={{display:'flex', flexDirection:'column', gap:8, paddingBottom:4}}>
@@ -430,16 +430,16 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
             const sel = course?.id === c.id;
             return (
               <div key={c.id} onClick={() => onSelect(c)}
-                style={{...setupS.courseCard, border:sel?'1px solid #D4AF37':'1px solid #2A2A2A', background:sel?'rgba(212,175,55,0.06)':'#1E1E1E'}}>
+                style={{...setupS.courseCard, border:sel?'1px solid #C8A15A':'1px solid #E7E3D9', background:sel?'rgba(200,161,90,0.06)':'#FFFFFF'}}>
                 <div style={{flex:1}}>
                   <div style={{display:'flex', alignItems:'center', gap:8}}>
-                    <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:sel?'#D4AF37':'#F5F5F5'}}>{c.name}</div>
-                    {c.custom && <span style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:1, color:'#00A86B', background:'rgba(0,168,107,0.1)', border:'1px solid rgba(0,168,107,0.2)', padding:'1px 6px', borderRadius:4}}>CUSTOM</span>}
+                    <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:sel?'#C8A15A':'#0E2B20'}}>{c.name}</div>
+                    {c.custom && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:1, color:'#15803D', background:'rgba(21,128,61,0.1)', border:'1px solid rgba(21,128,61,0.2)', padding:'1px 6px', borderRadius:4}}>CUSTOM</span>}
                   </div>
-                  <div style={{fontSize:11, color:'#A0A0A0', marginTop:2, fontFamily:'Inter, system-ui, sans-serif'}}>{c.location}</div>
-                  <div style={{fontSize:10, color:'#666666', marginTop:1, fontFamily:'Inter, system-ui, sans-serif'}}>Rating {c.rating} · Slope {c.slope}</div>
+                  <div style={{fontSize:11, color:'#3F5F4A', marginTop:2, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{c.location}</div>
+                  <div style={{fontSize:10, color:'#8A9E8A', marginTop:1, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>Rating {c.rating} · Slope {c.slope}</div>
                 </div>
-                {sel && <span style={{color:'#D4AF37', fontSize:20, flexShrink:0}}>✓</span>}
+                {sel && <span style={{color:'#C8A15A', fontSize:20, flexShrink:0}}>✓</span>}
               </div>
             );
           })}
@@ -526,7 +526,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const roundPlayersForNassau = allPlayers.filter(p => selectedPlayers.includes(p.id));
   const steps = ['Players','Course','Formats'];
 
-  const inputBase = { width:'100%', background:'#121212', border:'1px solid #2A2A2A', borderRadius:12, padding:'11px 14px', color:'#F5F5F5', fontFamily:'Inter, system-ui, sans-serif', fontSize:14, outline:'none', boxSizing:'border-box' };
+  const inputBase = { width:'100%', background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:12, padding:'11px 14px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, outline:'none', boxSizing:'border-box' };
 
   return (
     <div style={setupS.root}>
@@ -534,12 +534,12 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
         {steps.map((s,i) => (
           <React.Fragment key={s}>
             <div style={setupS.stepItem} onClick={()=> i+1 < step && setStep(i+1)}>
-              <div style={{...setupS.stepDot, background:step>i+1?'#00A86B':step===i+1?'#D4AF37':'#2A2A2A', color:step>=i+1?'#0D0D0D':'#666666'}}>
+              <div style={{...setupS.stepDot, background:step>i+1?'#1F3D2E':step===i+1?'#C8A15A':'#E7E3D9', color:step>=i+1?'#F6F4EE':'#8A9E8A'}}>
                 {step>i+1 ? '✓' : i+1}
               </div>
-              <span style={{...setupS.stepLabel, color:step===i+1?'#F5F5F5':step>i+1?'#00A86B':'#666666'}}>{s}</span>
+              <span style={{...setupS.stepLabel, color:step===i+1?'#0E2B20':step>i+1?'#1F3D2E':'#8A9E8A'}}>{s}</span>
             </div>
-            {i<2 && <div style={{flex:1, height:1, background:step>i+1?'#00A86B':'#2A2A2A', margin:'0 8px', marginBottom:12}}/>}
+            {i<2 && <div style={{flex:1, height:1, background:step>i+1?'#1F3D2E':'#E7E3D9', margin:'0 8px', marginBottom:12}}/>}
           </React.Fragment>
         ))}
       </div>
@@ -548,21 +548,21 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
 
         {step===1 && (
           <div>
-            <div style={setupS.stepTitle}>SELECT PLAYERS <span style={{color:'#A0A0A0', fontSize:13, fontWeight:400}}>({selectedPlayers.length} selected)</span></div>
+            <div style={setupS.stepTitle}>SELECT PLAYERS <span style={{color:'#3F5F4A', fontSize:13, fontWeight:400}}>({selectedPlayers.length} selected)</span></div>
             <div style={setupS.stepSub}>Choose 2–6 players for this round</div>
             <div style={{display:'flex', flexDirection:'column', gap:10, marginTop:16}}>
               {allPlayers.map(p => {
                 const sel = selectedPlayers.includes(p.id);
                 return (
                   <div key={p.id} onClick={()=>togglePlayer(p.id)}
-                    style={{...setupS.playerRow, border:sel?`1px solid ${p.color}`:'1px solid #2A2A2A', background:sel?`${p.color}0A`:'#1E1E1E'}}>
+                    style={{...setupS.playerRow, border:sel?`1px solid ${p.color}`:'1px solid #E7E3D9', background:sel?`${p.color}0A`:'#FFFFFF'}}>
                     <Avatar player={p} size={42}/>
                     <div style={{flex:1}}>
-                      <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:17, color:'#F5F5F5'}}>{p.name}</div>
-                      <div style={{fontSize:11, color:'#A0A0A0', fontFamily:'Inter, system-ui, sans-serif'}}>HCP {p.handicap} · GHIN {p.ghin}</div>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:17, color:'#0E2B20'}}>{p.name}</div>
+                      <div style={{fontSize:11, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>HCP {p.handicap} · GHIN {p.ghin}</div>
                     </div>
-                    <div style={{...setupS.check, background:sel?p.color:'transparent', border:`2px solid ${sel?p.color:'#2A2A2A'}`}}>
-                      {sel && <span style={{color:'#0D0D0D', fontSize:14, fontWeight:900}}>✓</span>}
+                    <div style={{...setupS.check, background:sel?p.color:'transparent', border:`2px solid ${sel?p.color:'#E7E3D9'}`}}>
+                      {sel && <span style={{color:'#FFFFFF', fontSize:14, fontWeight:900}}>✓</span>}
                     </div>
                   </div>
                 );
@@ -592,10 +592,10 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                 {customFiltered.length > 0 && <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={setCourse} defaultOpen={true}/>}
                 {stateGroups.map(({state, label, list}) => <CourseGroup key={state} label={label.toUpperCase()} list={list} course={course} onSelect={setCourse} defaultOpen={isSearching}/>)}
                 {filtered.length===0 && (
-                  <div style={{textAlign:'center', padding:'32px 0', color:'#666666', fontFamily:'Inter, system-ui, sans-serif', fontSize:13}}>
+                  <div style={{textAlign:'center', padding:'32px 0', color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13}}>
                     No courses match "{courseSearch}"<br/>
-                    <span onClick={()=>setAddMode('scanner')} style={{color:'#00A86B', cursor:'pointer', fontWeight:600}}>📸 Scan a scorecard →</span>{' · '}
-                    <span onClick={()=>{setScanPrefill(null);setAddMode('builder');}} style={{color:'#D4AF37', cursor:'pointer', fontWeight:600}}>enter manually →</span>
+                    <span onClick={()=>setAddMode('scanner')} style={{color:'#15803D', cursor:'pointer', fontWeight:600}}>📸 Scan a scorecard →</span>{' · '}
+                    <span onClick={()=>{setScanPrefill(null);setAddMode('builder');}} style={{color:'#C8A15A', cursor:'pointer', fontWeight:600}}>enter manually →</span>
                   </div>
                 )}
               </div>
@@ -615,27 +615,27 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
               {Object.entries(FORMAT_INFO).map(([key, info]) => {
                 const on = formats[key];
                 return (
-                  <div key={key} style={{...setupS.formatCard, border:on?'1px solid #00A86B':'1px solid #2A2A2A', background:on?'rgba(0,168,107,0.04)':'#1E1E1E'}}>
+                  <div key={key} style={{...setupS.formatCard, border:on?'1px solid #0E2B20':'1px solid #E7E3D9', background:on?'rgba(14,43,32,0.04)':'#FFFFFF'}}>
                     <div style={{display:'flex', alignItems:'center', gap:12}} onClick={()=>toggleFormat(key)}>
                       <span style={{fontSize:22, flexShrink:0}}>{info.icon}</span>
                       <div style={{flex:1}}>
-                        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:17, color:on?'#00A86B':'#F5F5F5'}}>{info.label}</div>
-                        <div style={{fontSize:12, color:'#A0A0A0', marginTop:2, lineHeight:1.4, fontFamily:'Inter, system-ui, sans-serif'}}>{info.desc}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:17, color:'#0E2B20'}}>{info.label}</div>
+                        <div style={{fontSize:12, color:'#3F5F4A', marginTop:2, lineHeight:1.4, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{info.desc}</div>
                       </div>
-                      <div style={{...setupS.check, flexShrink:0, background:on?'#00A86B':'transparent', border:`2px solid ${on?'#00A86B':'#2A2A2A'}`}}>
-                        {on && <span style={{color:'#0D0D0D', fontSize:14, fontWeight:900}}>✓</span>}
+                      <div style={{...setupS.check, flexShrink:0, background:on?'#0E2B20':'transparent', border:`2px solid ${on?'#0E2B20':'#E7E3D9'}`}}>
+                        {on && <span style={{color:'#F6F4EE', fontSize:14, fontWeight:900}}>✓</span>}
                       </div>
                     </div>
                     {on && key !== 'nassau' && (
-                      <div style={{borderTop:'1px solid rgba(0,168,107,0.12)', marginTop:12, paddingTop:12}}>
-                        <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#A0A0A0', marginBottom:8}}>
+                      <div style={{borderTop:'1px solid rgba(14,43,32,0.08)', marginTop:12, paddingTop:12}}>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', marginBottom:8}}>
                           STAKE ({key==='wolf'?'pot ante per player':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
                         </div>
                         <StakesInput value={stakes[key]} onChange={v=>setStakes(prev=>({...prev,[key]:v}))}/>
                       </div>
                     )}
                     {on && key === 'nassau' && (
-                      <div style={{borderTop:'1px solid rgba(0,168,107,0.12)', marginTop:12, paddingTop:12}}>
+                      <div style={{borderTop:'1px solid rgba(14,43,32,0.08)', marginTop:12, paddingTop:12}}>
                         <NassauMultiMatchConfig roundPlayers={roundPlayersForNassau} nassauMatches={nassauMatches} onChange={setNassauMatches} course={course}/>
                       </div>
                     )}
@@ -645,24 +645,24 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
             </div>
 
             {activeFormats.length > 0 && (
-              <div style={{marginTop:16, background:'rgba(212,175,55,0.04)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:12, padding:'12px 14px'}}>
-                <div style={{fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2.5, color:'#D4AF37', marginBottom:8}}>ROUND SUMMARY</div>
-                <div style={{fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#A0A0A0'}}>
+              <div style={{marginTop:16, background:'rgba(200,161,90,0.04)', border:'1px solid rgba(200,161,90,0.15)', borderRadius:12, padding:'12px 14px'}}>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2.5, color:'#C8A15A', marginBottom:8}}>ROUND SUMMARY</div>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>
                   <div style={{marginBottom:2}}>📍 {course?.name}</div>
                   <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players</div>
                   {activeFormats.map(f => (
                     <div key={f.type}>
                       🎯 {FORMAT_INFO[f.type].label}
-                      {f.type !== 'nassau' && <span> — <span style={{color:'#D4AF37', fontWeight:700}}>${f.stakes}</span></span>}
+                      {f.type !== 'nassau' && <span> — <span style={{color:'#C8A15A', fontWeight:700}}>${f.stakes}</span></span>}
                       {f.type === 'nassau' && f.nassauMatches && f.nassauMatches.length > 0 && (
-                        <span style={{color:'#A0A0A0', marginLeft:6}}>
+                        <span style={{color:'#3F5F4A', marginLeft:6}}>
                           {f.nassauMatches.length} match{f.nassauMatches.length>1?'es':''}
                           {f.nassauMatches.map((m,i)=>{
                             const p1=roundPlayersForNassau.find(p=>p.id===m.playersInMatch[0]);
                             const p2=roundPlayersForNassau.find(p=>p.id===m.playersInMatch[1]);
                             const popCount=Object.values(m.popHoles||{}).reduce((a,arr)=>a+(arr||[]).filter(Boolean).length,0);
                             if(!p1||!p2)return null;
-                            return <span key={m.id} style={{display:'block', marginLeft:16, color:'#A0A0A0', fontSize:11}}>· {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]} — ${m.stakes}{popCount>0?` · ${popCount} pops`:''}</span>;
+                            return <span key={m.id} style={{display:'block', marginLeft:16, color:'#3F5F4A', fontSize:11}}>· {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]} — ${m.stakes}{popCount>0?` · ${popCount} pops`:''}</span>;
                           })}
                         </span>
                       )}
@@ -677,7 +677,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
               <Btn onClick={handleStart} variant="gold" disabled={!canStart} style={{flex:1, fontSize:17, padding:'15px'}}>⛳ TEE IT UP</Btn>
             </div>
             {!canStart && (
-              <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#666666', fontFamily:'Inter, system-ui, sans-serif'}}>
+              <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
                 {!nassauValid ? 'Complete all Nassau match setups to continue' : 'Select at least one format to continue'}
               </div>
             )}
@@ -689,14 +689,14 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
 };
 
 const setupS = {
-  root:      { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', background:'#121212' },
+  root:      { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', background:'#F6F4EE' },
   stepBar:   { display:'flex', alignItems:'flex-end', padding:'20px 24px 0', gap:0 },
   stepItem:  { display:'flex', flexDirection:'column', alignItems:'center', gap:6, cursor:'pointer' },
-  stepDot:   { width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, transition:'all 0.2s' },
-  stepLabel: { fontFamily:'Inter, system-ui, sans-serif', fontSize:10, letterSpacing:2, fontWeight:600, marginBottom:12 },
+  stepDot:   { width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, transition:'all 0.2s' },
+  stepLabel: { fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, letterSpacing:2, fontWeight:600, marginBottom:12 },
   content:   { padding:'24px 20px', flex:1 },
-  stepTitle: { fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:24, color:'#F5F5F5', letterSpacing:0.5 },
-  stepSub:   { fontFamily:'Inter, system-ui, sans-serif', fontSize:13, color:'#A0A0A0', marginTop:4 },
+  stepTitle: { fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:24, color:'#0E2B20', letterSpacing:0.5 },
+  stepSub:   { fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', marginTop:4 },
   playerRow: { display:'flex', alignItems:'center', gap:14, borderRadius:16, padding:'14px 16px', cursor:'pointer', transition:'all 0.15s' },
   courseCard:{ display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:14, padding:'14px 16px', cursor:'pointer' },
   formatCard:{ borderRadius:16, padding:'16px', cursor:'default' },
