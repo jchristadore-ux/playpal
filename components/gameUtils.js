@@ -147,8 +147,10 @@ function ptmNextPlayer(players, currentId) {
 
 function computePTMState(scores, putts, players, course, initialHolderId) {
   let holderId = initialHolderId || players[0].id;
-  const log    = [];
+  const log          = [];
+  const holderAtStart = []; // who held the money at the START of each hole, before any pass
   for (let i = 0; i < 18; i++) {
+    holderAtStart[i] = holderId;
     const par = course.holes[i].par;
     if (i < 17) {
       const score = scores[holderId]?.[i];
@@ -182,7 +184,7 @@ function computePTMState(scores, putts, players, course, initialHolderId) {
       }
     }
   }
-  return { holderId, log };
+  return { holderId, log, holderAtStart };
 }
 
 function calcPTMPayouts(holderId, players, stake) {

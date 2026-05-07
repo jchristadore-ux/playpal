@@ -457,6 +457,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
     return computePTMState(scores, putts, players, course, players[0]?.id);
   }, [JSON.stringify(scores), JSON.stringify(putts)]);
+  // Who held the money at the START of the current hole (before any pass this hole)
+  const ptmHoleHolder = ptmState.holderAtStart?.[holeIdx] ?? ptmState.holderId;
 
   // ── Nassau live statuses ──────────────────────────────────────────────────
   const matchLiveStatuses = React.useMemo(() => {
@@ -477,7 +479,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       const holesPlayed = (scores[p.id]||[]).filter(Boolean).length;
       if (hasWolf) { const wolfPts = calcWolfStandings(scores, wolfData, players, course); const pts = wolfPts[p.id]||0; stats.push({ icon:'🐺', label:'WOLF PTS', value:String(pts), color:pts>0?'#2DD97A':'#7A9EBF' }); }
       if (hasStable) { const pts = course.holes.reduce((acc,h,i) => { const g=scores[p.id]?.[i]; return acc+(g?calcStablefordPoints(getAdjustedHoleScore(scores,popFlags,p.id,i),h.par):0); }, 0); stats.push({ icon:'⭐', label:'STBL PTS', value:String(pts), color:pts>=2?'#D4AF47':'#7A9EBF' }); }
-      if (hasPTM && ptmState.holderId===p.id) stats.push({ icon:'💰', label:'HOLDS', value:'', color:'#D4AF47' });
+      if (hasPTM && ptmHoleHolder===p.id) stats.push({ icon:'💰', label:'HOLDS', value:'', color:'#D4AF47' });
       if (holesPlayed>0) { const total=(scores[p.id]||[]).reduce((acc,s)=>acc+(s||0),0); stats.push({ icon:'⛳', label:'STROKES', value:String(total), color:'#9BB4D4' }); }
       if (hasSkins) { const {skins}=calcSkins(scores,players,course,skinsFmt?.stakes||1,popFlags); const won=skins[p.id]||0; stats.push({ icon:'🎯', label:'SKINS', value:String(won), color:won>0?'#D4AF47':'#7A9EBF' }); }
       if (hasNassau) {
@@ -566,7 +568,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
 
-  const ptmPuttRequired = hasPTM && !!ptmState.holderId && !(putts[ptmState.holderId]?.[holeIdx] > 0);
+  const ptmPuttRequired = hasPTM && !!ptmHoleHolder && !(putts[ptmHoleHolder]?.[holeIdx] > 0);
   const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
 
@@ -644,7 +646,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           {players.map(p => {
             const isWolf       = hasWolf && wolfPlayer?.id === p.id;
             const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
-            const isPTM        = hasPTM && ptmState.holderId === p.id;
+            const isPTM        = hasPTM && ptmHoleHolder === p.id;
             const isNassauPlayer = allNassauPlayerIds.has(p.id);
             const nassauPopActive = isNassauPlayer && nassauMatches.some(match => {
               if (!match.playersInMatch.includes(p.id)) return false;
