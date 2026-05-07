@@ -1,43 +1,36 @@
 // Shared.jsx — NavBar, Button, Avatar, Modal, Toast
 
-// PlayPal logo SVG — two golfers fist-bumping over tee
+// PlayPal logo — premium emerald golf ball with gold coin shine
 const PPLogo = ({ size = 36 }) => (
   <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="18" cy="27" rx="11" ry="2.5" fill="#0B3D2A"/>
-    <ellipse cx="18" cy="27" rx="7" ry="1.5" fill="#0D4A33"/>
-    <rect x="17" y="21" width="2.5" height="5.5" rx="1.25" fill="#D4AF47"/>
-    <circle cx="18.25" cy="20.5" r="2" fill="#D4AF47"/>
-    {/* left golfer green */}
-    <circle cx="10.5" cy="10" r="2.5" fill="#2DD97A"/>
-    <path d="M9 13 Q10.5 20 10.5 21 L13 21 Q13 17 12 13Z" fill="#2DD97A"/>
-    <path d="M9 13 L7 17" stroke="#2DD97A" strokeWidth="1.8" strokeLinecap="round"/>
-    <path d="M12 13 L14.5 11.5" stroke="#2DD97A" strokeWidth="1.8" strokeLinecap="round"/>
-    {/* right golfer white */}
-    <circle cx="25.5" cy="10" r="2.5" fill="#FFFFFF"/>
-    <path d="M24 13 Q25.5 20 25.5 21 L23 21 Q23 17 24 13Z" fill="#E8EDF4"/>
-    <path d="M27 13 L29 17" stroke="#E8EDF4" strokeWidth="1.8" strokeLinecap="round"/>
-    <path d="M24 13 L21.5 11.5" stroke="#E8EDF4" strokeWidth="1.8" strokeLinecap="round"/>
-    {/* fist bump */}
-    <rect x="13.5" y="10.5" width="3.5" height="2.5" rx="1.25" fill="#2DD97A"/>
-    <rect x="19" y="10.5" width="3.5" height="2.5" rx="1.25" fill="#FFFFFF"/>
-    {/* caps */}
-    <path d="M8.2 8.5 Q10.5 6.8 12.8 8.5" stroke="#1A5C3A" strokeWidth="1.3" strokeLinecap="round" fill="none"/>
-    <path d="M23.2 8.5 Q25.5 6.8 27.8 8.5" stroke="#B8BCC4" strokeWidth="1.3" strokeLinecap="round" fill="none"/>
+    {/* Main golf ball — emerald green */}
+    <circle cx="18" cy="18" r="14" fill="#00A86B"/>
+    {/* Radial gold shimmer overlay */}
+    <circle cx="18" cy="18" r="14" fill="url(#ppBallShine)" opacity="0.9"/>
+    {/* Subtle dimple lines */}
+    <path d="M10 14 Q14 12 18 14 Q22 12 26 14" stroke="rgba(0,0,0,0.2)" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+    <path d="M9 18 Q13 16 18 18 Q23 16 27 18" stroke="rgba(0,0,0,0.2)" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+    <path d="M10 22 Q14 20 18 22 Q22 20 26 22" stroke="rgba(0,0,0,0.2)" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+    {/* Gold coin highlight — top-right metallic shimmer */}
+    <ellipse cx="23.5" cy="12" rx="5.5" ry="3.5" fill="#D4AF37" opacity="0.5" transform="rotate(-22 23.5 12)"/>
+    <ellipse cx="24.5" cy="10.5" rx="2.5" ry="1.5" fill="#F5D76E" opacity="0.75" transform="rotate(-22 24.5 10.5)"/>
+    <defs>
+      <radialGradient id="ppBallShine" cx="68%" cy="28%" r="65%">
+        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.5"/>
+        <stop offset="55%" stopColor="#00A86B" stopOpacity="0"/>
+        <stop offset="100%" stopColor="#005535" stopOpacity="0.3"/>
+      </radialGradient>
+    </defs>
   </svg>
 );
 
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
-// Uses qrcodejs (loaded in index.html via cdnjs).
-// API: new QRCode(domElement, { text, width, height, colorDark, colorLight })
-// The modal div is ALWAYS in the DOM (display:none when closed) so the ref
-// is never null when the QRCode constructor runs.
 const QRModal = ({ open, onClose, syncCode }) => {
   const containerRef  = React.useRef(null);
   const instanceRef   = React.useRef(null);
   const lastCodeRef   = React.useRef(null);
 
   React.useEffect(() => {
-    // Only re-render when opening or when syncCode changes while open
     if (!open || !syncCode) return;
     if (!containerRef.current) return;
     if (lastCodeRef.current === syncCode && instanceRef.current) return;
@@ -47,7 +40,6 @@ const QRModal = ({ open, onClose, syncCode }) => {
 
     const render = () => {
       if (!window.QRCode) return false;
-      // Clear previous QR
       containerRef.current.innerHTML = '';
       instanceRef.current = null;
       try {
@@ -67,7 +59,6 @@ const QRModal = ({ open, onClose, syncCode }) => {
     };
 
     if (!render()) {
-      // qrcodejs not loaded yet — poll until available
       const interval = setInterval(() => { if (render()) clearInterval(interval); }, 150);
       const timeout  = setTimeout(() => clearInterval(interval), 10000);
       return () => { clearInterval(interval); clearTimeout(timeout); };
@@ -75,23 +66,22 @@ const QRModal = ({ open, onClose, syncCode }) => {
   }, [open, syncCode]);
 
   return (
-    // Always mounted — visibility toggled via display style
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         display:        open ? 'flex' : 'none',
         position:       'fixed',
         inset:          0,
-        background:     'rgba(0,0,0,0.85)',
+        background:     'rgba(0,0,0,0.88)',
         zIndex:         3000,
         alignItems:     'center',
         justifyContent: 'center',
         padding:        24,
       }}>
       <div style={{
-        background:     '#0F1D35',
-        border:         '1px solid #1F3354',
-        borderRadius:   18,
+        background:     '#1E1E1E',
+        border:         '1px solid #2A2A2A',
+        borderRadius:   20,
         padding:        24,
         maxWidth:       360,
         width:          '100%',
@@ -100,23 +90,21 @@ const QRModal = ({ open, onClose, syncCode }) => {
         alignItems:     'center',
         gap:            18,
       }}>
-        {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%' }}>
-          <span style={{ fontFamily:'Barlow Condensed', fontSize:20, fontWeight:700, color:'#fff', letterSpacing:1 }}>
+          <span style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:18, fontWeight:800, color:'#F5F5F5', letterSpacing:0.5 }}>
             JOIN THIS ROUND
           </span>
           <button onClick={onClose} style={{
-            background: 'rgba(255,255,255,0.05)', border:'1px solid #1F3354', borderRadius:8,
-            color:'#7A9EBF', fontSize:18, cursor:'pointer', width:32, height:32,
+            background: 'rgba(255,255,255,0.05)', border:'1px solid #2A2A2A', borderRadius:8,
+            color:'#A0A0A0', fontSize:18, cursor:'pointer', width:32, height:32,
             display:'flex', alignItems:'center', justifyContent:'center',
             WebkitTapHighlightColor:'transparent',
           }}>✕</button>
         </div>
 
-        {/* QR code — white box so black modules are visible */}
         <div style={{
           background:     '#ffffff',
-          borderRadius:   12,
+          borderRadius:   14,
           padding:        12,
           width:          '100%',
           boxSizing:      'border-box',
@@ -129,25 +117,24 @@ const QRModal = ({ open, onClose, syncCode }) => {
           <div ref={containerRef} />
         </div>
 
-        {/* Round code */}
         <div style={{
-          background:   'rgba(45,217,122,0.07)',
-          border:       '1px solid rgba(45,217,122,0.25)',
-          borderRadius: 10,
+          background:   'rgba(0,168,107,0.07)',
+          border:       '1px solid rgba(0,168,107,0.25)',
+          borderRadius: 12,
           padding:      '10px 20px',
           textAlign:    'center',
           width:        '100%',
           boxSizing:    'border-box',
         }}>
-          <div style={{ fontFamily:'Barlow Condensed', fontSize:11, letterSpacing:2.5, color:'#7A9EBF', marginBottom:4 }}>
+          <div style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:10, letterSpacing:2.5, color:'#A0A0A0', marginBottom:4, fontWeight:600 }}>
             ROUND CODE
           </div>
-          <div style={{ fontFamily:'Barlow Condensed', fontWeight:900, fontSize:34, letterSpacing:6, color:'#2DD97A' }}>
+          <div style={{ fontFamily:'Inter, system-ui, sans-serif', fontWeight:900, fontSize:32, letterSpacing:6, color:'#00A86B' }}>
             {syncCode}
           </div>
         </div>
 
-        <div style={{ fontFamily:'DM Sans', fontSize:12, color:'#7A9EBF', textAlign:'center', lineHeight:1.6 }}>
+        <div style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:12, color:'#A0A0A0', textAlign:'center', lineHeight:1.6 }}>
           Scan with any camera app — or share the code above.
         </div>
       </div>
@@ -171,21 +158,20 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
       <nav style={navStyles.bar}>
         <button onClick={onHome} style={navStyles.logo}>
           <PPLogo size={30} />
-          <span style={{ color:'#FFFFFF', fontFamily:'Barlow Condensed', fontSize:20, fontWeight:800, letterSpacing:2, marginLeft:6 }}>
-            PLAYPAL
+          <span style={{ color:'#F5F5F5', fontFamily:'Inter, system-ui, sans-serif', fontSize:19, fontWeight:900, letterSpacing:1.5, marginLeft:8 }}>
+            PlayPal
           </span>
         </button>
         <div style={navStyles.center} />
         {syncCode && (
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            {/* QR icon button */}
             <button
               onClick={() => setShowQR(true)}
               title="Show QR code to join round"
               style={{
-                background:  'rgba(45,217,122,0.07)',
-                border:      '1px solid rgba(45,217,122,0.2)',
-                borderRadius: 8,
+                background:  'rgba(0,168,107,0.08)',
+                border:      '1px solid rgba(0,168,107,0.2)',
+                borderRadius: 10,
                 padding:     '6px 10px',
                 cursor:      'pointer',
                 display:     'flex',
@@ -195,19 +181,17 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
               }}>
               <span style={{ fontSize:18, lineHeight:1 }}>📲</span>
             </button>
-            {/* Sync code pill */}
             <button onClick={copy} style={navStyles.sync}>
-              <span style={{ fontSize:9, color:'#7A9EBF', letterSpacing:1.5 }}>SYNC</span>
-              <span style={{ fontSize:13, fontWeight:800, color:'#2DD97A', fontFamily:'Barlow Condensed', letterSpacing:2 }}>
+              <span style={{ fontSize:9, color:'#A0A0A0', letterSpacing:1.5, fontFamily:'Inter, system-ui, sans-serif', fontWeight:600 }}>SYNC</span>
+              <span style={{ fontSize:13, fontWeight:900, color:'#00A86B', fontFamily:'Inter, system-ui, sans-serif', letterSpacing:2 }}>
                 {syncCode}
               </span>
-              {copied && <span style={{ fontSize:9, color:'#2DD97A' }}>✓ COPIED</span>}
+              {copied && <span style={{ fontSize:9, color:'#00A86B', fontWeight:700 }}>✓ COPIED</span>}
             </button>
           </div>
         )}
       </nav>
 
-      {/* QRModal always mounted while syncCode exists */}
       {syncCode && (
         <QRModal
           open={showQR}
@@ -222,8 +206,8 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
 const navStyles = {
   bar: {
     display:'flex', alignItems:'center', justifyContent:'space-between',
-    padding:'0 16px', height:52, background:'#070C16',
-    borderBottom:'1px solid #1F3354', flexShrink:0, zIndex:100, position:'relative',
+    padding:'0 16px', height:54, background:'#0D0D0D',
+    borderBottom:'1px solid #2A2A2A', flexShrink:0, zIndex:100, position:'relative',
   },
   logo: {
     background:'none', border:'none', cursor:'pointer',
@@ -232,27 +216,28 @@ const navStyles = {
   center: { flex:1 },
   sync: {
     display:'flex', flexDirection:'column', alignItems:'flex-end',
-    background:'rgba(45,217,122,0.07)', border:'1px solid rgba(45,217,122,0.2)',
-    borderRadius:8, padding:'4px 10px', cursor:'pointer', gap:1,
+    background:'rgba(0,168,107,0.07)', border:'1px solid rgba(0,168,107,0.2)',
+    borderRadius:10, padding:'4px 10px', cursor:'pointer', gap:1,
   },
 };
 
+// ─── Btn ─────────────────────────────────────────────────────────────────────
 const Btn = ({ children, onClick, variant='gold', style={}, disabled=false }) => {
   const variants = {
-    gold:    { background:'linear-gradient(135deg,#D4AF47,#B8962E)', color:'#0B0F1A', fontWeight:800, border:'none' },
-    green:   { background:'linear-gradient(135deg,#2DD97A,#20B862)', color:'#0B0F1A', fontWeight:800, border:'none' },
-    ghost:   { background:'transparent', color:'#9BB4D4', border:'1px solid #1F3354' },
-    danger:  { background:'linear-gradient(135deg,#E5534B,#C0392B)', color:'#fff', fontWeight:700, border:'none' },
-    surface: { background:'#112240', color:'#fff', border:'1px solid #1F3354' },
+    gold:    { background:'#D4AF37', color:'#0D0D0D', fontWeight:800, border:'none', boxShadow:'0 4px 16px rgba(212,175,55,0.30)' },
+    green:   { background:'#00A86B', color:'#F5F5F5', fontWeight:800, border:'none', boxShadow:'0 4px 16px rgba(0,168,107,0.35)' },
+    ghost:   { background:'transparent', color:'#00A86B', border:'1.5px solid #00A86B', boxShadow:'none' },
+    danger:  { background:'#FF6B6B', color:'#F5F5F5', fontWeight:700, border:'none', boxShadow:'none' },
+    surface: { background:'#252525', color:'#F5F5F5', border:'1px solid #2A2A2A', boxShadow:'none' },
   };
   return (
     <button onClick={onClick} disabled={disabled} style={{
       display:'flex', alignItems:'center', justifyContent:'center', gap:6,
-      minHeight:48, padding:'12px 20px', borderRadius:12,
+      minHeight:56, padding:'14px 24px', borderRadius:18,
       cursor: disabled ? 'not-allowed' : 'pointer',
-      fontFamily:'Barlow Condensed', fontSize:16, letterSpacing:1,
+      fontFamily:'Inter, system-ui, sans-serif', fontSize:15, letterSpacing:0.5, fontWeight:700,
       opacity: disabled ? 0.45 : 1,
-      transition:'transform 0.1s, opacity 0.1s',
+      transition:'transform 0.1s, box-shadow 0.1s',
       WebkitTapHighlightColor:'transparent',
       ...variants[variant], ...style,
     }}
@@ -263,25 +248,27 @@ const Btn = ({ children, onClick, variant='gold', style={}, disabled=false }) =>
   );
 };
 
+// ─── Avatar ───────────────────────────────────────────────────────────────────
 const Avatar = ({ player, size=40 }) => (
   <div style={{
     width:size, height:size, borderRadius:'50%',
     background:`${player.color}18`,
     border:`2px solid ${player.color}`,
     display:'flex', alignItems:'center', justifyContent:'center',
-    fontFamily:'Barlow Condensed', fontWeight:800, fontSize:size*0.35,
+    fontFamily:'Inter, system-ui, sans-serif', fontWeight:800, fontSize:size*0.35,
     color:player.color, flexShrink:0, letterSpacing:0.5,
   }}>{player.initials}</div>
 );
 
+// ─── Modal ────────────────────────────────────────────────────────────────────
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.82)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ background:'#0F1D35', border:'1px solid #1F3354', borderRadius:18, padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto' }}>
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ background:'#1E1E1E', border:'1px solid #2A2A2A', borderRadius:20, padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-          <span style={{ fontFamily:'Barlow Condensed', fontSize:20, fontWeight:700, color:'#fff', letterSpacing:1 }}>{title}</span>
-          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid #1F3354', borderRadius:8, color:'#7A9EBF', fontSize:18, cursor:'pointer', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+          <span style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:18, fontWeight:800, color:'#F5F5F5', letterSpacing:0.3 }}>{title}</span>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid #2A2A2A', borderRadius:8, color:'#A0A0A0', fontSize:18, cursor:'pointer', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
         </div>
         {children}
       </div>
@@ -289,34 +276,38 @@ const Modal = ({ open, onClose, title, children }) => {
   );
 };
 
+// ─── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ message, type='success' }) => {
   if (!message) return null;
-  const colors = { success:'#2DD97A', error:'#E5534B', info:'#D4AF47' };
+  const colors = { success:'#00A86B', error:'#FF6B6B', info:'#D4AF37' };
   return (
-    <div style={{ position:'fixed', bottom:100, left:'50%', transform:'translateX(-50%)', background:'#0F1D35', border:`1px solid ${colors[type]}44`, borderRadius:10, padding:'12px 20px', color:'#fff', fontFamily:'DM Sans', fontSize:14, zIndex:2000, boxShadow:'0 4px 24px rgba(0,0,0,0.6)' }}>
+    <div style={{ position:'fixed', bottom:100, left:'50%', transform:'translateX(-50%)', background:'#1E1E1E', border:`1px solid ${colors[type]}44`, borderRadius:12, padding:'12px 20px', color:'#F5F5F5', fontFamily:'Inter, system-ui, sans-serif', fontSize:14, zIndex:2000, boxShadow:'0 4px 24px rgba(0,0,0,0.6)' }}>
       <span style={{ color:colors[type], marginRight:8 }}>{type==='success'?'✓':type==='error'?'✕':'ℹ'}</span>
       {message}
     </div>
   );
 };
 
+// ─── Label ────────────────────────────────────────────────────────────────────
 const Label = ({ children, style={} }) => (
-  <span style={{ fontFamily:'Barlow Condensed', fontSize:10, fontWeight:700, letterSpacing:2.5, color:'#7A9EBF', textTransform:'uppercase', ...style }}>{children}</span>
+  <span style={{ fontFamily:'Inter, system-ui, sans-serif', fontSize:10, fontWeight:700, letterSpacing:2, color:'#A0A0A0', textTransform:'uppercase', ...style }}>{children}</span>
 );
 
+// ─── Divider ──────────────────────────────────────────────────────────────────
 const Divider = ({ label }) => (
   <div style={{ display:'flex', alignItems:'center', gap:10, margin:'16px 0' }}>
-    <div style={{ flex:1, height:1, background:'#1F3354' }} />
+    <div style={{ flex:1, height:1, background:'#2A2A2A' }} />
     {label && <Label>{label}</Label>}
-    <div style={{ flex:1, height:1, background:'#1F3354' }} />
+    <div style={{ flex:1, height:1, background:'#2A2A2A' }} />
   </div>
 );
 
+// ─── ScorePill ────────────────────────────────────────────────────────────────
 const ScorePill = ({ diff }) => {
-  const colors = diff <= -2 ? '#FFD700' : diff === -1 ? '#2DD97A' : diff === 0 ? '#7A9EBF' : diff === 1 ? '#E5534B' : '#8B0000';
+  const colors = diff <= -2 ? '#D4AF37' : diff === -1 ? '#4ADE80' : diff === 0 ? '#A0A0A0' : diff === 1 ? '#FF6B6B' : '#CC3333';
   const labels = diff <= -3 ? 'ALB' : diff === -2 ? 'EGL' : diff === -1 ? 'BRD' : diff === 0 ? 'PAR' : diff === 1 ? 'BOG' : diff === 2 ? 'DBL' : `+${diff}`;
   return (
-    <span style={{ fontSize:10, fontFamily:'Barlow Condensed', fontWeight:700, letterSpacing:1, color:colors, background:`${colors}18`, padding:'2px 7px', borderRadius:4, border:`1px solid ${colors}44` }}>
+    <span style={{ fontSize:10, fontFamily:'Inter, system-ui, sans-serif', fontWeight:700, letterSpacing:0.5, color:colors, background:`${colors}18`, padding:'2px 7px', borderRadius:5, border:`1px solid ${colors}44` }}>
       {labels}
     </span>
   );
