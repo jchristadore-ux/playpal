@@ -127,7 +127,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             <PPLogo size={52} />
           </div>
           <div>
-            <div style={homeS.logoText}>PlayPal</div>
+            <div style={homeS.logoText}>
+              <span style={{ color:'#C8A84B', fontFamily:"'Playfair Display', Georgia, serif" }}>Play</span><span style={{ color:'#8A95B0', fontFamily:"'Playfair Display', Georgia, serif" }}>Pal</span>
+            </div>
             <div style={homeS.logoSub}>YOUR GOLF COMPANION</div>
           </div>
         </div>
@@ -362,8 +364,8 @@ const homeS = {
   root:       { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:0, background:'#121212' },
   hero:       { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'40px 20px 32px', borderBottom:'1px solid #2A2A2A', gap:16 },
   logoWrap:   { display:'flex', alignItems:'center', gap:16 },
-  logoIconWrap: { width:68, height:68, background:'#1E1E1E', border:'1px solid #2A2A2A', borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center' },
-  logoText:   { fontFamily:'Inter, system-ui, sans-serif', fontSize:40, fontWeight:900, color:'#F5F5F5', letterSpacing:0.5, lineHeight:1 },
+  logoIconWrap: { width:68, height:68, display:'flex', alignItems:'center', justifyContent:'center' },
+  logoText:   { fontSize:40, fontWeight:800, letterSpacing:0.3, lineHeight:1, display:'flex', alignItems:'baseline' },
   logoSub:    { fontFamily:'Inter, system-ui, sans-serif', fontSize:10, letterSpacing:3, color:'#00A86B', fontWeight:700, marginTop:4 },
   tagline:    { fontFamily:'Inter, system-ui, sans-serif', fontSize:14, color:'#A0A0A0', textAlign:'center' },
   section:    { padding:'20px 16px', borderBottom:'1px solid #2A2A2A' },
