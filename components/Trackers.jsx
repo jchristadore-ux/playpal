@@ -137,27 +137,30 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   const { computePTMState, checkPTMPass, checkPTMWin18, ptmNextPlayer } = window;
   const stake = format?.stakes || 5;
 
-  const { holderId: currentHolder, log } = React.useMemo(() =>
+  const { holderId: currentHolder, log, holderAtStart } = React.useMemo(() =>
     computePTMState(scores, putts, players, course, ptmInitialHolder),
     [JSON.stringify(scores), JSON.stringify(putts)]
   );
 
-  const holder   = players.find(p => p.id === currentHolder) || players[0];
   const isHole18 = holeIdx === 17;
+  // For holes 1-17: show who held the money at the START of this hole (pre-pass).
+  // For hole 18: show the current chain holder so the chaining preview works.
+  const displayHolderId = isHole18 ? currentHolder : (holderAtStart?.[holeIdx] ?? currentHolder);
+  const holder   = players.find(p => p.id === displayHolderId) || players[0];
   const par      = course.holes[holeIdx]?.par;
   const hole18Passes = log.filter(l => l.holeIdx === 17).length;
-  const curScore = scores[currentHolder]?.[holeIdx];
-  const curPutts = (putts[currentHolder]?.[holeIdx]) || 0;
+  const curScore = scores[displayHolderId]?.[holeIdx];
+  const curPutts = (putts[displayHolderId]?.[holeIdx]) || 0;
 
   let preview = null;
-  if (curScore && par && holeIdx > 0) {
+  if (curScore && par) {
     const passes = checkPTMPass(curScore, par, curPutts);
     if (isHole18) {
       const wins = checkPTMWin18(curScore, par, curPutts);
       if (wins) {
         preview = { outcome:'win', label:`${holder.name.split(' ')[0].toUpperCase()} WINS THE POT`, detail:`Bogey or better · ≤2 putts`, color:'#2DD97A', icon:'🏆' };
       } else if (passes) {
-        const nextP = ptmNextPlayer(players, currentHolder);
+        const nextP = ptmNextPlayer(players, displayHolderId);
         const final = hole18Passes >= 3;
         const toName = final ? (players.find(p=>p.id===log.find(l=>l.holeIdx===17)?.fromId)?.name||holder.name) : nextP.name;
         preview = { outcome:'pass', label:final?`RETURNS TO ${toName.split(' ')[0].toUpperCase()}`:`PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail:curScore>=par+2?`Double bogey (${curScore})`:'3-putt or worse', color:'#E5534B', icon:'➡️' };
@@ -166,7 +169,7 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
       if (!passes) {
         preview = { outcome:'keep', label:`${holder.name.split(' ')[0].toUpperCase()} KEEPS THE MONEY`, detail:`Bogey or better · ≤2 putts`, color:'#2DD97A', icon:'✅' };
       } else {
-        const nextP = ptmNextPlayer(players, currentHolder);
+        const nextP = ptmNextPlayer(players, displayHolderId);
         preview = { outcome:'pass', label:`PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail:curScore>=par+2?`Double bogey (${curScore})`:'3-putt or worse', color:'#E5534B', icon:'➡️' };
       }
     }
