@@ -566,7 +566,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
 
-  const ptmPuttRequired = hasPTM && !!ptmState.holderId && !(putts[ptmState.holderId]?.[holeIdx] > 0);
+  const ptmPuttRequired = hasPTM && holeIdx > 0 && !!ptmState.holderId && !(putts[ptmState.holderId]?.[holeIdx] > 0);
   const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
 
@@ -644,7 +644,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           {players.map(p => {
             const isWolf       = hasWolf && wolfPlayer?.id === p.id;
             const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
-            const isPTM        = hasPTM && ptmState.holderId === p.id;
+            const isPTM        = hasPTM && holeIdx > 0 && ptmState.holderId === p.id;
             const isNassauPlayer = allNassauPlayerIds.has(p.id);
             const nassauPopActive = isNassauPlayer && nassauMatches.some(match => {
               if (!match.playersInMatch.includes(p.id)) return false;

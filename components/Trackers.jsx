@@ -150,7 +150,7 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   const curPutts = (putts[currentHolder]?.[holeIdx]) || 0;
 
   let preview = null;
-  if (curScore && par) {
+  if (curScore && par && holeIdx > 0) {
     const passes = checkPTMPass(curScore, par, curPutts);
     if (isHole18) {
       const wins = checkPTMWin18(curScore, par, curPutts);

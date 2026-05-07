@@ -150,7 +150,7 @@ function computePTMState(scores, putts, players, course, initialHolderId) {
   const log    = [];
   for (let i = 0; i < 18; i++) {
     const par = course.holes[i].par;
-    if (i < 17) {
+    if (i > 0 && i < 17) {
       const score = scores[holderId]?.[i];
       const putt  = (putts[holderId]?.[i]) || 0;
       if (!score) continue;
