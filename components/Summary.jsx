@@ -261,20 +261,28 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               <thead>
                 <tr>
                   <th style={{...sumS.th, textAlign:'left', minWidth:90}}>PLAYER</th>
-                  {course.holes.map(h=><th key={h.num} style={{...sumS.th, color:'#6B7280', minWidth:28}}>{h.num}</th>)}
+                  {course.holes.slice(0,9).map(h=><th key={h.num} style={{...sumS.th, color:'#6B7280', minWidth:28}}>{h.num}</th>)}
+                  <th style={{...sumS.th, color:'#0E2B20', background:'#F0EDE4', borderLeft:'2px solid #E7E3D9', minWidth:32}}>OUT</th>
+                  {course.holes.slice(9,18).map(h=><th key={h.num} style={{...sumS.th, color:'#6B7280', minWidth:28}}>{h.num}</th>)}
+                  <th style={{...sumS.th, color:'#0E2B20', background:'#F0EDE4', borderLeft:'2px solid #E7E3D9', minWidth:32}}>IN</th>
                   <th style={{...sumS.th, color:'#0E2B20'}}>TOT</th>
                   <th style={{...sumS.th, color:'#0E2B20'}}>+/−</th>
                 </tr>
                 <tr>
                   <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:11}}>PAR</td>
-                  {course.holes.map(h=><td key={h.num} style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:12}}>{h.par}</td>)}
+                  {course.holes.slice(0,9).map(h=><td key={h.num} style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:12}}>{h.par}</td>)}
+                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>{course.holes.slice(0,9).reduce((a,h)=>a+h.par,0)}</td>
+                  {course.holes.slice(9,18).map(h=><td key={h.num} style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:12}}>{h.par}</td>)}
+                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>{course.holes.slice(9,18).reduce((a,h)=>a+h.par,0)}</td>
                   <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600}}>{course.holes.reduce((a,h)=>a+h.par,0)}</td>
                   <td style={{...sumS.td, color:'#8A9E8A'}}>—</td>
                 </tr>
               </thead>
               <tbody>
                 {players.map(p=>{
-                  const vs = totalVsPar(scores,p.id,course.holes);
+                  const vs   = totalVsPar(scores,p.id,course.holes);
+                  const ftot = course.holes.slice(0,9).reduce((a,h,i)=>a+(scores[p.id]?.[i]||0),0);
+                  const btot = course.holes.slice(9,18).reduce((a,h,i)=>a+(scores[p.id]?.[i+9]||0),0);
                   return (
                     <tr key={p.id}>
                       <td style={{...sumS.td, textAlign:'left'}}>
@@ -283,7 +291,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
                         </div>
                       </td>
-                      {course.holes.map((h,i)=>{
+                      {course.holes.slice(0,9).map((h,i)=>{
                         const s=scores[p.id]?.[i]; const d=s?s-h.par:null;
                         const c=d===null?'#E7E3D9':d<=-2?'#C8A15A':d===-1?'#15803D':d===0?'#6B7280':d===1?'#DC2626':'#991B1B';
                         const hasPop = !!(popFlags?.[p.id]?.[i]);
@@ -294,6 +302,19 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           </td>
                         );
                       })}
+                      <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, color:'#0E2B20', background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>{ftot||'·'}</td>
+                      {course.holes.slice(9,18).map((h,i)=>{
+                        const ri=i+9; const s=scores[p.id]?.[ri]; const d=s?s-h.par:null;
+                        const c=d===null?'#E7E3D9':d<=-2?'#C8A15A':d===-1?'#15803D':d===0?'#6B7280':d===1?'#DC2626':'#991B1B';
+                        const hasPop = !!(popFlags?.[p.id]?.[ri]);
+                        return (
+                          <td key={ri} style={{...sumS.td, color:c, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14}}>
+                            {s||'·'}
+                            {hasPop && <span style={{display:'inline-block',marginLeft:1,fontSize:7,color:'#C8A15A',verticalAlign:'super'}}>●</span>}
+                          </td>
+                        );
+                      })}
+                      <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, color:'#0E2B20', background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>{btot||'·'}</td>
                       <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:'#0E2B20'}}>{totalScore(scores,p.id)||'—'}</td>
                       <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:vs<0?'#15803D':vs===0?'#6B7280':'#DC2626'}}>{vs===0?'E':vs>0?`+${vs}`:vs}</td>
                     </tr>
@@ -301,11 +322,21 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 })}
                 {putts && <tr>
                   <td style={{...sumS.td, color:'#8A9E8A', fontSize:11, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, letterSpacing:1}}>PUTTS</td>
-                  {course.holes.map((_,i)=>{
+                  {course.holes.slice(0,9).map((_,i)=>{
                     const tot = players.reduce((a,p)=>a+(putts[p.id]?.[i]||0),0);
                     return <td key={i} style={{...sumS.td, color:'#8A9E8A', fontSize:12, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{tot||'·'}</td>;
                   })}
-                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{players.reduce((a,p)=>a+(putts[p.id]||[]).reduce((b,v)=>b+v,0),0)}</td>
+                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>
+                    {players.reduce((a,p)=>a+(putts[p.id]||[]).slice(0,9).reduce((b,v)=>b+(v||0),0),0)||'·'}
+                  </td>
+                  {course.holes.slice(9,18).map((_,i)=>{
+                    const ri=i+9; const tot = players.reduce((a,p)=>a+(putts[p.id]?.[ri]||0),0);
+                    return <td key={ri} style={{...sumS.td, color:'#8A9E8A', fontSize:12, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{tot||'·'}</td>;
+                  })}
+                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>
+                    {players.reduce((a,p)=>a+(putts[p.id]||[]).slice(9,18).reduce((b,v)=>b+(v||0),0),0)||'·'}
+                  </td>
+                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{players.reduce((a,p)=>a+(putts[p.id]||[]).reduce((b,v)=>b+(v||0),0),0)}</td>
                   <td style={{...sumS.td}}/>
                 </tr>}
               </tbody>
