@@ -370,6 +370,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [showFinish, setShowFinish] = React.useState(false);
   const [showExit,   setShowExit]   = React.useState(false);
   const [trackersOpen, setTrackersOpen] = React.useState(false);
+  const [showScorecard, setShowScorecard] = React.useState(false);
   const [syncing,  setSyncing]  = React.useState(false);
 
   // Ref to hold pending write timer for debouncing
@@ -639,6 +640,22 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             );
           })}
         </div>
+
+        {/* Scorecard button */}
+        <div style={{display:'flex', justifyContent:'center', marginTop:8, paddingBottom:4}}>
+          <button
+            onClick={() => setShowScorecard(true)}
+            style={{
+              background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)',
+              borderRadius:20, padding:'4px 14px', color:'#F6F4EE', cursor:'pointer',
+              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',
+              fontWeight:700, fontSize:11, letterSpacing:1,
+              display:'flex', alignItems:'center', gap:6,
+              WebkitTapHighlightColor:'transparent',
+            }}>
+            📊 SCORECARD
+          </button>
+        </div>
       </div>
 
       {/* Scrollable body */}
@@ -739,6 +756,18 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           </div>
         </div>
       </Modal>
+
+      {showScorecard && (
+        <LiveScorecardModal
+          onClose={() => setShowScorecard(false)}
+          players={players} course={course}
+          scores={scores} putts={putts} popFlags={popFlags} wolfData={wolfData}
+          nassauMatches={nassauMatches} holeIdx={holeIdx}
+          hasWolf={hasWolf} hasPTM={hasPTM} hasNassau={hasNassau}
+          hasStable={hasStable} hasSkins={hasSkins}
+          wolfFmt={wolfFmt} ptmFmt={ptmFmt} skinsFmt={skinsFmt} nassauFmtObj={nassauFmtObj}
+        />
+      )}
     </div>
   );
 };
