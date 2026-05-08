@@ -36,24 +36,36 @@ window.PLAYPAL_THEME = T;
 // ─── PPLogo — winking golf ball with crown ────────────────────────────────────
 const PPLogo = ({ size = 36 }) => {
   return (
-    <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Golf ball — drawn first so crown overlaps the top */}
-      <circle cx="22" cy="28" r="15" fill="white" stroke="#0E2B20" strokeWidth="1.4"/>
-      {/* Crown body — 3 peaks with inner valleys, base overlapping ball top */}
-      <path d="M11 21 L14 9 L18.5 15 L22 7 L25.5 15 L30 9 L33 21 Z" fill="#C8A15A"/>
-      {/* Crown base band — slightly darker, curved bottom follows ball arc */}
-      <path d="M10 21 L34 21 L34 24 Q22 27.5 10 24 Z" fill="#B8913A"/>
-      {/* Crown gem circles at each tip */}
-      <circle cx="14" cy="9" r="1.8" fill="#E8C578"/>
-      <circle cx="22" cy="7" r="2" fill="#E8C578"/>
-      <circle cx="30" cy="9" r="1.8" fill="#E8C578"/>
-      {/* Left winking eye — upward arc (∧ shape) */}
-      <path d="M15 27 Q18 24 21 27" stroke="#0E2B20" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-      {/* Right open eye */}
-      <circle cx="27" cy="26" r="2.2" fill="#0E2B20"/>
-      <circle cx="28" cy="25" r="0.8" fill="white"/>
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Shadow */}
+      <ellipse cx="50" cy="99" rx="22" ry="5" fill="#0E2B20" opacity="0.4"/>
+      {/* Ball */}
+      <circle cx="50" cy="63" r="34" fill="white" stroke="#0E2B20" strokeWidth="3.2"/>
+      {/* Dimples — lower-left arc pattern */}
+      <ellipse cx="23" cy="60" rx="3.4" ry="2" fill="#0E2B20" transform="rotate(-45 23 60)"/>
+      <ellipse cx="30" cy="60" rx="3.4" ry="2" fill="#0E2B20" transform="rotate(-35 30 60)"/>
+      <ellipse cx="24" cy="69" rx="3.5" ry="2.1" fill="#0E2B20" transform="rotate(-28 24 69)"/>
+      <ellipse cx="18" cy="77" rx="3.3" ry="2" fill="#0E2B20" transform="rotate(-22 18 77)"/>
+      <ellipse cx="26" cy="78" rx="3.5" ry="2.1" fill="#0E2B20" transform="rotate(-16 26 78)"/>
+      <ellipse cx="30" cy="86" rx="3.4" ry="2" fill="#0E2B20" transform="rotate(-10 30 86)"/>
+      <ellipse cx="36" cy="92" rx="3.2" ry="2" fill="#0E2B20" transform="rotate(-4 36 92)"/>
+      {/* Crown — three separate prongs so background shows through gaps */}
+      <polygon points="14,50 20,13 37,50" fill="#C8A15A"/>
+      <polygon points="38,50 50,5 62,50"  fill="#C8A15A"/>
+      <polygon points="63,50 80,13 86,50" fill="#C8A15A"/>
+      {/* Crown base band */}
+      <rect x="14" y="42" width="72" height="9" fill="#C8A15A"/>
+      {/* Crown gem balls at each tip */}
+      <circle cx="20" cy="13" r="5"   fill="#DFC070"/>
+      <circle cx="50" cy="5"  r="5.5" fill="#DFC070"/>
+      <circle cx="80" cy="13" r="5"   fill="#DFC070"/>
+      {/* Winking eye (viewer's left) — closed upward arc */}
+      <path d="M34 59 Q41 53 48 59" stroke="#0E2B20" strokeWidth="2.4" strokeLinecap="round" fill="none"/>
+      {/* Open eye (viewer's right) — filled oval with highlight */}
+      <ellipse cx="63" cy="57" rx="4.5" ry="5.5" fill="#0E2B20"/>
+      <ellipse cx="64.5" cy="55.5" rx="1.8" ry="1.8" fill="white"/>
       {/* Smile */}
-      <path d="M16 32 Q22 36.5 28 32" stroke="#0E2B20" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      <path d="M37 71 Q50 83 63 71" stroke="#0E2B20" strokeWidth="2.3" strokeLinecap="round" fill="none"/>
     </svg>
   );
 };
