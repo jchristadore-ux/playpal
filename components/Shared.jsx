@@ -35,31 +35,25 @@ window.PLAYPAL_THEME = T;
 
 // ─── PPLogo — winking golf ball with crown ────────────────────────────────────
 const PPLogo = ({ size = 36 }) => {
-  const s = size / 44;
   return (
     <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Crown */}
-      <path d="M9 20 L13 8 L22 15 L31 8 L35 20 Z" fill="#C8A15A"/>
-      <path d="M7 22 L37 22 L35 20 L9 20 Z" fill="#A8812A"/>
-      {/* Crown gems */}
-      <circle cx="13" cy="9" r="1.8" fill="#E8C070"/>
-      <circle cx="22" cy="6" r="2" fill="#E8C070"/>
-      <circle cx="31" cy="9" r="1.8" fill="#E8C070"/>
-      {/* Golf ball */}
-      <circle cx="22" cy="30" r="13" fill="white" stroke="#0E2B20" strokeWidth="1.2"/>
-      {/* Dimple pattern (subtle) */}
-      <circle cx="16.5" cy="27.5" r="1.3" fill="none" stroke="#0E2B20" strokeWidth="0.5" opacity="0.25"/>
-      <circle cx="27.5" cy="27.5" r="1.3" fill="none" stroke="#0E2B20" strokeWidth="0.5" opacity="0.25"/>
-      <circle cx="22" cy="35.5" r="1.3" fill="none" stroke="#0E2B20" strokeWidth="0.5" opacity="0.25"/>
-      <circle cx="16.5" cy="33" r="1.1" fill="none" stroke="#0E2B20" strokeWidth="0.5" opacity="0.2"/>
-      <circle cx="27.5" cy="33" r="1.1" fill="none" stroke="#0E2B20" strokeWidth="0.5" opacity="0.2"/>
-      {/* Left winking eye */}
-      <path d="M15.5 27.5 Q17.5 25.5 19.5 27.5" stroke="#0E2B20" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+      {/* Golf ball — drawn first so crown overlaps the top */}
+      <circle cx="22" cy="28" r="15" fill="white" stroke="#0E2B20" strokeWidth="1.4"/>
+      {/* Crown body — 3 peaks with inner valleys, base overlapping ball top */}
+      <path d="M11 21 L14 9 L18.5 15 L22 7 L25.5 15 L30 9 L33 21 Z" fill="#C8A15A"/>
+      {/* Crown base band — slightly darker, curved bottom follows ball arc */}
+      <path d="M10 21 L34 21 L34 24 Q22 27.5 10 24 Z" fill="#B8913A"/>
+      {/* Crown gem circles at each tip */}
+      <circle cx="14" cy="9" r="1.8" fill="#E8C578"/>
+      <circle cx="22" cy="7" r="2" fill="#E8C578"/>
+      <circle cx="30" cy="9" r="1.8" fill="#E8C578"/>
+      {/* Left winking eye — upward arc (∧ shape) */}
+      <path d="M15 27 Q18 24 21 27" stroke="#0E2B20" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
       {/* Right open eye */}
-      <ellipse cx="25.5" cy="27" rx="2.2" ry="2.4" fill="#0E2B20"/>
-      <circle cx="26.4" cy="26.1" r="0.8" fill="white"/>
+      <circle cx="27" cy="26" r="2.2" fill="#0E2B20"/>
+      <circle cx="28" cy="25" r="0.8" fill="white"/>
       {/* Smile */}
-      <path d="M16.5 32 Q22 36.5 27.5 32" stroke="#0E2B20" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      <path d="M16 32 Q22 36.5 28 32" stroke="#0E2B20" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
     </svg>
   );
 };
