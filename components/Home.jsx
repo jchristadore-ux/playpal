@@ -125,7 +125,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         {/* Logo mark */}
         <div style={homeS.logoWrap}>
           <div style={homeS.logoIconWrap}>
-            <PPLogo size={58} />
+            <PPLogo size={68} />
           </div>
           <div>
             <div style={homeS.logoText}>
@@ -358,7 +358,7 @@ const homeS = {
   root:       { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:0, background:'#F6F4EE' },
   hero:       { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'36px 20px 28px', borderBottom:'1px solid #E7E3D9', gap:16 },
   logoWrap:   { display:'flex', alignItems:'center', gap:16 },
-  logoIconWrap: { width:68, height:68, display:'flex', alignItems:'center', justifyContent:'center' },
+  logoIconWrap: { width:68, height:68, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'50%', border:'2px solid rgba(200,161,90,0.35)', boxShadow:'0 4px 18px rgba(14,43,32,0.13)', overflow:'hidden' },
   logoText:   { fontSize:38, fontWeight:800, letterSpacing:0.3, lineHeight:1, display:'flex', alignItems:'baseline' },
   logoSub:    { fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, letterSpacing:2.5, color:'#C8A15A', fontWeight:700, marginTop:5 },
   section:    { padding:'20px 16px', borderBottom:'1px solid #E7E3D9' },
