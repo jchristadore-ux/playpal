@@ -27,23 +27,22 @@ const T = {
 window.PLAYPAL_THEME = T;
 
 // ─── PPLogo — uses the official PlayPal logo image ────────────────────────────
-const PPLogo = ({ size = 36 }) => {
-  return (
-    <img
-      src="playpal-logo.png"
-      alt="PlayPal Logo"
-      width={size}
-      height={size}
-      style={{
-        width: size,
-        height: size,
-        objectFit: 'contain',
-        display: 'block',
-        flexShrink: 0,
-      }}
-    />
-  );
-};
+const PPLogo = ({ size = 36 }) => (
+  <img
+    src="playpal-logo.png"
+    alt="PlayPal Logo"
+    width={size}
+    height={size}
+    style={{
+      width: size,
+      height: size,
+      objectFit: 'cover',
+      display: 'block',
+      flexShrink: 0,
+      borderRadius: '50%',
+    }}
+  />
+);
 
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
 const QRModal = ({ open, onClose, syncCode }) => {
@@ -164,7 +163,9 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
     <>
       <nav style={navStyles.bar}>
         <button onClick={onHome} style={navStyles.logo}>
-          <PPLogo size={32} />
+          <span style={{ display:'inline-flex', borderRadius:'50%', boxShadow:'0 0 0 1.5px rgba(200,161,90,0.55)', flexShrink:0 }}>
+            <PPLogo size={32} />
+          </span>
           <span style={{ marginLeft:9, lineHeight:1 }}>
             <span style={{ color:'#C8A15A', fontFamily:"'Plus Jakarta Sans', 'Playfair Display', Georgia, serif", fontSize:20, fontWeight:800, letterSpacing:0.3 }}>Play</span><span style={{ color:'#FFFFFF', fontFamily:"'Plus Jakarta Sans', 'Playfair Display', Georgia, serif", fontSize:20, fontWeight:800, letterSpacing:0.3 }}>Pal</span>
           </span>
