@@ -1,37 +1,37 @@
 // ScoreEntry.jsx — Full Score Entry Screen with real-time cross-device sync
 
 const C = {
-  headerPadT:  [12, 10,  8],
-  headerPadB:  [ 8,  6,  4],
+  headerPadT:  [12,  8,  5],
+  headerPadB:  [ 8,  4,  2],
   headerPadH:  [16, 12, 10],
   headerGap:   [10,  8,  6],
-  avatarSize:  [36, 30, 26],
-  nameFontSz:  [20, 16, 14],
+  avatarSize:  [36, 28, 22],
+  nameFontSz:  [20, 16, 13],
   hcpFontSz:   [11, 10,  9],
-  hcpMarginT:  [ 3,  2,  2],
-  stepPadB:    [12, 10,  6],
+  hcpMarginT:  [ 3,  2,  1],
+  stepPadB:    [12,  6,  4],
   stepPadH:    [12, 10,  8],
-  stepGap:     [ 8,  6,  6],
-  btnW:        [52, 46, 40],
-  btnH:        [52, 46, 40],
-  btnFontSz:   [28, 24, 20],
-  btnRadius:   [12, 10,  9],
-  scoreMinH:   [72, 54, 46],
-  scoreFontSz: [64, 52, 44],
-  popPadB:     [10,  8,  0],
-  popMinH:     [28, 24,  0],
-  puttPadT:    [ 8,  6,  4],
-  puttPadB:    [12, 10,  6],
+  stepGap:     [ 8,  6,  5],
+  btnW:        [52, 40, 34],
+  btnH:        [52, 40, 34],
+  btnFontSz:   [28, 22, 18],
+  btnRadius:   [12, 10,  8],
+  scoreMinH:   [72, 46, 40],
+  scoreFontSz: [64, 50, 40],
+  popPadB:     [10,  0,  0],   // only used at compact=0; inlined into putt row at compact >= 1
+  popMinH:     [28,  0,  0],
+  puttPadT:    [ 8,  5,  3],
+  puttPadB:    [12,  8,  5],
   puttPadH:    [14, 12, 10],
   puttGap:     [10,  8,  6],
-  puttBtnW:    [40, 36, 32],
-  puttBtnH:    [40, 36, 32],
-  puttBtnFSz:  [17, 14, 13],
-  puttBtnGap:  [ 6,  5,  4],
-  puttBtnRad:  [ 9,  8,  7],
-  cardGap:     [10,  8,  6],
+  puttBtnW:    [40, 32, 28],
+  puttBtnH:    [40, 32, 28],
+  puttBtnFSz:  [17, 13, 12],
+  puttBtnGap:  [ 6,  4,  3],
+  puttBtnRad:  [ 9,  7,  6],
+  cardGap:     [10,  8,  5],
   cardBorderR: [18, 14, 12],
-  cardPadT:    [12, 10,  8],
+  cardPadT:    [12,  8,  6],
 };
 
 const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, compact = 0 }) => {
@@ -71,8 +71,8 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         )}
       </div>
 
-      {/* Wolf pick required warning */}
-      {isWolf && hasWolf && !wolfData?.[holeIdx]?.confirmed && (
+      {/* Wolf pick required warning — full banner at compact=0 only */}
+      {compact === 0 && isWolf && hasWolf && !wolfData?.[holeIdx]?.confirmed && (
         <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
           background:'rgba(220,38,38,0.04)', borderTop:'1px solid rgba(220,38,38,0.2)'}}>
           <span style={{fontSize:11}}>⚠️</span>
@@ -80,8 +80,8 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </div>
       )}
 
-      {/* PTM putt required warning */}
-      {isPTMHolder && !(putts[p.id]?.[holeIdx] > 0) && (
+      {/* PTM putt required warning — full banner at compact=0 only */}
+      {compact === 0 && isPTMHolder && !(putts[p.id]?.[holeIdx] > 0) && (
         <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
           background:'rgba(200,161,90,0.06)', borderTop:'1px solid rgba(200,161,90,0.15)'}}>
           <span style={{fontSize:11}}>⚠️</span>
@@ -147,12 +147,12 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Pop pill row */}
-      {compact < 2 && (isNassauPlayer ? nassauPopActive : true) && (
-        <div style={{display:'flex', justifyContent:'flex-end', padding:`0 ${C.stepPadH[compact]}px ${C.popPadB[compact]}px`}}>
+      {/* Pop pill row — standalone at compact=0 only */}
+      {compact === 0 && (isNassauPlayer ? nassauPopActive : true) && (
+        <div style={{display:'flex', justifyContent:'flex-end', padding:`0 ${C.stepPadH[0]}px ${C.popPadB[0]}px`}}>
           {isNassauPlayer ? (
             <div style={{
-              borderRadius:999, padding:'5px 10px', minHeight:C.popMinH[compact],
+              borderRadius:999, padding:'5px 10px', minHeight:C.popMinH[0],
               border:'1px solid rgba(200,161,90,0.45)',
               background:'rgba(200,161,90,0.12)', color:'#C8A15A',
               fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, letterSpacing:0.5,
@@ -164,7 +164,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             <button
               onClick={()=>onPopToggle(p.id)}
               style={{
-                borderRadius:999, padding:'5px 10px', minHeight:C.popMinH[compact],
+                borderRadius:999, padding:'5px 10px', minHeight:C.popMinH[0],
                 border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1px solid #E7E3D9',
                 background:gettingPop ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
                 color:gettingPop ? '#C8A15A' : '#3F5F4A',
@@ -177,15 +177,18 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </div>
       )}
 
-      {/* Putt tracker */}
+      {/* Putt tracker — pop button inlined at right edge at compact >= 1 */}
       <div style={{display:'flex', alignItems:'center', padding:`${C.puttPadT[compact]}px ${C.puttPadH[compact]}px ${C.puttPadB[compact]}px`,
         borderTop: isPTMHolder && puttVal === 0 ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
         gap:C.puttGap[compact],
         background: isPTMHolder && puttVal === 0 ? 'rgba(200,161,90,0.04)' : 'transparent'}}>
         <div style={{display:'flex', flexDirection:'column', gap:1, flexShrink:0}}>
           <Label style={{flexShrink:0}}>PUTTS</Label>
-          {isPTMHolder && puttVal === 0 && (
+          {compact === 0 && isPTMHolder && puttVal === 0 && (
             <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A', letterSpacing:0.5}}>💰 REQUIRED</span>
+          )}
+          {compact >= 1 && isPTMHolder && puttVal === 0 && (
+            <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A', letterSpacing:0.3}}>⚠️ REQD</span>
           )}
         </div>
         <div style={{display:'flex', gap:C.puttBtnGap[compact], marginLeft:2}}>
@@ -203,7 +206,37 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             </button>
           ))}
         </div>
-        {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>}
+        {compact === 0 && puttVal >= 3 && (
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>
+        )}
+        {compact >= 1 && (isNassauPlayer ? nassauPopActive : true) && (
+          <div style={{marginLeft:'auto', flexShrink:0}}>
+            {isNassauPlayer ? (
+              <div style={{
+                borderRadius:999, padding:'4px 8px',
+                border:'1px solid rgba(200,161,90,0.45)',
+                background:'rgba(200,161,90,0.12)', color:'#C8A15A',
+                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:10, letterSpacing:0.5,
+                display:'flex', alignItems:'center', gap:3,
+              }}>
+                <span style={{fontSize:9}}>💰</span> POP
+              </div>
+            ) : (
+              <button
+                onClick={()=>onPopToggle(p.id)}
+                style={{
+                  borderRadius:999, padding:'4px 8px',
+                  border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1px solid #E7E3D9',
+                  background:gettingPop ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
+                  color:gettingPop ? '#C8A15A' : '#3F5F4A',
+                  fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:10, letterSpacing:0.5,
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent'
+                }}>
+                {gettingPop ? 'POP ON' : 'POP'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -628,11 +661,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
       <SyncPulse syncing={syncing}/>
 
-      {/* Hole header */}
-      <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)', padding:'12px 16px 10px'}}>
+      {/* Hole header — compressed at compact=2 to save ~35px for 4-player tile space */}
+      <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)', padding: compact===2 ? '8px 12px 6px' : '12px 16px 10px'}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
           <button onClick={prevHole} disabled={holeIdx===0}
-            style={{width:36, height:36, borderRadius:8, border:'none', background:holeIdx===0?'transparent':'rgba(255,255,255,0.12)',
+            style={{width:compact===2?28:36, height:compact===2?28:36, borderRadius:8, border:'none', background:holeIdx===0?'transparent':'rgba(255,255,255,0.12)',
               color:holeIdx===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:20, cursor:holeIdx===0?'default':'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
@@ -641,17 +674,17 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
           <div style={{flex:1, textAlign:'center'}}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'center', gap:8}}>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:32, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:18, color:parColor}}>PAR {hole.par}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:compact===2?24:32, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:compact===2?14:18, color:parColor}}>PAR {hole.par}</span>
             </div>
             <div style={{display:'flex', justifyContent:'center', gap:16, marginTop:2}}>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>HCP {hole.hdcp}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:compact===2?10:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:compact===2?10:11, color:'rgba(246,244,238,0.6)'}}>HCP {hole.hdcp}</span>
             </div>
           </div>
 
           <button onClick={nextHole} disabled={holeIdx===17 || (currentHoleScored && !canAdvance)}
-            style={{width:36, height:36, borderRadius:8, border:'none',
+            style={{width:compact===2?28:36, height:compact===2?28:36, borderRadius:8, border:'none',
               background: holeIdx===17 ? 'transparent' : 'rgba(255,255,255,0.12)',
               color: holeIdx===17 ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
               fontSize:20, cursor: holeIdx===17 || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
@@ -662,13 +695,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         </div>
 
         {/* Hole dots */}
-        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:10, flexWrap:'wrap'}}>
+        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:compact===2?6:10, flexWrap:'wrap'}}>
           {course.holes.map((h,i) => {
             const allIn = players.every(p => scores[p.id]?.[i]);
             const some  = players.some(p => scores[p.id]?.[i]);
             return (
               <div key={i} onClick={()=>{ holeIdxRef.current=i; setHoleIdx(i); scheduleCloudWrite(null,null,null,null); }}
-                style={{width:i===holeIdx?20:8, height:8, borderRadius:4, cursor:'pointer', transition:'all 0.2s',
+                style={{width:i===holeIdx?(compact===2?14:20):(compact===2?6:8), height:compact===2?6:8, borderRadius:4, cursor:'pointer', transition:'all 0.2s',
                   background:i===holeIdx?'#C8A15A':allIn?'rgba(246,244,238,0.9)':some?'rgba(246,244,238,0.4)':'rgba(255,255,255,0.2)',
                   border:i===holeIdx?'none':`1px solid ${allIn?'rgba(246,244,238,0.4)':'rgba(255,255,255,0.15)'}`}}>
               </div>
@@ -677,14 +710,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         </div>
 
         {/* Scorecard button */}
-        <div style={{display:'flex', justifyContent:'center', marginTop:8, paddingBottom:4}}>
+        <div style={{display:'flex', justifyContent:'center', marginTop:compact===2?4:8, paddingBottom:compact===2?2:4}}>
           <button
             onClick={() => setShowScorecard(true)}
             style={{
               background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)',
-              borderRadius:20, padding:'4px 14px', color:'#F6F4EE', cursor:'pointer',
+              borderRadius:20, padding:compact===2?'3px 10px':'4px 14px', color:'#F6F4EE', cursor:'pointer',
               fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',
-              fontWeight:700, fontSize:11, letterSpacing:1,
+              fontWeight:700, fontSize:compact===2?10:11, letterSpacing:1,
               display:'flex', alignItems:'center', gap:6,
               WebkitTapHighlightColor:'transparent',
             }}>
