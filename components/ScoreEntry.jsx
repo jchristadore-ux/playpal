@@ -1,6 +1,6 @@
 // ScoreEntry.jsx — Full Score Entry Screen with real-time cross-device sync
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, onClearScore }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -32,7 +32,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             WebkitTapHighlightColor:'transparent', flexShrink:0,
           }}>
             <span style={{fontSize:14}}>🐺</span>
-            {!wolfData?.[holeIdx]?.confirmed ? 'PICK →' : wolfData[holeIdx]?.lone ? 'LONE 🐺' : '✓ SET'}
+            {!wolfData?.[holeIdx]?.confirmed ? 'PICK →' : wolfData[holeIdx]?.lone ? 'LONE 🐺 ✎' : '✓ PICK ✎'}
           </button>
         )}
       </div>
@@ -99,6 +99,17 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             ? <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, fontWeight:700, letterSpacing:1, color:relColor}}>{relLabel}</div>
             : <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', letterSpacing:0.5}}>TAP TO ENTER</div>
           }
+          {score && (
+            <button
+              onClick={e => { e.stopPropagation(); onClearScore(p.id); }}
+              aria-label="Clear score"
+              style={{background:'none', border:'none', cursor:'pointer', padding:'2px 8px',
+                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',
+                fontSize:9, color:'#8A9E8A', letterSpacing:0.5, fontWeight:600,
+                WebkitTapHighlightColor:'transparent'}}>
+              CLEAR ✕
+            </button>
+          )}
         </div>
 
         <button
@@ -372,6 +383,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [trackersOpen, setTrackersOpen] = React.useState(false);
   const [showScorecard, setShowScorecard] = React.useState(false);
   const [syncing,  setSyncing]  = React.useState(false);
+  const [holeToast, setHoleToast] = React.useState(null);
 
   // Ref to hold pending write timer for debouncing
   const syncTimerRef  = React.useRef(null);
@@ -513,6 +525,15 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
+  const clearScore = (playerId) => {
+    setScores(prev => {
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      next[playerId][holeIdx] = null;
+      scheduleCloudWrite(next, null, null, null);
+      return next;
+    });
+  };
+
   const setPutt = (playerId, val) => {
     setPutts(prev => {
       const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(0))]};
@@ -576,10 +597,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const nextHole = () => {
     if (canAdvance && holeIdx < 17) {
-      const newIdx = holeIdx + 1;
+      const saved = holeIdx + 1;
+      const newIdx = saved;
       holeIdxRef.current = newIdx;
       setHoleIdx(newIdx);
       scheduleCloudWrite(null, null, null, null);
+      setHoleToast(`Hole ${saved} saved ✓`);
+      setTimeout(() => setHoleToast(null), 1800);
     }
   };
 
@@ -592,6 +616,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#F6F4EE'}}>
 
       <SyncPulse syncing={syncing}/>
+      <Toast message={holeToast} type="success"/>
 
       {/* Hole header */}
       <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)', padding:'12px 16px 10px'}}>
@@ -679,7 +704,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 isWolf={isWolf} isPartner={isPartner} isPTMHolder={isPTM}
                 hasWolf={hasWolf} wolfData={wolfData} formatStats={playerFormatStats[p.id]||[]}
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
-                onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
+                onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop} onClearScore={clearScore}
               />
             );
           })}

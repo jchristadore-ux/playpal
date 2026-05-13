@@ -71,15 +71,20 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
     const g = scores[p.id]?.[holeIdx];
     strokes[p.id] = (g && g > 0) ? g : null;
   });
+  const deltas = Object.fromEntries(players.map(p => [p.id, 0]));
+
+  // Can't resolve until every player has scored
+  if (players.some(p => strokes[p.id] === null)) {
+    return { wolfWins: false, otherWins: false, tied: true, deltas };
+  }
+
   const wolfTeam = isLone ? [wolfId] : [wolfId, partnerId].filter(Boolean);
   const others   = players.map(p => p.id).filter(id => !wolfTeam.includes(id));
-  const deltas   = Object.fromEntries(players.map(p => [p.id, 0]));
 
   if (isLone) {
-    const wolfStrokes = strokes[wolfId];
-    if (wolfStrokes === null) return { wolfWins:false, otherWins:false, tied:true, deltas };
-    const otherStrokes = others.map(id => strokes[id]).filter(s => s !== null).sort((a, b) => a - b);
-    if (otherStrokes.length < 2) return { wolfWins:false, otherWins:false, tied:true, deltas };
+    const wolfStrokes  = strokes[wolfId];
+    const otherStrokes = others.map(id => strokes[id]).sort((a, b) => a - b);
+    if (otherStrokes.length < 2) return { wolfWins: false, otherWins: false, tied: true, deltas };
     const wolfScore  = wolfStrokes * 2;
     const otherScore = otherStrokes[0] + otherStrokes[1];
     const wolfWins   = wolfScore < otherScore;
@@ -88,14 +93,12 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
       deltas[wolfId] = 2;
     } else if (otherWins) {
       const threshold = otherStrokes[1];
-      others.forEach(id => {
-        if (strokes[id] !== null && strokes[id] <= threshold) deltas[id] = 1;
-      });
+      others.forEach(id => { if (strokes[id] <= threshold) deltas[id] = 1; });
     }
     return { wolfWins, otherWins, tied: (!wolfWins && !otherWins), deltas };
   } else {
-    const wolfScore  = wolfTeam.reduce((s, id) => s + (strokes[id] ?? 99), 0);
-    const otherScore = others.reduce((s, id)   => s + (strokes[id] ?? 99), 0);
+    const wolfScore  = wolfTeam.reduce((s, id) => s + strokes[id], 0);
+    const otherScore = others.reduce((s, id)   => s + strokes[id], 0);
     const wolfWins   = wolfScore < otherScore;
     const otherWins  = otherScore < wolfScore;
     if (wolfWins)       wolfTeam.forEach(id => { deltas[id] = 1; });
@@ -125,8 +128,8 @@ function calcWolfPayouts(wolfPts, players, stake, scores, course) {
     ? resolveTiebreaker(tied, scores, course)
     : tied;
   losers.forEach(l => {
-    pay[l.id] -= stake;
-    winners.forEach(w => { pay[w.id] += stake / winners.length; });
+    pay[l.id] = parseFloat((pay[l.id] - stake).toFixed(2));
+    winners.forEach(w => { pay[w.id] = parseFloat((pay[w.id] + stake / winners.length).toFixed(2)); });
   });
   return pay;
 }
@@ -146,6 +149,7 @@ function ptmNextPlayer(players, currentId) {
 }
 
 function computePTMState(scores, putts, players, course, initialHolderId) {
+  if (!players || players.length === 0) return { holderId: null, log: [], holderAtStart: [] };
   let holderId = initialHolderId || players[0].id;
   const log          = [];
   const holderAtStart = []; // who held the money at the START of each hole, before any pass
@@ -250,7 +254,10 @@ function nassauSegmentStatus(scores, players, course, holesRange, currentHole, p
 
   const p1 = nassauPlayers[0];
   const p2 = nassauPlayers[1];
-  const played = holesRange.filter(i => i <= currentHole);
+  // Only count holes where both players have a score and the hole is not ahead of current
+  const played = holesRange.filter(i =>
+    i <= currentHole && !!(scores[p1.id]?.[i]) && !!(scores[p2.id]?.[i])
+  );
 
   let p1Holes = 0;
   let p2Holes = 0;

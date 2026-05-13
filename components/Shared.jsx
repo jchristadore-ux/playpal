@@ -152,6 +152,15 @@ const QRModal = ({ open, onClose, syncCode }) => {
 const NavBar = ({ syncCode, onHome, currentScreen }) => {
   const [copied, setCopied] = React.useState(false);
   const [showQR, setShowQR] = React.useState(false);
+  const [online, setOnline] = React.useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const up   = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online',  up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
 
   const copy = () => {
     navigator.clipboard?.writeText(syncCode).catch(() => {});
@@ -171,11 +180,22 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
           </span>
         </button>
         <div style={navStyles.center} />
+        {!online && (
+          <div style={{
+            display:'flex', alignItems:'center', gap:4,
+            background:'rgba(220,38,38,0.18)', border:'1px solid rgba(220,38,38,0.4)',
+            borderRadius:8, padding:'3px 8px', marginRight:6,
+          }}>
+            <span style={{ fontSize:10, lineHeight:1 }}>⚡</span>
+            <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, color:'#FCA5A5', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif' }}>OFFLINE</span>
+          </div>
+        )}
         {syncCode && (
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <button
               onClick={() => setShowQR(true)}
               title="Show QR code to join round"
+              aria-label="Show QR code to join round"
               style={{
                 background:  'rgba(255,255,255,0.1)',
                 border:      '1px solid rgba(255,255,255,0.15)',
@@ -187,7 +207,7 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
               }}>
               <span style={{ fontSize:18, lineHeight:1 }}>📲</span>
             </button>
-            <button onClick={copy} style={navStyles.sync}>
+            <button onClick={copy} style={navStyles.sync} aria-label={`Copy round sync code ${syncCode}`}>
               <span style={{ fontSize:9, color:'rgba(246,244,238,0.6)', letterSpacing:1.5, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600 }}>SYNC</span>
               <span style={{ fontSize:13, fontWeight:900, color:'#C8A15A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', letterSpacing:2 }}>
                 {syncCode}
@@ -264,11 +284,28 @@ const Avatar = ({ player, size=40 }) => (
   }}>{player.initials}</div>
 );
 
+// ─── Spinner ──────────────────────────────────────────────────────────────────
+const Spinner = ({ size = 28, color = '#C8A15A' }) => (
+  <>
+    <div style={{
+      width: size, height: size,
+      border: `3px solid ${color}33`,
+      borderTopColor: color,
+      borderRadius: '50%',
+      animation: 'ppSpinShared 0.8s linear infinite',
+      flexShrink: 0,
+    }}/>
+    <style>{`@keyframes ppSpinShared { to { transform: rotate(360deg); } }`}</style>
+  </>
+);
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(14,43,32,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position:'fixed', inset:0, background:'rgba(14,43,32,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:20, padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(14,43,32,0.2)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <span style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:18, fontWeight:800, color:'#0E2B20', letterSpacing:0.3 }}>{title}</span>
@@ -319,4 +356,4 @@ const ScorePill = ({ diff }) => {
   );
 };
 
-Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal, PLAYPAL_THEME: T });
+Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal, Spinner, PLAYPAL_THEME: T });

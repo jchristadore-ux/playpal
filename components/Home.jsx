@@ -1,14 +1,15 @@
 // Home.jsx — Dashboard / Landing Screen
 
 const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, onViewRound, customCourses, onCourseSaved }) => {
-  const [showPlayers, setShowPlayers]   = React.useState(false);
-  const [editPlayer,  setEditPlayer]    = React.useState(null);
-  const [localPlayers,setLocalPlayers]  = React.useState(players);
-  const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#15803D' });
-  const [joinError,   setJoinError]     = React.useState('');
-  const [joining,     setJoining]       = React.useState(false);
-  const [showCourses, setShowCourses]   = React.useState(false);
-  const [addCourseOpen, setAddCourseOpen] = React.useState(false);
+  const [showPlayers,    setShowPlayers]    = React.useState(false);
+  const [editPlayer,     setEditPlayer]     = React.useState(null);
+  const [localPlayers,   setLocalPlayers]   = React.useState(players);
+  const [form, setForm]                     = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#15803D' });
+  const [joinError,      setJoinError]      = React.useState('');
+  const [joining,        setJoining]        = React.useState(false);
+  const [showCourses,    setShowCourses]    = React.useState(false);
+  const [addCourseOpen,  setAddCourseOpen]  = React.useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState(null);
 
   const courses = customCourses || [];
 
@@ -29,8 +30,19 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   }, []);
 
   const handleJoin = () => {
-    const code = joinCode.trim().toUpperCase();
-    if (!code || code.length < 4) { setJoinError('Enter a valid round code'); return; }
+    const code = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!code || code.length < 4) { setJoinError('Enter a valid round code (4+ characters)'); return; }
+    // Guard: warn if a different round is already active
+    const activeRoundRaw = localStorage.getItem('pp_round');
+    if (localStorage.getItem('pp_active_round') === '1' && activeRoundRaw) {
+      try {
+        const activeRound = JSON.parse(activeRoundRaw);
+        if (activeRound.syncCode !== code) {
+          setJoinError('You have an active round in progress. Exit it before joining another.');
+          return;
+        }
+      } catch(e) {}
+    }
     const roundRaw = localStorage.getItem('pp_round');
     if (roundRaw) {
       try {
@@ -84,8 +96,13 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   };
 
   const deletePlayer = (id) => {
-    const next = localPlayers.filter(p=>p.id!==id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    const next = localPlayers.filter(p => p.id !== deleteConfirmId);
     setLocalPlayers(next); onManagePlayers(next);
+    setDeleteConfirmId(null); setShowPlayers(false);
   };
 
   const handleSaveCourse = (newCourse, allCourses) => {
@@ -199,11 +216,17 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       </div>
 
       {/* Recent Rounds */}
-      {recentRounds.length > 0 && (
-        <div style={homeS.section}>
-          <Label style={{marginBottom:12, display:'block'}}>Recent Rounds</Label>
-          <div style={{display:'flex', flexDirection:'column', gap:8}}>
-            {recentRounds.map((r, i) => {
+      <div style={homeS.section}>
+        <Label style={{marginBottom:12, display:'block'}}>Recent Rounds</Label>
+        {recentRounds.length === 0 ? (
+          <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:14, padding:'20px 16px', textAlign:'center'}}>
+            <div style={{fontSize:28, marginBottom:8}}>⛳</div>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20', marginBottom:4}}>No rounds yet</div>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>Tap START NEW ROUND to tee it up</div>
+          </div>
+        ) : (
+        <div style={{display:'flex', flexDirection:'column', gap:8}}>
+          {recentRounds.map((r, i) => {
               const tappable = !!(r.syncCode && onViewRound);
               return (
                 <div key={i}
@@ -230,8 +253,8 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Player Profiles */}
       <div style={homeS.section}>
@@ -272,9 +295,12 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             <Label style={{display:'block', marginBottom:6}}>ROUND CODE</Label>
             <input
               value={joinCode}
-              onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
+              onChange={e => {
+                const clean = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+                setJoinCode(clean); setJoinError('');
+              }}
               onKeyDown={e => e.key === 'Enter' && !joining && handleJoin()}
-              maxLength={8} placeholder="e.g. AB3X9K" autoFocus disabled={joining}
+              maxLength={12} placeholder="e.g. AB3X9K" autoFocus disabled={joining}
               style={{width:'100%', background:'#F6F4EE', border:`1.5px solid ${joinError?'#DC2626':'#E7E3D9'}`, borderRadius:12,
                 padding:'14px 16px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800,
                 fontSize:28, letterSpacing:6, outline:'none', boxSizing:'border-box', textAlign:'center', textTransform:'uppercase',
@@ -313,7 +339,20 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
           <div style={{display:'flex', gap:10, marginTop:8}}>
             <Btn onClick={savePlayer} variant="gold" style={{flex:1}}>SAVE PLAYER</Btn>
-            {editPlayer && <Btn onClick={()=>{deletePlayer(editPlayer.id); setShowPlayers(false);}} variant="danger" style={{padding:'13px 20px'}}>DELETE</Btn>}
+            {editPlayer && <Btn onClick={() => deletePlayer(editPlayer.id)} variant="danger" style={{padding:'13px 20px'}}>DELETE</Btn>}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Player Confirmation Modal */}
+      <Modal open={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} title="Delete Player?">
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.6}}>
+            Remove <strong>{localPlayers.find(p => p.id === deleteConfirmId)?.name}</strong> from the player list? This cannot be undone.
+          </div>
+          <div style={{display:'flex', gap:10}}>
+            <Btn onClick={() => setDeleteConfirmId(null)} variant="ghost" style={{flex:1}}>CANCEL</Btn>
+            <Btn onClick={confirmDelete} variant="danger" style={{flex:1}}>DELETE</Btn>
           </div>
         </div>
       </Modal>

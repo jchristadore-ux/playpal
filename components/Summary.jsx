@@ -43,6 +43,11 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     stPts:  stablefordPts[p.id]||0,
   })).sort((a,b)=>a.vsPar-b.vsPar);
 
+  const fmtAmt = (v) => {
+    const abs = Math.abs(v);
+    return abs % 1 === 0 ? `$${abs.toFixed(0)}` : `$${abs.toFixed(2)}`;
+  };
+
   const debts = [];
   players.forEach(debtor => {
     if ((payouts[debtor.id]||0) >= 0) return;
@@ -64,8 +69,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   };
 
   const postToGhin = () => {
-    setGhinStep('logging');
-    setTimeout(()=>{ setGhinStep('posted'); showToast('Scores posted to GHIN ✓'); }, 2200);
+    // GHIN API integration not yet implemented — placeholder
+    showToast('GHIN posting coming soon', 'info');
   };
 
   const buildScorecardEmail = () => {
@@ -186,7 +191,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
       }
     }
 
-    body += `\n${'─'.repeat(60)}\nSent via PlayPal Golf\n`;
+    body += `\n${'─'.repeat(60)}\nSent via PlayPal Golf`;
+    if (syncCode) body += ` · Round Code: ${syncCode}`;
+    body += '\n';
     return body;
   };
 
@@ -393,7 +400,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           {f.type==='stableford' && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#C8A15A'}}>{stablefordPts[p.id]||0} pts</div>}
                         </div>
                         <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:20, color:v>0?'#15803D':v<0?'#DC2626':'#6B7280'}}>
-                          {v>0?'+':''}{v===0?'—':`$${Math.abs(v).toFixed(0)}`}
+                          {v>0?'+':v<0?'−':''}{v===0?'—':fmtAmt(v)}
                         </span>
                       </div>
                     );
@@ -412,7 +419,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                     <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20', flex:1}}>
                       {d.from.name.split(' ')[0]} → {d.to.name.split(' ')[0]}
                     </span>
-                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:22, color:'#C8A15A'}}>${d.amount.toFixed(0)}</span>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:22, color:'#C8A15A'}}>{fmtAmt(d.amount)}</span>
                   </div>
                 ))
               }
@@ -448,24 +455,13 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20'}}>POST TO GHIN</div>
               </div>
               <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', marginBottom:12}}>Posts each player's adjusted gross score to GHIN for handicap update</div>
-              {ghinStep==='idle' && <Btn onClick={postToGhin} variant="surface" style={{width:'100%', fontSize:15}}>POST SCORES TO GHIN</Btn>}
-              {ghinStep==='logging' && (
-                <div style={{textAlign:'center', padding:'12px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', color:'#3F5F4A', fontSize:14, letterSpacing:1}}>
-                  CONNECTING TO GHIN<span style={{animation:'blink 1s infinite'}}>...</span>
+              <div style={{display:'flex', alignItems:'center', gap:10, background:'rgba(200,161,90,0.06)', border:'1px solid rgba(200,161,90,0.2)', borderRadius:10, padding:'10px 14px'}}>
+                <span style={{fontSize:18}}>🚧</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#C8A15A'}}>COMING SOON</div>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', marginTop:1}}>Direct GHIN posting will be available in a future update</div>
                 </div>
-              )}
-              {ghinStep==='posted' && (
-                <div style={{display:'flex', flexDirection:'column', gap:6}}>
-                  {players.map(p=>(
-                    <div key={p.id} style={{display:'flex', alignItems:'center', gap:8, padding:'6px 0', borderBottom:'1px solid #F0EDE4'}}>
-                      <Avatar player={p} size={24}/>
-                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20', flex:1}}>{p.name}</span>
-                      <span style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>GHIN {p.ghin}</span>
-                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#15803D', fontWeight:700}}>✓ {totalScore(scores,p.id)||'—'}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
 
             {debts.length>0 && (
@@ -478,7 +474,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                       <Avatar player={d.from} size={32}/>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{d.from.name}</div>
-                        <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>owes <span style={{color:'#C8A15A', fontWeight:700}}>${d.amount.toFixed(0)}</span> to {d.to.name.split(' ')[0]} · @{d.to.venmo}</div>
+                        <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>owes <span style={{color:'#C8A15A', fontWeight:700}}>{fmtAmt(d.amount)}</span> to {d.to.name.split(' ')[0]} · @{d.to.venmo}</div>
                       </div>
                       <Btn onClick={()=>openVenmo(d.from,d.to,d.amount)}
                         variant={venmoSent[d.from.id]?'ghost':'gold'} style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>

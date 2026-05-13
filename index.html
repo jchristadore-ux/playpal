@@ -95,6 +95,13 @@
 /* ============================================================
    FIREBASE CONFIG
    ============================================================ */
+/* ============================================================
+   ANTHROPIC API KEY — required for scorecard scanning
+   Set this to your Anthropic API key. Keep this file private
+   (do not commit real keys to public repositories).
+   ============================================================ */
+window.PLAYPAL_ANTHROPIC_KEY = '';
+
 var PLAYPAL_FIREBASE_CONFIG = {
   apiKey:            "AIzaSyCwXOOYOARt2m5sbMHT_E8BYQii-DjNuQs",
   authDomain:        "playpal-sync.firebaseapp.com",
@@ -416,6 +423,38 @@ function _updateJoinOverlay(status, error) {
 
 <script type="text/babel">
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[PlayPal] Unhandled render error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:32, background:'#F6F4EE', gap:16}}>
+          <div style={{fontSize:40}}>⚠️</div>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#0E2B20', textAlign:'center'}}>Something went wrong</div>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', textAlign:'center', lineHeight:1.6}}>
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </div>
+          <button
+            onClick={() => { this.setState({ hasError: false, error: null }); }}
+            style={{background:'#0E2B20', color:'#F6F4EE', border:'none', borderRadius:12, padding:'12px 24px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, cursor:'pointer', letterSpacing:0.5}}>
+            TRY AGAIN
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentGreen": "#0E2B20",
   "accentGold":  "#C8A15A",
@@ -471,8 +510,10 @@ const App = () => {
   const [viewedRoundData, setViewedRoundData] = React.useState(null);
   const [viewSyncCode,    setViewSyncCode]    = React.useState(null);
 
-  const [tweaks,     setTweaks]     = React.useState(TWEAK_DEFAULTS);
-  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+  const [tweaks,          setTweaks]          = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen,      setTweaksOpen]      = React.useState(false);
+  const [showExitConfirm, setShowExitConfirm] = React.useState(false);
+  const [showNewRoundConfirm, setShowNewRoundConfirm] = React.useState(false);
 
   const [recentRounds, setRecentRounds] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('pp_recent') || '[]'); } catch(e) { return []; }
@@ -508,6 +549,20 @@ const App = () => {
     });
 
     function _completeJoin(r) {
+      const hasActiveRound = localStorage.getItem('pp_active_round') === '1';
+      if (hasActiveRound) {
+        const currentRaw = localStorage.getItem('pp_round');
+        try {
+          const currentRound = currentRaw ? JSON.parse(currentRaw) : null;
+          if (currentRound && currentRound.syncCode === r.syncCode) {
+            // Rejoining the same round — safe to proceed
+          } else if (currentRound) {
+            // Different active round — warn user via overlay
+            _updateJoinOverlay(null, 'You have an active round in progress. Finish or exit it before joining a new one.');
+            return;
+          }
+        } catch(e) {}
+      }
       localStorage.setItem('pp_round', JSON.stringify(r));
       sessionStorage.setItem('pp_screen', 'score');
       localStorage.setItem('pp_active_round', '1');
@@ -739,37 +794,47 @@ const App = () => {
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
 
         {screen === 'home' &&
-          <HomeScreen
-            onStartRound={() => setScreen('setup')}
-            players={players}
-            onManagePlayers={handleManagePlayers}
-            recentRounds={recentRounds}
-            onJoinRound={handleJoinRound}
-            onViewRound={handleViewRound}
-            customCourses={customCourses}
-            onCourseSaved={handleCourseSaved}
-          />
+          <ErrorBoundary key="home">
+            <HomeScreen
+              onStartRound={() => {
+                if (localStorage.getItem('pp_active_round') === '1') { setShowNewRoundConfirm(true); return; }
+                setScreen('setup');
+              }}
+              players={players}
+              onManagePlayers={handleManagePlayers}
+              recentRounds={recentRounds}
+              onJoinRound={handleJoinRound}
+              onViewRound={handleViewRound}
+              customCourses={customCourses}
+              onCourseSaved={handleCourseSaved}
+            />
+          </ErrorBoundary>
         }
 
         {screen === 'setup' &&
-          <SetupScreen
-            allPlayers={players}
-            customCourses={customCourses}
-            onStart={handleStartRound}
-          />
+          <ErrorBoundary key="setup">
+            <SetupScreen
+              allPlayers={players}
+              customCourses={customCourses}
+              onStart={handleStartRound}
+            />
+          </ErrorBoundary>
         }
 
         {screen === 'score' && round &&
-          <ScoreEntry
-            round={round}
-            onSaveRound={handleSaveRound}
-            onExitRound={handleExitRound}
-            deviceId={deviceId}
-          />
+          <ErrorBoundary key="score">
+            <ScoreEntry
+              round={round}
+              onSaveRound={handleSaveRound}
+              onExitRound={handleExitRound}
+              deviceId={deviceId}
+            />
+          </ErrorBoundary>
         }
 
         {screen === 'viewround' && (
-          viewedRoundData ? (
+          <ErrorBoundary key="viewround">
+          {viewedRoundData ? (
             <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
               <div style={{
                 flexShrink:0, display:'flex', alignItems:'center', height:52,
@@ -810,21 +875,24 @@ const App = () => {
               syncCode={viewSyncCode}
               onBack={handleBackFromView}
             />
-          )
+          )}
+          </ErrorBoundary>
         )}
 
         {screen === 'summary' && round && finalScores &&
-          <SummaryScreen
-            round={round}
-            scores={finalScores}
-            wolfData={finalWolf}
-            putts={finalPutts}
-            nassauPresses={finalPresses}
-            manualChips={finalChips}
-            popFlags={finalPopFlags || {}}
-            onNewRound={handleNewRound}
-            readOnly={false}
-          />
+          <ErrorBoundary key="summary">
+            <SummaryScreen
+              round={round}
+              scores={finalScores}
+              wolfData={finalWolf}
+              putts={finalPutts}
+              nassauPresses={finalPresses}
+              manualChips={finalChips}
+              popFlags={finalPopFlags || {}}
+              onNewRound={handleNewRound}
+              readOnly={false}
+            />
+          </ErrorBoundary>
         }
 
       </div>
@@ -840,7 +908,11 @@ const App = () => {
             ...(round       ? [{ id:'__exit',  icon:'\uD83D\uDEAA', label:'EXIT'    }] : []),
           ].map(tab =>
             <div key={tab.id}
-              onClick={() => tab.id === '__exit' ? handleExitRound() : setScreen(tab.id)}
+              onClick={() => {
+                if (tab.id === '__exit') { setShowExitConfirm(true); return; }
+                if (tab.id === 'setup' && localStorage.getItem('pp_active_round') === '1') { setShowNewRoundConfirm(true); return; }
+                setScreen(tab.id);
+              }}
               style={{
                 flex:1, display:'flex', flexDirection:'column', alignItems:'center',
                 justifyContent:'center', padding:'12px 4px 10px', cursor:'pointer',
@@ -858,6 +930,26 @@ const App = () => {
           )}
         </div>
       }
+
+      <Modal open={showExitConfirm} onClose={() => setShowExitConfirm(false)} title="Exit Round?">
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.6}}>Your scores are saved locally. You can resume this round from the home screen.</div>
+          <div style={{display:'flex', gap:10}}>
+            <Btn onClick={() => setShowExitConfirm(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>
+            <Btn onClick={() => { setShowExitConfirm(false); handleExitRound(); }} variant="danger" style={{flex:1}}>EXIT ROUND</Btn>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showNewRoundConfirm} onClose={() => setShowNewRoundConfirm(false)} title="Start New Round?">
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.6}}>You have an active round in progress. Starting a new round will discard any unfinished scores.</div>
+          <div style={{display:'flex', gap:10}}>
+            <Btn onClick={() => setShowNewRoundConfirm(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>
+            <Btn onClick={() => { setShowNewRoundConfirm(false); handleExitRound(); setScreen('setup'); }} variant="danger" style={{flex:1}}>NEW ROUND</Btn>
+          </div>
+        </div>
+      </Modal>
 
       {tweaksOpen && (
         <div style={{

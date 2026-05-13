@@ -20,11 +20,22 @@ const ScorecardScanner = ({ onResult, onCancel }) => {
 
   const callVision = async (b64, mediaType) => {
     const prompt = `You are analyzing a golf scorecard image. Extract the data and return ONLY valid JSON — no markdown, no explanation, no code fences.\n\nReturn exactly this structure:\n{\n  "name": "Full official course name",\n  "location": "City, State",\n  "rating": 72.0,\n  "slope": 113,\n  "holes": [\n    {"num": 1, "par": 4, "yds": 380, "hdcp": 7},\n    ... (exactly 18 entries)\n  ]\n}\n\nRules:\n- EXACTLY 18 holes numbered 1–18\n- par = 3, 4, or 5 only\n- If only 9 holes visible, repeat with hdcp offset by 9\n- NEVER return fewer than 18 holes`;
+    const apiKey = window.PLAYPAL_ANTHROPIC_KEY || '';
+    if (!apiKey) {
+      setStatus('error');
+      setErrorMsg('Scorecard scanning is not configured. Contact the app admin.');
+      return;
+    }
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }, { type: 'text', text: prompt }] }] })
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-ipc': 'true',
+        },
+        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1200, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }, { type: 'text', text: prompt }] }] })
       });
       if (!resp.ok) throw new Error('API error ' + resp.status);
       const data = await resp.json();

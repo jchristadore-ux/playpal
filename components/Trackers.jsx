@@ -42,7 +42,7 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
 
   const holeResult = React.useMemo(() => {
     if (!wd.confirmed) return null;
-    return resolveWolfHole(scores, holeIdx, wd.wolfId, wd.partnerId, !wd.lone, players);
+    return resolveWolfHole(scores, holeIdx, wd.wolfId, wd.partnerId, !!wd.lone, players);
   }, [wd.confirmed, JSON.stringify(scores), holeIdx]);
 
   const maxPts = Math.max(...players.map(p => standings[p.id]||0));
