@@ -365,7 +365,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [wolfData, setWolfData] = React.useState(_initWolf);
 
   const [holeIdx,  setHoleIdx]  = React.useState(() => {
-    try { const s = localStorage.getItem('pp_hole_idx_'+round.id); return s ? Math.min(Math.max(parseInt(s,10),0),17) : 0; } catch(e) { return 0; }
+    try { const s = localStorage.getItem('pp_hole_idx_'+round.id); if (!s) return 0; const n = parseInt(s,10); return isNaN(n) ? 0 : Math.min(Math.max(n,0),17); } catch(e) { return 0; }
   });
   const [keypad,   setKeypad]   = React.useState(null);
   const [wolfPicker, setWolfPicker] = React.useState(false);
