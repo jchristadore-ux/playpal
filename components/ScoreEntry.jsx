@@ -358,13 +358,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } };
   const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } };
   const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initHole    = () => { try { const s = localStorage.getItem('pp_hole_'+round.id);   return s !== null ? Math.min(Math.max(parseInt(s, 10), 0), 17) : 0; } catch(e) { return 0; } };
 
   const [scores,   setScores]   = React.useState(_initScores);
   const [putts,    setPutts]    = React.useState(_initPutts);
   const [popFlags, setPopFlags] = React.useState(_initPop);
   const [wolfData, setWolfData] = React.useState(_initWolf);
 
-  const [holeIdx,  setHoleIdx]  = React.useState(0);
+  const [holeIdx,  setHoleIdx]  = React.useState(_initHole);
   const [keypad,   setKeypad]   = React.useState(null);
   const [wolfPicker, setWolfPicker] = React.useState(false);
   const [showFinish, setShowFinish] = React.useState(false);
@@ -409,6 +410,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id,  JSON.stringify(putts));  }, [putts]);
   React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id,    JSON.stringify(popFlags)); }, [popFlags]);
   React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,   JSON.stringify(wolfData)); }, [wolfData]);
+  React.useEffect(() => { localStorage.setItem('pp_hole_'+round.id,   String(holeIdx)); }, [holeIdx]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
   const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf) => {
