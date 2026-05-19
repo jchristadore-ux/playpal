@@ -1,6 +1,62 @@
 // ScoreEntry.jsx — Full Score Entry Screen with real-time cross-device sync
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
+// ── BBB Bottom Sheet ──────────────────────────────────────────────────────────
+const BBBSheet = ({ player, players, holeIdx, bbbData, onSetBBB, onClose }) => {
+  const holeEntry = bbbData?.[holeIdx] || { bingo:null, bango:null, bongo:null };
+  const cats = [
+    { key:'bingo', icon:'①', label:'BINGO', sub:'First ball on the green' },
+    { key:'bango', icon:'②', label:'BANGO', sub:'Closest to pin once all on green' },
+    { key:'bongo', icon:'③', label:'BONGO', sub:'First to hole out' },
+  ];
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(14,43,32,0.8)',display:'flex',
+      alignItems:'flex-end',zIndex:2000,WebkitTapHighlightColor:'transparent'}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:'100%',background:'#F6F4EE',
+        borderRadius:'20px 20px 0 0',padding:'20px 16px 36px',maxWidth:480,margin:'0 auto'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
+          <div style={{width:10,height:10,borderRadius:'50%',background:player.color,flexShrink:0}}/>
+          <span style={{fontFamily:'Plus Jakarta Sans,Inter,system-ui,sans-serif',fontWeight:800,
+            fontSize:16,color:'#0E2B20'}}>{player.name.split(' ')[0]}</span>
+          <span style={{fontFamily:'Plus Jakarta Sans,Inter,system-ui,sans-serif',fontSize:12,
+            color:'#8A9E8A',marginLeft:4}}>— HOLE {holeIdx+1}</span>
+          <button onClick={onClose} style={{marginLeft:'auto',background:'none',border:'none',
+            fontSize:22,color:'#8A9E8A',cursor:'pointer',lineHeight:1,padding:'0 4px',
+            WebkitTapHighlightColor:'transparent'}}>×</button>
+        </div>
+        {cats.map(({ key, icon, label, sub }) => {
+          const holder  = holeEntry[key];
+          const isOwned = holder === player.id;
+          const isTaken = !!(holder && holder !== player.id);
+          const takenBy = isTaken ? players.find(p=>p.id===holder)?.name.split(' ')[0] : null;
+          return (
+            <div key={key} onClick={() => {
+              if (isTaken) return;
+              if (isOwned) { onSetBBB(holeIdx, key, null); }
+              else { onSetBBB(holeIdx, key, player.id); onClose(); }
+            }} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 14px',
+              borderRadius:14,marginBottom:10,
+              cursor:isTaken?'not-allowed':'pointer',
+              opacity:isTaken?0.45:1,
+              background: isOwned ? 'rgba(21,128,61,0.1)' : '#FFFFFF',
+              border: isOwned ? '2px solid #15803D' : '1px solid #E7E3D9',
+              WebkitTapHighlightColor:'transparent'}}>
+              <span style={{fontSize:24,minWidth:30,textAlign:'center',lineHeight:1}}>{icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'Plus Jakarta Sans,Inter,system-ui,sans-serif',
+                  fontWeight:700,fontSize:15,color:isOwned?'#15803D':'#0E2B20',lineHeight:1.2}}>{label}</div>
+                <div style={{fontFamily:'Plus Jakarta Sans,Inter,system-ui,sans-serif',
+                  fontSize:12,color:'#8A9E8A',marginTop:2}}>{isTaken ? `Taken by ${takenBy}` : sub}</div>
+              </div>
+              {isOwned && <span style={{fontSize:18,color:'#15803D'}}>✓</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, hasBBB, bbbData, onBBBTap, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -56,9 +112,9 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
       )}
 
       {/* Format stat pills */}
-      {formatStats && formatStats.length > 0 && (
+      {((formatStats && formatStats.length > 0) || hasBBB) && (
         <div style={{display:'flex', gap:6, padding:'0 12px 10px', flexWrap:'wrap'}}>
-          {formatStats.map((s,i) => (
+          {formatStats && formatStats.map((s,i) => (
             <div key={i} style={{
               display:'flex', alignItems:'center', gap:4,
               background:'#F6F4EE', border:'1px solid #E7E3D9',
@@ -69,6 +125,29 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
               <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A', letterSpacing:0.3, marginLeft:2}}>{s.label}</span>
             </div>
           ))}
+          {hasBBB && (() => {
+            const holeEntry = bbbData?.[holeIdx] || {};
+            const iconMap = { bingo:'①', bango:'②', bongo:'③' };
+            const myAwards = ['bingo','bango','bongo'].filter(cat => holeEntry[cat] === p.id);
+            const hasAny = myAwards.length > 0;
+            return (
+              <button onClick={onBBBTap}
+                style={{
+                  display:'flex', alignItems:'center', gap:4,
+                  background: hasAny ? 'rgba(21,128,61,0.08)' : '#F6F4EE',
+                  border: hasAny ? '1px solid rgba(21,128,61,0.35)' : '1px solid #E7E3D9',
+                  borderRadius:20, padding:'3px 10px 3px 9px',
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent',
+                }}>
+                <span style={{fontSize:11, lineHeight:1}}>🎯</span>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                  color: hasAny ? '#15803D' : '#8A9E8A', lineHeight:1}}>
+                  {hasAny ? myAwards.map(c => iconMap[c]).join(' ') : 'BBB'}
+                </span>
+                {!hasAny && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A', letterSpacing:0.3}}>TAP</span>}
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -371,6 +450,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [holeIdx,  setHoleIdx]  = React.useState(0);
   const [keypad,   setKeypad]   = React.useState(null);
   const [wolfPicker, setWolfPicker] = React.useState(false);
+  const [bbbSheetPlayer, setBBBSheetPlayer] = React.useState(null);
   const [showFinish, setShowFinish] = React.useState(false);
   const [showExit,   setShowExit]   = React.useState(false);
   const [trackersOpen, setTrackersOpen] = React.useState(false);
@@ -515,11 +595,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           }
         });
       }
-      if (hasBBB) {
-        const bbbSt = window.calcBBBStandings(bbbData, players);
-        const tot = bbbSt[p.id]?.total || 0;
-        stats.push({ icon:'🎯', label:'BBB PTS', value:String(tot), color:tot>0?'#15803D':'#3F5F4A' });
-      }
       if (hasTeeBall) {
         const tbSt = window.calcTeeBallStandings(teeBallData, players);
         const pts = tbSt[p.id] || 0;
@@ -589,7 +664,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const handleSetBBB = (hIdx, field, value) => {
     setBBBData(prev => {
       const existing = prev[hIdx] || { bingo:null, bango:null, bongo:null, confirmed:false };
-      const next = { ...prev, [hIdx]: { ...existing, [field]: value } };
+      const updated  = { ...existing, [field]: value };
+      updated.confirmed = !!(updated.bingo || updated.bango || updated.bongo);
+      const next = { ...prev, [hIdx]: updated };
+      localStorage.setItem('pp_bbb_'+round.id, JSON.stringify(next));
       scheduleCloudWrite(null, null, null, null, next, null);
       return next;
     });
@@ -724,6 +802,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 nassauPopActive={nassauPopActive} isNassauPlayer={isNassauPlayer}
                 isWolf={isWolf} isPartner={isPartner} isPTMHolder={isPTM}
                 hasWolf={hasWolf} wolfData={wolfData} formatStats={playerFormatStats[p.id]||[]}
+                hasBBB={hasBBB} bbbData={bbbData} onBBBTap={() => setBBBSheetPlayer(p)}
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
               />
@@ -781,6 +860,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       {wolfPicker && wolfPlayer && (
         <WolfPicker wolfPlayer={wolfPlayer} players={players} holeIdx={holeIdx}
           onPick={handleWolfPick} onLone={handleLoneWolf} onClose={()=>setWolfPicker(false)}/>
+      )}
+
+      {bbbSheetPlayer && (
+        <BBBSheet player={bbbSheetPlayer} players={players} holeIdx={holeIdx}
+          bbbData={bbbData} onSetBBB={handleSetBBB} onClose={() => setBBBSheetPlayer(null)}/>
       )}
 
       <Modal open={showExit} onClose={()=>setShowExit(false)} title="Exit Round?">
