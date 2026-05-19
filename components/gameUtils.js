@@ -366,6 +366,69 @@ function calcSkins(scores, players, course, stakes, popFlags) {
   return { skins, payouts: pay };
 }
 
+// ─── BINGO BANGO BONGO ───────────────────────────────────────────────────────
+// Rules: Three independent points awarded per hole (all manual input).
+//   Bingo = first player on the green (order of play by distance from hole)
+//   Bango = closest to the pin once all balls are on the green
+//   Bongo = first player to hole out
+// Ties within a category → null winner → no point awarded.
+// Most total points across 18 holes wins stake from each other player.
+
+function calcBBBStandings(bbbData, players) {
+  const pts = Object.fromEntries(players.map(p => [p.id, { bingo:0, bango:0, bongo:0, total:0 }]));
+  for (let i = 0; i < 18; i++) {
+    const hole = bbbData?.[i];
+    if (!hole?.confirmed) continue;
+    ['bingo','bango','bongo'].forEach(cat => {
+      const winner = hole[cat];
+      if (winner && pts[winner]) { pts[winner][cat]++; pts[winner].total++; }
+    });
+  }
+  return pts;
+}
+
+function calcBBBPayouts(bbbStandings, players, stake) {
+  const pay = Object.fromEntries(players.map(p => [p.id, 0]));
+  if (!players.length) return pay;
+  const maxTotal = Math.max(...players.map(p => bbbStandings[p.id]?.total || 0));
+  const winners  = players.filter(p => (bbbStandings[p.id]?.total || 0) === maxTotal);
+  const losers   = players.filter(p => (bbbStandings[p.id]?.total || 0) < maxTotal);
+  losers.forEach(l => {
+    pay[l.id] -= stake;
+    winners.forEach(w => { pay[w.id] += stake / winners.length; });
+  });
+  return pay;
+}
+
+// ─── TEE BALL ────────────────────────────────────────────────────────────────
+// Rules: One point per hole to the player with the longest tee shot that stays in bounds/in play.
+// OB or hazard drives are disqualified; next longest in-bounds drive wins instead.
+// Tied longest in-bounds drives → null winner → no point awarded.
+// Works on par 3, 4, and 5. All input is manual — distance/OB can't be derived from scores.
+
+function calcTeeBallStandings(teeBallData, players) {
+  const pts = Object.fromEntries(players.map(p => [p.id, 0]));
+  for (let i = 0; i < 18; i++) {
+    const hole = teeBallData?.[i];
+    if (!hole?.confirmed || !hole.winner) continue;
+    if (pts[hole.winner] !== undefined) pts[hole.winner]++;
+  }
+  return pts;
+}
+
+function calcTeeBallPayouts(teeBallPts, players, stake) {
+  const pay = Object.fromEntries(players.map(p => [p.id, 0]));
+  if (!players.length) return pay;
+  const maxPts  = Math.max(...players.map(p => teeBallPts[p.id] || 0));
+  const winners = players.filter(p => (teeBallPts[p.id] || 0) === maxPts);
+  const losers  = players.filter(p => (teeBallPts[p.id] || 0) < maxPts);
+  losers.forEach(l => {
+    pay[l.id] -= stake;
+    winners.forEach(w => { pay[w.id] += stake / winners.length; });
+  });
+  return pay;
+}
+
 // ─── TOTALS ──────────────────────────────────────────────────────────────────
 function totalScore(scores, pid) {
   return (scores[pid] || []).reduce((a, b) => a + (b || 0), 0);
@@ -378,8 +441,10 @@ function totalVsPar(scores, pid, holes) {
 // ─── calcAllPayouts ───────────────────────────────────────────────────────────
 // Handles both single nassauConfig (legacy) and nassauMatches[] (new multi-match).
 // nassauConfig param is kept for backward compat but ignored when nassauMatches[] is present on the format object.
-function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPresses, ptmHolderId, popFlags, nassauConfig) {
-  popFlags = popFlags || {};
+function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPresses, ptmHolderId, popFlags, nassauConfig, bbbData, teeBallData) {
+  popFlags   = popFlags   || {};
+  bbbData    = bbbData    || {};
+  teeBallData = teeBallData || {};
   const totals = Object.fromEntries(players.map(p => [p.id, 0]));
   formats.forEach(f => {
     let pay = {};
@@ -400,6 +465,12 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
       pay = calcPTMPayouts(holder, players, f.stakes);
     } else if (f.type === 'skins') {
       pay = calcSkins(scores, players, course, f.stakes, popFlags).payouts;
+    } else if (f.type === 'bingobangobongo') {
+      const standings = calcBBBStandings(bbbData, players);
+      pay = calcBBBPayouts(standings, players, f.stakes);
+    } else if (f.type === 'teeball') {
+      const standings = calcTeeBallStandings(teeBallData, players);
+      pay = calcTeeBallPayouts(standings, players, f.stakes);
     } else if (f.type === 'stableford') {
       const playerPts = players.map(p => ({
         p,
@@ -423,6 +494,74 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
   return totals;
 }
 
+// ─── DEVTOOLS TEST SUITE ─────────────────────────────────────────────────────
+// Run window.runPlayPalTests() in browser console to verify BBB and Tee Ball logic.
+function runPlayPalTests() {
+  const players = [{id:'p1',name:'Alice'},{id:'p2',name:'Bob'},{id:'p3',name:'Charlie'}];
+  let pass = 0; let fail = 0;
+  const ok = (label, cond) => { if (cond) { pass++; } else { fail++; console.error('FAIL:', label); } };
+
+  // BBB: basic accumulation
+  const bbbData = {
+    0: { bingo:'p1', bango:'p2', bongo:'p1', confirmed:true },
+    1: { bingo:'p2', bango:'p2', bongo:'p3', confirmed:true },
+  };
+  const bst = calcBBBStandings(bbbData, players);
+  ok('BBB p1 total=2', bst.p1.total === 2);
+  ok('BBB p2 total=3', bst.p2.total === 3);
+  ok('BBB p3 total=1', bst.p3.total === 1);
+  ok('BBB p1 bingo=1', bst.p1.bingo === 1);
+  ok('BBB p2 bango=2', bst.p2.bango === 2);
+
+  // BBB: null winner (tie) awards no point
+  const bbbTie = { 0: { bingo:null, bango:null, bongo:null, confirmed:true } };
+  const tieSt = calcBBBStandings(bbbTie, players);
+  ok('BBB tie→0pts p1', tieSt.p1.total === 0);
+  ok('BBB tie→0pts p2', tieSt.p2.total === 0);
+
+  // BBB: unconfirmed hole ignored
+  const bbbUnconf = { 0: { bingo:'p1', bango:'p1', bongo:'p1', confirmed:false } };
+  const unconfSt = calcBBBStandings(bbbUnconf, players);
+  ok('BBB unconfirmed→0', unconfSt.p1.total === 0);
+
+  // BBB: payouts — p2 wins (3 pts), p1 and p3 owe
+  const bbbPay = calcBBBPayouts(bst, players, 5);
+  ok('BBB p2 wins +10', bbbPay.p2 === 10);
+  ok('BBB p1 loses -5', bbbPay.p1 === -5);
+  ok('BBB p3 loses -5', bbbPay.p3 === -5);
+
+  // TeeBall: basic
+  const tbData = {
+    0: { winner:'p1', confirmed:true },
+    1: { winner:'p1', confirmed:true },
+    2: { winner:null, confirmed:true },
+    3: { winner:'p2', confirmed:true },
+  };
+  const tbSt = calcTeeBallStandings(tbData, players);
+  ok('TB p1=2', tbSt.p1 === 2);
+  ok('TB p2=1', tbSt.p2 === 1);
+  ok('TB p3=0', tbSt.p3 === 0);
+
+  // TeeBall: null winner → no point
+  const tbTie = { 0: { winner:null, confirmed:true } };
+  const tieStTB = calcTeeBallStandings(tbTie, players);
+  ok('TB null→no pts', Object.values(tieStTB).every(v => v === 0));
+
+  // TeeBall: payouts
+  const tbPay = calcTeeBallPayouts(tbSt, players, 3);
+  ok('TB p1 wins +6', tbPay.p1 === 6);
+  ok('TB p2 loses -3', tbPay.p2 === -3);
+  ok('TB p3 loses -3', tbPay.p3 === -3);
+
+  // TeeBall: all tied = no exchange
+  const allTied = calcTeeBallStandings({}, players);
+  const tiedPay = calcTeeBallPayouts(allTied, players, 5);
+  ok('TB all tied→0', Object.values(tiedPay).every(v => v === 0));
+
+  console.log(`PlayPal tests: ${pass} passed, ${fail} failed`);
+  return { pass, fail };
+}
+
 if (typeof window !== 'undefined') {
   Object.assign(window, {
     scoreName, calcStablefordPoints, resolveTiebreaker,
@@ -430,5 +569,7 @@ if (typeof window !== 'undefined') {
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
+    calcBBBStandings, calcBBBPayouts, calcTeeBallStandings, calcTeeBallPayouts,
+    runPlayPalTests,
   });
 }

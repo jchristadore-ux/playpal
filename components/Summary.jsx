@@ -1,7 +1,7 @@
 // Summary.jsx — updated design system
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, onNewRound, readOnly }) => {
-  const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus } = window;
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, onNewRound, readOnly }) => {
+  const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus, calcBBBStandings, calcTeeBallStandings } = window;
   const { players, course, formats, syncCode } = round;
   const [toast, setToast]       = React.useState(null);
   const [tab, setTab]           = React.useState('scorecard');
@@ -18,12 +18,12 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   []);
 
   const payouts = React.useMemo(() =>
-    calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses || [], ptmState.holderId, popFlags || {}),
+    calcAllPayouts(scores, wolfData, players, course, formats, nassauPresses || [], ptmState.holderId, popFlags || {}, null, bbbData || {}, teeBallData || {}),
   []);
 
   const payoutsByFormat = React.useMemo(() =>
     formats.map(f =>
-      calcAllPayouts(scores, wolfData, players, course, [f], nassauPresses || [], ptmState.holderId, popFlags || {})
+      calcAllPayouts(scores, wolfData, players, course, [f], nassauPresses || [], ptmState.holderId, popFlags || {}, null, bbbData || {}, teeBallData || {})
     ),
   []);
 
@@ -33,6 +33,14 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
   const stablefordPts = React.useMemo(() =>
     Object.fromEntries(players.map(p => [p.id, course.holes.reduce((a,h,i) => a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags||{}, p.id, i), h.par), 0)])),
+  []);
+
+  const bbbStandings = React.useMemo(() =>
+    formats.some(f => f.type === 'bingobangobongo') ? calcBBBStandings(bbbData || {}, players) : {},
+  []);
+
+  const teeBallStandings = React.useMemo(() =>
+    formats.some(f => f.type === 'teeball') ? calcTeeBallStandings(teeBallData || {}, players) : {},
   []);
 
   const leaderboard = [...players].map(p=>({
@@ -100,11 +108,13 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         const fPay   = payoutsByFormat[fi] || {};
         const mStake = f.nassauMatches?.[0]?.stakes ?? f.stakes;
         const stakeLabel =
-          f.type === 'nassau'     ? `$${mStake}·$${mStake}·$${mStake*2}` :
-          f.type === 'skins'      ? `$${f.stakes}/skin` :
-          f.type === 'wolf'       ? `$${f.stakes}/round` :
-          f.type === 'stableford' ? `$${f.stakes} match` :
-          f.type === 'passmoney'  ? `$${f.stakes} pot` : '';
+          f.type === 'nassau'          ? `$${mStake}·$${mStake}·$${mStake*2}` :
+          f.type === 'skins'           ? `$${f.stakes}/skin` :
+          f.type === 'wolf'            ? `$${f.stakes}/round` :
+          f.type === 'stableford'      ? `$${f.stakes} match` :
+          f.type === 'passmoney'       ? `$${f.stakes} pot` :
+          f.type === 'bingobangobongo' ? `$${f.stakes} pot` :
+          f.type === 'teeball'         ? `$${f.stakes} pot` : '';
 
         body += `\n${info.label.toUpperCase()} — ${stakeLabel}\n${'─'.repeat(60)}\n`;
 
@@ -173,6 +183,20 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
           const winner = players.find(p => p.id === ptmState.holderId);
           const v = fPay[ptmState.holderId] || 0;
           if (winner) body += `Final holder: ${winner.name} wins $${v.toFixed(0)}\n`;
+
+        } else if (f.type === 'bingobangobongo') {
+          players.forEach(p => {
+            const st = bbbStandings[p.id] || {bingo:0,bango:0,bongo:0,total:0};
+            const v  = fPay[p.id] || 0;
+            body += lpad(p.name, nameW+2) + lpad(`${st.total}pts (${st.bingo}/${st.bango}/${st.bongo})`, 18) + pad(fmtPay(v), 8) + '\n';
+          });
+
+        } else if (f.type === 'teeball') {
+          players.forEach(p => {
+            const pts = teeBallStandings[p.id] || 0;
+            const v   = fPay[p.id] || 0;
+            body += lpad(p.name, nameW+2) + lpad(`${pts} tee ball pts`, 16) + pad(fmtPay(v), 8) + '\n';
+          });
         }
       });
 
@@ -372,11 +396,13 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                     <span style={{fontSize:18}}>{info.icon}</span>
                     <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20'}}>{info.label}</span>
                     <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#C8A15A'}}>
-                      {f.type==='wolf'      ? `$${f.stakes} round pot` :
-                       f.type==='passmoney' ? `$${f.stakes} round pot` :
-                       f.type==='nassau'    ? `$${fmtStake}·$${fmtStake}·$${fmtStake*2}` :
-                       f.type==='skins'     ? `$${f.stakes}/skin` :
-                       f.type==='stableford'? `$${f.stakes} match` : ''}
+                      {f.type==='wolf'            ? `$${f.stakes} round pot` :
+                       f.type==='passmoney'       ? `$${f.stakes} round pot` :
+                       f.type==='nassau'          ? `$${fmtStake}·$${fmtStake}·$${fmtStake*2}` :
+                       f.type==='skins'           ? `$${f.stakes}/skin` :
+                       f.type==='stableford'      ? `$${f.stakes} match` :
+                       f.type==='bingobangobongo' ? `$${f.stakes} round pot` :
+                       f.type==='teeball'         ? `$${f.stakes} round pot` : ''}
                     </span>
                   </div>
                   {players.map(p=>{
@@ -391,6 +417,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           {f.type==='wolf' && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{wolfPts[p.id]||0} wolf pts{isWinner?` — wins $${f.stakes} from each`:''}</div>}
                           {isPTMWinner && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#C8A15A'}}>💰 holds the money — wins ${f.stakes} from each player</div>}
                           {f.type==='stableford' && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#C8A15A'}}>{stablefordPts[p.id]||0} pts</div>}
+                          {f.type==='bingobangobongo' && (() => { const st=bbbStandings[p.id]||{bingo:0,bango:0,bongo:0,total:0}; return <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{st.total} pts · Bingo {st.bingo} · Bango {st.bango} · Bongo {st.bongo}</div>; })()}
+                          {f.type==='teeball' && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{teeBallStandings[p.id]||0} tee ball pts</div>}
                         </div>
                         <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:20, color:v>0?'#15803D':v<0?'#DC2626':'#6B7280'}}>
                           {v>0?'+':''}{v===0?'—':`$${Math.abs(v).toFixed(0)}`}
