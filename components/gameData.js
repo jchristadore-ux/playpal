@@ -1,13 +1,15 @@
 // PlayPal — Game Data & Constants (v2 — expanded course database)
 
-const FORMATS = { WOLF:'wolf', NASSAU:'nassau', STABLEFORD:'stableford', PASS_MONEY:'passmoney', SKINS:'skins' };
+const FORMATS = { WOLF:'wolf', NASSAU:'nassau', STABLEFORD:'stableford', PASS_MONEY:'passmoney', SKINS:'skins', BINGO_BANGO_BONGO:'bingobangobongo', TEE_BALL:'teeball' };
 
 const FORMAT_INFO = {
-  wolf:      { label:'Wolf',           icon:'🐺', desc:'Rotating wolf picks a partner or goes lone wolf each hole' },
-  nassau:    { label:'Nassau',         icon:'💰', desc:'Three bets: Front 9, Back 9, and Full 18 (with presses)' },
-  stableford:{ label:'Stableford',     icon:'⭐', desc:'Points-based: Eagle=5, Birdie=3, Par=2, Bogey=1' },
-  passmoney: { label:'Pass the Money', icon:'💸', desc:'Worst net score passes a chip to best net score per hole' },
-  skins:     { label:'Skins',          icon:'🎴', desc:'Win a hole outright to claim the skin — ties carry over' },
+  wolf:            { label:'Wolf',             icon:'🐺', desc:'Rotating wolf picks a partner or goes lone wolf each hole' },
+  nassau:          { label:'Nassau',           icon:'💰', desc:'Three bets: Front 9, Back 9, and Full 18 (with presses)' },
+  stableford:      { label:'Stableford',       icon:'⭐', desc:'Points-based: Eagle=5, Birdie=3, Par=2, Bogey=1' },
+  passmoney:       { label:'Pass the Money',   icon:'💸', desc:'Worst net score passes a chip to best net score per hole' },
+  skins:           { label:'Skins',            icon:'🎴', desc:'Win a hole outright to claim the skin — ties carry over' },
+  bingobangobongo: { label:'Bingo Bango Bongo',icon:'🎯', desc:'Three points per hole: first on green, closest to pin, first to hole out' },
+  teeball:         { label:'Tee Ball',         icon:'🏌️', desc:'Point per hole to longest in-bounds tee shot — ties get nothing' },
 };
 
 const COURSES = [

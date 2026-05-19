@@ -358,11 +358,15 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } };
   const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } };
   const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initBBB     = () => { try { const s = localStorage.getItem('pp_bbb_'+round.id);    return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initTeeBall = () => { try { const s = localStorage.getItem('pp_teeball_'+round.id);return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
 
-  const [scores,   setScores]   = React.useState(_initScores);
-  const [putts,    setPutts]    = React.useState(_initPutts);
-  const [popFlags, setPopFlags] = React.useState(_initPop);
-  const [wolfData, setWolfData] = React.useState(_initWolf);
+  const [scores,      setScores]      = React.useState(_initScores);
+  const [putts,       setPutts]       = React.useState(_initPutts);
+  const [popFlags,    setPopFlags]    = React.useState(_initPop);
+  const [wolfData,    setWolfData]    = React.useState(_initWolf);
+  const [bbbData,     setBBBData]     = React.useState(_initBBB);
+  const [teeBallData, setTeeBallData] = React.useState(_initTeeBall);
 
   const [holeIdx,  setHoleIdx]  = React.useState(0);
   const [keypad,   setKeypad]   = React.useState(null);
@@ -383,43 +387,55 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const hasNassau = nassauMatches.length > 0;
   const hasStable = formats.some(f => f.type === 'stableford');
   const hasSkins  = formats.some(f => f.type === 'skins');
+  const hasBBB    = formats.some(f => f.type === 'bingobangobongo');
+  const hasTeeBall= formats.some(f => f.type === 'teeball');
   const wolfFmt   = formats.find(f => f.type === 'wolf');
   const ptmFmt    = formats.find(f => f.type === 'passmoney');
   const skinsFmt  = formats.find(f => f.type === 'skins');
+  const bbbFmt    = formats.find(f => f.type === 'bingobangobongo');
+  const teeBallFmt= formats.find(f => f.type === 'teeball');
 
   const hole       = course.holes[holeIdx];
   const wolfPlayer = hasWolf ? getWolfForHole(players, holeIdx) : null;
   const wolfHoleData = wolfData[holeIdx] || { wolfId: wolfPlayer?.id, partnerId: null, confirmed: false, lone: false };
 
   // ── Live refs for sync reads (avoid stale closures) ───────────────────────
-  const scoresRef   = React.useRef(scores);
-  const puttsRef    = React.useRef(putts);
-  const popRef      = React.useRef(popFlags);
-  const wolfRef     = React.useRef(wolfData);
-  const holeIdxRef  = React.useRef(holeIdx);
+  const scoresRef    = React.useRef(scores);
+  const puttsRef     = React.useRef(putts);
+  const popRef       = React.useRef(popFlags);
+  const wolfRef      = React.useRef(wolfData);
+  const bbbRef       = React.useRef(bbbData);
+  const teeBallRef   = React.useRef(teeBallData);
+  const holeIdxRef   = React.useRef(holeIdx);
 
-  React.useEffect(() => { scoresRef.current = scores; }, [scores]);
-  React.useEffect(() => { puttsRef.current  = putts;  }, [putts]);
-  React.useEffect(() => { popRef.current    = popFlags; }, [popFlags]);
-  React.useEffect(() => { wolfRef.current   = wolfData; }, [wolfData]);
-  React.useEffect(() => { holeIdxRef.current = holeIdx; }, [holeIdx]);
+  React.useEffect(() => { scoresRef.current   = scores;      }, [scores]);
+  React.useEffect(() => { puttsRef.current    = putts;       }, [putts]);
+  React.useEffect(() => { popRef.current      = popFlags;    }, [popFlags]);
+  React.useEffect(() => { wolfRef.current     = wolfData;    }, [wolfData]);
+  React.useEffect(() => { bbbRef.current      = bbbData;     }, [bbbData]);
+  React.useEffect(() => { teeBallRef.current  = teeBallData; }, [teeBallData]);
+  React.useEffect(() => { holeIdxRef.current  = holeIdx;     }, [holeIdx]);
 
   // ── Persist to localStorage ───────────────────────────────────────────────
-  React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id, JSON.stringify(scores)); }, [scores]);
-  React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id,  JSON.stringify(putts));  }, [putts]);
-  React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id,    JSON.stringify(popFlags)); }, [popFlags]);
-  React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,   JSON.stringify(wolfData)); }, [wolfData]);
+  React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id,   JSON.stringify(scores));      }, [scores]);
+  React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id,    JSON.stringify(putts));       }, [putts]);
+  React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id,      JSON.stringify(popFlags));    }, [popFlags]);
+  React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(wolfData));    }, [wolfData]);
+  React.useEffect(() => { localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(bbbData));     }, [bbbData]);
+  React.useEffect(() => { localStorage.setItem('pp_teeball_'+round.id,  JSON.stringify(teeBallData)); }, [teeBallData]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
-  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf) => {
+  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall) => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
       if (!window.RoundSyncService || !syncCode) return;
       const payload = {
-        scores:         nextScores || scoresRef.current,
-        putts:          nextPutts  || puttsRef.current,
-        popFlags:       nextPop    || popRef.current,
-        wolfData:       nextWolf   || wolfRef.current,
+        scores:         nextScores   || scoresRef.current,
+        putts:          nextPutts    || puttsRef.current,
+        popFlags:       nextPop      || popRef.current,
+        wolfData:       nextWolf     || wolfRef.current,
+        bbbData:        nextBBB      || bbbRef.current,
+        teeBallData:    nextTeeBall  || teeBallRef.current,
         currentHoleIdx: holeIdxRef.current,
         _writtenBy: deviceId,
         _ts: Date.now(),
@@ -439,10 +455,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (!livePayload) return;
       // Remote update: merge into local state
       applyingRemoteRef.current = true;
-      if (livePayload.scores)   { setScores(livePayload.scores);   localStorage.setItem('pp_scores_'+round.id, JSON.stringify(livePayload.scores)); }
-      if (livePayload.putts)    { setPutts(livePayload.putts);     localStorage.setItem('pp_putts_'+round.id,  JSON.stringify(livePayload.putts)); }
-      if (livePayload.popFlags) { setPopFlags(livePayload.popFlags); localStorage.setItem('pp_pop_'+round.id,  JSON.stringify(livePayload.popFlags)); }
-      if (livePayload.wolfData) { setWolfData(livePayload.wolfData); localStorage.setItem('pp_wolf_'+round.id, JSON.stringify(livePayload.wolfData)); }
+      if (livePayload.scores)      { setScores(livePayload.scores);           localStorage.setItem('pp_scores_'+round.id,   JSON.stringify(livePayload.scores)); }
+      if (livePayload.putts)       { setPutts(livePayload.putts);             localStorage.setItem('pp_putts_'+round.id,    JSON.stringify(livePayload.putts)); }
+      if (livePayload.popFlags)    { setPopFlags(livePayload.popFlags);       localStorage.setItem('pp_pop_'+round.id,      JSON.stringify(livePayload.popFlags)); }
+      if (livePayload.wolfData)    { setWolfData(livePayload.wolfData);       localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(livePayload.wolfData)); }
+      if (livePayload.bbbData)     { setBBBData(livePayload.bbbData);         localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(livePayload.bbbData)); }
+      if (livePayload.teeBallData) { setTeeBallData(livePayload.teeBallData); localStorage.setItem('pp_teeball_'+round.id, JSON.stringify(livePayload.teeBallData)); }
       if (livePayload.currentHoleIdx !== undefined) { holeIdxRef.current = livePayload.currentHoleIdx; setHoleIdx(livePayload.currentHoleIdx); }
       // Small delay before clearing flag to let React batch the state updates
       setTimeout(() => { applyingRemoteRef.current = false; }, 50);
@@ -497,10 +515,20 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           }
         });
       }
+      if (hasBBB) {
+        const bbbSt = window.calcBBBStandings(bbbData, players);
+        const tot = bbbSt[p.id]?.total || 0;
+        stats.push({ icon:'🎯', label:'BBB PTS', value:String(tot), color:tot>0?'#15803D':'#3F5F4A' });
+      }
+      if (hasTeeBall) {
+        const tbSt = window.calcTeeBallStandings(teeBallData, players);
+        const pts = tbSt[p.id] || 0;
+        stats.push({ icon:'🏌️', label:'TEE BALL', value:String(pts), color:pts>0?'#C8A15A':'#3F5F4A' });
+      }
       result[p.id] = stats;
     });
     return result;
-  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), holeIdx, JSON.stringify(matchLiveStatuses)]);
+  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), JSON.stringify(bbbData), JSON.stringify(teeBallData), holeIdx, JSON.stringify(matchLiveStatuses)]);
 
   // ── Score / putt / pop setters ────────────────────────────────────────────
   const setScore = (playerId, val) => {
@@ -558,6 +586,24 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
+  const handleSetBBB = (hIdx, field, value) => {
+    setBBBData(prev => {
+      const existing = prev[hIdx] || { bingo:null, bango:null, bongo:null, confirmed:false };
+      const next = { ...prev, [hIdx]: { ...existing, [field]: value } };
+      scheduleCloudWrite(null, null, null, null, next, null);
+      return next;
+    });
+  };
+
+  const handleSetTeeBall = (hIdx, winner, confirmed) => {
+    setTeeBallData(prev => {
+      const existing = prev[hIdx] || { winner:null, confirmed:false };
+      const next = { ...prev, [hIdx]: { ...existing, winner, confirmed: !!confirmed } };
+      scheduleCloudWrite(null, null, null, null, null, next);
+      return next;
+    });
+  };
+
   const prevHole = () => {
     if (holeIdx > 0) {
       const newIdx = holeIdx - 1;
@@ -583,10 +629,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
-  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags); };
+  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
-  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins;
+  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall;
 
   return (
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#F6F4EE'}}>
@@ -691,9 +737,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
         {hasAnyTracker && (
           <TrackersDrawer open={trackersOpen} onToggle={() => setTrackersOpen(v => !v)} formats={formats}>
-            {hasWolf && <WolfTracker players={players} scores={scores} wolfData={wolfData} course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
-            {hasPTM  && <PTMTracker players={players} scores={scores} putts={putts} course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
-            {hasNassau && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
+            {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
+            {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
+            {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
+            {hasBBB     && <BBBTracker       players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         onSetBBB={handleSetBBB}         format={bbbFmt}/>}
+            {hasTeeBall && <TeeBallTracker   players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
           </TrackersDrawer>
         )}
 
@@ -765,7 +813,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           nassauMatches={nassauMatches} holeIdx={holeIdx}
           hasWolf={hasWolf} hasPTM={hasPTM} hasNassau={hasNassau}
           hasStable={hasStable} hasSkins={hasSkins}
+          hasBBB={hasBBB} hasTeeBall={hasTeeBall}
           wolfFmt={wolfFmt} ptmFmt={ptmFmt} skinsFmt={skinsFmt} nassauFmtObj={nassauFmtObj}
+          bbbFmt={bbbFmt} teeBallFmt={teeBallFmt}
+          bbbData={bbbData} teeBallData={teeBallData}
         />
       )}
     </div>

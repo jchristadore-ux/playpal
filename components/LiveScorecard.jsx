@@ -3,16 +3,18 @@
 const LiveScorecardModal = ({
   onClose,
   players, course, scores, putts, popFlags, wolfData, nassauMatches, holeIdx,
-  hasWolf, hasPTM, hasNassau, hasStable, hasSkins,
-  wolfFmt, ptmFmt, skinsFmt, nassauFmtObj,
+  hasWolf, hasPTM, hasNassau, hasStable, hasSkins, hasBBB, hasTeeBall,
+  wolfFmt, ptmFmt, skinsFmt, nassauFmtObj, bbbFmt, teeBallFmt,
+  bbbData, teeBallData,
 }) => {
   const {
     totalScore, totalVsPar, calcWolfStandings, calcStablefordPoints,
     calcSkins, computePTMState, getAdjustedHoleScore, nassauSegmentStatus,
+    calcBBBStandings, calcTeeBallStandings,
   } = window;
 
   const [tab, setTab] = React.useState('scorecard');
-  const hasFormats = hasWolf || hasPTM || hasNassau || hasStable || hasSkins;
+  const hasFormats = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall;
 
   const frontPar = course.holes.slice(0, 9).reduce((a, h) => a + h.par, 0);
   const backPar  = course.holes.slice(9, 18).reduce((a, h) => a + h.par, 0);
@@ -58,6 +60,18 @@ const LiveScorecardModal = ({
     if (!hasSkins) return { skins: {} };
     return calcSkins(scores, players, course, skinsFmt?.stakes || 1, popFlags || {});
   }, [JSON.stringify(scores), JSON.stringify(popFlags)]);
+
+  // ── Bingo Bango Bongo standings ────────────────────────────────────────────
+  const bbbStandings = React.useMemo(() => {
+    if (!hasBBB) return {};
+    return calcBBBStandings(bbbData || {}, players);
+  }, [JSON.stringify(bbbData)]);
+
+  // ── Tee Ball standings ────────────────────────────────────────────────────
+  const teeBallStandings = React.useMemo(() => {
+    if (!hasTeeBall) return {};
+    return calcTeeBallStandings(teeBallData || {}, players);
+  }, [JSON.stringify(teeBallData)]);
 
   // ── PTM state ─────────────────────────────────────────────────────────────
   const ptmState = React.useMemo(() => {
@@ -507,6 +521,57 @@ const LiveScorecardModal = ({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Bingo Bango Bongo */}
+            {hasBBB && (
+              <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:14, overflow:'hidden'}}>
+                <div style={{display:'flex', alignItems:'center', gap:8, padding:'12px 14px', borderBottom:'1px solid #E7E3D9'}}>
+                  <span style={{fontSize:16}}>🎯</span>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>BINGO BANGO BONGO</span>
+                  {bbbFmt?.stakes && <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>${bbbFmt.stakes} round pot</span>}
+                </div>
+                {[...players].sort((a,b) => (bbbStandings[b.id]?.total||0) - (bbbStandings[a.id]?.total||0)).map(p => {
+                  const st = bbbStandings[p.id] || {bingo:0,bango:0,bongo:0,total:0};
+                  return (
+                    <div key={p.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid #F0EDE4'}}>
+                      <Avatar player={p} size={28}/>
+                      <div style={{flex:1}}>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{p.name}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>
+                          Bingo {st.bingo} · Bango {st.bango} · Bongo {st.bongo}
+                        </div>
+                      </div>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:20, color:st.total>0?'#15803D':'#6B7280'}}>
+                        {st.total} <span style={{fontSize:11, fontWeight:600, color:'#8A9E8A'}}>pts</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Tee Ball */}
+            {hasTeeBall && (
+              <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:14, overflow:'hidden'}}>
+                <div style={{display:'flex', alignItems:'center', gap:8, padding:'12px 14px', borderBottom:'1px solid #E7E3D9'}}>
+                  <span style={{fontSize:16}}>🏌️</span>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>TEE BALL</span>
+                  {teeBallFmt?.stakes && <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>${teeBallFmt.stakes} round pot</span>}
+                </div>
+                {[...players].sort((a,b) => (teeBallStandings[b.id]||0) - (teeBallStandings[a.id]||0)).map(p => {
+                  const pts = teeBallStandings[p.id] || 0;
+                  return (
+                    <div key={p.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid #F0EDE4'}}>
+                      <Avatar player={p} size={28}/>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20', flex:1}}>{p.name}</span>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:20, color:pts>0?'#C8A15A':'#6B7280'}}>
+                        {pts} <span style={{fontSize:11, fontWeight:600, color:'#8A9E8A'}}>pts</span>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
