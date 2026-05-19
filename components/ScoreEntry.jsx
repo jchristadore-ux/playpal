@@ -677,7 +677,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const handleSetBBB = (hIdx, field, value) => {
     setBBBData(prev => {
       const existing = prev[hIdx] || { bingo:null, bango:null, bongo:null, confirmed:false };
-      const next = { ...prev, [hIdx]: { ...existing, [field]: value } };
+      const updated  = { ...existing, [field]: value };
+      // Mark confirmed whenever any category is set so calcBBBStandings counts it
+      const bbbFields = ['bingo', 'bango', 'bongo'];
+      if (bbbFields.includes(field)) {
+        updated.confirmed = bbbFields.some(k => k === field ? !!value : !!updated[k]);
+      }
+      const next = { ...prev, [hIdx]: updated };
       scheduleCloudWrite(null, null, null, null, next, null);
       return next;
     });
