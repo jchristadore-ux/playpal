@@ -1,6 +1,97 @@
 // ScoreEntry.jsx — Full Score Entry Screen with real-time cross-device sync
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle }) => {
+// ── BBB Inline Pill ───────────────────────────────────────────────────────────
+const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
+  const [open, setOpen] = React.useState(false);
+  const [pos,  setPos]  = React.useState({ top: 0, left: 0 });
+  const btnRef          = React.useRef(null);
+
+  const holeEntry = bbbData?.[holeIdx] || { bingo:null, bango:null, bongo:null };
+  const hasB  = holeEntry.bingo === playerId;
+  const hasBa = holeEntry.bango === playerId;
+  const hasBo = holeEntry.bongo === playerId;
+  const bingoOther = holeEntry.bingo && !hasB  ? players.find(p => p.id === holeEntry.bingo)  : null;
+  const bangoOther = holeEntry.bango && !hasBa ? players.find(p => p.id === holeEntry.bango)  : null;
+  const bongoOther = holeEntry.bongo && !hasBo ? players.find(p => p.id === holeEntry.bongo)  : null;
+  const hasAny = hasB || hasBa || hasBo;
+
+  const cats = [
+    { cat:'bingo', label:'BINGO', sub:'First on Green',    icon:'①', other:bingoOther, active:hasB  },
+    { cat:'bango', label:'BANGO', sub:'Closest to Pin',    icon:'②', other:bangoOther, active:hasBa },
+    { cat:'bongo', label:'BONGO', sub:'First to Hole Out', icon:'③', other:bongoOther, active:hasBo },
+  ];
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 244)) });
+    }
+    setOpen(true);
+  };
+
+  return (
+    <div style={{position:'relative', display:'inline-block'}}>
+      <button ref={btnRef} onClick={handleOpen}
+        style={{
+          display:'flex', alignItems:'center', gap:4,
+          background: hasAny ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
+          border: hasAny ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
+          borderRadius:999, padding:'3px 10px 3px 8px', minHeight:28,
+          cursor:'pointer', WebkitTapHighlightColor:'transparent',
+        }}>
+        <span style={{fontSize:11, lineHeight:1}}>🎯</span>
+        {hasB  && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:13, color:'#C8A15A', lineHeight:1}}>①</span>}
+        {hasBa && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:13, color:'#C8A15A', lineHeight:1}}>②</span>}
+        {hasBo && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:13, color:'#C8A15A', lineHeight:1}}>③</span>}
+        {!hasAny && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, color:'#8A9E8A', letterSpacing:0.5, lineHeight:1}}>BBB</span>}
+        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A', marginLeft:1}}>▾</span>
+      </button>
+
+      {open && (
+        <>
+          <div style={{position:'fixed', inset:0, zIndex:300}} onClick={() => setOpen(false)}/>
+          <div style={{
+            position:'fixed', top:pos.top, left:pos.left, zIndex:301,
+            background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16,
+            padding:8, boxShadow:'0 8px 32px rgba(14,43,32,0.15)', width:236,
+          }}>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800,
+              fontSize:10, color:'#8A9E8A', letterSpacing:1.5, padding:'4px 8px 8px'}}>
+              HOLE {holeIdx+1} — AWARD POINTS
+            </div>
+            {cats.map(({ cat, label, sub, icon, other, active }) => (
+              <button key={cat}
+                onClick={() => {
+                  if (!other) { onSetBBB(holeIdx, cat, active ? null : playerId); setOpen(false); }
+                }}
+                style={{
+                  width:'100%', display:'flex', alignItems:'center', gap:10,
+                  padding:'10px 12px', borderRadius:12, border:'none', marginBottom:4,
+                  background: active ? 'rgba(200,161,90,0.1)' : other ? 'rgba(107,114,128,0.04)' : '#F6F4EE',
+                  cursor: other ? 'default' : 'pointer',
+                  WebkitTapHighlightColor:'transparent', textAlign:'left',
+                }}>
+                <span style={{fontSize:20, lineHeight:1, opacity:other ? 0.35 : 1}}>{icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                    color: active ? '#C8A15A' : other ? '#AFAFAF' : '#0E2B20'}}>
+                    {label}{active ? ' ✓' : ''}
+                  </div>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11,
+                    color: other ? '#AFAFAF' : '#3F5F4A'}}>
+                    {other ? `${other.name.split(' ')[0]} has this` : sub}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -56,9 +147,9 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
       )}
 
       {/* Format stat pills */}
-      {formatStats && formatStats.length > 0 && (
+      {((formatStats && formatStats.length > 0) || hasBBB) && (
         <div style={{display:'flex', gap:6, padding:'0 12px 10px', flexWrap:'wrap'}}>
-          {formatStats.map((s,i) => (
+          {formatStats && formatStats.map((s,i) => (
             <div key={i} style={{
               display:'flex', alignItems:'center', gap:4,
               background:'#F6F4EE', border:'1px solid #E7E3D9',
@@ -69,6 +160,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
               <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A', letterSpacing:0.3, marginLeft:2}}>{s.label}</span>
             </div>
           ))}
+          {hasBBB && <BBBPill playerId={p.id} holeIdx={holeIdx} bbbData={bbbData} players={players} onSetBBB={onSetBBB}/>}
         </div>
       )}
 
@@ -515,11 +607,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           }
         });
       }
-      if (hasBBB) {
-        const bbbSt = window.calcBBBStandings(bbbData, players);
-        const tot = bbbSt[p.id]?.total || 0;
-        stats.push({ icon:'🎯', label:'BBB PTS', value:String(tot), color:tot>0?'#15803D':'#3F5F4A' });
-      }
+      // BBB points are shown via the interactive BBBPill on each player card
       if (hasTeeBall) {
         const tbSt = window.calcTeeBallStandings(teeBallData, players);
         const pts = tbSt[p.id] || 0;
@@ -589,7 +677,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const handleSetBBB = (hIdx, field, value) => {
     setBBBData(prev => {
       const existing = prev[hIdx] || { bingo:null, bango:null, bongo:null, confirmed:false };
-      const next = { ...prev, [hIdx]: { ...existing, [field]: value } };
+      const updated  = { ...existing, [field]: value };
+      // Mark confirmed whenever any category is set so calcBBBStandings counts it
+      const bbbFields = ['bingo', 'bango', 'bongo'];
+      if (bbbFields.includes(field)) {
+        updated.confirmed = bbbFields.some(k => k === field ? !!value : !!updated[k]);
+      }
+      const next = { ...prev, [hIdx]: updated };
       scheduleCloudWrite(null, null, null, null, next, null);
       return next;
     });
@@ -726,6 +820,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 hasWolf={hasWolf} wolfData={wolfData} formatStats={playerFormatStats[p.id]||[]}
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
+                hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
               />
             );
           })}
@@ -740,7 +835,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
             {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
             {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
-            {hasBBB     && <BBBTracker       players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         onSetBBB={handleSetBBB}         format={bbbFmt}/>}
+            {hasBBB     && <BBBTracker       players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         format={bbbFmt}/>}
             {hasTeeBall && <TeeBallTracker   players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
           </TrackersDrawer>
         )}
