@@ -420,41 +420,12 @@ const trS = {
 };
 
 // ─── BINGO BANGO BONGO TRACKER ───────────────────────────────────────────────
-const BBBTracker = ({ players, course, holeIdx, bbbData, onSetBBB, format }) => {
+const BBBTracker = ({ players, course, holeIdx, bbbData, format }) => {
   const stake      = format?.stakes || 2;
-  const holeEntry  = bbbData?.[holeIdx] || { bingo:null, bango:null, bongo:null, confirmed:false };
+  const holeEntry  = bbbData?.[holeIdx] || { bingo:null, bango:null, bongo:null };
   const standings  = window.calcBBBStandings(bbbData || {}, players);
   const ranked     = [...players].sort((a,b) => (standings[b.id]?.total||0) - (standings[a.id]?.total||0));
-
-  const CategoryPicker = ({ cat, label, icon }) => {
-    const current = holeEntry[cat];
-    return (
-      <div style={{marginBottom:10}}>
-        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11,
-          letterSpacing:1, color:'#C8A15A', marginBottom:5}}>{icon} {label}</div>
-        <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-          {players.map(p => (
-            <button key={p.id} onClick={() => onSetBBB(holeIdx, cat, current===p.id ? null : p.id)}
-              style={{flex:1, minWidth:70, padding:'8px 6px', borderRadius:10,
-                border: current===p.id ? `2px solid ${p.color}` : `1px solid ${p.color}44`,
-                background: current===p.id ? `${p.color}18` : `${p.color}08`,
-                color: current===p.id ? p.color : '#3F5F4A',
-                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700,
-                fontSize:12, cursor:'pointer'}}>
-              {p.name.split(' ')[0]}
-            </button>
-          ))}
-          <button onClick={() => onSetBBB(holeIdx, cat, null)}
-            style={{padding:'8px 10px', borderRadius:10, border:'1px solid rgba(107,114,128,0.3)',
-              background:'rgba(107,114,128,0.06)', color:'#6B7280',
-              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700,
-              fontSize:12, cursor:'pointer'}}>
-            TIE
-          </button>
-        </div>
-      </div>
-    );
-  };
+  const holeHasAny = holeEntry.bingo || holeEntry.bango || holeEntry.bongo;
 
   return (
     <div style={trS.section}>
@@ -480,28 +451,26 @@ const BBBTracker = ({ players, course, holeIdx, bbbData, onSetBBB, format }) => 
         })}
       </div>
 
-      {!holeEntry.confirmed ? (
-        <div style={{background:'#F6F4EE',border:'1px solid #E7E3D9',borderRadius:14,padding:'12px'}}>
-          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontWeight:800,fontSize:13,color:'#0E2B20',marginBottom:12}}>
-            HOLE {holeIdx+1} — AWARD POINTS
-          </div>
-          <CategoryPicker cat="bingo" label="BINGO — First on Green"    icon="①" />
-          <CategoryPicker cat="bango" label="BANGO — Closest to Pin"    icon="②" />
-          <CategoryPicker cat="bongo" label="BONGO — First to Hole Out" icon="③" />
-          <button onClick={() => onSetBBB(holeIdx, 'confirmed', true)}
-            style={{width:'100%',padding:'10px',borderRadius:10,border:'none',
-              background:'#0E2B20',color:'#F6F4EE',marginTop:4,
-              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontWeight:700,fontSize:13,cursor:'pointer'}}>
-            CONFIRM HOLE {holeIdx+1}
-          </button>
+      {holeHasAny && (
+        <div style={{background:'rgba(200,161,90,0.06)',border:'1px solid rgba(200,161,90,0.2)',borderRadius:10,padding:'10px 12px'}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontWeight:800,fontSize:11,color:'#C8A15A',letterSpacing:1,marginBottom:6}}>HOLE {holeIdx+1}</div>
+          {[['bingo','①','First on Green'],['bango','②','Closest to Pin'],['bongo','③','First to Hole Out']].map(([cat, icon, label]) => {
+            const winner = holeEntry[cat] ? players.find(p => p.id === holeEntry[cat]) : null;
+            if (!winner) return null;
+            return (
+              <div key={cat} style={{display:'flex',alignItems:'center',gap:8,marginBottom:3}}>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontWeight:800,fontSize:14,color:'#C8A15A'}}>{icon}</span>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontSize:11,color:'#3F5F4A'}}>{label}</span>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontWeight:700,fontSize:11,color:'#0E2B20',marginLeft:'auto'}}>{winner.name.split(' ')[0]}</span>
+              </div>
+            );
+          })}
         </div>
-      ) : (
-        <div style={{background:'rgba(21,128,61,0.06)',border:'1px solid rgba(21,128,61,0.2)',borderRadius:10,
-          padding:'10px 12px',display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:14}}>✅</span>
-          <div style={{flex:1,fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontSize:12,color:'#15803D',fontWeight:700}}>Hole {holeIdx+1} recorded</div>
-          <button onClick={() => onSetBBB(holeIdx, 'confirmed', false)}
-            style={{fontSize:11,color:'#8A9E8A',background:'none',border:'none',cursor:'pointer',textDecoration:'underline'}}>edit</button>
+      )}
+
+      {!holeHasAny && (
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontSize:11,color:'#8A9E8A',textAlign:'center',padding:'4px 0'}}>
+          Tap the 🎯 BBB pill on a player card to award points for this hole.
         </div>
       )}
     </div>
