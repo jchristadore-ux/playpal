@@ -705,7 +705,7 @@ const App = () => {
 
   };
 
-  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}) => {
+  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, fairways = {}) => {
     setFinalScores(scores);
     setFinalWolf(wolfData);
     setFinalPutts(putts);
@@ -723,6 +723,7 @@ const App = () => {
         return {
           strokes:    scores[player.id]?.[i] || null,
           putts:      (putts[player.id]?.[i]) || 0,
+          fir:        fairways[player.id] ? (fairways[player.id][i] ?? null) : null,
           gettingPop: !!(popFlags[player.id]?.[i]),
         };
       });

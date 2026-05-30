@@ -30,17 +30,22 @@
       Object.keys(hs).forEach(function (pid) {
         if (!stats[pid]) {
           stats[pid] = {
-            player:        _playerFromRounds(pid, tripRounds),
-            rounds:        0,
-            totalStrokes:  0,
-            totalVsPar:    0,
-            totalEarnings: 0,
-            birdies:       0,
-            eagles:        0,
-            pars:          0,
-            bogeys:        0,
-            doubles:       0,
-            roundScores:   [],
+            player:           _playerFromRounds(pid, tripRounds),
+            rounds:           0,
+            totalStrokes:     0,
+            totalVsPar:       0,
+            totalEarnings:    0,
+            birdies:          0,
+            eagles:           0,
+            pars:             0,
+            bogeys:           0,
+            doubles:          0,
+            roundScores:      [],
+            totalPutts:       0,
+            fairwaysHit:      0,
+            fairwaysEligible: 0,
+            girsHit:          0,
+            girsEligible:     0,
           };
         }
 
@@ -51,17 +56,34 @@
         var played     = 0;
 
         (holes || []).forEach(function (h, i) {
-          if (!h.strokes) return;
-          var par  = ((course.holes || [])[i] || {}).par || 4;
-          var diff = h.strokes - par;
-          rStrokes += h.strokes;
-          rVsPar   += diff;
-          played++;
-          if (diff <= -2)       s.eagles++;
-          else if (diff === -1) s.birdies++;
-          else if (diff ===  0) s.pars++;
-          else if (diff ===  1) s.bogeys++;
-          else                  s.doubles++;
+          var par = ((course.holes || [])[i] || {}).par || 4;
+
+          if (h.strokes) {
+            var diff = h.strokes - par;
+            rStrokes += h.strokes;
+            rVsPar   += diff;
+            played++;
+            if (diff <= -2)       s.eagles++;
+            else if (diff === -1) s.birdies++;
+            else if (diff ===  0) s.pars++;
+            else if (diff ===  1) s.bogeys++;
+            else                  s.doubles++;
+
+            // FIR: par 4/5 holes only; only counted when fir field is explicitly boolean
+            if (par !== 3) {
+              s.fairwaysEligible++;
+              if (h.fir === true) s.fairwaysHit++;
+            }
+
+            // GIR: derived from strokes and putts (requires both to be set)
+            if (h.putts > 0) {
+              s.girsEligible++;
+              if ((h.strokes - h.putts) <= (par - 2)) s.girsHit++;
+            }
+          }
+
+          // Putts (independent of strokes guard — count all recorded putts)
+          if (h.putts > 0) s.totalPutts += h.putts;
         });
 
         if (played > 0) {
@@ -88,19 +110,23 @@
           ? s.roundScores.reduce(function (a, v) { return a + Math.pow(v - mean, 2); }, 0) / s.roundScores.length
           : 0;
         return Object.assign({}, s.player, {
-          rounds:        s.rounds,
-          totalStrokes:  s.totalStrokes,
-          totalVsPar:    s.totalVsPar,
-          avgVsPar:      s.totalVsPar  / s.rounds,
-          avgStrokes:    s.totalStrokes / s.rounds,
-          totalEarnings: s.totalEarnings,
-          birdies:       s.birdies,
-          eagles:        s.eagles,
-          pars:          s.pars,
-          bogeys:        s.bogeys,
-          doubles:       s.doubles,
-          stdDev:        Math.sqrt(variance),
-          roundScores:   s.roundScores,
+          rounds:           s.rounds,
+          totalStrokes:     s.totalStrokes,
+          totalVsPar:       s.totalVsPar,
+          avgVsPar:         s.totalVsPar  / s.rounds,
+          avgStrokes:       s.totalStrokes / s.rounds,
+          totalEarnings:    s.totalEarnings,
+          birdies:          s.birdies,
+          eagles:           s.eagles,
+          pars:             s.pars,
+          bogeys:           s.bogeys,
+          doubles:          s.doubles,
+          stdDev:           Math.sqrt(variance),
+          roundScores:      s.roundScores,
+          totalPutts:       s.totalPutts,
+          avgPuttsPerRound: s.rounds > 0 ? s.totalPutts / s.rounds : 0,
+          firPct:           s.fairwaysEligible > 0 ? s.fairwaysHit / s.fairwaysEligible : null,
+          girPct:           s.girsEligible   > 0 ? s.girsHit   / s.girsEligible   : null,
         });
       })
       .sort(function (a, b) { return a.avgVsPar - b.avgVsPar; });
@@ -178,6 +204,36 @@
         id: 'bestround', emoji: '⭐', title: 'Best Single Round',
         winner: bestRound.player,
         detail: (bestRound.vsPar >= 0 ? '+' : '') + bestRound.vsPar + ' · ' + bestRound.course,
+      });
+    }
+
+    var byPutts = lb.filter(function (p) { return p.avgPuttsPerRound > 0; })
+                   .sort(function (a, b) { return a.avgPuttsPerRound - b.avgPuttsPerRound; });
+    if (byPutts.length > 0) {
+      awards.push({
+        id: 'putting', emoji: '🕳️', title: 'Fewest Putts',
+        winner: byPutts[0],
+        detail: byPutts[0].avgPuttsPerRound.toFixed(1) + ' avg / round',
+      });
+    }
+
+    var byFir = lb.filter(function (p) { return p.firPct !== null; })
+                  .sort(function (a, b) { return b.firPct - a.firPct; });
+    if (byFir.length > 0) {
+      awards.push({
+        id: 'fairways', emoji: '🌿', title: 'Best Fairways',
+        winner: byFir[0],
+        detail: Math.round(byFir[0].firPct * 100) + '% FIR',
+      });
+    }
+
+    var byGir = lb.filter(function (p) { return p.girPct !== null; })
+                  .sort(function (a, b) { return b.girPct - a.girPct; });
+    if (byGir.length > 0) {
+      awards.push({
+        id: 'gir', emoji: '🟢', title: 'Best Greens in Regulation',
+        winner: byGir[0],
+        detail: Math.round(byGir[0].girPct * 100) + '% GIR',
       });
     }
 

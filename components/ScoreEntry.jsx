@@ -91,11 +91,12 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, fir, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onFir, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
   const puttVal  = putts[p.id]?.[holeIdx] || 0;
+  const girHit   = score > 0 && puttVal > 0 && (score - puttVal) <= (hole.par - 2);
 
   const cardBorder = isWolf ? '1.5px solid rgba(220,38,38,0.35)' : isPartner ? `1.5px solid ${p.color}55` : '1px solid #E7E3D9';
   const cardBg     = isWolf ? 'rgba(220,38,38,0.03)' : '#FFFFFF';
@@ -236,7 +237,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
       )}
 
       {/* Putt tracker */}
-      <div style={{display:'flex', alignItems:'center', padding:'8px 14px 12px',
+      <div style={{display:'flex', alignItems:'center', padding:'8px 14px 10px',
         borderTop: isPTMHolder && puttVal === 0 ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
         gap:10,
         background: isPTMHolder && puttVal === 0 ? 'rgba(200,161,90,0.04)' : 'transparent'}}>
@@ -262,6 +263,49 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
           ))}
         </div>
         {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>}
+      </div>
+
+      {/* FIR toggle (par 4/5 only) + GIR indicator */}
+      <div style={{padding:'6px 14px 12px', borderTop:'1px solid #F0EDE4', display:'flex', alignItems:'center', gap:10}}>
+        {hole.par !== 3 ? (
+          <>
+            <Label style={{flexShrink:0, minWidth:32}}>FIR</Label>
+            <div style={{display:'flex', gap:6, flex:1}}>
+              <button
+                onClick={()=>onFir(p.id, fir === true ? null : true)}
+                style={{flex:1, padding:'6px 0', borderRadius:8, border:'1.5px solid',
+                  borderColor: fir === true  ? '#2A6F4F' : '#C8D5C8',
+                  background:  fir === true  ? '#E8F5EE' : '#F6F4EE',
+                  color:       fir === true  ? '#2A6F4F' : '#8A9E8A',
+                  fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12,
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                HIT
+              </button>
+              <button
+                onClick={()=>onFir(p.id, fir === false ? null : false)}
+                style={{flex:1, padding:'6px 0', borderRadius:8, border:'1.5px solid',
+                  borderColor: fir === false ? '#C84B4B' : '#C8D5C8',
+                  background:  fir === false ? '#FFF0F0' : '#F6F4EE',
+                  color:       fir === false ? '#C84B4B' : '#8A9E8A',
+                  fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12,
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                MISS
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#C8D5C8', letterSpacing:0.5}}>Par 3 — no fairway</div>
+        )}
+        {score > 0 && puttVal > 0 && (
+          <div style={{
+            flexShrink:0, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11,
+            color: girHit ? '#2A6F4F' : '#C8D5C8', letterSpacing:0.3,
+            border: '1px solid', borderColor: girHit ? '#2A6F4F' : '#E7E3D9',
+            borderRadius:20, padding:'2px 8px', background: girHit ? '#E8F5EE' : 'transparent',
+          }}>
+            GIR {girHit ? '✓' : '✗'}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -446,12 +490,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   }, []);
 
   // ── State initializers ────────────────────────────────────────────────────
-  const _initScores  = () => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
-  const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } };
-  const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } };
-  const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
-  const _initBBB     = () => { try { const s = localStorage.getItem('pp_bbb_'+round.id);    return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
-  const _initTeeBall = () => { try { const s = localStorage.getItem('pp_teeball_'+round.id);return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initScores   = () => { try { const s = localStorage.getItem('pp_scores_'+round.id);   return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
+  const _initPutts    = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } };
+  const _initPop      = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);      return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } };
+  const _initWolf     = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);     return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initBBB      = () => { try { const s = localStorage.getItem('pp_bbb_'+round.id);      return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initTeeBall  = () => { try { const s = localStorage.getItem('pp_teeball_'+round.id);  return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initFairways = () => { try { const s = localStorage.getItem('pp_fairways_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
 
   const [scores,      setScores]      = React.useState(_initScores);
   const [putts,       setPutts]       = React.useState(_initPutts);
@@ -459,6 +504,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [wolfData,    setWolfData]    = React.useState(_initWolf);
   const [bbbData,     setBBBData]     = React.useState(_initBBB);
   const [teeBallData, setTeeBallData] = React.useState(_initTeeBall);
+  const [fairways,    setFairways]    = React.useState(_initFairways);
 
   const [holeIdx,  setHoleIdx]  = React.useState(0);
   const [keypad,   setKeypad]   = React.useState(null);
@@ -515,6 +561,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(wolfData));    }, [wolfData]);
   React.useEffect(() => { localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(bbbData));     }, [bbbData]);
   React.useEffect(() => { localStorage.setItem('pp_teeball_'+round.id,  JSON.stringify(teeBallData)); }, [teeBallData]);
+  React.useEffect(() => { localStorage.setItem('pp_fairways_'+round.id, JSON.stringify(fairways));    }, [fairways]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
   const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall) => {
@@ -647,6 +694,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
+  const handleFir = (playerId, val) => {
+    setFairways(prev => {
+      const arr = [...(prev[playerId] || Array(18).fill(null))];
+      arr[holeIdx] = val;
+      return { ...prev, [playerId]: arr };
+    });
+  };
+
   const handleWolfPick = (partnerId) => {
     setWolfData(prev => {
       const next = {...prev, [holeIdx]:{wolfId:wolfPlayer.id,partnerId,confirmed:true,lone:false}};
@@ -723,7 +778,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
-  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData); };
+  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, fairways); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
   const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall;
@@ -814,11 +869,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
               <PlayerScoreCard
                 key={p.id}
                 p={p} score={scores[p.id]?.[holeIdx]||null} hole={hole} holeIdx={holeIdx}
-                putts={putts} gettingPop={!!popFlags[p.id]?.[holeIdx]}
+                putts={putts} fir={fairways[p.id]?.[holeIdx] ?? null} gettingPop={!!popFlags[p.id]?.[holeIdx]}
                 nassauPopActive={nassauPopActive} isNassauPlayer={isNassauPlayer}
                 isWolf={isWolf} isPartner={isPartner} isPTMHolder={isPTM}
                 hasWolf={hasWolf} wolfData={wolfData} formatStats={playerFormatStats[p.id]||[]}
-                onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
+                onScore={setScore} onPutt={setPutt} onFir={handleFir} onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
               />

@@ -344,6 +344,42 @@ const TripDashboard = ({ trip, rounds, onBack, onViewRound }) => {
                 ))}
               </div>
             )}
+
+            {/* Putting & Approach sub-board */}
+            {leaderboard.some(p => p.avgPuttsPerRound > 0 || p.firPct !== null || p.girPct !== null) && (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E7E3D9', borderRadius: 16, overflow: 'hidden', marginTop: 2 }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #E7E3D9', background: 'rgba(14,43,32,0.02)' }}>
+                  <div style={{ fontFamily: FF, fontSize: 9, letterSpacing: 2, fontWeight: 700, color: '#3F5F4A' }}>PUTTING &amp; APPROACH</div>
+                </div>
+                {/* column headers */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '6px 16px', borderBottom: '1px solid #F6F4EE', gap: 12 }}>
+                  <div style={{ width: 26, flexShrink: 0 }}/>
+                  <div style={{ flex: 1 }}/>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[{ w: 52, label: 'PUTTS/R' }, { w: 48, label: 'FIR%' }, { w: 48, label: 'GIR%' }].map(col => (
+                      <div key={col.label} style={{ width: col.w, textAlign: 'center', fontFamily: FF, fontSize: 8, fontWeight: 700, letterSpacing: 1, color: '#8A9E8A' }}>{col.label}</div>
+                    ))}
+                  </div>
+                </div>
+                {leaderboard.map((p, i) => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderTop: i === 0 ? 'none' : '1px solid #F6F4EE' }}>
+                    <Avatar player={p} size={26}/>
+                    <div style={{ flex: 1, fontFamily: FF, fontWeight: 700, fontSize: 14, color: '#0E2B20', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <div style={{ width: 52, textAlign: 'center', fontFamily: FF, fontWeight: 700, fontSize: 14, color: '#0E2B20' }}>
+                        {p.avgPuttsPerRound > 0 ? p.avgPuttsPerRound.toFixed(1) : '—'}
+                      </div>
+                      <div style={{ width: 48, textAlign: 'center', fontFamily: FF, fontWeight: 700, fontSize: 14, color: p.firPct !== null ? '#0E2B20' : '#C8D5C8' }}>
+                        {p.firPct !== null ? Math.round(p.firPct * 100) + '%' : '—'}
+                      </div>
+                      <div style={{ width: 48, textAlign: 'center', fontFamily: FF, fontWeight: 700, fontSize: 14, color: p.girPct !== null ? '#0E2B20' : '#C8D5C8' }}>
+                        {p.girPct !== null ? Math.round(p.girPct * 100) + '%' : '—'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
