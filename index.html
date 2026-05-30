@@ -705,7 +705,7 @@ const App = () => {
 
   };
 
-  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}) => {
+  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}) => {
     setFinalScores(scores);
     setFinalWolf(wolfData);
     setFinalPutts(putts);
@@ -740,6 +740,8 @@ const App = () => {
       ...round,
       holeScores,
       payouts: _computedPayouts,
+      firData:  firData || {},
+      girData:  girData || {},
       tripId:  round.tripId || null,
       date: new Date().toLocaleDateString('en-US', {
         weekday:'long', month:'long', day:'numeric', year:'numeric',
@@ -758,6 +760,8 @@ const App = () => {
         popFlags,
         bbbData,
         teeBallData,
+        firData,
+        girData,
         savedAt:       Date.now(),
       };
       try {
