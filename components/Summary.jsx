@@ -1,6 +1,6 @@
 // Summary.jsx — updated design system
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, onNewRound, readOnly }) => {
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, onNewRound, readOnly }) => {
   const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus, calcBBBStandings, calcTeeBallStandings } = window;
   const { players, course, formats, syncCode } = round;
   const [toast, setToast]       = React.useState(null);
@@ -381,6 +381,71 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 </div>
               </div>
             )}
+
+            {/* Round Stats: Putts / FIR / GIR */}
+            {(() => {
+              const hasPutts = putts && players.some(p => (putts[p.id]||[]).some(v=>v>0));
+              const hasFir   = firData && players.some(p => (firData[p.id]||[]).some(v=>v!==null));
+              const hasGir   = girData && players.some(p => (girData[p.id]||[]).some(v=>v!==null));
+              if (!hasPutts && !hasFir && !hasGir) return null;
+              const firEligHoles = (course.holes||[]).filter(h=>h.par>3).length;
+              const girTotal     = (course.holes||[]).length;
+              return (
+                <div style={{marginTop:16, background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, overflow:'hidden'}}>
+                  <div style={{padding:'10px 14px', borderBottom:'1px solid #E7E3D9', background:'rgba(200,161,90,0.04)'}}>
+                    <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, letterSpacing:2, fontWeight:700, color:'#C8A15A'}}>ROUND STATS</div>
+                  </div>
+                  <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+                    <table style={{borderCollapse:'collapse', width:'100%', minWidth:240}}>
+                      <thead>
+                        <tr>
+                          <th style={{...sumS.th, textAlign:'left', paddingLeft:14}}>PLAYER</th>
+                          {hasPutts && <th style={sumS.th}>PUTTS</th>}
+                          {hasFir   && <th style={sumS.th}>FIR</th>}
+                          {hasGir   && <th style={sumS.th}>GIR</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {players.map(p => {
+                          const totalPutts = hasPutts ? (putts[p.id]||[]).reduce((a,v)=>a+(v||0),0) : null;
+                          const firArr  = firData?.[p.id] || [];
+                          const firHit  = firArr.filter((v,i)=>(course.holes[i]?.par||4)>3 && v===true).length;
+                          const firElig = firArr.filter((v,i)=>(course.holes[i]?.par||4)>3 && v!==null).length || firEligHoles;
+                          const girArr  = girData?.[p.id] || [];
+                          const girHit  = girArr.filter(v=>v===true).length;
+                          const girPlyd = girArr.filter(v=>v!==null).length || girTotal;
+                          return (
+                            <tr key={p.id}>
+                              <td style={{...sumS.td, textAlign:'left', paddingLeft:14}}>
+                                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                                  <div style={{width:7, height:7, borderRadius:'50%', background:p.color, flexShrink:0}}/>
+                                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
+                                </div>
+                              </td>
+                              {hasPutts && (
+                                <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>
+                                  {totalPutts||'—'}
+                                </td>
+                              )}
+                              {hasFir && (
+                                <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A'}}>
+                                  {firArr.some(v=>v!==null) ? `${firHit}/${firElig}` : '—'}
+                                </td>
+                              )}
+                              {hasGir && (
+                                <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A'}}>
+                                  {girArr.some(v=>v!==null) ? `${girHit}/${girPlyd}` : '—'}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 

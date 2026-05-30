@@ -41,6 +41,11 @@
             bogeys:        0,
             doubles:       0,
             roundScores:   [],
+            totalPutts:    0,
+            firHit:        0,
+            firEligible:   0,
+            girHit:        0,
+            girEligible:   0,
           };
         }
 
@@ -49,6 +54,9 @@
         var rStrokes   = 0;
         var rVsPar     = 0;
         var played     = 0;
+        var puttsMap   = (round.putts    || {})[pid] || [];
+        var firMap     = (round.firData  || {})[pid] || [];
+        var girMap     = (round.girData  || {})[pid] || [];
 
         (holes || []).forEach(function (h, i) {
           if (!h.strokes) return;
@@ -62,6 +70,19 @@
           else if (diff ===  0) s.pars++;
           else if (diff ===  1) s.bogeys++;
           else                  s.doubles++;
+
+          s.totalPutts += (puttsMap[i] || 0);
+
+          if (par > 3) {
+            if (firMap[i] !== null && firMap[i] !== undefined) {
+              s.firEligible++;
+              if (firMap[i] === true) s.firHit++;
+            }
+          }
+          if (girMap[i] !== null && girMap[i] !== undefined) {
+            s.girEligible++;
+            if (girMap[i] === true) s.girHit++;
+          }
         });
 
         if (played > 0) {
@@ -101,6 +122,14 @@
           doubles:       s.doubles,
           stdDev:        Math.sqrt(variance),
           roundScores:   s.roundScores,
+          totalPutts:    s.totalPutts,
+          avgPutts:      s.rounds > 0 ? s.totalPutts / s.rounds : 0,
+          firHit:        s.firHit,
+          firEligible:   s.firEligible,
+          firPct:        s.firEligible > 0 ? s.firHit / s.firEligible : null,
+          girHit:        s.girHit,
+          girEligible:   s.girEligible,
+          girPct:        s.girEligible > 0 ? s.girHit / s.girEligible : null,
         });
       })
       .sort(function (a, b) { return a.avgVsPar - b.avgVsPar; });

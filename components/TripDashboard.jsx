@@ -344,6 +344,34 @@ const TripDashboard = ({ trip, rounds, onBack, onViewRound }) => {
                 ))}
               </div>
             )}
+
+            {/* Putting & Approach sub-board */}
+            {leaderboard.some(p => p.totalPutts > 0 || p.firEligible > 0 || p.girEligible > 0) && (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E7E3D9', borderRadius: 16, overflow: 'hidden', marginTop: 2 }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #E7E3D9', background: 'rgba(200,161,90,0.04)' }}>
+                  <div style={{ fontFamily: FF, fontSize: 9, letterSpacing: 2, fontWeight: 700, color: '#C8A15A' }}>PUTTING &amp; APPROACH</div>
+                </div>
+                {leaderboard.slice().sort((a, b) => a.avgPutts - b.avgPutts).map((p, i) => {
+                  const hasFir = p.firEligible > 0;
+                  const hasGir = p.girEligible > 0;
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderTop: i === 0 ? 'none' : '1px solid #F6F4EE' }}>
+                      <Avatar player={p} size={26}/>
+                      <div style={{ flex: 1, fontFamily: FF, fontWeight: 700, fontSize: 14, color: '#0E2B20' }}>{p.name}</div>
+                      <div style={{ fontFamily: FF, fontSize: 12, color: '#3F5F4A', textAlign: 'right' }}>
+                        {p.totalPutts > 0 && (
+                          <div>🏌️ {p.avgPutts.toFixed(1)} putts/rd</div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 2 }}>
+                          {hasFir && <span>FIR {p.firHit}/{p.firEligible} ({Math.round((p.firPct||0)*100)}%)</span>}
+                          {hasGir && <span>GIR {p.girHit}/{p.girEligible} ({Math.round((p.girPct||0)*100)}%)</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -381,6 +409,37 @@ const TripDashboard = ({ trip, rounds, onBack, onViewRound }) => {
                     </div>
                     {canView && <span style={{ color: '#C8A15A', fontSize: 20, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>›</span>}
                   </div>
+                  {(() => {
+                    const puttsMap  = r.putts   || {};
+                    const firMap    = r.firData  || {};
+                    const girMap    = r.girData  || {};
+                    const players   = r.players  || [];
+                    const holes     = r.course?.holes || [];
+                    const hasPutts  = players.some(p => (puttsMap[p.id]||[]).some(v=>v>0));
+                    const hasFir    = players.some(p => (firMap[p.id]||[]).some(v=>v!==null));
+                    const hasGir    = players.some(p => (girMap[p.id]||[]).some(v=>v!==null));
+                    let totalPutts  = 0, firHit = 0, firElig = 0, girHit = 0, girElig = 0;
+                    players.forEach(p => {
+                      (puttsMap[p.id]||[]).forEach(v => { totalPutts += (v||0); });
+                      (firMap[p.id]||[]).forEach((v,i) => {
+                        if ((holes[i]?.par||4) > 3 && v !== null) { firElig++; if (v===true) firHit++; }
+                      });
+                      (girMap[p.id]||[]).forEach(v => {
+                        if (v !== null) { girElig++; if (v===true) girHit++; }
+                      });
+                    });
+                    const avgPutts = players.length > 0 ? (totalPutts / players.length) : 0;
+                    const parts = [];
+                    if (hasPutts && totalPutts > 0) parts.push(`${avgPutts.toFixed(1)} putts avg`);
+                    if (hasFir   && firElig > 0)    parts.push(`${firHit}/${firElig} FIR`);
+                    if (hasGir   && girElig > 0)    parts.push(`${girHit}/${girElig} GIR`);
+                    if (parts.length === 0) return null;
+                    return (
+                      <div style={{ fontFamily: FF, fontSize: 11, color: '#8A9E8A', marginTop: 6 }}>
+                        {parts.join(' · ')}
+                      </div>
+                    );
+                  })()}
                   {winner && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px solid #F6F4EE' }}>
                       <Avatar player={winner.player} size={24}/>
