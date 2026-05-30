@@ -467,6 +467,11 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [formats, setFormats]                 = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false });
   const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:2, stableford:2, passmoney:2, skins:2 });
   const [nassauMatches, setNassauMatches]     = React.useState([{ id:'nm_init', matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:2 }]);
+  const [tripMode,        setTripMode]        = React.useState('none'); // 'none' | 'existing' | 'new'
+  const [selectedTripId,  setSelectedTripId]  = React.useState('');
+  const [newTripName,     setNewTripName]     = React.useState('');
+  const [newTripLocation, setNewTripLocation] = React.useState('');
+  const [availableTrips,  setAvailableTrips]  = React.useState([]);
 
   const localCourses = customCourses || [];
 
@@ -478,6 +483,14 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
       popHoles: Object.fromEntries(Object.entries(match.popHoles||{}).filter(([id])=>selectedPlayers.includes(id))),
     })));
   }, [selectedPlayers.join(',')]);
+
+  React.useEffect(() => {
+    if (window.GolfTripSyncService) {
+      window.GolfTripSyncService.fetchAllTrips(function(trips) {
+        setAvailableTrips((trips || []).sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }));
+      });
+    }
+  }, []);
 
   const togglePlayer = (id) => setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length<6?[...prev,id]:prev);
   const toggleFormat = (f) => setFormats(prev => ({...prev,[f]:!prev[f]}));
@@ -502,14 +515,21 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
     ...(k==='nassau'?{nassauMatches}:{}),
   }));
 
-  const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid;
+  const tripValid = tripMode === 'none' ||
+    (tripMode === 'existing' && !!selectedTripId) ||
+    (tripMode === 'new' && !!newTripName.trim());
+  const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid && tripValid;
 
   const handleSaveCourse = (newCourse) => { setCourse(newCourse); setAddMode('list'); setScanPrefill(null); };
   const handleScanResult = (scannedData) => { setScanPrefill(scannedData); setAddMode('builder'); };
 
   const handleStart = () => {
     const players = allPlayers.filter(p => selectedPlayers.includes(p.id));
-    onStart({ players, course, formats: activeFormats, syncCode: generateSyncCode() });
+    const tripSelection =
+      tripMode === 'new'      ? { mode: 'new',      newTrip: { name: newTripName.trim(), location: newTripLocation.trim() } } :
+      tripMode === 'existing' ? { mode: 'existing', tripId: selectedTripId } :
+      { mode: 'none' };
+    onStart({ players, course, formats: activeFormats, syncCode: generateSyncCode(), tripSelection });
   };
 
   const buildStateGroups = (list) => {
@@ -611,6 +631,57 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
           <div>
             <div style={setupS.stepTitle}>FORMATS & STAKES</div>
             <div style={setupS.stepSub}>Choose one or more formats and set your stakes</div>
+
+            {/* ── Golf Trip Selector ── */}
+            <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
+              <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A', marginBottom:12}}>GOLF TRIP (OPTIONAL)</div>
+              <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                {/* No Trip */}
+                <div onClick={()=>setTripMode('none')} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:10, cursor:'pointer', background:tripMode==='none'?'rgba(14,43,32,0.05)':'transparent', border:tripMode==='none'?'1px solid rgba(14,43,32,0.15)':'1px solid transparent', WebkitTapHighlightColor:'transparent'}}>
+                  <div style={{width:18, height:18, borderRadius:'50%', border:`2px solid ${tripMode==='none'?'#0E2B20':'#E7E3D9'}`, background:tripMode==='none'?'#0E2B20':'transparent', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    {tripMode==='none' && <div style={{width:7, height:7, borderRadius:'50%', background:'#F6F4EE'}}/>}
+                  </div>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:14, color:'#0E2B20'}}>No Trip</span>
+                </div>
+
+                {/* Existing Trip */}
+                {availableTrips.length > 0 && (
+                  <div>
+                    <div onClick={()=>{setTripMode('existing'); if(!selectedTripId && availableTrips.length>0) setSelectedTripId(availableTrips[0].id);}} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:10, cursor:'pointer', background:tripMode==='existing'?'rgba(14,43,32,0.05)':'transparent', border:tripMode==='existing'?'1px solid rgba(14,43,32,0.15)':'1px solid transparent', WebkitTapHighlightColor:'transparent'}}>
+                      <div style={{width:18, height:18, borderRadius:'50%', border:`2px solid ${tripMode==='existing'?'#0E2B20':'#E7E3D9'}`, background:tripMode==='existing'?'#0E2B20':'transparent', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                        {tripMode==='existing' && <div style={{width:7, height:7, borderRadius:'50%', background:'#F6F4EE'}}/>}
+                      </div>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:14, color:'#0E2B20'}}>Add to existing trip</span>
+                    </div>
+                    {tripMode==='existing' && (
+                      <select value={selectedTripId} onChange={e=>setSelectedTripId(e.target.value)}
+                        style={{width:'100%', marginTop:6, padding:'10px 12px', background:'#F6F4EE', border:'1px solid #C8A15A', borderRadius:10, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, fontWeight:600, color:'#0E2B20', outline:'none', cursor:'pointer'}}>
+                        {availableTrips.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                )}
+
+                {/* New Trip */}
+                <div>
+                  <div onClick={()=>setTripMode('new')} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:10, cursor:'pointer', background:tripMode==='new'?'rgba(200,161,90,0.06)':'transparent', border:tripMode==='new'?'1px solid rgba(200,161,90,0.3)':'1px solid transparent', WebkitTapHighlightColor:'transparent'}}>
+                    <div style={{width:18, height:18, borderRadius:'50%', border:`2px solid ${tripMode==='new'?'#C8A15A':'#E7E3D9'}`, background:tripMode==='new'?'#C8A15A':'transparent', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                      {tripMode==='new' && <div style={{width:7, height:7, borderRadius:'50%', background:'#F6F4EE'}}/>}
+                    </div>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:14, color:tripMode==='new'?'#C8A15A':'#3F5F4A'}}>+ Create new trip</span>
+                  </div>
+                  {tripMode==='new' && (
+                    <div style={{display:'flex', flexDirection:'column', gap:8, marginTop:8, paddingLeft:4}}>
+                      <input autoFocus value={newTripName} onChange={e=>setNewTripName(e.target.value)} placeholder="Trip name (e.g. Pinehurst 2026) *"
+                        style={{background:'#F6F4EE', border:'1px solid #C8A15A', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, outline:'none', width:'100%', boxSizing:'border-box'}}/>
+                      <input value={newTripLocation} onChange={e=>setNewTripLocation(e.target.value)} placeholder="Location (optional)"
+                        style={{background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, outline:'none', width:'100%', boxSizing:'border-box'}}/>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div style={{display:'flex', flexDirection:'column', gap:12, marginTop:16}}>
               {Object.entries(FORMAT_INFO).map(([key, info]) => {
                 const on = formats[key];
@@ -650,6 +721,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>
                   <div style={{marginBottom:2}}>📍 {course?.name}</div>
                   <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players</div>
+                  {tripMode==='new' && newTripName.trim() && <div style={{marginBottom:2}}>🗺️ New trip: <span style={{color:'#C8A15A', fontWeight:700}}>{newTripName.trim()}</span></div>}
+                  {tripMode==='existing' && selectedTripId && <div style={{marginBottom:2}}>🗺️ Trip: <span style={{color:'#C8A15A', fontWeight:700}}>{availableTrips.find(t=>t.id===selectedTripId)?.name}</span></div>}
                   {activeFormats.map(f => (
                     <div key={f.type}>
                       🎯 {FORMAT_INFO[f.type].label}
@@ -678,7 +751,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
             </div>
             {!canStart && (
               <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
-                {!nassauValid ? 'Complete all Nassau match setups to continue' : 'Select at least one format to continue'}
+                {!nassauValid ? 'Complete all Nassau match setups to continue' : !tripValid ? 'Enter a trip name to continue' : 'Select at least one format to continue'}
               </div>
             )}
           </div>
