@@ -90,6 +90,8 @@
 <script type="text/babel" src="components/ScoreEntry.jsx"></script>
 <script type="text/babel" src="components/Summary.jsx"></script>
 <script type="text/babel" src="components/RoundViewer.jsx"></script>
+<script src="components/tripUtils.js?v=1"></script>
+<script type="text/babel" src="components/TripDashboard.jsx?v=1"></script>
 
 <script>
 /* ============================================================
@@ -364,10 +366,69 @@ var SavedRoundsSyncService = (function() {
   return { save: save, subscribe: subscribe, unsubscribe: unsubscribe };
 })();
 
+/* ============================================================
+   GOLF TRIP SYNC SERVICE
+   ============================================================ */
+var GolfTripSyncService = (function() {
+  var TRIPS_COL  = 'golf_trips';
+  var ROUNDS_COL = 'playpal_rounds';
+
+  function saveTrip(trip, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      _fbFs.collection(TRIPS_COL).doc(trip.id).set(trip)
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[TripSync] saveTrip failed:', e); cb && cb(false); });
+    });
+  }
+
+  function fetchAllTrips(cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb([]); return; }
+      _fbFs.collection(TRIPS_COL).get()
+        .then(function(snap) {
+          var trips = [];
+          snap.forEach(function(doc) { trips.push(doc.data()); });
+          cb(trips);
+        })
+        .catch(function(e) { console.warn('[TripSync] fetchAllTrips failed:', e); cb([]); });
+    });
+  }
+
+  function fetchTripRounds(tripId, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb([]); return; }
+      _fbFs.collection(ROUNDS_COL).get()
+        .then(function(snap) {
+          var rounds = [];
+          snap.forEach(function(doc) {
+            var d = doc.data();
+            if (d.round && d.round.tripId === tripId) rounds.push(d);
+          });
+          rounds.sort(function(a, b) { return (b.savedAt || 0) - (a.savedAt || 0); });
+          cb(rounds);
+        })
+        .catch(function(e) { console.warn('[TripSync] fetchTripRounds failed:', e); cb([]); });
+    });
+  }
+
+  function deleteTrip(tripId, cb) {
+    _fbInit(function(ok) {
+      if (!ok) { cb && cb(false); return; }
+      _fbFs.collection(TRIPS_COL).doc(tripId).delete()
+        .then(function() { cb && cb(true); })
+        .catch(function(e) { console.warn('[TripSync] deleteTrip failed:', e); cb && cb(false); });
+    });
+  }
+
+  return { saveTrip: saveTrip, fetchAllTrips: fetchAllTrips, fetchTripRounds: fetchTripRounds, deleteTrip: deleteTrip };
+})();
+
 window.PlayerSyncService      = PlayerSyncService;
 window.CourseSyncService      = CourseSyncService;
 window.RoundSyncService       = RoundSyncService;
 window.SavedRoundsSyncService = SavedRoundsSyncService;
+window.GolfTripSyncService    = GolfTripSyncService;
 
 /* ============================================================
    DEEP-LINK DETECTION — visual only
@@ -480,6 +541,10 @@ const App = () => {
     try { return JSON.parse(localStorage.getItem('pp_recent') || '[]'); } catch(e) { return []; }
   });
 
+  const [trips,           setTrips]           = React.useState([]);
+  const [viewedTrip,      setViewedTrip]      = React.useState(null);
+  const [tripRounds,      setTripRounds]      = React.useState(null); // null = loading
+
   React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
 
   // ── Deep-link join — runs exactly once on mount ──────────────────────────
@@ -562,6 +627,16 @@ const App = () => {
   }, []);
 
   React.useEffect(() => {
+    if (window.GolfTripSyncService) {
+      GolfTripSyncService.fetchAllTrips(function(fetched) {
+        if (fetched && fetched.length > 0) {
+          setTrips(fetched.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }));
+        }
+      });
+    }
+  }, []);
+
+  React.useEffect(() => {
     const handler = (e) => {
       if (e.data?.type === '__activate_edit_mode')   setTweaksOpen(true);
       if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
@@ -588,16 +663,46 @@ const App = () => {
   const handleCourseSaved = () => {};
 
   const handleStartRound = (config) => {
-    const r = { ...config, id: Date.now() };
-    setRound(r);
-    localStorage.setItem('pp_round', JSON.stringify(r));
-    sessionStorage.setItem('pp_screen', 'score');
-    localStorage.setItem('pp_active_round', '1');
-    setScreen('score');
-    RoundSyncService.saveRound(r, function(ok) {
-      if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
-      else    console.warn('[PlayPal] Cloud round save failed — works locally');
-    });
+    const { tripSelection, ...rest } = config;
+
+    const _finishStart = function(tripId) {
+      const r = { ...rest, id: Date.now(), tripId: tripId || null };
+      setRound(r);
+      localStorage.setItem('pp_round', JSON.stringify(r));
+      sessionStorage.setItem('pp_screen', 'score');
+      localStorage.setItem('pp_active_round', '1');
+      setScreen('score');
+      RoundSyncService.saveRound(r, function(ok) {
+        if (ok) console.log('[PlayPal] Round saved to cloud:', r.syncCode);
+        else    console.warn('[PlayPal] Cloud round save failed — works locally');
+      });
+    };
+
+    if (tripSelection && tripSelection.mode === 'new' && tripSelection.newTrip && tripSelection.newTrip.name) {
+      const newTrip = {
+        id:        'trip_' + Date.now(),
+        name:      tripSelection.newTrip.name,
+        location:  tripSelection.newTrip.location || '',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate:   '',
+        notes:     '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      if (window.GolfTripSyncService) {
+        GolfTripSyncService.saveTrip(newTrip, function() {
+          setTrips(function(prev) { return [newTrip, ...prev]; });
+          _finishStart(newTrip.id);
+        });
+      } else {
+        _finishStart(null);
+      }
+    } else if (tripSelection && tripSelection.mode === 'existing' && tripSelection.tripId) {
+      _finishStart(tripSelection.tripId);
+    } else {
+      _finishStart(null);
+    }
+
   };
 
   const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}) => {
@@ -623,9 +728,19 @@ const App = () => {
       });
     });
 
+    // Compute payouts at save time so trip dashboard can aggregate without re-running format logic.
+    const _ptmState = window.computePTMState
+      ? window.computePTMState(scores, putts || {}, round.players, round.course, round.players[0].id)
+      : { holderId: null };
+    const _computedPayouts = window.calcAllPayouts
+      ? window.calcAllPayouts(scores, wolfData || {}, round.players, round.course, round.formats, presses || [], _ptmState.holderId, popFlags || {}, null, bbbData || {}, teeBallData || {})
+      : {};
+
     const completedRound = {
       ...round,
       holeScores,
+      payouts: _computedPayouts,
+      tripId:  round.tripId || null,
       date: new Date().toLocaleDateString('en-US', {
         weekday:'long', month:'long', day:'numeric', year:'numeric',
       }),
@@ -658,6 +773,8 @@ const App = () => {
       players:    round.players.length,
       formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' \u00b7 '),
       syncCode:   round.syncCode || null,
+      tripId:     round.tripId || null,
+      tripName:   round.tripId ? (trips.find(function(t){return t.id===round.tripId;})||{}).name || null : null,
       savedAt:    Date.now(),
     };
 
@@ -700,6 +817,25 @@ const App = () => {
     setViewedRoundData(null);
     setViewSyncCode(null);
     setScreen('home');
+  };
+
+  const handleViewTrip = (trip) => {
+    setViewedTrip(trip);
+    setTripRounds(null);
+    setScreen('trip');
+    if (window.GolfTripSyncService) {
+      GolfTripSyncService.fetchTripRounds(trip.id, function(rds) {
+        setTripRounds(rds || []);
+      });
+    } else {
+      setTripRounds([]);
+    }
+  };
+
+  const handleBackFromTrip = () => {
+    setViewedTrip(null);
+    setTripRounds(null);
+    setScreen('trips');
   };
 
   const handleNewRound = () => {
@@ -821,6 +957,23 @@ const App = () => {
           )
         )}
 
+        {screen === 'trips' && (
+          <TripListScreen
+            trips={trips}
+            onView={handleViewTrip}
+            onNewRound={() => setScreen('setup')}
+          />
+        )}
+
+        {screen === 'trip' && viewedTrip && (
+          <TripDashboard
+            trip={viewedTrip}
+            rounds={tripRounds}
+            onBack={handleBackFromTrip}
+            onViewRound={handleViewRound}
+          />
+        )}
+
         {screen === 'summary' && round && finalScores &&
           <SummaryScreen
             round={round}
@@ -839,11 +992,12 @@ const App = () => {
 
       </div>
 
-      {/* Bottom Tab Nav — hidden on score and viewround screens */}
-      {screen !== 'score' && screen !== 'viewround' &&
+      {/* Bottom Tab Nav — hidden on score, viewround, and trip detail screens */}
+      {screen !== 'score' && screen !== 'viewround' && screen !== 'trip' &&
         <div style={{ display:'flex', borderTop:'1px solid rgba(255,255,255,0.1)', background:'#0E2B20', flexShrink:0, paddingBottom:'env(safe-area-inset-bottom, 0px)' }}>
           {[
             { id:'home',    icon:'\uD83C\uDFE0', label:'HOME' },
+            { id:'trips',   icon:'\uD83D\uDDFA\uFE0F', label:'TRIPS' },
             { id:'setup',   icon:'\u26F3', label:'NEW ROUND' },
             ...(round       ? [{ id:'score',   icon:'\uD83C\uDFCC\uFE0F', label:'SCORING' }] : []),
             ...(finalScores ? [{ id:'summary', icon:'\uD83D\uDCCA', label:'RESULTS' }] : []),
