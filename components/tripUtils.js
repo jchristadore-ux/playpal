@@ -71,7 +71,7 @@
           else if (diff ===  1) s.bogeys++;
           else                  s.doubles++;
 
-          s.totalPutts += (puttsMap[i] || 0);
+          s.totalPutts += (h.putts || puttsMap[i] || 0);
 
           if (par > 3) {
             if (firMap[i] !== null && firMap[i] !== undefined) {

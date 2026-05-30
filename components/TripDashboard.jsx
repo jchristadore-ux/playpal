@@ -415,12 +415,15 @@ const TripDashboard = ({ trip, rounds, onBack, onViewRound }) => {
                     const girMap    = r.girData  || {};
                     const players   = r.players  || [];
                     const holes     = r.course?.holes || [];
-                    const hasPutts  = players.some(p => (puttsMap[p.id]||[]).some(v=>v>0));
+                    const holeScores = r.holeScores || {};
+                    // putts may be in the flat putts map or embedded in holeScores[pid][i].putts
+                    const getPutts  = (pid, i) => (puttsMap[pid]?.[i]) || (holeScores[pid]?.[i]?.putts) || 0;
+                    const hasPutts  = players.some(p => holes.some((_,i) => getPutts(p.id,i) > 0));
                     const hasFir    = players.some(p => (firMap[p.id]||[]).some(v=>v!==null));
                     const hasGir    = players.some(p => (girMap[p.id]||[]).some(v=>v!==null));
                     let totalPutts  = 0, firHit = 0, firElig = 0, girHit = 0, girElig = 0;
                     players.forEach(p => {
-                      (puttsMap[p.id]||[]).forEach(v => { totalPutts += (v||0); });
+                      holes.forEach((_, i) => { totalPutts += getPutts(p.id, i); });
                       (firMap[p.id]||[]).forEach((v,i) => {
                         if ((holes[i]?.par||4) > 3 && v !== null) { firElig++; if (v===true) firHit++; }
                       });
