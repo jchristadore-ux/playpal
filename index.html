@@ -530,6 +530,8 @@ const App = () => {
   const [finalPopFlags,    setFinalPopFlags]    = React.useState(null);
   const [finalBBBData,     setFinalBBBData]     = React.useState(null);
   const [finalTeeBallData, setFinalTeeBallData] = React.useState(null);
+  const [finalFirData,     setFinalFirData]     = React.useState(null);
+  const [finalGirData,     setFinalGirData]     = React.useState(null);
 
   const [viewedRoundData, setViewedRoundData] = React.useState(null);
   const [viewSyncCode,    setViewSyncCode]    = React.useState(null);
@@ -714,6 +716,8 @@ const App = () => {
     setFinalPopFlags(popFlags);
     setFinalBBBData(bbbData);
     setFinalTeeBallData(teeBallData);
+    setFinalFirData(firData);
+    setFinalGirData(girData);
 
     RoundSyncService.unsubscribeRound();
 
@@ -948,6 +952,8 @@ const App = () => {
                   popFlags={viewedRoundData.popFlags || {}}
                   bbbData={viewedRoundData.bbbData || {}}
                   teeBallData={viewedRoundData.teeBallData || {}}
+                  firData={viewedRoundData.firData || {}}
+                  girData={viewedRoundData.girData || {}}
                   onNewRound={null}
                   readOnly={true}
                 />
@@ -989,6 +995,8 @@ const App = () => {
             popFlags={finalPopFlags || {}}
             bbbData={finalBBBData || {}}
             teeBallData={finalTeeBallData || {}}
+            firData={finalFirData || {}}
+            girData={finalGirData || {}}
             onNewRound={handleNewRound}
             readOnly={false}
           />
