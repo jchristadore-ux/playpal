@@ -91,7 +91,7 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, isTripMode, firData, girData, onFIR, onGIR }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -263,6 +263,60 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </div>
         {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>}
       </div>
+
+      {/* Trip Mode: FIR / GIR trackers */}
+      {isTripMode && (
+        <div style={{borderTop:'1px solid #E7E3D9', padding:'8px 14px 12px', display:'flex', flexDirection:'column', gap:8}}>
+          {hole.par !== 3 && (
+            <div style={{display:'flex', alignItems:'center', gap:10}}>
+              <Label style={{width:36, flexShrink:0}}>FIR</Label>
+              <div style={{display:'flex', gap:6}}>
+                {[true, false].map(val => {
+                  const firVal = firData?.[p.id]?.[holeIdx];
+                  const selected = firVal === val;
+                  return (
+                    <button key={String(val)}
+                      onClick={() => onFIR(p.id, selected ? null : val)}
+                      style={{
+                        height:36, borderRadius:9, padding:'0 14px',
+                        border: selected ? 'none' : '1px solid #E7E3D9',
+                        background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
+                        color: selected ? '#FFFFFF' : '#3F5F4A',
+                        fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                        cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                      }}>
+                      {val ? '✓ HIT' : '✗ MISS'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div style={{display:'flex', alignItems:'center', gap:10}}>
+            <Label style={{width:36, flexShrink:0}}>GIR</Label>
+            <div style={{display:'flex', gap:6}}>
+              {[true, false].map(val => {
+                const girVal = girData?.[p.id]?.[holeIdx];
+                const selected = girVal === val;
+                return (
+                  <button key={String(val)}
+                    onClick={() => onGIR(p.id, selected ? null : val)}
+                    style={{
+                      height:36, borderRadius:9, padding:'0 14px',
+                      border: selected ? 'none' : '1px solid #E7E3D9',
+                      background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
+                      color: selected ? '#FFFFFF' : '#3F5F4A',
+                      fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                      cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                    }}>
+                    {val ? '✓ HIT' : '✗ MISS'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -452,6 +506,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
   const _initBBB     = () => { try { const s = localStorage.getItem('pp_bbb_'+round.id);    return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
   const _initTeeBall = () => { try { const s = localStorage.getItem('pp_teeball_'+round.id);return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
+  const _initFIR     = () => { try { const s = localStorage.getItem('pp_fir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
+  const _initGIR     = () => { try { const s = localStorage.getItem('pp_gir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
 
   const [scores,      setScores]      = React.useState(_initScores);
   const [putts,       setPutts]       = React.useState(_initPutts);
@@ -459,6 +515,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [wolfData,    setWolfData]    = React.useState(_initWolf);
   const [bbbData,     setBBBData]     = React.useState(_initBBB);
   const [teeBallData, setTeeBallData] = React.useState(_initTeeBall);
+  const [firData,     setFIRData]     = React.useState(_initFIR);
+  const [girData,     setGIRData]     = React.useState(_initGIR);
 
   const [holeIdx,  setHoleIdx]  = React.useState(0);
   const [keypad,   setKeypad]   = React.useState(null);
@@ -498,6 +556,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const wolfRef      = React.useRef(wolfData);
   const bbbRef       = React.useRef(bbbData);
   const teeBallRef   = React.useRef(teeBallData);
+  const firRef       = React.useRef(firData);
+  const girRef       = React.useRef(girData);
   const holeIdxRef   = React.useRef(holeIdx);
 
   React.useEffect(() => { scoresRef.current   = scores;      }, [scores]);
@@ -506,6 +566,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { wolfRef.current     = wolfData;    }, [wolfData]);
   React.useEffect(() => { bbbRef.current      = bbbData;     }, [bbbData]);
   React.useEffect(() => { teeBallRef.current  = teeBallData; }, [teeBallData]);
+  React.useEffect(() => { firRef.current      = firData;     }, [firData]);
+  React.useEffect(() => { girRef.current      = girData;     }, [girData]);
   React.useEffect(() => { holeIdxRef.current  = holeIdx;     }, [holeIdx]);
 
   // ── Persist to localStorage ───────────────────────────────────────────────
@@ -515,6 +577,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(wolfData));    }, [wolfData]);
   React.useEffect(() => { localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(bbbData));     }, [bbbData]);
   React.useEffect(() => { localStorage.setItem('pp_teeball_'+round.id,  JSON.stringify(teeBallData)); }, [teeBallData]);
+  React.useEffect(() => { localStorage.setItem('pp_fir_'+round.id,      JSON.stringify(firData));     }, [firData]);
+  React.useEffect(() => { localStorage.setItem('pp_gir_'+round.id,      JSON.stringify(girData));     }, [girData]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
   const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall) => {
@@ -698,6 +762,22 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
+  const setFIR = (playerId, val) => {
+    setFIRData(prev => {
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      next[playerId][holeIdx] = val;
+      return next;
+    });
+  };
+
+  const setGIR = (playerId, val) => {
+    setGIRData(prev => {
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      next[playerId][holeIdx] = val;
+      return next;
+    });
+  };
+
   const prevHole = () => {
     if (holeIdx > 0) {
       const newIdx = holeIdx - 1;
@@ -723,7 +803,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
-  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData); };
+  const isTripMode = !!round.tripId;
+
+  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
   const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall;
@@ -821,6 +903,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
+                isTripMode={isTripMode} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
               />
             );
           })}
