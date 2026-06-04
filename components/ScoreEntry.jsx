@@ -91,7 +91,7 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, isTripMode, firData, girData, onFIR, onGIR }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, isTripMode, firData, girData, onFIR, onGIR }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -205,10 +205,10 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Pop pill row */}
-      {(isNassauPlayer ? nassauPopActive : true) && (
+      {/* Pop pill row — auto for Nassau/Markey, manual toggle for everyone else */}
+      {(isNassauPlayer ? nassauPopActive : markeyPopCount !== undefined ? markeyPopCount > 0 : true) && (
         <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
-          {isNassauPlayer ? (
+          {(isNassauPlayer && nassauPopActive) ? (
             <div style={{
               borderRadius:999, padding:'5px 10px', minHeight:28,
               border:'1px solid rgba(200,161,90,0.45)',
@@ -217,6 +217,16 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
               display:'flex', alignItems:'center', gap:4,
             }}>
               <span>💰</span> POP ON
+            </div>
+          ) : markeyPopCount > 0 ? (
+            <div style={{
+              borderRadius:999, padding:'5px 10px', minHeight:28,
+              border:'1px solid rgba(200,161,90,0.45)',
+              background:'rgba(200,161,90,0.12)', color:'#C8A15A',
+              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, letterSpacing:0.5,
+              display:'flex', alignItems:'center', gap:4,
+            }}>
+              <span>⚔️</span> {markeyPopCount > 1 ? `${markeyPopCount} POPS` : 'POP ON'}
             </div>
           ) : (
             <button
@@ -911,12 +921,16 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
               if (!match.playersInMatch.includes(p.id)) return false;
               return !!(match.popHoles?.[p.id]?.[holeIdx]);
             });
+            const markeyPopCount = hasMarkey && markeyFmt?.markeyMatchConfig
+              ? (markeyFmt.markeyMatchConfig.markeyPopStrokes?.[p.id]?.[holeIdx] || 0)
+              : undefined;
             return (
               <PlayerScoreCard
                 key={p.id}
                 p={p} score={scores[p.id]?.[holeIdx]||null} hole={hole} holeIdx={holeIdx}
                 putts={putts} gettingPop={!!popFlags[p.id]?.[holeIdx]}
                 nassauPopActive={nassauPopActive} isNassauPlayer={isNassauPlayer}
+                markeyPopCount={markeyPopCount}
                 isWolf={isWolf} isPartner={isPartner} isPTMHolder={isPTM}
                 hasWolf={hasWolf} wolfData={wolfData} formatStats={playerFormatStats[p.id]||[]}
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
