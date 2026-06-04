@@ -1,54 +1,126 @@
-// RoundViewer.jsx — Read-only historical round viewer
-// Opens via sync code deep-link or from Recent Rounds on HomeScreen
+// RoundViewer.jsx — Read-only historical round viewer (Firestore fallback path)
+// Used only when pp_round_snap_{syncCode} is NOT in localStorage.
+// fetchRound callback: (roundObj, err, fullDoc) — first arg IS the round already.
 
 const RoundViewer = ({ syncCode, onBack }) => {
-  const [state, setState]   = React.useState('loading');
-  const [round, setRound]   = React.useState(null);
-  const [scores, setScores] = React.useState(null);
+  const [state, setState]         = React.useState('loading');
+  const [round, setRound]         = React.useState(null);
+  const [scores, setScores]       = React.useState(null);
   const [wolfData, setWolfData]   = React.useState(null);
   const [putts, setPutts]         = React.useState(null);
   const [popFlags, setPopFlags]   = React.useState(null);
+  const [bbbData, setBBBData]     = React.useState(null);
+  const [teeBallData, setTeeBallData] = React.useState(null);
+  const [firData, setFirData]     = React.useState(null);
+  const [girData, setGirData]     = React.useState(null);
   const [errorMsg, setErrorMsg]   = React.useState('');
 
   React.useEffect(() => {
     if (!syncCode) { setState('error'); setErrorMsg('No round code provided.'); return; }
     setState('loading');
-    if (window.RoundSyncService) {
-      window.RoundSyncService.fetchRound(syncCode, function(data, err) {
-        if (data && data.round) {
-          setRound(data.round);
-          setScores(data.scores || {});
-          setWolfData(data.wolfData || {});
-          setPutts(data.putts || {});
-          setPopFlags(data.popFlags || {});
-          setState('loaded');
-        } else {
-          setErrorMsg(err || 'Round not found.');
-          setState('error');
-        }
-      });
-    } else {
+
+    // Try local active round first
+    const tryLocalFallback = () => {
       const cached = localStorage.getItem('pp_round');
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           if (parsed.syncCode === syncCode) {
+            const id = parsed.id;
             setRound(parsed);
-            const sc = localStorage.getItem('pp_scores_' + parsed.id);
-            const pt = localStorage.getItem('pp_putts_' + parsed.id);
-            const wd = localStorage.getItem('pp_wolf_' + parsed.id);
-            const pf = localStorage.getItem('pp_pop_' + parsed.id);
+            const sc = localStorage.getItem('pp_scores_' + id);
+            const pt = localStorage.getItem('pp_putts_' + id);
+            const wd = localStorage.getItem('pp_wolf_' + id);
+            const pf = localStorage.getItem('pp_pop_' + id);
+            const bb = localStorage.getItem('pp_bbb_' + id);
+            const tb = localStorage.getItem('pp_teeball_' + id);
+            const fi = localStorage.getItem('pp_fir_' + id);
+            const gi = localStorage.getItem('pp_gir_' + id);
             setScores(sc ? JSON.parse(sc) : {});
             setPutts(pt ? JSON.parse(pt) : {});
             setWolfData(wd ? JSON.parse(wd) : {});
             setPopFlags(pf ? JSON.parse(pf) : {});
+            setBBBData(bb ? JSON.parse(bb) : {});
+            setTeeBallData(tb ? JSON.parse(tb) : {});
+            setFirData(fi ? JSON.parse(fi) : {});
+            setGirData(gi ? JSON.parse(gi) : {});
             setState('loaded');
-            return;
+            return true;
           }
         } catch(e) {}
       }
-      setErrorMsg(`Round "${syncCode}" not found on this device.`);
-      setState('error');
+      return false;
+    };
+
+    if (window.RoundSyncService) {
+      // fetchRound callback signature: (roundObj, err, fullDoc)
+      // roundObj is already the round (d.round from Firestore)
+      // fullDoc contains liveScores, holeScores, etc.
+      window.RoundSyncService.fetchRound(syncCode, function(roundObj, err, fullDoc) {
+        if (roundObj) {
+          setRound(roundObj);
+
+          // Attempt to reconstruct scores from holeScores on the round object
+          // or from liveScores on the full doc, or fall back to empty
+          let sc = {};
+          let pt = {};
+          let wd = {};
+          let pf = {};
+          let bb = {};
+          let tb = {};
+          let fi = {};
+          let gi = {};
+
+          // fullDoc may have liveScores (written during active round)
+          const live = fullDoc && fullDoc.liveScores;
+          if (live) {
+            sc = live.scores    || {};
+            pt = live.putts     || {};
+            wd = live.wolfData  || {};
+            pf = live.popFlags  || {};
+            bb = live.bbbData   || {};
+            tb = live.teeBallData || {};
+          }
+
+          // roundObj.holeScores is the canonical completed-round storage format
+          // { [playerId]: [{strokes, putts, gettingPop}, ...] }
+          if (roundObj.holeScores) {
+            const players = roundObj.players || [];
+            players.forEach(function(p) {
+              const hs = roundObj.holeScores[p.id];
+              if (!hs) return;
+              sc[p.id] = hs.map(function(h) { return h ? (h.strokes || null) : null; });
+              pt[p.id] = hs.map(function(h) { return h ? (h.putts || 0) : 0; });
+              pf[p.id] = hs.map(function(h) { return h ? !!(h.gettingPop) : false; });
+            });
+          }
+
+          // firData / girData may be stored directly on the round
+          if (roundObj.firData) fi = roundObj.firData;
+          if (roundObj.girData) gi = roundObj.girData;
+
+          setScores(sc);
+          setPutts(pt);
+          setWolfData(wd);
+          setPopFlags(pf);
+          setBBBData(bb);
+          setTeeBallData(tb);
+          setFirData(fi);
+          setGirData(gi);
+          setState('loaded');
+        } else {
+          // Cloud fetch failed — try local
+          if (!tryLocalFallback()) {
+            setErrorMsg(err || 'Round not found.');
+            setState('error');
+          }
+        }
+      });
+    } else {
+      if (!tryLocalFallback()) {
+        setErrorMsg(`Round "${syncCode}" not found on this device.`);
+        setState('error');
+      }
     }
   }, [syncCode]);
 
@@ -64,18 +136,18 @@ const RoundViewer = ({ syncCode, onBack }) => {
     <div style={{flex:1, display:'flex', flexDirection:'column', background:'#F6F4EE'}}>
       <div style={{padding:'24px 20px', display:'flex', flexDirection:'column', gap:16, alignItems:'center'}}>
         <div style={{fontSize:36}}>⚠️</div>
-        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:20, color:'#0E2B20', textAlign:'center'}}>{errorMsg}</div>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:18, color:'#0E2B20', textAlign:'center', lineHeight:1.4}}>{errorMsg}</div>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#8A9E8A', textAlign:'center', lineHeight:1.6}}>
+          This round may only be viewable on the device that originally saved it, or the round data may be too old to retrieve.
+        </div>
         <Btn onClick={onBack} variant="ghost" style={{minWidth:180}}>← BACK TO HOME</Btn>
       </div>
     </div>
   );
 
-  const nassauFmt = round?.formats?.find(f => f.type === 'nassau');
-  const nassauMatches = nassauFmt?.nassauMatches || [];
-
   return (
-    <div style={{flex:1, overflowY:'auto', background:'#F6F4EE'}}>
-      <div style={{padding:'16px', borderBottom:'1px solid #E7E3D9', display:'flex', alignItems:'center', gap:12}}>
+    <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#F6F4EE'}}>
+      <div style={{flexShrink:0, padding:'14px 16px', borderBottom:'1px solid #E7E3D9', display:'flex', alignItems:'center', gap:12, background:'#F6F4EE'}}>
         <button onClick={onBack}
           style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:9, color:'#3F5F4A', width:36, height:36, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', WebkitTapHighlightColor:'transparent'}}>
           ‹
@@ -89,17 +161,23 @@ const RoundViewer = ({ syncCode, onBack }) => {
         </div>
       </div>
 
-      <SummaryScreen
-        round={round}
-        scores={scores}
-        wolfData={wolfData}
-        putts={putts}
-        nassauPresses={[]}
-        manualChips={{}}
-        popFlags={popFlags}
-        onNewRound={onBack}
-        readOnly={true}
-      />
+      <div style={{flex:1, overflow:'hidden', display:'flex', flexDirection:'column'}}>
+        <SummaryScreen
+          round={round}
+          scores={scores || {}}
+          wolfData={wolfData || {}}
+          putts={putts || {}}
+          nassauPresses={[]}
+          manualChips={{}}
+          popFlags={popFlags || {}}
+          bbbData={bbbData || {}}
+          teeBallData={teeBallData || {}}
+          firData={firData || {}}
+          girData={girData || {}}
+          onNewRound={onBack}
+          readOnly={true}
+        />
+      </div>
     </div>
   );
 };
