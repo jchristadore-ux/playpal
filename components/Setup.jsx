@@ -805,7 +805,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                         {on && <span style={{color:'#F6F4EE', fontSize:14, fontWeight:900}}>✓</span>}
                       </div>
                     </div>
-                    {on && key !== 'nassau' && (
+                    {on && key !== 'nassau' && key !== 'markeymatch' && (
                       <div style={{borderTop:'1px solid rgba(14,43,32,0.08)', marginTop:12, paddingTop:12}}>
                         <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', marginBottom:8}}>
                           STAKE ({key==='wolf'?'pot ante per player':key==='passmoney'?'pot — winner collects from each player':key==='skins'?'per skin':'winner takes all'})
