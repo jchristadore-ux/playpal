@@ -43,6 +43,12 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     formats.some(f => f.type === 'teeball') ? calcTeeBallStandings(teeBallData || {}, players) : {},
   []);
 
+  const markeyMatchStates = React.useMemo(() => {
+    const fmt = formats.find(f => f.type === 'markeymatch');
+    if (!fmt?.markeyMatchConfig) return [];
+    return window.calcMarkeyMatchState(scores, fmt.markeyMatchConfig.markeyPopStrokes, players, fmt);
+  }, []);
+
   const leaderboard = [...players].map(p=>({
     ...p,
     gross:  totalScore(scores, p.id),
@@ -196,6 +202,25 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
             const pts = teeBallStandings[p.id] || 0;
             const v   = fPay[p.id] || 0;
             body += lpad(p.name, nameW+2) + lpad(`${pts} tee ball pts`, 16) + pad(fmtPay(v), 8) + '\n';
+          });
+
+        } else if (f.type === 'markeymatch') {
+          const cfg = f.markeyMatchConfig;
+          if (cfg) {
+            const t1Names = (cfg.team1||[]).map(id=>players.find(p=>p.id===id)?.name||'?').join(' & ');
+            const t2Names = (cfg.team2||[]).map(id=>players.find(p=>p.id===id)?.name||'?').join(' & ');
+            body += `  Team A: ${t1Names}\n  Team B: ${t2Names}\n\n`;
+            markeyMatchStates.forEach(match => {
+              const winner = match.team1Holes > match.team2Holes ? 'Team A' : match.team2Holes > match.team1Holes ? 'Team B' : 'Push';
+              const pressLabel = match.matchId > 1 ? ' [PRESS]' : '';
+              body += `  Match ${match.matchId}${pressLabel} (H${match.startHole+1}-18): Team A ${match.team1Holes} – ${match.team2Holes} Team B  →  ${winner}  $${cfg.stake}\n`;
+            });
+            body += '\n';
+          }
+          players.forEach(p => {
+            const v = fPay[p.id] || 0;
+            const team = (cfg?.team1||[]).includes(p.id) ? 'A' : (cfg?.team2||[]).includes(p.id) ? 'B' : '?';
+            body += lpad(p.name, nameW+2) + lpad(`Team ${team}`, 10) + pad(fmtPay(v), 8) + '\n';
           });
         }
       });
@@ -467,13 +492,15 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                        f.type==='skins'           ? `$${f.stakes}/skin` :
                        f.type==='stableford'      ? `$${f.stakes} match` :
                        f.type==='bingobangobongo' ? `$${f.stakes} round pot` :
-                       f.type==='teeball'         ? `$${f.stakes} round pot` : ''}
+                       f.type==='teeball'         ? `$${f.stakes} round pot` :
+                       f.type==='markeymatch'     ? `$${f.markeyMatchConfig?.stake || f.stakes}/match` : ''}
                     </span>
                   </div>
                   {players.map(p=>{
                     const v=(payoutsByFormat[fi]?.[p.id])||0;
                     const isWinner = v > 0;
                     const isPTMWinner = f.type==='passmoney' && ptmState.holderId===p.id;
+                    const markeyTeam = f.type==='markeymatch' && f.markeyMatchConfig ? ((f.markeyMatchConfig.team1||[]).includes(p.id) ? 'A' : (f.markeyMatchConfig.team2||[]).includes(p.id) ? 'B' : null) : null;
                     return (
                       <div key={p.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #F0EDE4'}}>
                         <Avatar player={p} size={28}/>
@@ -484,6 +511,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           {f.type==='stableford' && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#C8A15A'}}>{stablefordPts[p.id]||0} pts</div>}
                           {f.type==='bingobangobongo' && (() => { const st=bbbStandings[p.id]||{bingo:0,bango:0,bongo:0,total:0}; return <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{st.total} pts · Bingo {st.bingo} · Bango {st.bango} · Bongo {st.bongo}</div>; })()}
                           {f.type==='teeball' && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{teeBallStandings[p.id]||0} tee ball pts</div>}
+                          {markeyTeam && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>Team {markeyTeam} · {markeyMatchStates.length} match{markeyMatchStates.length!==1?'es':''}</div>}
                         </div>
                         <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:20, color:v>0?'#15803D':v<0?'#DC2626':'#6B7280'}}>
                           {v>0?'+':''}{v===0?'—':`$${Math.abs(v).toFixed(0)}`}
@@ -491,6 +519,33 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                       </div>
                     );
                   })}
+
+                  {f.type==='markeymatch' && markeyMatchStates.length > 0 && (
+                    <div style={{padding:'10px 14px', borderTop:'1px solid #E7E3D9'}}>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:10, letterSpacing:2, color:'#C8A15A', marginBottom:8}}>MATCH RESULTS</div>
+                      <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                        {markeyMatchStates.map((match, idx) => {
+                          const mc = ['#C8A15A','#7B9FE0','#E07BE0'][idx % 3] || '#C8A15A';
+                          const stake = f.markeyMatchConfig?.stake || f.stakes || 0;
+                          const winner = match.team1Holes > match.team2Holes ? 'Team A' : match.team2Holes > match.team1Holes ? 'Team B' : null;
+                          const resultColor = winner === 'Team A' ? '#C8A15A' : winner === 'Team B' ? '#7B9FE0' : '#6B7280';
+                          return (
+                            <div key={match.matchId} style={{display:'flex', alignItems:'center', gap:10, padding:'7px 10px', background:'#F6F4EE', borderRadius:10, border:`1px solid ${mc}22`}}>
+                              <div style={{width:6, height:6, borderRadius:'50%', background:mc, flexShrink:0}}/>
+                              <div style={{flex:1}}>
+                                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:mc}}>Match {match.matchId}</span>
+                                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginLeft:6}}>H{match.startHole+1}–18</span>
+                                {match.matchId > 1 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px', marginLeft:6}}>PRESS</span>}
+                              </div>
+                              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#3F5F4A'}}>{match.team1Holes}–{match.team2Holes}</span>
+                              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, color:resultColor, minWidth:60, textAlign:'right'}}>{winner ? `${winner} wins` : 'Push'}</span>
+                              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#C8A15A'}}>${stake}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

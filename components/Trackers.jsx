@@ -557,4 +557,154 @@ const TeeBallTracker = ({ players, course, holeIdx, teeBallData, onSetTeeBall, f
   );
 };
 
-Object.assign(window, { RoundTracker, WolfTracker, PTMTracker, NassauTracker, MultiNassauTracker, BBBTracker, TeeBallTracker });
+// ─── MARKEY MATCH TRACKER ────────────────────────────────────────────────────
+const MarkeyMatchTracker = ({ players, scores, format, holeIdx }) => {
+  const cfg = format?.markeyMatchConfig;
+  if (!cfg || !cfg.team1 || !cfg.team2) return null;
+
+  const matchStates = React.useMemo(() =>
+    window.calcMarkeyMatchState(scores, cfg.markeyPopStrokes, players, format),
+  [JSON.stringify(scores)]);
+
+  const [expandedMatch, setExpandedMatch] = React.useState(null);
+
+  const playerById = (id) => players.find(p => p.id === id);
+  const team1Names = cfg.team1.map(id => playerById(id)?.name.split(' ')[0] || '').join(' & ');
+  const team2Names = cfg.team2.map(id => playerById(id)?.name.split(' ')[0] || '').join(' & ');
+
+  const statusLabel = (m) => {
+    if (m.team1Holes === m.team2Holes) return 'A.S.';
+    const diff = Math.abs(m.team1Holes - m.team2Holes);
+    const leadTeam = m.team1Holes > m.team2Holes ? 'A' : 'B';
+    return `Team ${leadTeam} +${diff}`;
+  };
+
+  const statusColor = (m) => {
+    if (m.team1Holes === m.team2Holes) return '#6B7280';
+    return '#C8A15A';
+  };
+
+  // Which match indices started after a press on the current hole?
+  const pressedThisHole = matchStates.filter(m => m.startHole === holeIdx + 1 && m.matchId > 1);
+
+  const popThisHole = [...cfg.team1, ...cfg.team2].filter(id => {
+    const strokes = (cfg.markeyPopStrokes?.[id]?.[holeIdx] || 0);
+    return strokes > 0;
+  }).map(id => ({ player: playerById(id), strokes: cfg.markeyPopStrokes[id][holeIdx] })).filter(x => x.player);
+
+  return (
+    <div style={trS.section}>
+      <div style={trS.head}>
+        <span style={{fontSize:14}}>⚔️</span><Label>MARKEY MATCH</Label>
+        <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', letterSpacing:0.5}}>
+          {matchStates.length} MATCH{matchStates.length !== 1 ? 'ES' : ''}
+        </span>
+      </div>
+
+      <div style={{background:'rgba(200,161,90,0.04)', border:'1px solid rgba(200,161,90,0.15)', borderRadius:8, padding:'6px 10px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <div style={{display:'flex', alignItems:'center', gap:6}}>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, color:'#C8A15A', letterSpacing:0.5}}>A</span>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#0E2B20', fontWeight:600}}>{team1Names}</span>
+        </div>
+        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A'}}>vs</span>
+        <div style={{display:'flex', alignItems:'center', gap:6}}>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, color:'#7B9FE0', letterSpacing:0.5}}>B</span>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#0E2B20', fontWeight:600}}>{team2Names}</span>
+        </div>
+      </div>
+
+      {popThisHole.length > 0 && (
+        <div style={{background:'rgba(200,161,90,0.06)', border:'1px solid rgba(200,161,90,0.2)', borderRadius:7, padding:'5px 9px', display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A', letterSpacing:1}}>H{holeIdx+1} POPS:</span>
+          {popThisHole.map(({ player: p, strokes }) => (
+            <span key={p.id} style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, color:'#C8A15A', background:'rgba(200,161,90,0.12)', border:'1px solid rgba(200,161,90,0.3)', borderRadius:4, padding:'1px 5px'}}>
+              {p.name.split(' ')[0]} +{strokes}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div style={{display:'flex', flexDirection:'column', gap:8}}>
+        {matchStates.map((match, idx) => {
+          const matchColor = MULTI_NASSAU_MATCH_COLORS[idx % MULTI_NASSAU_MATCH_COLORS.length] || '#C8A15A';
+          const isExpanded = expandedMatch === match.matchId;
+          const label = statusLabel(match);
+          const labelColor = statusColor(match);
+          const activeHoles = match.holeResults.filter(r => r !== null).length;
+
+          return (
+            <div key={match.matchId} style={{background:'#FFFFFF', border:`1px solid ${matchColor}30`, borderRadius:14, overflow:'hidden'}}>
+              <div onClick={() => setExpandedMatch(isExpanded ? null : match.matchId)}
+                style={{display:'flex', alignItems:'center', gap:8, padding:'10px 12px', background:`${matchColor}08`, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                <div style={{width:7, height:7, borderRadius:'50%', background:matchColor, flexShrink:0}}/>
+                <div style={{flex:1, display:'flex', alignItems:'center', gap:6, minWidth:0}}>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, color:matchColor, letterSpacing:1, whiteSpace:'nowrap'}}>
+                    MATCH {match.matchId}
+                  </span>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', whiteSpace:'nowrap'}}>
+                    H{match.startHole + 1}–18
+                  </span>
+                  {match.matchId > 1 && (
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px', whiteSpace:'nowrap'}}>PRESS</span>
+                  )}
+                </div>
+                <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2}}>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13, color:labelColor, whiteSpace:'nowrap'}}>
+                    {label}
+                  </span>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A'}}>
+                    {match.team1Holes}–{match.team2Holes} ({activeHoles} holes)
+                  </span>
+                </div>
+                <span style={{fontSize:12, color:'#8A9E8A', display:'inline-block', transform:isExpanded?'rotate(180deg)':'none', transition:'transform 0.2s', flexShrink:0, marginLeft:4}}>▾</span>
+              </div>
+
+              {isExpanded && (
+                <div style={{padding:'10px 12px', borderTop:`1px solid ${matchColor}18`}}>
+                  <div style={{display:'flex', gap:6, marginBottom:8}}>
+                    {[['Team A', match.team1Holes, '#C8A15A'], ['Team B', match.team2Holes, '#7B9FE0']].map(([lbl, holes, color]) => (
+                      <div key={lbl} style={{flex:1, background:'#F6F4EE', borderRadius:10, padding:'8px 10px', border:'1px solid #E7E3D9', textAlign:'center'}}>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, letterSpacing:1, color:'#8A9E8A', marginBottom:2}}>{lbl}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:22, color, lineHeight:1}}>{holes}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A'}}>holes won</div>
+                      </div>
+                    ))}
+                    <div style={{flex:1, background:'#F6F4EE', borderRadius:10, padding:'8px 10px', border:'1px solid #E7E3D9', textAlign:'center'}}>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, letterSpacing:1, color:'#8A9E8A', marginBottom:2}}>STAKE</div>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:18, color:matchColor, lineHeight:1}}>${cfg.stake}</div>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A'}}>per match</div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex', gap:2, flexWrap:'wrap'}}>
+                    {match.holeResults.map((r, i) => {
+                      if (i < match.startHole || r === null) return null;
+                      const bg = r === 'team1' ? '#C8A15A' : r === 'team2' ? '#7B9FE0' : '#E7E3D9';
+                      const textColor = r === 'tie' ? '#8A9E8A' : '#FFFFFF';
+                      const lbl = r === 'team1' ? 'A' : r === 'team2' ? 'B' : '–';
+                      return (
+                        <div key={i} style={{width:22, height:22, borderRadius:5, background:i===holeIdx?bg+'EE':bg+'88', display:'flex', alignItems:'center', justifyContent:'center', border:i===holeIdx?`2px solid ${bg}`:'none'}}>
+                          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, color:i===holeIdx?'#0E2B20':textColor}}>{lbl}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {pressedThisHole.length > 0 && (
+        <div style={{background:'rgba(224,123,224,0.06)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:8, padding:'6px 10px', display:'flex', alignItems:'center', gap:6}}>
+          <span style={{fontSize:12}}>🔔</span>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#E07BE0'}}>
+            PRESS — Match {pressedThisHole.map(m => m.matchId).join(', ')} start{pressedThisHole.length === 1 ? 's' : ''} H{holeIdx + 2}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+Object.assign(window, { RoundTracker, WolfTracker, PTMTracker, NassauTracker, MultiNassauTracker, BBBTracker, TeeBallTracker, MarkeyMatchTracker });

@@ -412,7 +412,7 @@ const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) =
 
 // ── Collapsible Game Trackers Drawer ─────────────────────────────────────────
 const TrackersDrawer = ({ open, onToggle, formats, children }) => {
-  const formatIcons = { wolf:'🐺', nassau:'💰', stableford:'⭐', passmoney:'💸', skins:'🎯' };
+  const formatIcons = { wolf:'🐺', nassau:'💰', stableford:'⭐', passmoney:'💸', skins:'🎯', bingobangobongo:'🎯', teeball:'🏌️', markeymatch:'⚔️' };
   const activeTypes = formats.map(f => f.type);
 
   return (
@@ -532,14 +532,16 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // Track whether we're currently processing a remote update (to avoid echo)
   const applyingRemoteRef = React.useRef(false);
 
-  const hasWolf   = formats.some(f => f.type === 'wolf');
-  const hasPTM    = formats.some(f => f.type === 'passmoney');
-  const hasNassau = nassauMatches.length > 0;
-  const hasStable = formats.some(f => f.type === 'stableford');
-  const hasSkins  = formats.some(f => f.type === 'skins');
-  const hasBBB    = formats.some(f => f.type === 'bingobangobongo');
-  const hasTeeBall= formats.some(f => f.type === 'teeball');
-  const wolfFmt   = formats.find(f => f.type === 'wolf');
+  const hasWolf    = formats.some(f => f.type === 'wolf');
+  const hasPTM     = formats.some(f => f.type === 'passmoney');
+  const hasNassau  = nassauMatches.length > 0;
+  const hasStable  = formats.some(f => f.type === 'stableford');
+  const hasSkins   = formats.some(f => f.type === 'skins');
+  const hasBBB     = formats.some(f => f.type === 'bingobangobongo');
+  const hasTeeBall = formats.some(f => f.type === 'teeball');
+  const hasMarkey  = formats.some(f => f.type === 'markeymatch');
+  const markeyFmt  = formats.find(f => f.type === 'markeymatch');
+  const wolfFmt    = formats.find(f => f.type === 'wolf');
   const ptmFmt    = formats.find(f => f.type === 'passmoney');
   const skinsFmt  = formats.find(f => f.type === 'skins');
   const bbbFmt    = formats.find(f => f.type === 'bingobangobongo');
@@ -677,6 +679,23 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         const pts = tbSt[p.id] || 0;
         stats.push({ icon:'🏌️', label:'TEE BALL', value:String(pts), color:pts>0?'#C8A15A':'#3F5F4A' });
       }
+      if (hasMarkey && markeyFmt?.markeyMatchConfig) {
+        const cfg = markeyFmt.markeyMatchConfig;
+        const inT1 = (cfg.team1||[]).includes(p.id);
+        const inT2 = (cfg.team2||[]).includes(p.id);
+        if (inT1 || inT2) {
+          const matchStates = window.calcMarkeyMatchState(scores, cfg.markeyPopStrokes, players, markeyFmt);
+          const overall = matchStates[0];
+          if (overall) {
+            const leading = overall.team1Holes > overall.team2Holes ? 'A' : overall.team2Holes > overall.team1Holes ? 'B' : null;
+            const diff = Math.abs(overall.team1Holes - overall.team2Holes);
+            const myTeam = inT1 ? 'A' : 'B';
+            const label = leading ? (leading === myTeam ? `+${diff}` : `-${diff}`) : 'AS';
+            const color = leading === myTeam ? '#15803D' : leading && leading !== myTeam ? '#DC2626' : '#3F5F4A';
+            stats.push({ icon:'⚔️', label:`MARKEY (${matchStates.length}M)`, value:label, color });
+          }
+        }
+      }
       result[p.id] = stats;
     });
     return result;
@@ -808,7 +827,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
-  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall;
+  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall || hasMarkey;
 
   return (
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#F6F4EE'}}>
@@ -918,8 +937,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
             {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
             {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
-            {hasBBB     && <BBBTracker       players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         format={bbbFmt}/>}
-            {hasTeeBall && <TeeBallTracker   players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
+            {hasBBB     && <BBBTracker          players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         format={bbbFmt}/>}
+            {hasTeeBall && <TeeBallTracker      players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
+            {hasMarkey  && <MarkeyMatchTracker  players={players} scores={scores} format={markeyFmt} holeIdx={holeIdx}/>}
           </TrackersDrawer>
         )}
 

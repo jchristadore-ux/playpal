@@ -438,6 +438,114 @@ function totalVsPar(scores, pid, holes) {
   return (scores[pid] || []).reduce((acc, s, i) => acc + (s && holes[i] ? s - holes[i].par : 0), 0);
 }
 
+// ─── MARKEY MATCH ─────────────────────────────────────────────────────────────
+
+function getMarkeyAdjustedScore(scores, markeyPopStrokes, playerId, holeIdx) {
+  const gross = scores[playerId]?.[holeIdx];
+  if (!gross) return 0;
+  const strokes = markeyPopStrokes?.[playerId]?.[holeIdx] || 0;
+  return Math.max(1, gross - strokes);
+}
+
+// Returns { [playerId]: number[18] } — stroke counts per hole for each player,
+// based on each player's handicap relative to the lowest in the foursome.
+function calcMarkeyMatchPops(players, course) {
+  const lowestHdcp = Math.min(...players.map(p => p.handicap || 0));
+  const result = {};
+  players.forEach(p => {
+    const effectiveHdcp = Math.max(0, (p.handicap || 0) - lowestHdcp);
+    result[p.id] = course.holes.map(h => getHoleStrokes(effectiveHdcp, h.hdcp));
+  });
+  return result;
+}
+
+// Derives the full match state array from scores alone. New matches spawn
+// automatically when a team goes 2 down. All matches run to the end of the round.
+function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
+  const cfg = format.markeyMatchConfig;
+  if (!cfg) return [];
+  const { team1, team2 } = cfg;
+  const pops = markeyPopStrokes || cfg.markeyPopStrokes || {};
+
+  const allMatches = [];
+  const activeMatches = [];
+
+  const makeMatch = (startHole) => ({
+    matchId: allMatches.length + 1,
+    startHole,
+    holeResults: Array(18).fill(null),
+    team1Holes: 0,
+    team2Holes: 0,
+    status: 'active',
+  });
+
+  const firstMatch = makeMatch(0);
+  allMatches.push(firstMatch);
+  activeMatches.push(firstMatch);
+
+  for (let holeIdx = 0; holeIdx < 18; holeIdx++) {
+    // Best net score per team (lower is better; 0 = unscored)
+    const t1Scores = team1.map(id => getMarkeyAdjustedScore(scores, pops, id, holeIdx)).filter(s => s > 0);
+    const t2Scores = team2.map(id => getMarkeyAdjustedScore(scores, pops, id, holeIdx)).filter(s => s > 0);
+
+    if (t1Scores.length === 0 || t2Scores.length === 0) continue;
+
+    const t1Best = Math.min(...t1Scores);
+    const t2Best = Math.min(...t2Scores);
+    const holeResult = t1Best < t2Best ? 'team1' : t2Best < t1Best ? 'team2' : 'tie';
+
+    const toSpawn = [];
+
+    activeMatches.forEach(match => {
+      if (holeIdx < match.startHole) return;
+      match.holeResults[holeIdx] = holeResult;
+      if (holeResult === 'team1') match.team1Holes++;
+      else if (holeResult === 'team2') match.team2Holes++;
+
+      // Press check: if a team just went 2 down, spawn a new match next hole
+      const deficit = match.team2Holes - match.team1Holes;
+      if ((deficit === 2 || deficit === -2) && holeIdx < 17) {
+        // Only spawn once per deficit of exactly 2 (check it wasn't already 2 before this hole)
+        const prevT1 = match.team1Holes - (holeResult === 'team1' ? 1 : 0);
+        const prevT2 = match.team2Holes - (holeResult === 'team2' ? 1 : 0);
+        const prevDeficit = prevT2 - prevT1;
+        if (Math.abs(prevDeficit) < 2) {
+          toSpawn.push(holeIdx + 1);
+        }
+      }
+    });
+
+    toSpawn.forEach(startHole => {
+      const newMatch = makeMatch(startHole);
+      allMatches.push(newMatch);
+      activeMatches.push(newMatch);
+    });
+  }
+
+  return allMatches;
+}
+
+// Returns { [playerId]: net amount won/lost } across all matches.
+// Each match: winning team members split the stake (stake/2 each), losing team pays stake/2 each.
+function calcMarkeyMatchPayouts(matchStates, stake, team1, team2) {
+  const pay = {};
+  [...team1, ...team2].forEach(id => { pay[id] = 0; });
+
+  matchStates.forEach(match => {
+    const { team1Holes, team2Holes } = match;
+    const half = stake / 2;
+    if (team1Holes > team2Holes) {
+      team1.forEach(id => { pay[id] = (pay[id] || 0) + half; });
+      team2.forEach(id => { pay[id] = (pay[id] || 0) - half; });
+    } else if (team2Holes > team1Holes) {
+      team2.forEach(id => { pay[id] = (pay[id] || 0) + half; });
+      team1.forEach(id => { pay[id] = (pay[id] || 0) - half; });
+    }
+  });
+
+  return pay;
+}
+
 // ─── calcAllPayouts ───────────────────────────────────────────────────────────
 // Handles both single nassauConfig (legacy) and nassauMatches[] (new multi-match).
 // nassauConfig param is kept for backward compat but ignored when nassauMatches[] is present on the format object.
@@ -471,6 +579,12 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
     } else if (f.type === 'teeball') {
       const standings = calcTeeBallStandings(teeBallData, players);
       pay = calcTeeBallPayouts(standings, players, f.stakes);
+    } else if (f.type === 'markeymatch') {
+      const cfg = f.markeyMatchConfig;
+      if (cfg && cfg.team1 && cfg.team2) {
+        const matchStates = calcMarkeyMatchState(scores, cfg.markeyPopStrokes, players, f);
+        pay = calcMarkeyMatchPayouts(matchStates, cfg.stake || f.stakes || 0, cfg.team1, cfg.team2);
+      }
     } else if (f.type === 'stableford') {
       const playerPts = players.map(p => ({
         p,
@@ -570,6 +684,7 @@ if (typeof window !== 'undefined') {
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
     calcBBBStandings, calcBBBPayouts, calcTeeBallStandings, calcTeeBallPayouts,
+    getMarkeyAdjustedScore, calcMarkeyMatchPops, calcMarkeyMatchState, calcMarkeyMatchPayouts,
     runPlayPalTests,
   });
 }

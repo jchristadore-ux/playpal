@@ -1,6 +1,6 @@
 // PlayPal — Game Data & Constants (v2 — expanded course database)
 
-const FORMATS = { WOLF:'wolf', NASSAU:'nassau', STABLEFORD:'stableford', PASS_MONEY:'passmoney', SKINS:'skins', BINGO_BANGO_BONGO:'bingobangobongo', TEE_BALL:'teeball' };
+const FORMATS = { WOLF:'wolf', NASSAU:'nassau', STABLEFORD:'stableford', PASS_MONEY:'passmoney', SKINS:'skins', BINGO_BANGO_BONGO:'bingobangobongo', TEE_BALL:'teeball', MARKEY_MATCH:'markeymatch' };
 
 const FORMAT_INFO = {
   wolf:            { label:'Wolf',             icon:'🐺', desc:'Rotating wolf picks a partner or goes lone wolf each hole' },
@@ -10,6 +10,7 @@ const FORMAT_INFO = {
   skins:           { label:'Skins',            icon:'🎴', desc:'Win a hole outright to claim the skin — ties carry over' },
   bingobangobongo: { label:'Bingo Bango Bongo',icon:'🎯', desc:'Three points per hole: first on green, closest to pin, first to hole out' },
   teeball:         { label:'Tee Ball',         icon:'🏌️', desc:'Point per hole to longest in-bounds tee shot — ties get nothing' },
+  markeymatch:     { label:'Markey Match',     icon:'⚔️',  desc:'2v2 team match play — auto-press when down 2, all matches run simultaneously', minPlayers:4, maxPlayers:4 },
 };
 
 const COURSES = [
