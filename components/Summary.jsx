@@ -57,13 +57,26 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     stPts:  stablefordPts[p.id]||0,
   })).sort((a,b)=>a.vsPar-b.vsPar);
 
+  const debtLedger = Object.fromEntries(players.map(p => [p.id, payouts[p.id] || 0]));
   const debts = [];
-  players.forEach(debtor => {
-    if ((payouts[debtor.id]||0) >= 0) return;
-    const owed = Math.abs(payouts[debtor.id]);
-    const creditors = players.filter(p=>(payouts[p.id]||0)>0).sort((a,b)=>(payouts[b.id]||0)-(payouts[a.id]||0));
-    if (creditors.length) debts.push({ from:debtor, to:creditors[0], amount:owed });
-  });
+  players
+    .filter(p => debtLedger[p.id] < 0)
+    .sort((a, b) => debtLedger[a.id] - debtLedger[b.id])
+    .forEach(debtor => {
+      let owed = Math.abs(debtLedger[debtor.id]);
+      const creditors = players
+        .filter(p => debtLedger[p.id] > 0)
+        .sort((a, b) => debtLedger[b.id] - debtLedger[a.id]);
+      for (const creditor of creditors) {
+        if (owed <= 0) break;
+        const transfer = Math.min(owed, debtLedger[creditor.id]);
+        if (transfer > 0) {
+          debts.push({ from: debtor, to: creditor, amount: transfer });
+          debtLedger[creditor.id] -= transfer;
+          owed -= transfer;
+        }
+      }
+    });
 
   const openVenmo = (from, to, amount) => {
     const note    = `PlayPal Golf · ${course.name} · ${new Date().toLocaleDateString()}`;
