@@ -3,8 +3,8 @@
 const LiveScorecardModal = ({
   onClose,
   players, course, scores, putts, popFlags, wolfData, nassauMatches, holeIdx,
-  hasWolf, hasPTM, hasNassau, hasStable, hasSkins, hasBBB, hasTeeBall,
-  wolfFmt, ptmFmt, skinsFmt, nassauFmtObj, bbbFmt, teeBallFmt,
+  hasWolf, hasPTM, hasNassau, hasStable, hasSkins, hasBBB, hasTeeBall, hasMarkey,
+  wolfFmt, ptmFmt, skinsFmt, nassauFmtObj, bbbFmt, teeBallFmt, markeyFmt,
   bbbData, teeBallData,
 }) => {
   const {
@@ -14,7 +14,7 @@ const LiveScorecardModal = ({
   } = window;
 
   const [tab, setTab] = React.useState('scorecard');
-  const hasFormats = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall;
+  const hasFormats = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall || hasMarkey;
 
   const frontPar = course.holes.slice(0, 9).reduce((a, h) => a + h.par, 0);
   const backPar  = course.holes.slice(9, 18).reduce((a, h) => a + h.par, 0);
@@ -78,6 +78,13 @@ const LiveScorecardModal = ({
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
     return computePTMState(scores, putts || {}, players, course, players[0]?.id);
   }, [JSON.stringify(scores), JSON.stringify(putts)]);
+
+  // ── Markey Match state ────────────────────────────────────────────────────
+  const markeyMatchStates = React.useMemo(() => {
+    const cfg = markeyFmt?.markeyMatchConfig;
+    if (!hasMarkey || !cfg?.team1 || !cfg?.team2) return [];
+    return window.calcMarkeyMatchState(scores, cfg.markeyPopStrokes, players, markeyFmt);
+  }, [JSON.stringify(scores)]);
 
   // ── Nassau match statuses ─────────────────────────────────────────────────
   const nassauStatuses = React.useMemo(() => {
@@ -574,6 +581,40 @@ const LiveScorecardModal = ({
                 })}
               </div>
             )}
+
+            {/* Markey Match */}
+            {hasMarkey && markeyMatchStates.length > 0 && (() => {
+              const cfg = markeyFmt.markeyMatchConfig;
+              const teamNames = (ids) => (ids||[]).map(id => players.find(p => p.id === id)?.name.split(' ')[0]).filter(Boolean).join(' & ');
+              return (
+                <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:14, overflow:'hidden'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:8, padding:'12px 14px', borderBottom:'1px solid #E7E3D9'}}>
+                    <span style={{fontSize:16}}>⚔️</span>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>MARKEY MATCH</span>
+                    <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>${cfg.stake}/match</span>
+                  </div>
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 14px', borderBottom:'1px solid #F0EDE4'}}>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#C8A15A'}}>A · {teamNames(cfg.team1)}</span>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>vs</span>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#7B9FE0'}}>B · {teamNames(cfg.team2)}</span>
+                  </div>
+                  {markeyMatchStates.map(match => {
+                    const lead = match.team1Holes > match.team2Holes ? 'A' : match.team2Holes > match.team1Holes ? 'B' : null;
+                    const diff = Math.abs(match.team1Holes - match.team2Holes);
+                    return (
+                      <div key={match.matchId} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid #F0EDE4'}}>
+                        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20'}}>Match {match.matchId}</span>
+                        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>H{match.startHole+1}–18</span>
+                        {match.matchId > 1 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px'}}>PRESS</span>}
+                        <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:lead ? (lead === 'A' ? '#C8A15A' : '#7B9FE0') : '#6B7280'}}>
+                          {lead ? `Team ${lead} +${diff}` : 'A.S.'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
           </div>
         )}

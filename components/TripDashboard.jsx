@@ -410,17 +410,18 @@ const TripDashboard = ({ trip, rounds, onBack, onViewRound }) => {
                     {canView && <span style={{ color: '#C8A15A', fontSize: 20, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>›</span>}
                   </div>
                   {(() => {
-                    const puttsMap  = r.putts   || {};
                     const firMap    = r.firData  || {};
                     const girMap    = r.girData  || {};
                     const players   = r.players  || [];
                     const holes     = r.course?.holes || [];
-                    const hasPutts  = players.some(p => (puttsMap[p.id]||[]).some(v=>v>0));
+                    // Older completed rounds only stored putts inside holeScores entries
+                    const playerPutts = (pid) => (r.putts || {})[pid] || ((r.holeScores || {})[pid] || []).map(h => h?.putts || 0);
+                    const hasPutts  = players.some(p => playerPutts(p.id).some(v=>v>0));
                     const hasFir    = players.some(p => (firMap[p.id]||[]).some(v=>v!==null));
                     const hasGir    = players.some(p => (girMap[p.id]||[]).some(v=>v!==null));
                     let totalPutts  = 0, firHit = 0, firElig = 0, girHit = 0, girElig = 0;
                     players.forEach(p => {
-                      (puttsMap[p.id]||[]).forEach(v => { totalPutts += (v||0); });
+                      playerPutts(p.id).forEach(v => { totalPutts += (v||0); });
                       (firMap[p.id]||[]).forEach((v,i) => {
                         if ((holes[i]?.par||4) > 3 && v !== null) { firElig++; if (v===true) firHit++; }
                       });

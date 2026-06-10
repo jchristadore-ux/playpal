@@ -238,19 +238,62 @@ function _nassauHoleWinner(scores, nassauPopFlags, p1id, p2id, holeIdx) {
   return 0;
 }
 
+// 2v2 teams (best ball). Returns { team1:[ids], team2:[ids] } or null when not a valid 2v2 config.
+function _nassauTeams(nassauConfig) {
+  if (nassauConfig?.matchType !== '2v2') return null;
+  const t1 = nassauConfig.teams?.team1 || [];
+  const t2 = nassauConfig.teams?.team2 || [];
+  if (t1.length < 1 || t2.length < 1) return null;
+  return { team1: t1, team2: t2 };
+}
+
+// Best adjusted ball for a team on a hole; 0 = no team member has scored yet
+function _nassauTeamBest(scores, nassauPopFlags, ids, holeIdx) {
+  const vals = ids
+    .map(id => getAdjustedHoleScore(scores, nassauPopFlags, id, holeIdx))
+    .filter(v => v > 0);
+  return vals.length ? Math.min(...vals) : 0;
+}
+
+// +1 = team1 wins hole, -1 = team2 wins hole, 0 = tie or unscored
+function _nassauTeamHoleWinner(scores, nassauPopFlags, teams, holeIdx) {
+  const s1 = _nassauTeamBest(scores, nassauPopFlags, teams.team1, holeIdx);
+  const s2 = _nassauTeamBest(scores, nassauPopFlags, teams.team2, holeIdx);
+  if (!s1 || !s2) return 0;
+  if (s1 < s2) return 1;
+  if (s2 < s1) return -1;
+  return 0;
+}
+
 // nassauSegmentStatus: live display string for tracker UI
 // "EVEN", "John +3", "TJ +1"
 function nassauSegmentStatus(scores, players, course, holesRange, currentHole, popFlags, nassauConfig) {
-  const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
-  if (nassauPlayers.length < 2) return 'EVEN';
-
   const nassauPopFlags = nassauConfig?.popHoles
     ? _buildNassauPopFlags(nassauConfig)
     : (popFlags || {});
 
+  const played = holesRange.filter(i => i <= currentHole);
+
+  // 2v2 best-ball path
+  const teams = _nassauTeams(nassauConfig);
+  if (teams) {
+    let t1Holes = 0;
+    let t2Holes = 0;
+    played.forEach(i => {
+      const r = _nassauTeamHoleWinner(scores, nassauPopFlags, teams, i);
+      if (r > 0) t1Holes++;
+      else if (r < 0) t2Holes++;
+    });
+    if (t1Holes === t2Holes) return 'EVEN';
+    if (t1Holes > t2Holes) return `Team 1 +${t1Holes - t2Holes}`;
+    return `Team 2 +${t2Holes - t1Holes}`;
+  }
+
+  const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
+  if (nassauPlayers.length < 2) return 'EVEN';
+
   const p1 = nassauPlayers[0];
   const p2 = nassauPlayers[1];
-  const played = holesRange.filter(i => i <= currentHole);
 
   let p1Holes = 0;
   let p2Holes = 0;
@@ -269,21 +312,43 @@ function nassauSegmentStatus(scores, players, course, holesRange, currentHole, p
 // Front 9: baseStake, Back 9: baseStake, Overall: baseStake * 2
 function calcNassauPayouts(scores, players, course, baseStake, _ignoredPresses, popFlags, nassauConfig) {
   const payouts = Object.fromEntries(players.map(p => [p.id, 0]));
-  const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
-  if (nassauPlayers.length < 2) return payouts;
 
   const nassauPopFlags = nassauConfig?.popHoles
     ? _buildNassauPopFlags(nassauConfig)
     : (popFlags || {});
-
-  const p1 = nassauPlayers[0];
-  const p2 = nassauPlayers[1];
 
   const segments = [
     { holes: Array.from({length:9},  (_, i) => i),    stake: baseStake     },
     { holes: Array.from({length:9},  (_, i) => i + 9), stake: baseStake    },
     { holes: Array.from({length:18}, (_, i) => i),    stake: baseStake * 2 },
   ];
+
+  // 2v2 best-ball path: each segment moves the full stake per side,
+  // split evenly across the two team members (zero-sum).
+  const teams = _nassauTeams(nassauConfig);
+  if (teams) {
+    segments.forEach(seg => {
+      let t1Holes = 0;
+      let t2Holes = 0;
+      seg.holes.forEach(i => {
+        const r = _nassauTeamHoleWinner(scores, nassauPopFlags, teams, i);
+        if (r > 0) t1Holes++;
+        else if (r < 0) t2Holes++;
+      });
+      if (t1Holes === t2Holes) return; // tied: no exchange
+      const winners = t1Holes > t2Holes ? teams.team1 : teams.team2;
+      const losers  = t1Holes > t2Holes ? teams.team2 : teams.team1;
+      winners.forEach(id => { payouts[id] = (payouts[id] || 0) + seg.stake / winners.length; });
+      losers.forEach(id  => { payouts[id] = (payouts[id] || 0) - seg.stake / losers.length;  });
+    });
+    return payouts;
+  }
+
+  const nassauPlayers = _resolveNassauPlayers(players, nassauConfig);
+  if (nassauPlayers.length < 2) return payouts;
+
+  const p1 = nassauPlayers[0];
+  const p2 = nassauPlayers[1];
 
   segments.forEach(seg => {
     let p1Holes = 0;
@@ -671,6 +736,28 @@ function runPlayPalTests() {
   const allTied = calcTeeBallStandings({}, players);
   const tiedPay = calcTeeBallPayouts(allTied, players, 5);
   ok('TB all tied→0', Object.values(tiedPay).every(v => v === 0));
+
+  // Nassau 2v2: team 1 best ball wins every hole → all three segments
+  const np = [{id:'a',name:'A'},{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}];
+  const courseStub = { holes: Array.from({length:18}, (_,i)=>({num:i+1, par:4, hdcp:i+1})) };
+  const sc2 = { a:Array(18).fill(3), b:Array(18).fill(5), c:Array(18).fill(4), d:Array(18).fill(5) };
+  const cfg2 = { matchType:'2v2', playersInMatch:['a','b','c','d'], teams:{team1:['a','b'],team2:['c','d']}, popHoles:{} };
+  const pay2 = calcNassauPayouts(sc2, np, courseStub, 5, [], {}, cfg2);
+  ok('Nassau2v2 winner +10 each', pay2.a === 10 && pay2.b === 10);
+  ok('Nassau2v2 loser -10 each',  pay2.c === -10 && pay2.d === -10);
+  ok('Nassau2v2 zero-sum', Math.abs(pay2.a + pay2.b + pay2.c + pay2.d) < 1e-9);
+  const st2 = nassauSegmentStatus(sc2, np, courseStub, Array.from({length:9},(_,i)=>i), 17, {}, cfg2);
+  ok('Nassau2v2 status label', st2 === 'Team 1 +9');
+
+  // Nassau 2v2 tie: best balls equal on every hole → no exchange
+  const scTie = { a:Array(18).fill(4), b:Array(18).fill(5), c:Array(18).fill(4), d:Array(18).fill(5) };
+  const payTie = calcNassauPayouts(scTie, np, courseStub, 5, [], {}, cfg2);
+  ok('Nassau2v2 tie→0', Object.values(payTie).every(v => v === 0));
+
+  // Nassau 1v1 still works
+  const cfg1 = { matchType:'1v1', playersInMatch:['a','c'], popHoles:{} };
+  const pay1 = calcNassauPayouts(sc2, np, courseStub, 5, [], {}, cfg1);
+  ok('Nassau1v1 winner +20', pay1.a === 20 && pay1.c === -20);
 
   console.log(`PlayPal tests: ${pass} passed, ${fail} failed`);
   return { pass, fail };

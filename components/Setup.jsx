@@ -562,8 +562,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [courseSearch, setCourseSearch]       = React.useState('');
   const [addMode, setAddMode]                 = React.useState('list');
   const [scanPrefill, setScanPrefill]         = React.useState(null);
-  const [formats, setFormats]                 = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false, markeymatch:false });
-  const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:2, stableford:2, passmoney:2, skins:2, markeymatch:5 });
+  const [formats, setFormats]                 = React.useState({ wolf:false, nassau:false, stableford:false, passmoney:false, skins:false, bingobangobongo:false, teeball:false, markeymatch:false });
+  const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:2, stableford:2, passmoney:2, skins:2, bingobangobongo:2, teeball:2, markeymatch:5 });
   const [nassauMatches, setNassauMatches]     = React.useState([{ id:'nm_init', matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:2 }]);
   const [markeyMatchConfig, setMarkeyMatchConfig] = React.useState({ team1:[], team2:[], stake:5, markeyPopStrokes:{} });
   const [tripMode,        setTripMode]        = React.useState('none'); // 'none' | 'existing' | 'new'
@@ -847,9 +847,15 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                         <span style={{color:'#3F5F4A', marginLeft:6}}>
                           {f.nassauMatches.length} match{f.nassauMatches.length>1?'es':''}
                           {f.nassauMatches.map((m,i)=>{
+                            const popCount=Object.values(m.popHoles||{}).reduce((a,arr)=>a+(arr||[]).filter(Boolean).length,0);
+                            if (m.matchType==='2v2' && m.teams) {
+                              const tName = ids => (ids||[]).map(id=>roundPlayersForNassau.find(p=>p.id===id)?.name.split(' ')[0]).filter(Boolean).join(' & ');
+                              const t1=tName(m.teams.team1); const t2=tName(m.teams.team2);
+                              if(!t1||!t2)return null;
+                              return <span key={m.id} style={{display:'block', marginLeft:16, color:'#3F5F4A', fontSize:11}}>· {t1} vs {t2} — ${m.stakes}</span>;
+                            }
                             const p1=roundPlayersForNassau.find(p=>p.id===m.playersInMatch[0]);
                             const p2=roundPlayersForNassau.find(p=>p.id===m.playersInMatch[1]);
-                            const popCount=Object.values(m.popHoles||{}).reduce((a,arr)=>a+(arr||[]).filter(Boolean).length,0);
                             if(!p1||!p2)return null;
                             return <span key={m.id} style={{display:'block', marginLeft:16, color:'#3F5F4A', fontSize:11}}>· {p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]} — ${m.stakes}{popCount>0?` · ${popCount} pops`:''}</span>;
                           })}

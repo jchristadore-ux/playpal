@@ -31,7 +31,7 @@ const COURSES = [
       {num:1,par:4,yds:447,hdcp:9},{num:2,par:4,yds:389,hdcp:15},{num:3,par:3,yds:199,hdcp:13},
       {num:4,par:4,yds:453,hdcp:1},{num:5,par:4,yds:384,hdcp:7},{num:6,par:5,yds:538,hdcp:5},
       {num:7,par:4,yds:452,hdcp:3},{num:8,par:3,yds:171,hdcp:17},{num:9,par:5,yds:570,hdcp:11},
-      {num:10,par:4,yds:408,hdcp:6},{num:11,par:4,yds:224,hdcp:18},{num:12,par:5,yds:504,hdcp:4},
+      {num:10,par:4,yds:408,hdcp:6},{num:11,par:3,yds:224,hdcp:18},{num:12,par:5,yds:504,hdcp:4},
       {num:13,par:3,yds:218,hdcp:10},{num:14,par:4,yds:444,hdcp:2},{num:15,par:4,yds:478,hdcp:8},
       {num:16,par:4,yds:404,hdcp:14},{num:17,par:3,yds:232,hdcp:16},{num:18,par:5,yds:570,hdcp:12}
     ]
@@ -72,12 +72,12 @@ const COURSES = [
   {
     id:'shinnecock', name:'Shinnecock Hills Golf Club', location:'Southampton, NY', rating:77.0, slope:147,
     holes:[
-      {num:1,par:3,yds:239,hdcp:15},{num:2,par:5,yds:226,hdcp:1},{num:3,par:4,yds:478,hdcp:7},
-      {num:4,par:4,yds:438,hdcp:9},{num:5,par:4,yds:537,hdcp:3},{num:6,par:4,yds:474,hdcp:5},
-      {num:7,par:4,yds:189,hdcp:17},{num:8,par:4,yds:374,hdcp:13},{num:9,par:4,yds:442,hdcp:11},
-      {num:10,par:4,yds:412,hdcp:4},{num:11,par:4,yds:158,hdcp:18},{num:12,par:4,yds:469,hdcp:2},
-      {num:13,par:4,yds:370,hdcp:14},{num:14,par:3,yds:447,hdcp:6},{num:15,par:5,yds:141,hdcp:16},
-      {num:16,par:3,yds:542,hdcp:8},{num:17,par:4,yds:179,hdcp:12},{num:18,par:4,yds:450,hdcp:10}
+      {num:1,par:4,yds:399,hdcp:15},{num:2,par:3,yds:226,hdcp:1},{num:3,par:4,yds:478,hdcp:7},
+      {num:4,par:4,yds:438,hdcp:9},{num:5,par:5,yds:537,hdcp:3},{num:6,par:4,yds:474,hdcp:5},
+      {num:7,par:3,yds:189,hdcp:17},{num:8,par:4,yds:374,hdcp:13},{num:9,par:4,yds:442,hdcp:11},
+      {num:10,par:4,yds:412,hdcp:4},{num:11,par:3,yds:158,hdcp:18},{num:12,par:4,yds:469,hdcp:2},
+      {num:13,par:4,yds:370,hdcp:14},{num:14,par:4,yds:447,hdcp:6},{num:15,par:4,yds:403,hdcp:16},
+      {num:16,par:5,yds:542,hdcp:8},{num:17,par:3,yds:179,hdcp:12},{num:18,par:4,yds:450,hdcp:10}
     ]
   },
   {
@@ -85,9 +85,9 @@ const COURSES = [
     holes:[
       {num:1,par:4,yds:446,hdcp:11},{num:2,par:4,yds:453,hdcp:5},{num:3,par:3,yds:216,hdcp:15},
       {num:4,par:5,yds:525,hdcp:1},{num:5,par:4,yds:431,hdcp:9},{num:6,par:3,yds:194,hdcp:17},
-      {num:7,par:4,yds:166,hdcp:3},{num:8,par:4,yds:442,hdcp:7},{num:9,par:5,yds:471,hdcp:13},
-      {num:10,par:4,yds:190,hdcp:16},{num:11,par:4,yds:386,hdcp:8},{num:12,par:3,yds:535,hdcp:4},
-      {num:13,par:5,yds:212,hdcp:14},{num:14,par:4,yds:458,hdcp:2},{num:15,par:4,yds:417,hdcp:10},
+      {num:7,par:3,yds:166,hdcp:3},{num:8,par:4,yds:442,hdcp:7},{num:9,par:5,yds:471,hdcp:13},
+      {num:10,par:3,yds:190,hdcp:16},{num:11,par:4,yds:386,hdcp:8},{num:12,par:5,yds:535,hdcp:4},
+      {num:13,par:3,yds:212,hdcp:14},{num:14,par:4,yds:458,hdcp:2},{num:15,par:4,yds:417,hdcp:10},
       {num:16,par:4,yds:457,hdcp:6},{num:17,par:3,yds:209,hdcp:18},{num:18,par:4,yds:448,hdcp:12}
     ]
   },
@@ -95,21 +95,21 @@ const COURSES = [
     id:'riviera', name:'Riviera Country Club', location:'Pacific Palisades, CA', rating:75.9, slope:140,
     holes:[
       {num:1,par:5,yds:501,hdcp:9},{num:2,par:4,yds:463,hdcp:3},{num:3,par:4,yds:434,hdcp:13},
-      {num:4,par:4,yds:236,hdcp:17},{num:5,par:3,yds:433,hdcp:5},{num:6,par:4,yds:176,hdcp:15},
+      {num:4,par:3,yds:236,hdcp:17},{num:5,par:4,yds:433,hdcp:5},{num:6,par:3,yds:176,hdcp:15},
       {num:7,par:4,yds:403,hdcp:11},{num:8,par:4,yds:466,hdcp:1},{num:9,par:4,yds:490,hdcp:7},
-      {num:10,par:4,yds:315,hdcp:12},{num:11,par:4,yds:564,hdcp:4},{num:12,par:4,yds:476,hdcp:2},
-      {num:13,par:4,yds:170,hdcp:18},{num:14,par:4,yds:178,hdcp:16},{num:15,par:5,yds:502,hdcp:8},
-      {num:16,par:4,yds:166,hdcp:14},{num:17,par:4,yds:590,hdcp:6},{num:18,par:4,yds:475,hdcp:10}
+      {num:10,par:4,yds:315,hdcp:12},{num:11,par:5,yds:564,hdcp:4},{num:12,par:4,yds:476,hdcp:2},
+      {num:13,par:3,yds:170,hdcp:18},{num:14,par:3,yds:178,hdcp:16},{num:15,par:5,yds:502,hdcp:8},
+      {num:16,par:3,yds:166,hdcp:14},{num:17,par:5,yds:590,hdcp:6},{num:18,par:4,yds:475,hdcp:10}
     ]
   },
   {
     id:'merion', name:'Merion Golf Club (East)', location:'Ardmore, PA', rating:75.7, slope:144,
     holes:[
-      {num:1,par:4,yds:355,hdcp:13},{num:2,par:4,yds:535,hdcp:1},{num:3,par:3,yds:183,hdcp:17},
-      {num:4,par:4,yds:600,hdcp:3},{num:5,par:4,yds:426,hdcp:9},{num:6,par:4,yds:420,hdcp:7},
-      {num:7,par:4,yds:350,hdcp:15},{num:8,par:4,yds:360,hdcp:11},{num:9,par:4,yds:195,hdcp:5},
+      {num:1,par:4,yds:355,hdcp:13},{num:2,par:5,yds:535,hdcp:1},{num:3,par:3,yds:183,hdcp:17},
+      {num:4,par:5,yds:600,hdcp:3},{num:5,par:4,yds:426,hdcp:9},{num:6,par:4,yds:420,hdcp:7},
+      {num:7,par:4,yds:350,hdcp:15},{num:8,par:4,yds:360,hdcp:11},{num:9,par:3,yds:195,hdcp:5},
       {num:10,par:4,yds:312,hdcp:14},{num:11,par:4,yds:369,hdcp:8},{num:12,par:4,yds:397,hdcp:4},
-      {num:13,par:3,yds:129,hdcp:18},{num:14,par:5,yds:414,hdcp:10},{num:15,par:4,yds:411,hdcp:6},
+      {num:13,par:3,yds:129,hdcp:18},{num:14,par:4,yds:414,hdcp:10},{num:15,par:4,yds:411,hdcp:6},
       {num:16,par:4,yds:430,hdcp:2},{num:17,par:3,yds:224,hdcp:16},{num:18,par:4,yds:521,hdcp:12}
     ]
   },
@@ -122,7 +122,7 @@ const COURSES = [
       {num:7,par:4,yds:467,hdcp:1},{num:8,par:4,yds:365,hdcp:13},{num:9,par:5,yds:565,hdcp:3},
       {num:10,par:4,yds:454,hdcp:4},{num:11,par:4,yds:417,hdcp:10},{num:12,par:5,yds:570,hdcp:2},
       {num:13,par:3,yds:192,hdcp:16},{num:14,par:4,yds:419,hdcp:8},{num:15,par:4,yds:397,hdcp:14},
-      {num:16,par:5,yds:536,hdcp:6},{num:17,par:3,yds:213,hdcp:18},{num:18,par:4,yds:542,hdcp:12}
+      {num:16,par:5,yds:536,hdcp:6},{num:17,par:3,yds:213,hdcp:18},{num:18,par:5,yds:542,hdcp:12}
     ]
   },
   {
@@ -263,7 +263,7 @@ const COURSES = [
     holes:[
       {num:1,par:4,yds:412,hdcp:7},{num:2,par:5,yds:518,hdcp:9},{num:3,par:3,yds:185,hdcp:15},
       {num:4,par:4,yds:425,hdcp:3},{num:5,par:4,yds:378,hdcp:13},{num:6,par:4,yds:445,hdcp:1},
-      {num:7,par:3,yds:175,hdcp:17},{num:8,par:5,yds:535,hdcp:7},{num:9,par:4,yds:402,hdcp:5},
+      {num:7,par:3,yds:175,hdcp:17},{num:8,par:5,yds:535,hdcp:11},{num:9,par:4,yds:402,hdcp:5},
       {num:10,par:4,yds:398,hdcp:4},{num:11,par:3,yds:195,hdcp:16},{num:12,par:5,yds:528,hdcp:2},
       {num:13,par:4,yds:392,hdcp:10},{num:14,par:4,yds:365,hdcp:18},{num:15,par:4,yds:438,hdcp:6},
       {num:16,par:3,yds:180,hdcp:12},{num:17,par:5,yds:522,hdcp:8},{num:18,par:4,yds:425,hdcp:14}

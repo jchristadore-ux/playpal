@@ -42,7 +42,7 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
 
   const holeResult = React.useMemo(() => {
     if (!wd.confirmed) return null;
-    return resolveWolfHole(scores, holeIdx, wd.wolfId, wd.partnerId, !wd.lone, players);
+    return resolveWolfHole(scores, holeIdx, wd.wolfId, wd.partnerId, !!wd.lone, players);
   }, [wd.confirmed, JSON.stringify(scores), holeIdx]);
 
   const maxPts = Math.max(...players.map(p => standings[p.id]||0));
@@ -317,12 +317,19 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
         {nassauMatches.map((match, idx) => {
           const matchColor = MULTI_NASSAU_MATCH_COLORS[idx] || '#C8A15A';
           const stake      = match.stakes || nassauFmt?.stakes || 5;
-          const matchCfg   = { playersInMatch:match.playersInMatch, matchType:match.matchType, popHoles:match.popHoles||{} };
+          const matchCfg   = { playersInMatch:match.playersInMatch, matchType:match.matchType, teams:match.teams||null, popHoles:match.popHoles||{} };
           const nassauPlayers = (match.playersInMatch||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);
           if (nassauPlayers.length < 2) return null;
 
+          const is2v2 = match.matchType === '2v2' && match.teams;
+          const teamNames = (ids) => (ids||[]).map(id=>players.find(p=>p.id===id)?.name.split(' ')[0]).filter(Boolean).join(' & ');
           const p1 = nassauPlayers[0];
           const p2 = nassauPlayers[1];
+          const shortStatus = (status) => {
+            if (status === 'EVEN') return 'AS';
+            if (is2v2) return status.replace('Team 1', 'T1').replace('Team 2', 'T2');
+            return status.replace(p1.name.split(' ')[0], p1.initials).replace(p2.name.split(' ')[0], p2.initials);
+          };
           const front  = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i),    holeIdx, {}, matchCfg);
           const back   = nassauSegmentStatus(scores, players, course, Array.from({length:9},(_,i)=>i+9),  holeIdx, {}, matchCfg);
           const full   = nassauSegmentStatus(scores, players, course, Array.from({length:18},(_,i)=>i),   holeIdx, {}, matchCfg);
@@ -337,6 +344,13 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
                 <div style={{width:7, height:7, borderRadius:'50%', background:matchColor, flexShrink:0}}/>
                 <div style={{flex:1, display:'flex', alignItems:'center', gap:6, minWidth:0}}>
                   <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, color:matchColor, letterSpacing:1, whiteSpace:'nowrap'}}>MATCH {idx+1}</span>
+                  {is2v2 ? (
+                    <div style={{display:'flex', alignItems:'center', gap:4, minWidth:0}}>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#0E2B20', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{teamNames(match.teams.team1)}</span>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A'}}>vs</span>
+                      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#0E2B20', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{teamNames(match.teams.team2)}</span>
+                    </div>
+                  ) : (
                   <div style={{display:'flex', alignItems:'center', gap:4, minWidth:0}}>
                     <div style={{width:5, height:5, borderRadius:'50%', background:p1.color, flexShrink:0}}/>
                     <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', whiteSpace:'nowrap'}}>{p1.name.split(' ')[0]}</span>
@@ -344,6 +358,7 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
                     <div style={{width:5, height:5, borderRadius:'50%', background:p2.color, flexShrink:0}}/>
                     <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', whiteSpace:'nowrap'}}>{p2.name.split(' ')[0]}</span>
                   </div>
+                  )}
                   {popThisHole.length > 0 && (
                     <div style={{background:'rgba(200,161,90,0.08)', border:'1px solid rgba(200,161,90,0.25)', borderRadius:4, padding:'1px 5px', flexShrink:0}}>
                       <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A'}}>💰 {popThisHole.map(p=>p.name.split(' ')[0]).join(',')} +1</span>
@@ -355,7 +370,7 @@ const MultiNassauTracker = ({ players, scores, nassauMatches, course, holeIdx, n
                     <div key={lbl} style={{display:'flex', flexDirection:'column', alignItems:'center', background:'#F0EDE4', borderRadius:6, padding:'3px 6px', minWidth:30}}>
                       <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:8, color:'#8A9E8A', letterSpacing:0.5}}>{lbl}</span>
                       <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:10, color:statusColor(status), whiteSpace:'nowrap'}}>
-                        {status === 'EVEN' ? 'AS' : status.replace(p1.name.split(' ')[0], p1.initials).replace(p2.name.split(' ')[0], p2.initials)}
+                        {shortStatus(status)}
                       </span>
                     </div>
                   ))}

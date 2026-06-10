@@ -168,10 +168,10 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
       <div style={{display:'flex', alignItems:'center', padding:'0 12px 12px', gap:8}}>
         <button
           onClick={()=>onScore(p.id, (score||hole.par)-1)}
-          disabled={score<=1}
+          disabled={score !== null && score <= 1}
           style={{width:52, height:52, borderRadius:12, border:'none', background:'#EAE7DE',
             color:'#0E2B20', fontSize:28, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900,
-            cursor:'pointer', flexShrink:0, opacity:score>1?1:0.3,
+            cursor:'pointer', flexShrink:0, opacity:(score === null || score > 1)?1:0.3,
             WebkitTapHighlightColor:'transparent', userSelect:'none',
             display:'flex', alignItems:'center', justifyContent:'center'}}>
           −
@@ -593,7 +593,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { localStorage.setItem('pp_gir_'+round.id,      JSON.stringify(girData));     }, [girData]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
-  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall) => {
+  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall, nextFIR, nextGIR) => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
       if (!window.RoundSyncService || !syncCode) return;
@@ -604,6 +604,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         wolfData:       nextWolf     || wolfRef.current,
         bbbData:        nextBBB      || bbbRef.current,
         teeBallData:    nextTeeBall  || teeBallRef.current,
+        firData:        nextFIR      || firRef.current,
+        girData:        nextGIR      || girRef.current,
         currentHoleIdx: holeIdxRef.current,
         _writtenBy: deviceId,
         _ts: Date.now(),
@@ -629,6 +631,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (livePayload.wolfData)    { setWolfData(livePayload.wolfData);       localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(livePayload.wolfData)); }
       if (livePayload.bbbData)     { setBBBData(livePayload.bbbData);         localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(livePayload.bbbData)); }
       if (livePayload.teeBallData) { setTeeBallData(livePayload.teeBallData); localStorage.setItem('pp_teeball_'+round.id, JSON.stringify(livePayload.teeBallData)); }
+      if (livePayload.firData)     { setFIRData(livePayload.firData);         localStorage.setItem('pp_fir_'+round.id,     JSON.stringify(livePayload.firData)); }
+      if (livePayload.girData)     { setGIRData(livePayload.girData);         localStorage.setItem('pp_gir_'+round.id,     JSON.stringify(livePayload.girData)); }
       if (livePayload.currentHoleIdx !== undefined) { holeIdxRef.current = livePayload.currentHoleIdx; setHoleIdx(livePayload.currentHoleIdx); }
       // Small delay before clearing flag to let React batch the state updates
       setTimeout(() => { applyingRemoteRef.current = false; }, 50);
@@ -655,7 +659,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     return nassauMatches.map((match, idx) => {
       const matchCfg = { playersInMatch:match.playersInMatch, matchType:match.matchType, teams:match.teams||null, popHoles:match.popHoles||{} };
       const status = _nassauLiveStatusForMatch(scores, matchCfg, players, course, holeIdx);
-      return { matchId:match.id, matchColor:MATCH_COLORS_LOCAL[idx]||'#D4AF47', playersInMatch:match.playersInMatch, stakes:match.stakes, front:status.front, back:status.back, overall:status.overall };
+      return { matchId:match.id, matchType:match.matchType, teams:match.teams||null, matchColor:MATCH_COLORS_LOCAL[idx]||'#D4AF47', playersInMatch:match.playersInMatch, stakes:match.stakes, front:status.front, back:status.back, overall:status.overall };
     });
   }, [JSON.stringify(scores), holeIdx]);
 
@@ -673,9 +677,15 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (hasNassau) {
         matchLiveStatuses.forEach((ms) => {
           if (!ms.playersInMatch.includes(p.id)) return;
-          const opponentId = ms.playersInMatch.find(id => id !== p.id);
-          const opponent   = opponentId ? players.find(pl => pl.id === opponentId) : null;
-          const oppName    = opponent ? opponent.name.split(' ')[0] : '?';
+          let oppName;
+          if (ms.matchType === '2v2' && ms.teams) {
+            const oppIds = (ms.teams.team1 || []).includes(p.id) ? (ms.teams.team2 || []) : (ms.teams.team1 || []);
+            oppName = oppIds.map(id => players.find(pl => pl.id === id)?.name.split(' ')[0]).filter(Boolean).join(' & ') || '?';
+          } else {
+            const opponentId = ms.playersInMatch.find(id => id !== p.id);
+            const opponent   = opponentId ? players.find(pl => pl.id === opponentId) : null;
+            oppName = opponent ? opponent.name.split(' ')[0] : '?';
+          }
           stats.push({ icon:'💰', label:`vs ${oppName} F9`, value:ms.front, color:ms.front==='EVEN'?'#3F5F4A':ms.matchColor });
           if (holeIdx >= 9) {
             stats.push({ icon:'', label:`B9`, value:ms.back,    color:ms.back==='EVEN'?'#3F5F4A':ms.matchColor });
@@ -795,6 +805,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     setFIRData(prev => {
       const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
       next[playerId][holeIdx] = val;
+      scheduleCloudWrite(null, null, null, null, null, null, next, null);
       return next;
     });
   };
@@ -803,6 +814,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     setGIRData(prev => {
       const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
       next[playerId][holeIdx] = val;
+      scheduleCloudWrite(null, null, null, null, null, null, null, next);
       return next;
     });
   };
@@ -1025,9 +1037,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           nassauMatches={nassauMatches} holeIdx={holeIdx}
           hasWolf={hasWolf} hasPTM={hasPTM} hasNassau={hasNassau}
           hasStable={hasStable} hasSkins={hasSkins}
-          hasBBB={hasBBB} hasTeeBall={hasTeeBall}
+          hasBBB={hasBBB} hasTeeBall={hasTeeBall} hasMarkey={hasMarkey}
           wolfFmt={wolfFmt} ptmFmt={ptmFmt} skinsFmt={skinsFmt} nassauFmtObj={nassauFmtObj}
-          bbbFmt={bbbFmt} teeBallFmt={teeBallFmt}
+          bbbFmt={bbbFmt} teeBallFmt={teeBallFmt} markeyFmt={markeyFmt}
           bbbData={bbbData} teeBallData={teeBallData}
         />
       )}

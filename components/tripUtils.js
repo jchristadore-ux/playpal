@@ -71,7 +71,8 @@
           else if (diff ===  1) s.bogeys++;
           else                  s.doubles++;
 
-          s.totalPutts += (puttsMap[i] || 0);
+          // Older completed rounds only stored putts inside holeScores entries
+          s.totalPutts += (puttsMap[i] || h.putts || 0);
 
           if (par > 3) {
             if (firMap[i] !== null && firMap[i] !== undefined) {

@@ -12,6 +12,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
 
   const courses = customCourses || [];
 
+  // Keep the visible list in sync when players update from cloud sync
+  React.useEffect(() => { setLocalPlayers(players); }, [players]);
+
   const [showJoin, setShowJoin] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.has('join') || params.has('code');
@@ -72,7 +75,13 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   };
 
   const savePlayer = () => {
-    const updated = form.initials ? form : {...form, initials: form.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)};
+    if (!form.name.trim()) return;
+    const normalized = {
+      ...form,
+      name:     form.name.trim(),
+      handicap: Math.max(0, parseFloat(form.handicap) || 0),
+    };
+    const updated = normalized.initials ? normalized : {...normalized, initials: normalized.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)};
     if (editPlayer) {
       const next = localPlayers.map(p => p.id === editPlayer.id ? {...updated, id:editPlayer.id} : p);
       setLocalPlayers(next); onManagePlayers(next);
@@ -206,7 +215,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             {recentRounds.map((r, i) => {
               const tappable = !!(r.syncCode && onViewRound);
               return (
-                <div key={i}
+                <div key={r.syncCode || i}
                   onClick={() => tappable && onViewRound(r.syncCode)}
                   style={{...homeS.roundCard, cursor: tappable ? 'pointer' : 'default'}}>
                   <div style={{display:'flex', alignItems:'center', gap:10}}>

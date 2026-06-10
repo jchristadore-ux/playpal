@@ -60,6 +60,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
   const stablefordPts = React.useMemo(() => {
     try {
+      if (!formats.some(f => f.type === 'stableford')) return Object.fromEntries(players.map(p => [p.id, 0]));
       return Object.fromEntries(players.map(p => [p.id, course.holes.reduce((a,h,i) => a + calcStablefordPoints(getAdjustedHoleScore(_scores, _popFlags, p.id, i), h.par), 0)]));
     } catch(e) { return Object.fromEntries(players.map(p => [p.id, 0])); }
   }, []);
@@ -90,25 +91,46 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     vsPar:  totalVsPar(_scores, p.id, course.holes),
     payout: payouts[p.id]||0,
     stPts:  stablefordPts[p.id]||0,
-  })).sort((a,b)=>a.vsPar-b.vsPar);
+  })).sort((a,b)=> (a.gross===0)-(b.gross===0) || a.vsPar-b.vsPar || a.gross-b.gross);
 
-  const debts = [];
-  players.forEach(debtor => {
-    if ((payouts[debtor.id]||0) >= 0) return;
-    const owed = Math.abs(payouts[debtor.id]);
-    const creditors = players.filter(p=>(payouts[p.id]||0)>0).sort((a,b)=>(payouts[b.id]||0)-(payouts[a.id]||0));
-    if (creditors.length) debts.push({ from:debtor, to:creditors[0], amount:owed });
-  });
+  // Net settlement: greedy ledger so each creditor's credit is consumed before
+  // moving to the next — debtors are never all routed to the same winner.
+  const debts = React.useMemo(() => {
+    const ledger = Object.fromEntries(players.map(p => [p.id, payouts[p.id] || 0]));
+    const out = [];
+    players
+      .filter(p => ledger[p.id] < -0.005)
+      .sort((a, b) => ledger[a.id] - ledger[b.id])
+      .forEach(debtor => {
+        let owed = Math.abs(ledger[debtor.id]);
+        const creditors = players
+          .filter(p => ledger[p.id] > 0.005)
+          .sort((a, b) => ledger[b.id] - ledger[a.id]);
+        for (const creditor of creditors) {
+          if (owed <= 0.005) break;
+          const transfer = Math.min(owed, ledger[creditor.id]);
+          if (transfer > 0.005) {
+            out.push({ from: debtor, to: creditor, amount: transfer });
+            ledger[creditor.id] -= transfer;
+            owed -= transfer;
+          }
+        }
+        ledger[debtor.id] = -owed;
+      });
+    return out;
+  }, []);
 
-  const openVenmo = (from, to, amount) => {
+  // Charges (requests money from) the debtor — txn=charge, recipient is the player who owes.
+  const openVenmo = (from, to, amount, debtKey) => {
+    const venmoHandle = (from.venmo || '').replace('@','');
+    if (!venmoHandle) { showToast(`${from.name.split(' ')[0]} has no Venmo handle on their profile`, 'error'); return; }
     const note    = `PlayPal Golf · ${course.name} · ${new Date().toLocaleDateString()}`;
     const encoded = encodeURIComponent(note);
-    const venmoHandle = to.venmo.replace('@','');
-    const deepLink = `venmo://paycharge?txn=pay&recipients=${venmoHandle}&amount=${amount.toFixed(2)}&note=${encoded}`;
-    const webLink  = `https://venmo.com/${venmoHandle}?txn=pay&amount=${amount.toFixed(2)}&note=${encoded}`;
+    const deepLink = `venmo://paycharge?txn=charge&recipients=${venmoHandle}&amount=${amount.toFixed(2)}&note=${encoded}`;
+    const webLink  = `https://venmo.com/${venmoHandle}?txn=charge&amount=${amount.toFixed(2)}&note=${encoded}`;
     const a = document.createElement('a'); a.href = deepLink; a.click();
     setTimeout(()=>{ window.open(webLink,'_blank'); }, 1200);
-    setVenmoSent(prev=>({...prev,[from.id]:true}));
+    setVenmoSent(prev=>({...prev,[debtKey]:true}));
     showToast(`Venmo request sent to @${venmoHandle}`);
   };
 
@@ -154,7 +176,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
           f.type === 'stableford'      ? `$${f.stakes} match` :
           f.type === 'passmoney'       ? `$${f.stakes} pot` :
           f.type === 'bingobangobongo' ? `$${f.stakes} pot` :
-          f.type === 'teeball'         ? `$${f.stakes} pot` : '';
+          f.type === 'teeball'         ? `$${f.stakes} pot` :
+          f.type === 'markeymatch'     ? `$${f.markeyMatchConfig?.stake ?? f.stakes}/match` : '';
         body += `\n${info.label.toUpperCase()} — ${stakeLabel}\n${'─'.repeat(60)}\n`;
 
         if (f.type === 'skins') {
@@ -618,11 +641,11 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                       <Avatar player={d.from} size={32}/>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{d.from.name}</div>
-                        <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>owes <span style={{color:'#C8A15A', fontWeight:700}}>${d.amount.toFixed(0)}</span> to {d.to.name.split(' ')[0]} · @{d.to.venmo}</div>
+                        <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>owes <span style={{color:'#C8A15A', fontWeight:700}}>${d.amount.toFixed(0)}</span> to {d.to.name.split(' ')[0]}{d.from.venmo ? ` · @${d.from.venmo}` : ''}</div>
                       </div>
-                      <Btn onClick={()=>openVenmo(d.from,d.to,d.amount)}
-                        variant={venmoSent[d.from.id]?'ghost':'gold'} style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>
-                        {venmoSent[d.from.id] ? '✓ SENT' : '💸 REQUEST'}
+                      <Btn onClick={()=>openVenmo(d.from,d.to,d.amount,i)}
+                        variant={venmoSent[i]?'ghost':'gold'} style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>
+                        {venmoSent[i] ? '✓ SENT' : '💸 REQUEST'}
                       </Btn>
                     </div>
                   ))}
