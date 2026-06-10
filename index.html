@@ -18,8 +18,8 @@
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
 
-<script src="components/gameData.js?v=2"></script>
-<script src="components/gameUtils.js?v=2"></script>
+<script src="components/gameData.js?v=3"></script>
+<script src="components/gameUtils.js?v=3"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #F6F4EE; color: #0E2B20; font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -90,8 +90,8 @@
 <script type="text/babel" src="components/ScoreEntry.jsx"></script>
 <script type="text/babel" src="components/Summary.jsx"></script>
 <script type="text/babel" src="components/RoundViewer.jsx"></script>
-<script src="components/tripUtils.js?v=1"></script>
-<script type="text/babel" src="components/TripDashboard.jsx?v=1"></script>
+<script src="components/tripUtils.js?v=2"></script>
+<script type="text/babel" src="components/TripDashboard.jsx?v=2"></script>
 
 <script>
 /* ============================================================
@@ -491,8 +491,14 @@ const App = () => {
   const [screen, setScreen] = React.useState(() => {
     if (window.__pp_pending_join_code) return 'home';
     const ss = sessionStorage.getItem('pp_screen');
-    if (ss) return ss;
-    if (localStorage.getItem('pp_active_round') === '1') return 'score';
+    // 'summary', 'viewround', and 'trip' depend on in-memory state that does
+    // not survive a reload — restoring them would render a blank screen.
+    const restorable = ['home', 'setup', 'score', 'trips'];
+    if (ss && restorable.includes(ss)) {
+      if (ss === 'score') return localStorage.getItem('pp_round') ? 'score' : 'home';
+      return ss;
+    }
+    if (localStorage.getItem('pp_active_round') === '1' && localStorage.getItem('pp_round')) return 'score';
     return 'home';
   });
 
@@ -744,6 +750,7 @@ const App = () => {
       ...round,
       holeScores,
       payouts: _computedPayouts,
+      putts:    putts || {},
       firData:  firData || {},
       girData:  girData || {},
       tripId:  round.tripId || null,
