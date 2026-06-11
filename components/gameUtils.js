@@ -625,20 +625,25 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
 }
 
 // Returns { [playerId]: net amount won/lost } across all matches.
-// Each match: winning team members split the stake (stake/2 each), losing team pays stake/2 each.
+// Each match is worth `stake` to a side: the winning side collects `stake`
+// (split evenly among its members) and the losing side pays `stake` (split
+// evenly among its members). So 1v1 winner takes the full stake; 2v2 winners
+// take stake/2 each. Zero-sum regardless of team size.
 function calcMarkeyMatchPayouts(matchStates, stake, team1, team2) {
   const pay = {};
   [...team1, ...team2].forEach(id => { pay[id] = 0; });
 
+  const t1Share = stake / (team1.length || 1);
+  const t2Share = stake / (team2.length || 1);
+
   matchStates.forEach(match => {
     const { team1Holes, team2Holes } = match;
-    const half = stake / 2;
     if (team1Holes > team2Holes) {
-      team1.forEach(id => { pay[id] = (pay[id] || 0) + half; });
-      team2.forEach(id => { pay[id] = (pay[id] || 0) - half; });
+      team1.forEach(id => { pay[id] = (pay[id] || 0) + t1Share; });
+      team2.forEach(id => { pay[id] = (pay[id] || 0) - t2Share; });
     } else if (team2Holes > team1Holes) {
-      team2.forEach(id => { pay[id] = (pay[id] || 0) + half; });
-      team1.forEach(id => { pay[id] = (pay[id] || 0) - half; });
+      team2.forEach(id => { pay[id] = (pay[id] || 0) + t2Share; });
+      team1.forEach(id => { pay[id] = (pay[id] || 0) - t1Share; });
     }
   });
 

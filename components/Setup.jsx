@@ -459,7 +459,8 @@ const _stateNames = { NJ:'New Jersey', CA:'California', NY:'New York', PA:'Penns
 
 const MarkeyMatchConfig = ({ roundPlayers, markeyMatchConfig, onChange, course }) => {
   const { team1 = [], team2 = [], stake = 5, markeyPopStrokes = {} } = markeyMatchConfig;
-  const allAssigned = team1.length === 2 && team2.length === 2;
+  // Valid as a 1v1 (one per team) or 2v2 (two per team) — both sides just need a player.
+  const allAssigned = team1.length >= 1 && team2.length >= 1;
 
   const setStakeVal = (v) => onChange({ ...markeyMatchConfig, stake: v });
 
@@ -469,10 +470,10 @@ const MarkeyMatchConfig = ({ roundPlayers, markeyMatchConfig, onChange, course }
     if (teamKey === 'team1') { if (newT1.length < 2) newT1.push(playerId); }
     else { if (newT2.length < 2) newT2.push(playerId); }
 
-    const allFour = [...newT1, ...newT2];
+    const assigned = [...newT1, ...newT2];
     let newPops = markeyPopStrokes;
-    if (newT1.length === 2 && newT2.length === 2 && course?.holes) {
-      const assignedPlayers = roundPlayers.filter(p => allFour.includes(p.id));
+    if (newT1.length >= 1 && newT2.length >= 1 && course?.holes) {
+      const assignedPlayers = roundPlayers.filter(p => assigned.includes(p.id));
       newPops = window.calcMarkeyMatchPops(assignedPlayers, course);
     }
     onChange({ ...markeyMatchConfig, team1: newT1, team2: newT2, markeyPopStrokes: newPops });
@@ -485,7 +486,7 @@ const MarkeyMatchConfig = ({ roundPlayers, markeyMatchConfig, onChange, course }
         <StakesInput value={stake} onChange={setStakeVal} />
       </div>
 
-      <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: 2, color: '#3F5F4A', marginBottom: 2 }}>ASSIGN TEAMS (2 per team)</div>
+      <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: 2, color: '#3F5F4A', marginBottom: 2 }}>ASSIGN TEAMS (1–2 per side · 1v1 or 2v2)</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {roundPlayers.map(p => {
           const inT1 = team1.includes(p.id);
@@ -514,15 +515,18 @@ const MarkeyMatchConfig = ({ roundPlayers, markeyMatchConfig, onChange, course }
 
       {!allAssigned && (
         <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 11, color: '#DC2626' }}>
-          Assign exactly 2 players to each team (Team A: {team1.length}/2, Team B: {team2.length}/2)
+          Assign at least one player to each side (Team A: {team1.length}, Team B: {team2.length})
         </div>
       )}
 
-      {allAssigned && (
-        <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 11, color: '#15803D' }}>
-          ✓ {roundPlayers.find(p => p.id === team1[0])?.name.split(' ')[0]} &amp; {roundPlayers.find(p => p.id === team1[1])?.name.split(' ')[0]} vs {roundPlayers.find(p => p.id === team2[0])?.name.split(' ')[0]} &amp; {roundPlayers.find(p => p.id === team2[1])?.name.split(' ')[0]}
-        </div>
-      )}
+      {allAssigned && (() => {
+        const teamNames = (ids) => ids.map(id => roundPlayers.find(p => p.id === id)?.name.split(' ')[0]).filter(Boolean).join(' & ');
+        return (
+          <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 11, color: '#15803D' }}>
+            ✓ {teamNames(team1)} vs {teamNames(team2)} ({team1.length}v{team2.length})
+          </div>
+        );
+      })()}
 
       {allAssigned && course?.holes && (() => {
         const allFour = [...team1, ...team2];
@@ -615,7 +619,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
     });
   })();
 
-  const markeyValid = !formats.markeymatch || (markeyMatchConfig.team1.length === 2 && markeyMatchConfig.team2.length === 2);
+  const markeyValid = !formats.markeymatch || (markeyMatchConfig.team1.length >= 1 && markeyMatchConfig.team2.length >= 1);
 
   const activeFormats = Object.entries(formats).filter(([,v])=>v).map(([k])=>({
     type:k,
@@ -841,8 +845,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                     )}
                     {on && key === 'markeymatch' && (
                       <div style={{borderTop:'1px solid rgba(14,43,32,0.08)', marginTop:12, paddingTop:12}}>
-                        {selectedPlayers.length < 4
-                          ? <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#DC2626'}}>⚠️ Markey Match requires at least 4 players — select 4 players in Step 1</div>
+                        {selectedPlayers.length < 2
+                          ? <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#DC2626'}}>⚠️ Markey Match requires at least 2 players — select players in Step 1</div>
                           : <MarkeyMatchConfig roundPlayers={roundPlayersForNassau} markeyMatchConfig={markeyMatchConfig} onChange={setMarkeyMatchConfig} course={course}/>
                         }
                       </div>
@@ -882,11 +886,11 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                           })}
                         </span>
                       )}
-                      {f.type === 'markeymatch' && f.markeyMatchConfig?.team1?.length === 2 && f.markeyMatchConfig?.team2?.length === 2 && (() => {
+                      {f.type === 'markeymatch' && f.markeyMatchConfig?.team1?.length >= 1 && f.markeyMatchConfig?.team2?.length >= 1 && (() => {
                         const cfg = f.markeyMatchConfig;
                         const t1 = cfg.team1.map(id => roundPlayersForNassau.find(p=>p.id===id)?.name.split(' ')[0]).filter(Boolean).join(' & ');
                         const t2 = cfg.team2.map(id => roundPlayersForNassau.find(p=>p.id===id)?.name.split(' ')[0]).filter(Boolean).join(' & ');
-                        return <span style={{color:'#3F5F4A', marginLeft:6, display:'block', marginTop:2, fontSize:11}}>· {t1} vs {t2} — <span style={{color:'#C8A15A', fontWeight:700}}>${cfg.stake}/match</span></span>;
+                        return <span style={{color:'#3F5F4A', marginLeft:6, display:'block', marginTop:2, fontSize:11}}>· {t1} vs {t2} ({cfg.team1.length}v{cfg.team2.length}) — <span style={{color:'#C8A15A', fontWeight:700}}>${cfg.stake}/match</span></span>;
                       })()}
                     </div>
                   ))}
@@ -900,7 +904,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
             </div>
             {!canStart && (
               <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
-                {!nassauValid ? 'Complete all Nassau match setups to continue' : !markeyValid ? 'Assign 2 players to each Markey Match team to continue' : !tripValid ? 'Enter a trip name to continue' : 'Select at least one format to continue'}
+                {!nassauValid ? 'Complete all Nassau match setups to continue' : !markeyValid ? 'Assign at least one player to each Markey Match side to continue' : !tripValid ? 'Enter a trip name to continue' : 'Select at least one format to continue'}
               </div>
             )}
           </div>
