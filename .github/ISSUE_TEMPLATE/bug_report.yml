@@ -1,0 +1,33 @@
+name: Bug report
+description: Something in PlayPal isn't working right
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong?
+      placeholder: "Entered a score on hole 7 and the Nassau tracker showed the wrong team ahead…"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device & browser
+      placeholder: "iPhone 15, Safari (added to home screen)"
+  - type: input
+    id: format
+    attributes:
+      label: Game formats in the round (if relevant)
+      placeholder: "Wolf + Nassau 2v2"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or sync code
+      description: Screenshots help; a round sync code lets the bug be reproduced with real data.

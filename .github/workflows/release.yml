@@ -1,0 +1,61 @@
+name: Release
+
+# Tag a commit with v* (e.g. v1.0.0) and push the tag:
+#   git tag v1.0.0 && git push origin v1.0.0
+# This builds, tests, generates a changelog from commit messages, and
+# publishes a GitHub Release with the deployable site attached.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build and test
+        run: |
+          npm ci
+          npm run build
+          node --test "tests/**/*.test.mjs"
+
+      - name: Package site
+        run: |
+          mkdir -p playpal-site
+          cp -r index.html join.html privacy.html terms.html support.html \
+                manifest.webmanifest sw.js playpal-logo.png dist icons playpal-site/
+          tar czf playpal-site.tar.gz playpal-site
+
+      - name: Generate changelog since previous tag
+        id: changelog
+        run: |
+          PREV=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "$PREV" ]; then
+            RANGE="$PREV..${GITHUB_REF_NAME}"
+          else
+            RANGE="${GITHUB_REF_NAME}"
+          fi
+          {
+            echo 'NOTES<<EOF'
+            echo "## Changes"
+            git log --pretty='- %s (%h)' --no-merges $RANGE
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.NOTES }}
+          files: playpal-site.tar.gz
