@@ -41,6 +41,7 @@ jobs:
       - name: Scan for accidentally committed secrets
         run: |
           # Firebase web config is public by design; look for genuinely secret patterns.
+          # .github is excluded so the scan doesn't match its own patterns in this file.
           ! grep -rEn "(sk-ant-|sk_live_|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY)" \
-            --exclude-dir=node_modules --exclude-dir=.git . \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.github . \
             || { echo "::error::Potential secret committed"; exit 1; }
