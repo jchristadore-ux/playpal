@@ -583,6 +583,12 @@ const MarkeyMatchTracker = ({ players, scores, format, holeIdx }) => {
 
   const [expandedMatch, setExpandedMatch] = React.useState(null);
 
+  // Play order so press timing / "starts next hole" respects the starting tee.
+  const startingTee = (cfg.startingTee || format.startingTee) === 10 ? 10 : 1;
+  const playOrder = window.getPlayOrder(startingTee);
+  const seqPos = playOrder.indexOf(holeIdx);
+  const nextHoleIdx = seqPos >= 0 && seqPos < 17 ? playOrder[seqPos + 1] : null;
+
   const playerById = (id) => players.find(p => p.id === id);
   const team1Names = cfg.team1.map(id => playerById(id)?.name.split(' ')[0] || '').join(' & ');
   const team2Names = cfg.team2.map(id => playerById(id)?.name.split(' ')[0] || '').join(' & ');
@@ -600,7 +606,7 @@ const MarkeyMatchTracker = ({ players, scores, format, holeIdx }) => {
   };
 
   // Which match indices started after a press on the current hole?
-  const pressedThisHole = matchStates.filter(m => m.startHole === holeIdx + 1 && m.matchId > 1);
+  const pressedThisHole = matchStates.filter(m => m.matchId > 1 && m.startSeq === seqPos + 1);
 
   const popThisHole = [...cfg.team1, ...cfg.team2].filter(id => {
     const strokes = (cfg.markeyPopStrokes?.[id]?.[holeIdx] || 0);
@@ -657,10 +663,10 @@ const MarkeyMatchTracker = ({ players, scores, format, holeIdx }) => {
                     MATCH {match.matchId}
                   </span>
                   <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', whiteSpace:'nowrap'}}>
-                    H{match.startHole + 1}–18
+                    H{match.startHole + 1}–{(match.endHole ?? 17) + 1}
                   </span>
                   {match.matchId > 1 && (
-                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px', whiteSpace:'nowrap'}}>PRESS</span>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px', whiteSpace:'nowrap'}}>{match.isTurnPress ? 'TURN' : 'PRESS'}</span>
                   )}
                 </div>
                 <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2}}>
@@ -691,8 +697,9 @@ const MarkeyMatchTracker = ({ players, scores, format, holeIdx }) => {
                     </div>
                   </div>
                   <div style={{display:'flex', gap:2, flexWrap:'wrap'}}>
-                    {match.holeResults.map((r, i) => {
-                      if (i < match.startHole || r === null) return null;
+                    {playOrder.map((i) => {
+                      const r = match.holeResults[i];
+                      if (r === null) return null;
                       const bg = r === 'team1' ? '#C8A15A' : r === 'team2' ? '#7B9FE0' : '#E7E3D9';
                       const textColor = r === 'tie' ? '#8A9E8A' : '#FFFFFF';
                       const lbl = r === 'team1' ? 'A' : r === 'team2' ? 'B' : '–';
@@ -714,7 +721,7 @@ const MarkeyMatchTracker = ({ players, scores, format, holeIdx }) => {
         <div style={{background:'rgba(224,123,224,0.06)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:8, padding:'6px 10px', display:'flex', alignItems:'center', gap:6}}>
           <span style={{fontSize:12}}>🔔</span>
           <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#E07BE0'}}>
-            PRESS — Match {pressedThisHole.map(m => m.matchId).join(', ')} start{pressedThisHole.length === 1 ? 's' : ''} H{holeIdx + 2}
+            {pressedThisHole.some(m => m.isTurnPress) ? 'TURN' : 'PRESS'} — Match {pressedThisHole.map(m => m.matchId).join(', ')} start{pressedThisHole.length === 1 ? 's' : ''} H{(nextHoleIdx ?? holeIdx) + 1}
           </span>
         </div>
       )}

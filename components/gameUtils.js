@@ -505,6 +505,15 @@ function totalVsPar(scores, pid, holes) {
 
 // ─── MARKEY MATCH ─────────────────────────────────────────────────────────────
 
+// Order holes are played in. Starting on the 10th tee plays 10→18 then 1→9.
+// Returned values are actual hole indices (0–17); position in the array is the
+// play-order position. Data arrays stay indexed by actual hole index throughout.
+function getPlayOrder(startingTee) {
+  return startingTee === 10
+    ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+    : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+}
+
 function getMarkeyAdjustedScore(scores, markeyPopStrokes, playerId, holeIdx) {
   const gross = scores[playerId]?.[holeIdx];
   if (!gross) return 0;
@@ -525,19 +534,31 @@ function calcMarkeyMatchPops(players, course) {
 }
 
 // Derives the full match state array from scores alone. New matches spawn
-// automatically when a team goes 2 down. All matches run to the end of the round.
+// automatically when a team goes 2 down. A fresh press also begins at the turn
+// (the 10th hole played) while the overall match score continues across all 18.
+// Holes are walked in play order so the press timing respects the starting tee.
 function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
   const cfg = format.markeyMatchConfig;
   if (!cfg) return [];
   const { team1, team2 } = cfg;
   const pops = markeyPopStrokes || cfg.markeyPopStrokes || {};
 
+  // Play order: starting on the 10th tee plays holes 10→18 then 1→9.
+  const startingTee = (cfg.startingTee || format.startingTee) === 10 ? 10 : 1;
+  const playOrder = getPlayOrder(startingTee);
+  const lastHole = playOrder[17]; // actual hole index played last in the round
+
   const allMatches = [];
   const activeMatches = [];
 
-  const makeMatch = (startHole) => ({
+  // startHole = actual hole index where the match begins; startSeq = its position
+  // in the play order (0–17). endHole is the final hole index of the round.
+  const makeMatch = (startSeq, isTurnPress) => ({
     matchId: allMatches.length + 1,
-    startHole,
+    startHole: playOrder[startSeq],
+    startSeq,
+    endHole: lastHole,
+    isTurnPress: !!isTurnPress,
     holeResults: Array(18).fill(null),
     team1Holes: 0,
     team2Holes: 0,
@@ -548,12 +569,25 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
   allMatches.push(firstMatch);
   activeMatches.push(firstMatch);
 
-  for (let holeIdx = 0; holeIdx < 18; holeIdx++) {
+  let turnPressSpawned = false;
+
+  for (let seq = 0; seq < 18; seq++) {
+    const holeIdx = playOrder[seq];
+
     // Best net score per team (lower is better; 0 = unscored)
     const t1Scores = team1.map(id => getMarkeyAdjustedScore(scores, pops, id, holeIdx)).filter(s => s > 0);
     const t2Scores = team2.map(id => getMarkeyAdjustedScore(scores, pops, id, holeIdx)).filter(s => s > 0);
 
     if (t1Scores.length === 0 || t2Scores.length === 0) continue;
+
+    // Turn press: once the back nine of the round (10th hole played) begins, a fresh
+    // even match kicks off. The overall match (Match 1) keeps running underneath it.
+    if (!turnPressSpawned && seq >= 9) {
+      const turnMatch = makeMatch(9, true);
+      allMatches.push(turnMatch);
+      activeMatches.push(turnMatch);
+      turnPressSpawned = true;
+    }
 
     const t1Best = Math.min(...t1Scores);
     const t2Best = Math.min(...t2Scores);
@@ -562,26 +596,26 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
     const toSpawn = [];
 
     activeMatches.forEach(match => {
-      if (holeIdx < match.startHole) return;
+      if (seq < match.startSeq) return;
       match.holeResults[holeIdx] = holeResult;
       if (holeResult === 'team1') match.team1Holes++;
       else if (holeResult === 'team2') match.team2Holes++;
 
       // Press check: if a team just went 2 down, spawn a new match next hole
       const deficit = match.team2Holes - match.team1Holes;
-      if ((deficit === 2 || deficit === -2) && holeIdx < 17) {
+      if ((deficit === 2 || deficit === -2) && seq < 17) {
         // Only spawn once per deficit of exactly 2 (check it wasn't already 2 before this hole)
         const prevT1 = match.team1Holes - (holeResult === 'team1' ? 1 : 0);
         const prevT2 = match.team2Holes - (holeResult === 'team2' ? 1 : 0);
         const prevDeficit = prevT2 - prevT1;
         if (Math.abs(prevDeficit) < 2) {
-          toSpawn.push(holeIdx + 1);
+          toSpawn.push(seq + 1);
         }
       }
     });
 
-    toSpawn.forEach(startHole => {
-      const newMatch = makeMatch(startHole);
+    toSpawn.forEach(startSeq => {
+      const newMatch = makeMatch(startSeq);
       allMatches.push(newMatch);
       activeMatches.push(newMatch);
     });
@@ -771,7 +805,7 @@ if (typeof window !== 'undefined') {
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
     calcBBBStandings, calcBBBPayouts, calcTeeBallStandings, calcTeeBallPayouts,
-    getMarkeyAdjustedScore, calcMarkeyMatchPops, calcMarkeyMatchState, calcMarkeyMatchPayouts,
+    getPlayOrder, getMarkeyAdjustedScore, calcMarkeyMatchPops, calcMarkeyMatchState, calcMarkeyMatchPayouts,
     runPlayPalTests,
   });
 }

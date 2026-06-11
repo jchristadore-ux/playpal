@@ -243,8 +243,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
             body += `  Team A: ${t1Names}\n  Team B: ${t2Names}\n\n`;
             markeyMatchStates.forEach(match => {
               const winner = match.team1Holes > match.team2Holes ? 'Team A' : match.team2Holes > match.team1Holes ? 'Team B' : 'Push';
-              const pressLabel = match.matchId > 1 ? ' [PRESS]' : '';
-              body += `  Match ${match.matchId}${pressLabel} (H${match.startHole+1}-18): Team A ${match.team1Holes} – ${match.team2Holes} Team B  →  ${winner}  $${cfg.stake}\n`;
+              const pressLabel = match.matchId > 1 ? (match.isTurnPress ? ' [TURN PRESS]' : ' [PRESS]') : '';
+              body += `  Match ${match.matchId}${pressLabel} (H${match.startHole+1}-${(match.endHole ?? 17)+1}): Team A ${match.team1Holes} – ${match.team2Holes} Team B  →  ${winner}  $${cfg.stake}\n`;
             });
             body += '\n';
           }
@@ -549,8 +549,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                               <div style={{width:6, height:6, borderRadius:'50%', background:mc, flexShrink:0}}/>
                               <div style={{flex:1}}>
                                 <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:mc}}>Match {match.matchId}</span>
-                                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginLeft:6}}>H{match.startHole+1}–18</span>
-                                {match.matchId > 1 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px', marginLeft:6}}>PRESS</span>}
+                                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginLeft:6}}>H{match.startHole+1}–{(match.endHole ?? 17)+1}</span>
+                                {match.matchId > 1 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px', marginLeft:6}}>{match.isTurnPress ? 'TURN' : 'PRESS'}</span>}
                               </div>
                               <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#3F5F4A'}}>{match.team1Holes}–{match.team2Holes}</span>
                               <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, color:resultColor, minWidth:60, textAlign:'right'}}>{winner ? `${winner} wins` : 'Push'}</span>
