@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest a new game format or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's missing?
+      placeholder: "We play a 9-point game on trips and have to track it on paper…"
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: How should it work?
+      description: Rules, scoring, payouts — as much detail as possible.

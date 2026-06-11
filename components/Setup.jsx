@@ -1,80 +1,5 @@
-// Setup.jsx — Course persistence + scorecard image scan + realtime course sync
+// Setup.jsx — Course persistence + realtime course sync
 //             Multi-Nassau: supports 1–3 independent Nassau matches per round
-
-const ScorecardScanner = ({ onResult, onCancel }) => {
-  const [status, setStatus]     = React.useState('idle');
-  const [preview, setPreview]   = React.useState(null);
-  const [errorMsg, setErrorMsg] = React.useState('');
-  const fileRef = React.useRef(null);
-
-  const handleFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) { setErrorMsg('Please upload an image file (JPG, PNG, HEIC, etc.)'); setStatus('error'); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target.result);
-    reader.readAsDataURL(file);
-    setStatus('scanning'); setErrorMsg('');
-    const b64Reader = new FileReader();
-    b64Reader.onload = (e) => { const b64 = e.target.result.split(',')[1]; callVision(b64, file.type || 'image/jpeg'); };
-    b64Reader.readAsDataURL(file);
-  };
-
-  const callVision = async (b64, mediaType) => {
-    const prompt = `You are analyzing a golf scorecard image. Extract the data and return ONLY valid JSON — no markdown, no explanation, no code fences.\n\nReturn exactly this structure:\n{\n  "name": "Full official course name",\n  "location": "City, State",\n  "rating": 72.0,\n  "slope": 113,\n  "holes": [\n    {"num": 1, "par": 4, "yds": 380, "hdcp": 7},\n    ... (exactly 18 entries)\n  ]\n}\n\nRules:\n- EXACTLY 18 holes numbered 1–18\n- par = 3, 4, or 5 only\n- If only 9 holes visible, repeat with hdcp offset by 9\n- NEVER return fewer than 18 holes`;
-    try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1200, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }, { type: 'text', text: prompt }] }] })
-      });
-      if (!resp.ok) throw new Error('API error ' + resp.status);
-      const data = await resp.json();
-      const raw  = data.content?.find(b => b.type === 'text')?.text || '';
-      const clean = raw.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      if (!parsed.name || !Array.isArray(parsed.holes) || parsed.holes.length !== 18) throw new Error('Could not read all 18 holes. Try a clearer, well-lit photo.');
-      parsed.rating = parseFloat(parsed.rating) || 72.0;
-      parsed.slope  = parseInt(parsed.slope) || 113;
-      parsed.holes  = parsed.holes.map((h, i) => ({ num:parseInt(h.num)||i+1, par:parseInt(h.par)||4, yds:parseInt(h.yds)||0, hdcp:parseInt(h.hdcp)||i+1 }));
-      setStatus('done'); onResult(parsed);
-    } catch (err) {
-      console.error('[Scanner]', err);
-      setStatus('error'); setErrorMsg(err.message || 'Could not read scorecard. Try a clearer, well-lit photo.');
-    }
-  };
-
-  const handleDrop = (e) => { e.preventDefault(); const file = e.dataTransfer?.files?.[0]; if (file) handleFile(file); };
-  const borderColor = status === 'error' ? '#DC2626' : status === 'done' ? '#15803D' : '#E7E3D9';
-
-  return (
-    <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#C8A15A', letterSpacing:1}}>📸 SCAN SCORECARD</div>
-      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.6}}>Take a screenshot or photo of any scorecard. Claude will automatically read the course name, par, yardage, and handicap for all 18 holes.</div>
-      <div
-        onClick={() => status !== 'scanning' && fileRef.current?.click()}
-        onDrop={handleDrop} onDragOver={e => e.preventDefault()}
-        style={{ border:`2px dashed ${borderColor}`, borderRadius:14, background:'#F6F4EE', minHeight:180, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, cursor:status==='scanning'?'default':'pointer', overflow:'hidden', position:'relative', transition:'border-color 0.2s' }}>
-        {preview && <img src={preview} alt="preview" style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:status==='scanning'?0.4:0.25}}/>}
-        <div style={{position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
-          {status === 'scanning' ? (
-            <><div style={{width:36, height:36, border:'3px solid #E7E3D9', borderTopColor:'#15803D', borderRadius:'50%', animation:'ppSpin 0.8s linear infinite'}}/><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, letterSpacing:1, color:'#15803D'}}>READING SCORECARD…</div></>
-          ) : status === 'error' ? (
-            <><div style={{fontSize:32}}>⚠️</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#DC2626', textAlign:'center', padding:'0 16px'}}>{errorMsg}</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#3F5F4A', letterSpacing:1}}>TAP TO TRY AGAIN</div></>
-          ) : (
-            <><div style={{fontSize:40}}>📸</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20', letterSpacing:1}}>TAP TO UPLOAD SCORECARD</div><div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>or drag and drop an image</div></>
-          )}
-        </div>
-      </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}/>
-      <div style={{display:'flex', gap:10}}>
-        <Btn onClick={onCancel} variant="ghost" style={{flex:1}}>CANCEL</Btn>
-        {(status === 'error' || status === 'idle') && preview && (
-          <Btn onClick={() => { setStatus('idle'); setPreview(null); setErrorMsg(''); }} variant="surface" style={{flex:1}}>CLEAR IMAGE</Btn>
-        )}
-      </div>
-      <style>{`@keyframes ppSpin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-};
 
 const BLANK_HOLES = Array.from({length:18}, (_,i) => ({ num:i+1, par:4, yds:'', hdcp:i+1 }));
 
@@ -111,7 +36,7 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
       <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#C8A15A', letterSpacing:1}}>{prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}</div>
-      {prefill && <div style={{background:'rgba(21,128,61,0.05)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:10, padding:'10px 14px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#15803D'}}>Scorecard scanned successfully — review and correct any values before saving.</div>}
+      {prefill && <div style={{background:'rgba(21,128,61,0.05)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:10, padding:'10px 14px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#15803D'}}>Review and correct any values before saving.</div>}
       <div style={{display:'flex', flexDirection:'column', gap:10}}>
         <div><Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/></div>
         <div><Label style={{display:'block', marginBottom:4}}>LOCATION</Label><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/></div>
@@ -633,7 +558,6 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid && markeyValid && tripValid;
 
   const handleSaveCourse = (newCourse) => { setCourse(newCourse); setAddMode('list'); setScanPrefill(null); };
-  const handleScanResult = (scannedData) => { setScanPrefill(scannedData); setAddMode('builder'); };
 
   const handleStart = () => {
     const players = allPlayers.filter(p => selectedPlayers.includes(p.id));
@@ -705,20 +629,17 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
         )}
 
         {step===2 && (
-          addMode==='scanner' ? (
-            <ScorecardScanner onResult={handleScanResult} onCancel={()=>{setAddMode('list');setScanPrefill(null);}}/>
-          ) : addMode==='builder' ? (
+          addMode==='builder' ? (
             <CourseBuilder onSave={handleSaveCourse} onCancel={()=>{setAddMode('list');setScanPrefill(null);}} prefill={scanPrefill}/>
           ) : (
             <div>
               <div style={setupS.stepTitle}>SELECT COURSE</div>
-              <div style={setupS.stepSub}>Search, scan a scorecard, or enter manually</div>
+              <div style={setupS.stepSub}>Search the course list or enter one manually</div>
               <div style={{marginTop:16, marginBottom:10}}>
                 <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)} placeholder="Search courses…" style={inputBase}/>
               </div>
               <div style={{display:'flex', gap:8, marginBottom:6}}>
-                <Btn onClick={()=>setAddMode('scanner')} variant="green" style={{flex:1, padding:'11px 10px', fontSize:13}}>📸 SCAN SCORECARD</Btn>
-                <Btn onClick={()=>{setScanPrefill(null);setAddMode('builder');}} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>✏️ ENTER MANUALLY</Btn>
+                <Btn onClick={()=>{setScanPrefill(null);setAddMode('builder');}} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>✏️ ADD A COURSE MANUALLY</Btn>
               </div>
               <div style={{display:'flex', flexDirection:'column'}}>
                 {customFiltered.length > 0 && <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={setCourse} defaultOpen={true}/>}
@@ -726,8 +647,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                 {filtered.length===0 && (
                   <div style={{textAlign:'center', padding:'32px 0', color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13}}>
                     No courses match "{courseSearch}"<br/>
-                    <span onClick={()=>setAddMode('scanner')} style={{color:'#15803D', cursor:'pointer', fontWeight:600}}>📸 Scan a scorecard →</span>{' · '}
-                    <span onClick={()=>{setScanPrefill(null);setAddMode('builder');}} style={{color:'#C8A15A', cursor:'pointer', fontWeight:600}}>enter manually →</span>
+                    <span role="button" tabIndex={0} onClick={()=>{setScanPrefill(null);setAddMode('builder');}} onKeyDown={e=>{if(e.key==='Enter')setAddMode('builder');}} style={{color:'#C8A15A', cursor:'pointer', fontWeight:600}}>enter it manually →</span>
                   </div>
                 )}
               </div>
@@ -928,4 +848,4 @@ const setupS = {
   check:     { width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
 };
 
-Object.assign(window, { SetupScreen, CourseBuilder, ScorecardScanner });
+Object.assign(window, { SetupScreen, CourseBuilder });

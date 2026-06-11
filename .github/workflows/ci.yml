@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (compiles JSX to dist/)
+        run: npm run build
+
+      - name: Verify committed dist/ is up to date
+        run: |
+          git diff --exit-code dist/ || {
+            echo "::error::dist/ is stale — run 'npm run build' and commit the result."
+            exit 1
+          }
+
+      - name: Run tests
+        run: node --test "tests/**/*.test.mjs"
+
+      - name: Dependency audit (fails on high severity)
+        run: npm audit --audit-level=high
+
+      - name: Scan for accidentally committed secrets
+        run: |
+          # Firebase web config is public by design; look for genuinely secret patterns.
+          ! grep -rEn "(sk-ant-|sk_live_|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY)" \
+            --exclude-dir=node_modules --exclude-dir=.git . \
+            || { echo "::error::Potential secret committed"; exit 1; }
