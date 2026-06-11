@@ -271,6 +271,20 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         </div>
       </div>
 
+      {/* Footer — support & legal */}
+      <div style={{padding:'18px 16px 26px', textAlign:'center'}}>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>
+          <a href="support.html" style={{color:'#3F5F4A', textDecoration:'underline'}}>Support</a>
+          {'  ·  '}
+          <a href="privacy.html" style={{color:'#3F5F4A', textDecoration:'underline'}}>Privacy Policy</a>
+          {'  ·  '}
+          <a href="terms.html" style={{color:'#3F5F4A', textDecoration:'underline'}}>Terms of Use</a>
+        </div>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5}}>
+          PlayPal v1.0.0
+        </div>
+      </div>
+
       {/* Join Round Modal */}
       <Modal open={showJoin} onClose={()=>{ setShowJoin(false); setJoinError(''); setJoining(false); }} title="Join a Round">
         <div style={{display:'flex', flexDirection:'column', gap:14}}>
