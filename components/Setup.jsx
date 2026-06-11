@@ -728,6 +728,26 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                   </div>
                 )}
               </div>
+              {/* ── Starting Tee (shown once a course is picked; applies to all formats) ── */}
+              {course && (
+                <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A', marginBottom:12}}>STARTING TEE</div>
+                  <div style={{display:'flex', gap:10}}>
+                    {[{ v:1, label:'1st Tee', sub:'Holes 1 → 18' }, { v:10, label:'10th Tee', sub:'Holes 10 → 9' }].map(opt => {
+                      const on = startingTee === opt.v;
+                      return (
+                        <div key={opt.v} onClick={()=>setStartingTee(opt.v)}
+                          style={{flex:1, padding:'12px 14px', borderRadius:12, cursor:'pointer', textAlign:'center',
+                            background:on?'rgba(14,43,32,0.05)':'#F6F4EE', border:on?'1px solid #0E2B20':'1px solid #E7E3D9',
+                            WebkitTapHighlightColor:'transparent'}}>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:on?'#0E2B20':'#3F5F4A'}}>{opt.label}</div>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginTop:2}}>{opt.sub}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div style={{display:'flex', gap:10, marginTop:24}}>
                 <Btn onClick={()=>setStep(1)} variant="ghost" style={{padding:'14px 20px'}}>← BACK</Btn>
                 <Btn onClick={()=>setStep(3)} variant="gold" disabled={!course} style={{flex:1, fontSize:17}}>NEXT: FORMATS →</Btn>
@@ -740,25 +760,6 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
           <div>
             <div style={setupS.stepTitle}>FORMATS & STAKES</div>
             <div style={setupS.stepSub}>Choose one or more formats and set your stakes</div>
-
-            {/* ── Starting Tee ── */}
-            <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
-              <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A', marginBottom:12}}>STARTING TEE</div>
-              <div style={{display:'flex', gap:10}}>
-                {[{ v:1, label:'1st Tee', sub:'Holes 1 → 18' }, { v:10, label:'10th Tee', sub:'Holes 10 → 9' }].map(opt => {
-                  const on = startingTee === opt.v;
-                  return (
-                    <div key={opt.v} onClick={()=>setStartingTee(opt.v)}
-                      style={{flex:1, padding:'12px 14px', borderRadius:12, cursor:'pointer', textAlign:'center',
-                        background:on?'rgba(14,43,32,0.05)':'#F6F4EE', border:on?'1px solid #0E2B20':'1px solid #E7E3D9',
-                        WebkitTapHighlightColor:'transparent'}}>
-                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:on?'#0E2B20':'#3F5F4A'}}>{opt.label}</div>
-                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginTop:2}}>{opt.sub}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* ── Golf Trip Selector ── */}
             <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
