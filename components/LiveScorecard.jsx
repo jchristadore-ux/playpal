@@ -604,8 +604,8 @@ const LiveScorecardModal = ({
                     return (
                       <div key={match.matchId} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid #F0EDE4'}}>
                         <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20'}}>Match {match.matchId}</span>
-                        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>H{match.startHole+1}–18</span>
-                        {match.matchId > 1 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px'}}>PRESS</span>}
+                        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A'}}>H{match.startHole+1}–{(match.endHole ?? 17)+1}</span>
+                        {match.matchId > 1 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#E07BE0', background:'rgba(224,123,224,0.1)', border:'1px solid rgba(224,123,224,0.25)', borderRadius:4, padding:'1px 5px'}}>{match.isTurnPress ? 'TURN' : 'PRESS'}</span>}
                         <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:lead ? (lead === 'A' ? '#C8A15A' : '#7B9FE0') : '#6B7280'}}>
                           {lead ? `Team ${lead} +${diff}` : 'A.S.'}
                         </span>

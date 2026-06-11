@@ -492,6 +492,15 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const { players, course, formats, syncCode } = round;
 
+  // Play order: which actual hole index is played in what position. Starting on the
+  // 10th tee plays holes 10→18 then 1→9. Data arrays stay indexed by actual hole idx.
+  const startingTee = round.startingTee === 10 ? 10 : 1;
+  const playOrder = React.useMemo(() => (
+    startingTee === 10
+      ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+  ), [startingTee]);
+
   const nassauFmtObj = formats.find(f => f.type === 'nassau');
 
   const nassauMatches = React.useMemo(() => {
@@ -528,7 +537,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [firData,     setFIRData]     = React.useState(_initFIR);
   const [girData,     setGIRData]     = React.useState(_initGIR);
 
-  const [holeIdx,  setHoleIdx]  = React.useState(0);
+  const [holeIdx,  setHoleIdx]  = React.useState(() => playOrder[0]);
   const [keypad,   setKeypad]   = React.useState(null);
   const [wolfPicker, setWolfPicker] = React.useState(false);
   const [showFinish, setShowFinish] = React.useState(false);
@@ -819,9 +828,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
+  // Current position within the play order (0–17), independent of which tee we started on.
+  const seqPos = playOrder.indexOf(holeIdx);
+
   const prevHole = () => {
-    if (holeIdx > 0) {
-      const newIdx = holeIdx - 1;
+    if (seqPos > 0) {
+      const newIdx = playOrder[seqPos - 1];
       holeIdxRef.current = newIdx;
       setHoleIdx(newIdx);
       scheduleCloudWrite(null, null, null, null);
@@ -836,8 +848,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
 
   const nextHole = () => {
-    if (canAdvance && holeIdx < 17) {
-      const newIdx = holeIdx + 1;
+    if (canAdvance && seqPos < 17) {
+      const newIdx = playOrder[seqPos + 1];
       holeIdxRef.current = newIdx;
       setHoleIdx(newIdx);
       scheduleCloudWrite(null, null, null, null);
@@ -859,9 +871,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       {/* Hole header */}
       <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)', padding:'12px 16px 10px'}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
-          <button onClick={prevHole} disabled={holeIdx===0}
-            style={{width:36, height:36, borderRadius:8, border:'none', background:holeIdx===0?'transparent':'rgba(255,255,255,0.12)',
-              color:holeIdx===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:20, cursor:holeIdx===0?'default':'pointer',
+          <button onClick={prevHole} disabled={seqPos===0}
+            style={{width:36, height:36, borderRadius:8, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
+              color:seqPos===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:20, cursor:seqPos===0?'default':'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ‹
@@ -878,11 +890,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             </div>
           </div>
 
-          <button onClick={nextHole} disabled={holeIdx===17 || (currentHoleScored && !canAdvance)}
+          <button onClick={nextHole} disabled={seqPos===17 || (currentHoleScored && !canAdvance)}
             style={{width:36, height:36, borderRadius:8, border:'none',
-              background: holeIdx===17 ? 'transparent' : 'rgba(255,255,255,0.12)',
-              color: holeIdx===17 ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
-              fontSize:20, cursor: holeIdx===17 || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
+              background: seqPos===17 ? 'transparent' : 'rgba(255,255,255,0.12)',
+              color: seqPos===17 ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
+              fontSize:20, cursor: seqPos===17 || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ›
@@ -891,7 +903,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
         {/* Hole dots */}
         <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:10, flexWrap:'wrap'}}>
-          {course.holes.map((h,i) => {
+          {playOrder.map((i) => {
             const allIn = players.every(p => scores[p.id]?.[i]);
             const some  = players.some(p => scores[p.id]?.[i]);
             return (
@@ -970,7 +982,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         )}
 
         <div style={{padding:'16px 12px 24px'}}>
-          {(allScored || holeIdx === 17) && (
+          {(allScored || seqPos === 17) && (
             <Btn onClick={() => setShowFinish(true)} variant="gold"
               style={{width:'100%', padding:'16px', fontSize:18, letterSpacing:1}}>
               🏁 FINISH ROUND
@@ -980,10 +992,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       </div>
 
       {/* Next hole button */}
-      {canAdvance && holeIdx < 17 && (
+      {canAdvance && seqPos < 17 && (
         <div style={{flexShrink:0, padding:'10px 12px', background:'#F6F4EE', borderTop:'1px solid #E7E3D9'}}>
           <Btn onClick={nextHole} variant="green" style={{width:'100%', padding:'13px', fontSize:16}}>
-            NEXT HOLE {holeIdx + 2} →
+            NEXT HOLE {course.holes[playOrder[seqPos + 1]].num} →
           </Btn>
         </div>
       )}
