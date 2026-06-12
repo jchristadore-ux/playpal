@@ -7,7 +7,7 @@
  *    they are version-pinned URLs and safe to cache long-term.
  *  - Firebase data traffic (firestore/rtdb) is never intercepted.
  */
-const CACHE_VERSION = 'playpal-v1.1.1';
+const CACHE_VERSION = 'playpal-v1.2.0';
 
 const PRECACHE = [
   './',
@@ -16,30 +16,29 @@ const PRECACHE = [
   './playpal-logo.png',
   './icons/icon-192.png',
   './icons/apple-touch-icon.png',
-  './dist/gameData.js?v=1.1.1',
-  './dist/gameUtils.js?v=1.1.1',
-  './dist/tripUtils.js?v=1.1.1',
-  './dist/handicapService.js?v=1.1.1',
-  './dist/courseService.js?v=1.1.1',
-  './dist/matchEngine.js?v=1.1.1',
-  './dist/statsService.js?v=1.1.1',
-  './dist/profileService.js?v=1.1.1',
-  './dist/roundHistoryService.js?v=1.1.1',
-  './dist/sharingService.js?v=1.1.1',
-  './dist/migrations.js?v=1.1.1',
-  './dist/Shared.js?v=1.1.1',
-  './dist/Home.js?v=1.1.1',
-  './dist/Setup.js?v=1.1.1',
-  './dist/PlayerCard.js?v=1.1.1',
-  './dist/Trackers.js?v=1.1.1',
-  './dist/GameTrackers.js?v=1.1.1',
-  './dist/LiveScorecard.js?v=1.1.1',
-  './dist/ScoreEntry.js?v=1.1.1',
-  './dist/Summary.js?v=1.1.1',
-  './dist/RoundViewer.js?v=1.1.1',
-  './dist/TripDashboard.js?v=1.1.1',
-  './dist/StatsScreen.js?v=1.1.1',
-  './dist/App.js?v=1.1.1',
+  './dist/gameData.js?v=1.2.0',
+  './dist/gameUtils.js?v=1.2.0',
+  './dist/tripUtils.js?v=1.2.0',
+  './dist/handicapService.js?v=1.2.0',
+  './dist/courseService.js?v=1.2.0',
+  './dist/matchEngine.js?v=1.2.0',
+  './dist/statsService.js?v=1.2.0',
+  './dist/profileService.js?v=1.2.0',
+  './dist/roundHistoryService.js?v=1.2.0',
+  './dist/sharingService.js?v=1.2.0',
+  './dist/migrations.js?v=1.2.0',
+  './dist/Shared.js?v=1.2.0',
+  './dist/Home.js?v=1.2.0',
+  './dist/Setup.js?v=1.2.0',
+  './dist/Trackers.js?v=1.2.0',
+  './dist/GameTrackers.js?v=1.2.0',
+  './dist/LiveScorecard.js?v=1.2.0',
+  './dist/ScoreEntry.js?v=1.2.0',
+  './dist/Summary.js?v=1.2.0',
+  './dist/RoundViewer.js?v=1.2.0',
+  './dist/TripDashboard.js?v=1.2.0',
+  './dist/StatsScreen.js?v=1.2.0',
+  './dist/App.js?v=1.2.0',
 ];
 
 const CDN_HOSTS = [

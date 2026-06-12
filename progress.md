@@ -37,17 +37,30 @@ Verified architecture facts (do NOT re-derive):
 - Baseline before this task: `npm test` → 85/85 pass, dist parity clean.
 
 ## Completed
-- **M1:** Analysis complete; plan written to `todo.md`.
+- **M1:** Analysis + plan.
+- **M2:** Stat registry (`STAT_TRACK_DEFS`) + pure `normalizeStatsConfig`/
+  `resolveRoundStatsConfig` in statsService.js; `tests/statsConfig.test.mjs`.
+- **M3:** Pre-round "Select Stats to Track" chip selector in Setup; remembered
+  in `localStorage pp_stats_config`; `onStart` passes `statsConfig` (+ derived
+  `trackStats`); summary line lists selected stats.
+- **M4:** ScoreEntry resolves `statsCfg`, passes a `stats` object to
+  `PlayerScoreCard` (replaced `isTripMode`/`trackStats`), hides disabled stats;
+  putts forced on under PTM. Tile compacted: PUTTS/FIR/GIR one row, opt-in
+  short-game second row, trimmed header/stepper padding. Removed dead
+  `isTripMode`.
+- **M5:** NavBar + bottom nav respect `env(safe-area-inset-*)` (top inset with
+  matching minHeight; L/R insets for landscape).
+- **M6:** Bumped to v1.2.0 (package.json+lock, index.html/sw.js `?v=`,
+  CACHE_VERSION, Home footer), CHANGELOG [1.2.0], removed `PlayerCard.jsx`
+  (+ build/script/cache entries). 91/91 tests pass; dist parity clean.
 
 ## In Progress
-- Nothing mid-flight; M1 done.
+- Nothing mid-flight; all milestones done. Pending: push + draft PR.
 
 ## Remaining
-- M2 (stat registry+model) → M3 (Setup selector) → M4 (ScoreEntry config+compact
-  tile) → M5 (safe area) → M6 (build/test/changelog/remove PlayerCard/push/PR).
+- Push branch + open draft PR (base main). Then await review/CI.
 
 ## Next Action (exact)
-Start **M2**: in `components/statsService.js`, before `Object.assign(window,
-{StatsService})` (L276), add `STAT_TRACK_DEFS`, `DEFAULT_STATS_CONFIG`,
-`normalizeStatsConfig`, `resolveRoundStatsConfig`; attach to the `StatsService`
-object AND `window`. Add `tests/statsConfig.test.mjs`. Build + test.
+`git push -u origin claude/fervent-planck-alq54v` (retry w/ backoff), then
+create a **draft** PR (base: main) via GitHub MCP tools summarizing the three
+objectives. Subscription/PR-watch per session rules.

@@ -22,7 +22,6 @@ const SOURCES = [
   'components/Shared.jsx',
   'components/Home.jsx',
   'components/Setup.jsx',
-  'components/PlayerCard.jsx',
   'components/Trackers.jsx',
   'components/GameTrackers.jsx',
   'components/LiveScorecard.jsx',

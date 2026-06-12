@@ -26,7 +26,11 @@ Milestones: code + rebuild `dist/` + tests green + docs, committed together.
   - NavBar bar: `minHeight: calc(56px + env(safe-area-inset-top))` +
     `paddingTop: env(safe-area-inset-top)` + L/R insets (landscape). Drop fixed
     `height:56`/`padding:'0 16px'`. Add L/R insets to bottom nav.
-- [ ] M6 — Build, test, changelog, remove dead `PlayerCard.jsx`, push, draft PR
+- [x] M2 — Stat registry + config model (statsService + tests)
+- [x] M3 — "Select Stats to Track" selector (Setup)
+- [x] M4 — Config-driven in-round UI + compact tile (ScoreEntry)
+- [x] M5 — iOS safe area (Shared NavBar + App bottom nav)
+- [x] M6 — v1.2.0 bump, changelog, removed dead PlayerCard.jsx, build, test
 
 ## Notes / constraints
 - `dist/` is committed; CI fails if stale → `npm run build` before every commit.
