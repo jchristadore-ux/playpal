@@ -93,7 +93,7 @@ const GameConfigCard = ({ game, players, onChange, onRemove }) => {
         {basis === 'net' && !def.teamEntry && (
           <div style={{display:'flex', gap:8, alignItems:'center'}}>
             <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', width:60}}>HCP %</div>
-            <input type="number" min="0" max="100" value={config.allowancePct !== undefined ? config.allowancePct : (def.defaultAllowance ?? 100)}
+            <input type="number" min="0" max="100" aria-label="Handicap allowance percent" value={config.allowancePct !== undefined ? config.allowancePct : (def.defaultAllowance ?? 100)}
               onChange={e => setCfg({ allowancePct: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
               style={{width:72, background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:9, padding:'7px 10px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20', outline:'none', textAlign:'center'}}/>
             <div onClick={() => setCfg({ relative: !(config.relative !== undefined ? config.relative : def.defaultRelative) })}
@@ -139,7 +139,7 @@ const GameConfigCard = ({ game, players, onChange, onRemove }) => {
                 {players.map(p => (
                   <div key={p.id} style={{display:'flex', alignItems:'center', gap:8}}>
                     <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', flex:1}}>{p.name.split(' ')[0]}</span>
-                    <input type="number" step="0.1" placeholder={String(p.handicap || 0)}
+                    <input type="number" step="0.1" aria-label={`${p.name.split(' ')[0]} handicap override`} placeholder={String(p.handicap || 0)}
                       value={config.handicapOverrides?.[p.id] ?? ''}
                       onChange={e => setCfg({ handicapOverrides: { ...(config.handicapOverrides || {}), [p.id]: e.target.value === '' ? undefined : parseFloat(e.target.value) } })}
                       style={{width:70, background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8, padding:'6px 8px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#0E2B20', outline:'none', textAlign:'center'}}/>
@@ -256,11 +256,11 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
       <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:18, color:'#C8A15A', letterSpacing:1}}>{prefill ? '✅ REVIEW & SAVE' : 'ADD CUSTOM COURSE'}</div>
       {prefill && <div style={{background:'rgba(21,128,61,0.05)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:10, padding:'10px 14px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#15803D'}}>Review and correct any values before saving.</div>}
       <div style={{display:'flex', flexDirection:'column', gap:10}}>
-        <div><Label style={{display:'block', marginBottom:4}}>COURSE NAME *</Label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/></div>
-        <div><Label style={{display:'block', marginBottom:4}}>LOCATION</Label><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/></div>
+        <div><Label htmlFor="pp-course-name" style={{display:'block', marginBottom:4}}>COURSE NAME *</Label><input id="pp-course-name" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Green Knoll Golf Course" style={inputStyle}/></div>
+        <div><Label htmlFor="pp-course-location" style={{display:'block', marginBottom:4}}>LOCATION</Label><input id="pp-course-location" value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Bridgewater, NJ" style={inputStyle}/></div>
         <div style={{display:'flex', gap:10}}>
-          <div style={{flex:1}}><Label style={{display:'block', marginBottom:4}}>COURSE RATING</Label><input value={rating} onChange={e=>setRating(e.target.value)} placeholder="e.g. 70.1" style={inputStyle}/></div>
-          <div style={{flex:1}}><Label style={{display:'block', marginBottom:4}}>SLOPE</Label><input value={slope} onChange={e=>setSlope(e.target.value)} placeholder="e.g. 121" style={inputStyle}/></div>
+          <div style={{flex:1}}><Label htmlFor="pp-course-rating" style={{display:'block', marginBottom:4}}>COURSE RATING</Label><input id="pp-course-rating" value={rating} onChange={e=>setRating(e.target.value)} placeholder="e.g. 70.1" style={inputStyle}/></div>
+          <div style={{flex:1}}><Label htmlFor="pp-course-slope" style={{display:'block', marginBottom:4}}>SLOPE</Label><input id="pp-course-slope" value={slope} onChange={e=>setSlope(e.target.value)} placeholder="e.g. 121" style={inputStyle}/></div>
         </div>
       </div>
       <div>
@@ -284,9 +284,9 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
         {extraTees.length === 0 && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginBottom:12}}>The rating/slope above defines the standard tee. Add Blue/White/Red sets with their own rating &amp; slope for accurate course handicaps.</div>}
         {extraTees.map((t, i) => (
           <div key={i} style={{display:'flex', gap:6, marginBottom:8, alignItems:'center'}}>
-            <input value={t.name} onChange={e=>setTeeField(i,'name',e.target.value)} placeholder="Name (e.g. Blue)" style={{...holeInputStyle, textAlign:'left', flex:2, padding:'7px 8px'}}/>
-            <input value={t.rating} onChange={e=>setTeeField(i,'rating',e.target.value)} placeholder="Rating" type="number" style={{...holeInputStyle, flex:1, padding:'7px 4px'}}/>
-            <input value={t.slope} onChange={e=>setTeeField(i,'slope',e.target.value)} placeholder="Slope" type="number" style={{...holeInputStyle, flex:1, padding:'7px 4px'}}/>
+            <input value={t.name} onChange={e=>setTeeField(i,'name',e.target.value)} aria-label={`Tee set ${i+1} name`} placeholder="Name (e.g. Blue)" style={{...holeInputStyle, textAlign:'left', flex:2, padding:'7px 8px'}}/>
+            <input value={t.rating} onChange={e=>setTeeField(i,'rating',e.target.value)} aria-label={`Tee set ${i+1} rating`} placeholder="Rating" type="number" style={{...holeInputStyle, flex:1, padding:'7px 4px'}}/>
+            <input value={t.slope} onChange={e=>setTeeField(i,'slope',e.target.value)} aria-label={`Tee set ${i+1} slope`} placeholder="Slope" type="number" style={{...holeInputStyle, flex:1, padding:'7px 4px'}}/>
             <button onClick={()=>removeTee(i)} aria-label="Remove tee" style={{background:'none', border:'none', cursor:'pointer', color:'#8A9E8A', fontSize:14, padding:'2px 4px', WebkitTapHighlightColor:'transparent'}}>✕</button>
           </div>
         ))}
@@ -304,9 +304,9 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
               {activeHoles.map((h, i) => (
                 <tr key={i} style={{background:i%2===0?'#F6F4EE':'#FFFFFF'}}>
                   <td style={{padding:'4px 6px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#3F5F4A', textAlign:'center'}}>{h.num}</td>
-                  <td style={{padding:'3px 4px'}}><input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)} type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/></td>
-                  <td style={{padding:'3px 4px'}}><input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)} placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/></td>
-                  <td style={{padding:'3px 4px'}}><input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)} type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/></td>
+                  <td style={{padding:'3px 4px'}}><input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)} aria-label={`Hole ${i+1} par`} type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/></td>
+                  <td style={{padding:'3px 4px'}}><input value={h.yds} onChange={e=>setHoleField(i,'yds',e.target.value)} aria-label={`Hole ${i+1} yards`} placeholder="—" type="number" min="50" max="700" tabIndex={i*3+2} style={holeInputStyle}/></td>
+                  <td style={{padding:'3px 4px'}}><input value={h.hdcp} onChange={e=>setHoleField(i,'hdcp',e.target.value)} aria-label={`Hole ${i+1} stroke index`} type="number" inputMode="numeric" min="1" max="18" tabIndex={i*3+3} style={holeInputStyle}/></td>
                 </tr>
               ))}
             </tbody>
@@ -347,7 +347,7 @@ const StakesInput = ({ value, onChange }) => {
       {custom && (
         <div style={{display:'flex', alignItems:'center', gap:8}}>
           <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:20, color:'#C8A15A', fontWeight:800}}>$</span>
-          <input autoFocus value={customVal} onChange={e=>handleCustomChange(e.target.value)} type="number" min="0.5" step="0.5" placeholder="Enter amount"
+          <input autoFocus value={customVal} onChange={e=>handleCustomChange(e.target.value)} aria-label="Custom stake amount" type="number" min="0.5" step="0.5" placeholder="Enter amount"
             style={{flex:1, background:'#F6F4EE', border:'1px solid #C8A15A', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:18, fontWeight:700, outline:'none'}}/>
         </div>
       )}
@@ -934,7 +934,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
               <div style={setupS.stepTitle}>SELECT COURSE</div>
               <div style={setupS.stepSub}>Search the course list or enter one manually</div>
               <div style={{marginTop:16, marginBottom:10}}>
-                <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)} placeholder="Search courses…" style={inputBase}/>
+                <input value={courseSearch} onChange={e=>setCourseSearch(e.target.value)} aria-label="Search courses" placeholder="Search courses…" style={inputBase}/>
               </div>
               <div style={{display:'flex', gap:8, marginBottom:6}}>
                 <Btn onClick={()=>{setScanPrefill(null);setAddMode('builder');}} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>✏️ ADD A COURSE MANUALLY</Btn>
@@ -1042,7 +1042,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                       <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:14, color:'#0E2B20'}}>Add to existing trip</span>
                     </div>
                     {tripMode==='existing' && (
-                      <select value={selectedTripId} onChange={e=>setSelectedTripId(e.target.value)}
+                      <select value={selectedTripId} onChange={e=>setSelectedTripId(e.target.value)} aria-label="Choose existing trip"
                         style={{width:'100%', marginTop:6, padding:'10px 12px', background:'#F6F4EE', border:'1px solid #C8A15A', borderRadius:10, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, fontWeight:600, color:'#0E2B20', outline:'none', cursor:'pointer'}}>
                         {availableTrips.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
@@ -1060,9 +1060,9 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                   </div>
                   {tripMode==='new' && (
                     <div style={{display:'flex', flexDirection:'column', gap:8, marginTop:8, paddingLeft:4}}>
-                      <input autoFocus value={newTripName} onChange={e=>setNewTripName(e.target.value)} placeholder="Trip name (e.g. Pinehurst 2026) *"
+                      <input autoFocus value={newTripName} onChange={e=>setNewTripName(e.target.value)} aria-label="Trip name" placeholder="Trip name (e.g. Pinehurst 2026) *"
                         style={{background:'#F6F4EE', border:'1px solid #C8A15A', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, outline:'none', width:'100%', boxSizing:'border-box'}}/>
-                      <input value={newTripLocation} onChange={e=>setNewTripLocation(e.target.value)} placeholder="Location (optional)"
+                      <input value={newTripLocation} onChange={e=>setNewTripLocation(e.target.value)} aria-label="Trip location" placeholder="Location (optional)"
                         style={{background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:10, padding:'10px 12px', color:'#0E2B20', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:14, outline:'none', width:'100%', boxSizing:'border-box'}}/>
                     </div>
                   )}

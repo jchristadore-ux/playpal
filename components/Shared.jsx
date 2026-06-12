@@ -83,6 +83,13 @@ const QRModal = ({ open, onClose, syncCode }) => {
     }
   }, [open, syncCode]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose && onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -94,7 +101,7 @@ const QRModal = ({ open, onClose, syncCode }) => {
         alignItems:     'center', justifyContent: 'center',
         padding:        24,
       }}>
-      <div style={{
+      <div role="dialog" aria-modal="true" aria-label="Join this round" style={{
         background:    '#FFFFFF',
         border:        '1px solid #E7E3D9',
         borderRadius:  24,
@@ -108,7 +115,7 @@ const QRModal = ({ open, onClose, syncCode }) => {
           <span style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:18, fontWeight:800, color:'#0E2B20', letterSpacing:0.3 }}>
             JOIN THIS ROUND
           </span>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close" style={{
             background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8,
             color:'#3F5F4A', fontSize:16, cursor:'pointer', width:32, height:32,
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -266,13 +273,19 @@ const Avatar = ({ player, size=40 }) => (
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 const Modal = ({ open, onClose, title, children }) => {
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose && onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
   if (!open) return null;
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(14,43,32,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:20, padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(14,43,32,0.2)' }}>
+      <div role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} style={{ background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:20, padding:24, maxWidth:480, width:'100%', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 20px 60px rgba(14,43,32,0.2)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <span style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:18, fontWeight:800, color:'#0E2B20', letterSpacing:0.3 }}>{title}</span>
-          <button onClick={onClose} style={{ background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8, color:'#3F5F4A', fontSize:16, cursor:'pointer', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', WebkitTapHighlightColor:'transparent' }}>✕</button>
+          <button onClick={onClose} aria-label="Close" style={{ background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8, color:'#3F5F4A', fontSize:16, cursor:'pointer', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', WebkitTapHighlightColor:'transparent' }}>✕</button>
         </div>
         {children}
       </div>
@@ -295,9 +308,14 @@ const Toast = ({ message, type='success' }) => {
 };
 
 // ─── Label ────────────────────────────────────────────────────────────────────
-const Label = ({ children, style={} }) => (
-  <span style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, fontWeight:700, letterSpacing:2, color:'#3F5F4A', textTransform:'uppercase', ...style }}>{children}</span>
-);
+// Pass htmlFor to get a real <label> bound to an input; without it this is a
+// purely visual <span> heading (the common usage across trackers/panels).
+const Label = ({ children, htmlFor, style={} }) => {
+  const Tag = htmlFor ? 'label' : 'span';
+  return (
+    <Tag htmlFor={htmlFor} style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, fontWeight:700, letterSpacing:2, color:'#3F5F4A', textTransform:'uppercase', ...style }}>{children}</Tag>
+  );
+};
 
 // ─── Divider ──────────────────────────────────────────────────────────────────
 const Divider = ({ label }) => (

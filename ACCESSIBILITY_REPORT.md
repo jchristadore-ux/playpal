@@ -17,16 +17,23 @@ accessibility expectations (VoiceOver, Dynamic Type, contrast, motion).
 | Touch targets | Tab buttons enforce 48px min height |
 | Language & semantics | `lang="en"` present; main nav now a `<nav>` landmark |
 
+## Fixed in v1.1.1 ✅
+
+| Requirement | What changed |
+|---|---|
+| Programmatic form labels (1.3.1 / 4.1.2) | `Label` renders a real `<label htmlFor>` when given a target; wired across the player-profile form, join-code field (`Home.jsx`) and course builder (`Setup.jsx`). Inputs whose visible label is a placeholder or table header (tee sets, hole grid, trip forms, search, compare selects, handicap overrides) carry `aria-label` |
+| Dialog semantics + Esc | `Modal` and `QRModal`: `role="dialog"`, `aria-modal="true"`, accessible name from the title, Escape closes; ✕ buttons have `aria-label="Close"` |
+| Player-form toggles | Righty/lefty and color-swatch pickers converted from `div onClick` to `<button>` with `aria-pressed` (swatches also get `aria-label`) |
+
 ## Remaining gaps (inventory, ranked)
 
 | Priority | Gap | Where | Suggested fix |
 |---|---|---|---|
-| 🔴 | Clickable `div`s without button semantics in content screens: player cards (`Home.jsx:261`), recent-round cards, score cells (`ScoreEntry.jsx`), collapsible trackers (`Trackers.jsx`), course rows and color swatches (`Setup.jsx`, `Home.jsx`) | throughout | Convert to `<button>` or add `role="button"` + `tabIndex={0}` + Enter/Space handlers; pattern established in the tab bar |
-| 🔴 | Form inputs lack programmatic labels — `Label` components are visual siblings, no `htmlFor`/`id` | all modals/forms | Give inputs `id`s and render `<label htmlFor>`; or `aria-label` on inputs |
+| 🔴 | Clickable `div`s without button semantics in content screens: player cards (`Home.jsx`), recent-round cards, score cells (`ScoreEntry.jsx`), collapsible trackers (`Trackers.jsx`), course rows (`Setup.jsx`) | throughout | Convert to `<button>` or add `role="button"` + `tabIndex={0}` + Enter/Space handlers; pattern established in the tab bar and player form |
 | 🟠 | No Dynamic Type: every font size is a fixed px inline style | all components | Move type scale to rem-based CSS variables; respect iOS text-size in the Capacitor shell via `-apple-system-body` |
 | 🟠 | Color-contrast spot failures: gold `#C8A15A` small text on cream `#F6F4EE` (~2.4:1), `rgba(246,244,238,0.6)` labels in NavBar | Shared.jsx, headers, section labels | Darken gold to ≥`#9d7c39` for small text or reserve gold for large/bold text only |
 | 🟠 | Color used as the only signal for player identity (avatar colors) and some score states | PlayerCard, scorecards | Initials already supplement avatars (good); add shape/text cues for score states |
-| 🟡 | Modals don't trap focus or restore it on close; no `aria-modal` | Shared.jsx `Modal` | Add `role="dialog"`, `aria-modal`, focus trap, Esc to close |
+| 🟡 | Modals don't trap focus or restore it on close | Shared.jsx `Modal` | Dialog semantics + Esc landed in v1.1.1; add a focus trap and focus restore |
 | 🟡 | Live score updates not announced | ScoreEntry | `aria-live="polite"` region for sync updates |
 
 ## VoiceOver expectations today

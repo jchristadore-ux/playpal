@@ -24,7 +24,7 @@ green + AUDIT/report status flip + progress.md update, committed together.
   - Delete vestigial `sync-config.js` (nothing references it).
   - Remove the two stray `console.log`s in `index.html` RoundSyncService
     (subscribe/unsubscribe noise).
-- [ ] M5 — Accessibility (AUDIT **M4** / ACCESSIBILITY_REPORT 🔴 form-labels
+- [x] M5 — Accessibility (AUDIT **M4** / ACCESSIBILITY_REPORT 🔴 form-labels
   row + 🟡 modal row)
   - `components/Shared.jsx`: `Label` accepts `htmlFor` (renders `<label>`);
     `Modal` gets `role="dialog"`, `aria-modal`, `aria-label={title}`, Esc to

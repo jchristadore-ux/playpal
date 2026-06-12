@@ -45,25 +45,33 @@ Key facts already verified (do not re-derive):
   M6 finished (last two `console.log`s removed from index.html
   RoundSyncService). AUDIT rows flipped. dist rebuilt; 85/85 tests pass.
 
+- **M5:** AUDIT M4 fixed. `Shared.jsx`: `Label` renders `<label htmlFor>`
+  when targeted; `Modal`/`QRModal` got `role="dialog"`, `aria-modal`,
+  accessible names, Esc-to-close, labeled ✕ buttons. `Home.jsx`: join-code
+  + all player-profile inputs labeled; hand/color pickers are now real
+  `<button>`s with `aria-pressed`. `Setup.jsx`: course form `htmlFor`/`id`,
+  `aria-label` on tee/hole/trip/search/allowance/override inputs.
+  `StatsScreen.jsx`: compare selects labeled. ACCESSIBILITY_REPORT.md
+  restructured (new "Fixed in v1.1.1" table; remaining gaps re-ranked).
+  dist rebuilt; 85/85 tests pass.
+
 ## In Progress
 
-- Nothing mid-flight; M4 is complete and committed.
+- Nothing mid-flight; M5 is complete and committed.
 
 ## Remaining
 
-- M5 (a11y: Label htmlFor + form input ids, Modal dialog semantics + Esc)
-  → M6 (v1.1.1 release pass, push, draft PR). Exact targets in `todo.md`.
+- M6 (v1.1.1 release pass, push, draft PR) — last milestone.
 
 ## Next Action (exact)
 
-Start **M5**:
-1. `components/Shared.jsx`: `Label` renders a real `<label>` and accepts
-   `htmlFor`; `Modal` gets `role="dialog"`, `aria-modal="true"`,
-   `aria-label={title}`, and an Esc-key close handler.
-2. `components/Home.jsx` player-profile form (~line 359 loop): give each
-   input an `id` and pass `htmlFor` on its Label.
-3. `components/Setup.jsx`: same treatment for course/trip form inputs
-   (grep for `<Label` siblings of `<input`); where layout makes pairing
-   awkward, use `aria-label` on the input instead.
-4. `npm run build`, run tests, update ACCESSIBILITY_REPORT.md (form-labels
-   row + modal row), tick M5 in todo.md, update this file, commit.
+Start **M6**:
+1. Bump version to 1.1.1: `package.json` "version"; every `?v=1.1.0` →
+   `?v=1.1.1` in `index.html` (script tags) and `sw.js` PRECACHE;
+   `sw.js` CACHE_VERSION `playpal-v1.1.0` → `playpal-v1.1.1`;
+   `Home.jsx` footer "PlayPal v1.1.0" → v1.1.1.
+2. Add CHANGELOG.md `[1.1.1]` entry (H7, H8, M3, M4, M6, M7 fixes).
+3. `npm run build` + full `npm test`; commit.
+4. `git push -u origin claude/fervent-planck-alq54v` (retry w/ backoff on
+   network failure), then open a **draft PR** via the GitHub MCP tools
+   (base: main). Tick M6 in todo.md, finalize this file.

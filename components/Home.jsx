@@ -331,8 +331,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             Enter the 6-character code shown on the scorer's device.
           </div>
           <div>
-            <Label style={{display:'block', marginBottom:6}}>ROUND CODE</Label>
+            <Label htmlFor="pp-join-code" style={{display:'block', marginBottom:6}}>ROUND CODE</Label>
             <input
+              id="pp-join-code"
               value={joinCode}
               onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
               onKeyDown={e => e.key === 'Enter' && !joining && handleJoin()}
@@ -358,15 +359,15 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
           {[['name','Full Name'],['ghin','GHIN #'],['ghinLogin','GHIN Login / Email'],['email','Email Address'],['venmo','Venmo Handle']].map(([key,label]) => (
             <div key={key}>
-              <Label style={{display:'block', marginBottom:4}}>{label}</Label>
-              <input value={form[key] || ''} onChange={e=>setForm({...form,[key]:e.target.value})}
+              <Label htmlFor={`pp-player-${key}`} style={{display:'block', marginBottom:4}}>{label}</Label>
+              <input id={`pp-player-${key}`} value={form[key] || ''} onChange={e=>setForm({...form,[key]:e.target.value})}
                 style={inputStyle}/>
             </div>
           ))}
           <div>
-            <Label style={{display:'block', marginBottom:4}}>Handicap Index</Label>
+            <Label htmlFor="pp-player-handicap" style={{display:'block', marginBottom:4}}>Handicap Index</Label>
             <div style={{display:'flex', gap:8}}>
-              <input value={form.handicap} onChange={e=>setForm({...form,handicap:e.target.value, handicapSource:'manual'})} style={{...inputStyle, flex:1}}/>
+              <input id="pp-player-handicap" value={form.handicap} onChange={e=>setForm({...form,handicap:e.target.value, handicapSource:'manual'})} style={{...inputStyle, flex:1}}/>
               <button onClick={syncHandicap}
                 style={{background:'#F0EDE4', border:'1px solid #E7E3D9', borderRadius:12, padding:'0 14px', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', WebkitTapHighlightColor:'transparent', flexShrink:0}}>
                 ↻ SYNC
@@ -376,26 +377,26 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
           <div style={{display:'flex', gap:10}}>
             <div style={{flex:1}}>
-              <Label style={{display:'block', marginBottom:4}}>Preferred Tees</Label>
-              <input value={form.preferredTee || ''} onChange={e=>setForm({...form,preferredTee:e.target.value})} placeholder="e.g. Blue" style={inputStyle}/>
+              <Label htmlFor="pp-player-tees" style={{display:'block', marginBottom:4}}>Preferred Tees</Label>
+              <input id="pp-player-tees" value={form.preferredTee || ''} onChange={e=>setForm({...form,preferredTee:e.target.value})} placeholder="e.g. Blue" style={inputStyle}/>
             </div>
             <div>
               <Label style={{display:'block', marginBottom:4}}>Plays</Label>
               <div style={{display:'flex', gap:6}}>
                 {[['R','RIGHTY'],['L','LEFTY']].map(([v,lbl]) => (
-                  <div key={v} onClick={()=>setForm({...form, dominantHand:v})}
+                  <button key={v} onClick={()=>setForm({...form, dominantHand:v})} aria-pressed={(form.dominantHand||'R')===v}
                     style={{padding:'12px 12px', borderRadius:12, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12,
                       background:(form.dominantHand||'R')===v?'#0E2B20':'#F6F4EE', color:(form.dominantHand||'R')===v?'#F6F4EE':'#3F5F4A',
                       border:(form.dominantHand||'R')===v?'none':'1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
                     {lbl}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
           </div>
           <div>
-            <Label style={{display:'block', marginBottom:4}}>Home Course</Label>
-            <input value={form.homeCourseName || ''} onChange={e=>setForm({...form,homeCourseName:e.target.value})} placeholder="e.g. Spring Lake Golf Club" style={inputStyle}/>
+            <Label htmlFor="pp-player-homecourse" style={{display:'block', marginBottom:4}}>Home Course</Label>
+            <input id="pp-player-homecourse" value={form.homeCourseName || ''} onChange={e=>setForm({...form,homeCourseName:e.target.value})} placeholder="e.g. Spring Lake Golf Club" style={inputStyle}/>
           </div>
           {editPlayer && onOpenStats && (
             <button onClick={()=>{ setShowPlayers(false); onOpenStats(editPlayer.id); }}
@@ -408,9 +409,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             <Label style={{display:'block', marginBottom:8}}>Color</Label>
             <div style={{display:'flex', gap:8}}>
               {colors.map(c=>(
-                <div key={c} onClick={()=>setForm({...form, color:c})}
-                  style={{width:28, height:28, borderRadius:'50%', background:c, cursor:'pointer',
-                    border: form.color===c ? '3px solid #0E2B20':'3px solid transparent', boxSizing:'border-box'}}/>
+                <button key={c} onClick={()=>setForm({...form, color:c})} aria-label={`Player color ${c}`} aria-pressed={form.color===c}
+                  style={{width:28, height:28, borderRadius:'50%', background:c, cursor:'pointer', padding:0,
+                    border: form.color===c ? '3px solid #0E2B20':'3px solid transparent', boxSizing:'border-box', WebkitTapHighlightColor:'transparent'}}/>
               ))}
             </div>
           </div>
