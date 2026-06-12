@@ -28,25 +28,29 @@ Key facts already verified (do not re-derive):
 
 ## Completed
 
-- **M1 (this commit):** Full repo analysis; concrete milestone plan written
-  to `todo.md`. No product code changed yet.
+- **M1:** Full repo analysis; concrete milestone plan written to `todo.md`.
+- **M2:** AUDIT H8 fixed in `components/ScoreEntry.jsx`: live payload now
+  carries `roundId` (`scheduleCloudWrite`), receiver rejects
+  present-and-mismatched round ids (backward compatible with v1.1.0
+  payloads) and drops post-cleanup callbacks via a `cancelled` effect flag.
+  AUDIT.md H8 row flipped. dist rebuilt; 85/85 tests pass.
 
 ## In Progress
 
-- Nothing mid-flight; M1 is complete and committed.
+- Nothing mid-flight; M2 is complete and committed.
 
 ## Remaining
 
-- M2 (H8 listener race) → M3 (H7 trip query) → M4 (M3/M7/console cleanup)
-  → M5 (a11y labels + modal) → M6 (v1.1.1 release pass, push, draft PR).
-  Exact file/line targets for each are in `todo.md`.
+- M3 (H7 trip query) → M4 (M3/M7/console cleanup) → M5 (a11y labels +
+  modal) → M6 (v1.1.1 release pass, push, draft PR). Exact file/line
+  targets for each are in `todo.md`.
 
 ## Next Action (exact)
 
-Start **M2**: edit `components/ScoreEntry.jsx` —
-1. In `scheduleCloudWrite` (~line 664) add `roundId: round.id` to `payload`.
-2. In the `subscribeRound` callback (~line 689) drop payloads where
-   `livePayload.roundId && livePayload.roundId !== round.id`; add a
-   `cancelled` flag set in the effect cleanup and checked in the callback.
-3. `npm run build && node --test "tests/**/*.test.mjs"`, flip AUDIT.md H8
-   row to FIXED, tick M2 in todo.md, update this file, commit.
+Start **M3**: edit `index.html` `GolfTripSyncService.fetchTripRounds`
+(~line 424) — query
+`_fbFs.collection(ROUNDS_COL).where('round.tripId','==',tripId).get()`,
+keep the client-side `savedAt` sort, and on query failure fall back to the
+legacy full-collection scan. index.html is not compiled (no dist rebuild
+needed), but still run the test suite; flip AUDIT.md H7 row, tick M3 in
+todo.md, update this file, commit.

@@ -33,7 +33,7 @@
 | H5 | Bottom tab bar and many tap targets were `<div onClick>` — invisible to VoiceOver and keyboards. | 🟠 | 🟠 | 🟠 (a11y) | M | ✅ PARTIALLY FIXED — tab bar is now real `<button>`s with `aria-label`/`aria-current`; remaining clickable divs inventoried in `ACCESSIBILITY_REPORT.md` |
 | H6 | `join.html` reflected the unsanitized `code` query param into a redirect and logged it. | 🟠 | 🟡 | 🟡 | S | ✅ FIXED — code sanitized to `[A-Z0-9]{≤12}`, logging removed |
 | H7 | `TripDashboard`/`GolfTripSyncService.fetchTripRounds` downloads **every round in the database** and filters client-side. Fine at friend-group scale; O(all rounds) cost as data grows. | 🟠 | 🟡 | — | M | OPEN — add a Firestore `where('round.tripId','==',tripId)` query + index |
-| H8 | Stale Firestore listener race: `ScoreEntry` live-score subscription doesn't verify the incoming snapshot belongs to the current round; a listener surviving a rapid exit/rejoin could apply another round's scores. | 🟠 | 🟠 | — | M | OPEN — include round id in `liveScores` payload and check on receive |
+| H8 | Stale Firestore listener race: `ScoreEntry` live-score subscription doesn't verify the incoming snapshot belongs to the current round; a listener surviving a rapid exit/rejoin could apply another round's scores. | 🟠 | 🟠 | — | M | ✅ FIXED (v1.1.1) — live payload carries `roundId`, receiver drops mismatched payloads and late post-cleanup callbacks (v1.1.0 payloads without the tag still accepted) |
 
 ## Medium Priority Issues
 

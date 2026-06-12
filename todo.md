@@ -4,7 +4,7 @@ Work the milestones in order. Each milestone = code + rebuild dist + tests
 green + AUDIT/report status flip + progress.md update, committed together.
 
 - [x] M1 — Analyze project, write concrete plan (this file + progress.md)
-- [ ] M2 — Fix AUDIT **H8**: stale live-score listener race
+- [x] M2 — Fix AUDIT **H8**: stale live-score listener race
   - `components/ScoreEntry.jsx` (~line 660–711): add `roundId: round.id` to
     the live payload in `scheduleCloudWrite`; in the `subscribeRound`
     callback, ignore payloads where `livePayload.roundId` exists and
