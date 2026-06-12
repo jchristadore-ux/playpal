@@ -2,6 +2,33 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.1.1] — 2026-06-12
+
+Hardening release: closes every remaining OPEN item from `AUDIT.md` that is
+fixable in software (H7, H8, M3, M4, M6, M7).
+
+### Fixed
+- **Stale live-score listener race (AUDIT H8):** live payloads are tagged
+  with the round id; receivers drop payloads for other rounds and late
+  callbacks after unsubscribe. v1.1.0 clients (untagged payloads) still sync.
+- **Trip dashboard full-collection read (AUDIT H7):** trip rounds are now
+  fetched with a `where('round.tripId','==',tripId)` Firestore query
+  (automatic single-field index; legacy scan kept only as an error fallback).
+- **Unencoded URL parts (AUDIT M3):** Venmo handles and recipient emails are
+  `encodeURIComponent`-ed in the Venmo deep/web links and scorecard `mailto:`.
+
+### Added (accessibility, AUDIT M4)
+- Programmatic form labels: `Label htmlFor` + input `id`s on the player
+  profile, join-code, and course-builder forms; `aria-label` on tee-set,
+  hole-grid, trip, search, allowance, override, and compare inputs.
+- Dialog semantics: `Modal`/`QRModal` announce as `role="dialog"` with
+  `aria-modal`, accessible names, Esc-to-close, and labeled close buttons.
+- Player-form hand/color pickers are real `<button>`s with `aria-pressed`.
+
+### Removed
+- Vestigial `sync-config.js` (config truth lives in `index.html`) (AUDIT M7).
+- Last two stray `console.log`s in the round sync service (AUDIT M6).
+
 ## [1.1.0] — 2026-06-12
 
 The match-format release: a modular scoring engine, real handicaps, richer

@@ -55,23 +55,28 @@ Key facts already verified (do not re-derive):
   restructured (new "Fixed in v1.1.1" table; remaining gaps re-ranked).
   dist rebuilt; 85/85 tests pass.
 
+- **M6:** v1.1.1 release pass — version bumped in `package.json` (+ lock),
+  all 24 `?v=` cache-busting strings in `index.html` and `sw.js`,
+  `CACHE_VERSION` → `playpal-v1.1.1`, Home footer version; CHANGELOG
+  `[1.1.1]` entry added. Full `npm test` green (85/85, dist parity).
+
 ## In Progress
 
-- Nothing mid-flight; M5 is complete and committed.
+- Nothing — all milestones complete.
 
 ## Remaining
 
-- M6 (v1.1.1 release pass, push, draft PR) — last milestone.
+- Nothing in this pass. Future work intentionally left documented:
+  ACCESSIBILITY_REPORT.md remaining-gaps table (clickable divs in content
+  screens, Dynamic Type, focus trap, contrast spots), AUDIT M2/M8
+  (accepted), AUDIT technical-debt section (ES modules, per-group
+  namespaces, ScoreEntry/Setup splits), and the manual ops steps in
+  RELEASE_CANDIDATE_REPORT.md (deploy Firebase rules, GitHub settings,
+  App Store logistics).
 
 ## Next Action (exact)
 
-Start **M6**:
-1. Bump version to 1.1.1: `package.json` "version"; every `?v=1.1.0` →
-   `?v=1.1.1` in `index.html` (script tags) and `sw.js` PRECACHE;
-   `sw.js` CACHE_VERSION `playpal-v1.1.0` → `playpal-v1.1.1`;
-   `Home.jsx` footer "PlayPal v1.1.0" → v1.1.1.
-2. Add CHANGELOG.md `[1.1.1]` entry (H7, H8, M3, M4, M6, M7 fixes).
-3. `npm run build` + full `npm test`; commit.
-4. `git push -u origin claude/fervent-planck-alq54v` (retry w/ backoff on
-   network failure), then open a **draft PR** via the GitHub MCP tools
-   (base: main). Tick M6 in todo.md, finalize this file.
+None — pass complete. Branch `claude/fervent-planck-alq54v` pushed and
+draft PR open (see PR for review). To resume future work, pick the top
+item from the "Remaining" list above and start a new milestone plan in
+`todo.md`.

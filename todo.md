@@ -31,7 +31,7 @@ green + AUDIT/report status flip + progress.md update, committed together.
     close.
   - Wire `id`/`htmlFor` (or `aria-label`) on the player-profile form
     (`Home.jsx` ~line 359 loop) and the course/trip forms in `Setup.jsx`.
-- [ ] M6 — Release pass v1.1.1
+- [x] M6 — Release pass v1.1.1
   - Bump: `package.json`, `index.html` `?v=` query strings, `sw.js`
     `CACHE_VERSION` + PRECACHE versions, `Home.jsx:323` footer version.
   - `CHANGELOG.md` 1.1.1 entry; flip fixed rows in `AUDIT.md`; update
