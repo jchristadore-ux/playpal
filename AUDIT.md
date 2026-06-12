@@ -41,11 +41,11 @@
 |---|---|---|---|---|
 | M1 | `JSON.parse(localStorage…)` without try/catch in several init paths (`pp_players` was unguarded; corrupted storage = crash loop). | 🟠 | S | ✅ FIXED for `pp_players` in App.jsx; remaining reads are wrapped already |
 | M2 | Hot-path `useMemo` keys built with `JSON.stringify(scores)` etc. in `ScoreEntry`/`LiveScorecard` — recomputed every render at 18 holes × 4 players scale. Works, but wasteful. | 🟡 | M | OPEN — acceptable at current scale |
-| M3 | Venmo handles and player names interpolated into `venmo://` / `mailto:` URLs without encoding (`Summary.jsx`). Malformed handle breaks the link; no XSS (attribute context). | 🟡 | S | OPEN — `encodeURIComponent` at the build sites |
+| M3 | Venmo handles and player names interpolated into `venmo://` / `mailto:` URLs without encoding (`Summary.jsx`). Malformed handle breaks the link; no XSS (attribute context). | 🟡 | S | ✅ FIXED (v1.1.1) — handle and recipient emails passed through `encodeURIComponent` |
 | M4 | `Modal`/form inputs lack `label htmlFor` associations; labels are visual only. | 🟡 | M | OPEN — inventoried in `ACCESSIBILITY_REPORT.md` |
 | M5 | `mockup-homepage.html` — dead 690-line design mockup served alongside the app. | 🟡 | S | ✅ FIXED — deleted |
-| M6 | Console noise: stray `console.log/info` in production paths. | 🟡 | S | ✅ MOSTLY FIXED — remaining `console.warn/error` are intentional failure diagnostics |
-| M7 | `sync-config.js` is vestigial (the real config is inline in `index.html`); two sources of truth for the database URL. | 🟡 | S | OPEN — harmless; remove on next pass |
+| M6 | Console noise: stray `console.log/info` in production paths. | 🟡 | S | ✅ FIXED (v1.1.1) — last two `console.log`s (listener attach/detach) removed; remaining `console.warn/error` are intentional failure diagnostics |
+| M7 | `sync-config.js` is vestigial (the real config is inline in `index.html`); two sources of truth for the database URL. | 🟡 | S | ✅ FIXED (v1.1.1) — file deleted (verified unreferenced) |
 | M8 | The "edit mode" `postMessage` appearance panel (builder-tool integration) ships in production. Inert outside the builder iframe, but it is debug UI. | 🟡 | S | OPEN — kept deliberately; remove before a public launch |
 
 ## Low Priority Issues

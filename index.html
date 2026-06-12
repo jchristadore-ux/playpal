@@ -343,13 +343,11 @@ var RoundSyncService = (function() {
           console.warn('[RoundSync] subscribeRound listener error:', err);
         }
       );
-      console.log('[PlayPal] Real-time listener attached for round', syncCode);
     });
   }
 
   function unsubscribeRound() {
     if (_roundUnsub) { _roundUnsub(); _roundUnsub = null; }
-    console.log('[PlayPal] Real-time listener detached');
   }
 
   return {

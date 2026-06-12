@@ -17,7 +17,7 @@ green + AUDIT/report status flip + progress.md update, committed together.
     `.where('round.tripId','==',tripId)` (single-field auto-index, no
     composite needed; keep client-side `savedAt` sort). On query error, fall
     back to the legacy full scan so the dashboard never regresses.
-- [ ] M4 — Fix AUDIT **M3** + **M7** + M6 leftovers
+- [x] M4 — Fix AUDIT **M3** + **M7** + M6 leftovers
   - `components/Summary.jsx` `openVenmo` (~line 177): `encodeURIComponent`
     the venmo handle in deep link + web link; encode recipient emails in the
     `mailto:` build (~line 326).

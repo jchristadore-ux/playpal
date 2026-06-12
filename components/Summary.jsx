@@ -179,8 +179,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     if (!venmoHandle) { showToast(`${from.name.split(' ')[0]} has no Venmo handle on their profile`, 'error'); return; }
     const note    = `PlayPal Golf · ${course.name} · ${new Date().toLocaleDateString()}`;
     const encoded = encodeURIComponent(note);
-    const deepLink = `venmo://paycharge?txn=charge&recipients=${venmoHandle}&amount=${amount.toFixed(2)}&note=${encoded}`;
-    const webLink  = `https://venmo.com/${venmoHandle}?txn=charge&amount=${amount.toFixed(2)}&note=${encoded}`;
+    const handle  = encodeURIComponent(venmoHandle);
+    const deepLink = `venmo://paycharge?txn=charge&recipients=${handle}&amount=${amount.toFixed(2)}&note=${encoded}`;
+    const webLink  = `https://venmo.com/${handle}?txn=charge&amount=${amount.toFixed(2)}&note=${encoded}`;
     const a = document.createElement('a'); a.href = deepLink; a.click();
     setTimeout(()=>{ window.open(webLink,'_blank'); }, 1200);
     setVenmoSent(prev=>({...prev,[debtKey]:true}));
@@ -322,7 +323,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const sendEmail = () => {
     const body    = buildScorecardEmail();
     const subject = `Scorecard — ${course.name} — ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
-    const emails  = players.map(p=>p.email).filter(Boolean).join(',');
+    const emails  = players.map(p=>p.email).filter(Boolean).map(encodeURIComponent).join(',');
     const mailto  = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailto, '_blank');
     setEmailSent(true);

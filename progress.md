@@ -40,25 +40,30 @@ Key facts already verified (do not re-derive):
   client-side `savedAt` sort), with the legacy full scan retained only as
   an error fallback. AUDIT.md H7 row flipped. 85/85 tests pass.
 
+- **M4:** AUDIT M3 fixed (`Summary.jsx`: venmo handle + mailto recipient
+  emails now `encodeURIComponent`-ed), M7 fixed (`sync-config.js` deleted),
+  M6 finished (last two `console.log`s removed from index.html
+  RoundSyncService). AUDIT rows flipped. dist rebuilt; 85/85 tests pass.
+
 ## In Progress
 
-- Nothing mid-flight; M3 is complete and committed.
+- Nothing mid-flight; M4 is complete and committed.
 
 ## Remaining
 
-- M4 (Summary venmo/mailto encoding, delete sync-config.js, drop 2 stray
-  console.logs in index.html) → M5 (a11y labels + modal) → M6 (v1.1.1
-  release pass, push, draft PR). Exact targets in `todo.md`.
+- M5 (a11y: Label htmlFor + form input ids, Modal dialog semantics + Esc)
+  → M6 (v1.1.1 release pass, push, draft PR). Exact targets in `todo.md`.
 
 ## Next Action (exact)
 
-Start **M4**:
-1. `components/Summary.jsx` `openVenmo` (~line 177): wrap the handle in
-   `encodeURIComponent` for both `venmo://` and `https://venmo.com` links;
-   encode recipient emails in the `mailto:` build (~line 326 — check how
-   `emails` is assembled first).
-2. `git rm sync-config.js` (verified unreferenced).
-3. Remove `console.log` lines in `index.html` `subscribeRound` /
-   `unsubscribeRound` (~lines 346, 352).
-4. `npm run build`, run tests, flip AUDIT.md M3/M7 (and M6 note) rows, tick
-   M4 in todo.md, update this file, commit.
+Start **M5**:
+1. `components/Shared.jsx`: `Label` renders a real `<label>` and accepts
+   `htmlFor`; `Modal` gets `role="dialog"`, `aria-modal="true"`,
+   `aria-label={title}`, and an Esc-key close handler.
+2. `components/Home.jsx` player-profile form (~line 359 loop): give each
+   input an `id` and pass `htmlFor` on its Label.
+3. `components/Setup.jsx`: same treatment for course/trip form inputs
+   (grep for `<Label` siblings of `<input`); where layout makes pairing
+   awkward, use `aria-label` on the input instead.
+4. `npm run build`, run tests, update ACCESSIBILITY_REPORT.md (form-labels
+   row + modal row), tick M5 in todo.md, update this file, commit.
