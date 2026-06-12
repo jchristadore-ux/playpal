@@ -231,7 +231,7 @@ const StatsScreen = ({ players, initialPlayerId }) => {
               <Label>COMPARE ROUNDS</Label>
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 {[[cmpA, setCmpA, 'Round A'], [cmpB, setCmpB, 'Round B']].map(([val, set, ph], i) => (
-                  <select key={i} value={val} onChange={e => set(e.target.value)} style={selectStyle}>
+                  <select key={i} value={val} onChange={e => set(e.target.value)} aria-label={`Compare ${ph}`} style={selectStyle}>
                     <option value="">{ph}…</option>
                     {playerRounds.map(d => (
                       <option key={d.syncCode || d.savedAt} value={d.syncCode}>

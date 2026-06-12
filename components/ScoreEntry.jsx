@@ -672,6 +672,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         girData:        nextGIR      || girRef.current,
         extraStats:     nextExtra    || extraRef.current,
         currentHoleIdx: holeIdxRef.current,
+        roundId: round.id,
         _writtenBy: deviceId,
         _ts: Date.now(),
       };
@@ -680,14 +681,21 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         setSyncing(false);
       });
     }, 400);
-  }, [syncCode, deviceId]);
+  }, [syncCode, deviceId, round.id]);
 
   // ── Subscribe to remote updates ───────────────────────────────────────────
   React.useEffect(() => {
     if (!window.RoundSyncService || !syncCode) return;
+    let cancelled = false;
 
     window.RoundSyncService.subscribeRound(syncCode, deviceId, function(livePayload) {
       if (!livePayload) return;
+      // A snapshot can arrive after cleanup (rapid exit/rejoin) — drop it.
+      if (cancelled) return;
+      // Payloads tagged with a different round id belong to a stale listener
+      // or a reused sync code; v1.1.0 clients send no roundId, so only
+      // reject on a present-and-mismatched tag.
+      if (livePayload.roundId && livePayload.roundId !== round.id) return;
       // Remote update: merge into local state
       applyingRemoteRef.current = true;
       if (livePayload.scores)      { setScores(livePayload.scores);           localStorage.setItem('pp_scores_'+round.id,   JSON.stringify(livePayload.scores)); }
@@ -705,6 +713,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
 
     return () => {
+      cancelled = true;
       window.RoundSyncService.unsubscribeRound();
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     };

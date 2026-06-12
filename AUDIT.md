@@ -32,8 +32,8 @@
 | H4 | `viewport` had `user-scalable=no, maximum-scale=1` — blocks pinch zoom (WCAG 1.4.4 failure; flagged in App Review a11y checks). | 🟠 | 🟠 | 🟠 | S | ✅ FIXED |
 | H5 | Bottom tab bar and many tap targets were `<div onClick>` — invisible to VoiceOver and keyboards. | 🟠 | 🟠 | 🟠 (a11y) | M | ✅ PARTIALLY FIXED — tab bar is now real `<button>`s with `aria-label`/`aria-current`; remaining clickable divs inventoried in `ACCESSIBILITY_REPORT.md` |
 | H6 | `join.html` reflected the unsanitized `code` query param into a redirect and logged it. | 🟠 | 🟡 | 🟡 | S | ✅ FIXED — code sanitized to `[A-Z0-9]{≤12}`, logging removed |
-| H7 | `TripDashboard`/`GolfTripSyncService.fetchTripRounds` downloads **every round in the database** and filters client-side. Fine at friend-group scale; O(all rounds) cost as data grows. | 🟠 | 🟡 | — | M | OPEN — add a Firestore `where('round.tripId','==',tripId)` query + index |
-| H8 | Stale Firestore listener race: `ScoreEntry` live-score subscription doesn't verify the incoming snapshot belongs to the current round; a listener surviving a rapid exit/rejoin could apply another round's scores. | 🟠 | 🟠 | — | M | OPEN — include round id in `liveScores` payload and check on receive |
+| H7 | `TripDashboard`/`GolfTripSyncService.fetchTripRounds` downloads **every round in the database** and filters client-side. Fine at friend-group scale; O(all rounds) cost as data grows. | 🟠 | 🟡 | — | M | ✅ FIXED (v1.1.1) — `where('round.tripId','==',tripId)` query (automatic single-field index; client-side `savedAt` sort keeps composite indexes unnecessary), legacy full scan kept as error fallback |
+| H8 | Stale Firestore listener race: `ScoreEntry` live-score subscription doesn't verify the incoming snapshot belongs to the current round; a listener surviving a rapid exit/rejoin could apply another round's scores. | 🟠 | 🟠 | — | M | ✅ FIXED (v1.1.1) — live payload carries `roundId`, receiver drops mismatched payloads and late post-cleanup callbacks (v1.1.0 payloads without the tag still accepted) |
 
 ## Medium Priority Issues
 
@@ -41,11 +41,11 @@
 |---|---|---|---|---|
 | M1 | `JSON.parse(localStorage…)` without try/catch in several init paths (`pp_players` was unguarded; corrupted storage = crash loop). | 🟠 | S | ✅ FIXED for `pp_players` in App.jsx; remaining reads are wrapped already |
 | M2 | Hot-path `useMemo` keys built with `JSON.stringify(scores)` etc. in `ScoreEntry`/`LiveScorecard` — recomputed every render at 18 holes × 4 players scale. Works, but wasteful. | 🟡 | M | OPEN — acceptable at current scale |
-| M3 | Venmo handles and player names interpolated into `venmo://` / `mailto:` URLs without encoding (`Summary.jsx`). Malformed handle breaks the link; no XSS (attribute context). | 🟡 | S | OPEN — `encodeURIComponent` at the build sites |
-| M4 | `Modal`/form inputs lack `label htmlFor` associations; labels are visual only. | 🟡 | M | OPEN — inventoried in `ACCESSIBILITY_REPORT.md` |
+| M3 | Venmo handles and player names interpolated into `venmo://` / `mailto:` URLs without encoding (`Summary.jsx`). Malformed handle breaks the link; no XSS (attribute context). | 🟡 | S | ✅ FIXED (v1.1.1) — handle and recipient emails passed through `encodeURIComponent` |
+| M4 | `Modal`/form inputs lack `label htmlFor` associations; labels are visual only. | 🟡 | M | ✅ FIXED (v1.1.1) — `Label htmlFor` + input `id`s on profile/course forms, `aria-label` elsewhere; modals gained `role="dialog"`/`aria-modal`/Esc (focus trap still inventoried in `ACCESSIBILITY_REPORT.md`) |
 | M5 | `mockup-homepage.html` — dead 690-line design mockup served alongside the app. | 🟡 | S | ✅ FIXED — deleted |
-| M6 | Console noise: stray `console.log/info` in production paths. | 🟡 | S | ✅ MOSTLY FIXED — remaining `console.warn/error` are intentional failure diagnostics |
-| M7 | `sync-config.js` is vestigial (the real config is inline in `index.html`); two sources of truth for the database URL. | 🟡 | S | OPEN — harmless; remove on next pass |
+| M6 | Console noise: stray `console.log/info` in production paths. | 🟡 | S | ✅ FIXED (v1.1.1) — last two `console.log`s (listener attach/detach) removed; remaining `console.warn/error` are intentional failure diagnostics |
+| M7 | `sync-config.js` is vestigial (the real config is inline in `index.html`); two sources of truth for the database URL. | 🟡 | S | ✅ FIXED (v1.1.1) — file deleted (verified unreferenced) |
 | M8 | The "edit mode" `postMessage` appearance panel (builder-tool integration) ships in production. Inert outside the builder iframe, but it is debug UI. | 🟡 | S | OPEN — kept deliberately; remove before a public launch |
 
 ## Low Priority Issues
