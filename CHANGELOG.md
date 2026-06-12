@@ -2,6 +2,44 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.2.0] — 2026-06-12
+
+Customizable stat tracking, a more compact score-entry tile, and proper
+iPhone safe-area handling.
+
+### Added
+- **Select Stats to Track** (pre-round, in Setup): choose exactly which
+  per-hole stats to record. Putts, FIR and GIR are pre-selected; Penalties,
+  Sand saves and Up & downs are opt-in. The selection is remembered locally
+  and pre-populated for future rounds.
+- `StatsService` stat registry (`STAT_TRACK_DEFS`) plus pure
+  `normalizeStatsConfig`/`resolveRoundStatsConfig` helpers — new stats can be
+  added in one place without touching the selection screen or in-round
+  plumbing. Covered by new unit tests.
+
+### Changed
+- In-round stat tracking is now driven by the per-round selection: disabled
+  stats are hidden entirely. Putts remain available automatically when a
+  Pass-the-Money game is in play (its holder is derived from putts).
+- **Compact player tile:** PUTTS, FIR and GIR now share a single horizontal
+  row (wrapping only on very narrow screens) with tighter controls; opt-in
+  short-game stats sit in a compact second row. Header and stepper padding
+  trimmed — more players fit on screen, less scrolling hole-to-hole.
+- **iPhone safe area:** the top navigation now respects
+  `env(safe-area-inset-*)` so the logo, QR button and sync code always clear
+  the Dynamic Island / status bar; side insets keep the top and bottom bars
+  clear of the notch in landscape. No hardcoded device offsets.
+
+### Removed
+- Dead `PlayerCard.jsx` (superseded by `PlayerScoreCard` in `ScoreEntry`;
+  it had no references) and its build/script/cache entries.
+
+### Migration / compatibility
+- Saved rounds are unaffected: the stat data model (FIR/GIR/extra arrays) is
+  unchanged; the new config only governs which inputs render. Rounds saved
+  before this release fall back correctly — legacy `trackStats` rounds show
+  all stats, trip rounds show Putts/FIR/GIR, others show Putts.
+
 ## [1.1.1] — 2026-06-12
 
 Hardening release: closes every remaining OPEN item from `AUDIT.md` that is

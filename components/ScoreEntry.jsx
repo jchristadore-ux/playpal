@@ -91,7 +91,7 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, isTripMode, trackStats, firData, girData, onFIR, onGIR, extraStats, onExtraStat }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -100,15 +100,52 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const cardBorder = isWolf ? '1.5px solid rgba(220,38,38,0.35)' : isPartner ? `1.5px solid ${p.color}55` : '1px solid #E7E3D9';
   const cardBg     = isWolf ? 'rgba(220,38,38,0.03)' : '#FFFFFF';
 
+  // Which per-hole stats this round records (FIR hidden on par 3s).
+  const showPutts = !!stats.putts;
+  const showFIR   = !!stats.fir && hole.par !== 3;
+  const showGIR   = !!stats.gir;
+  const showShort = !!(stats.pen || stats.sand || stats.ud);
+  const puttRequired = isPTMHolder && puttVal === 0;
+
+  // Compact ✓/✗ toggle shared by FIR and GIR on the single stat row.
+  const HitMiss = (label, data, onSet) => {
+    const cur = data?.[p.id]?.[holeIdx];
+    return (
+      <div style={{display:'flex', alignItems:'center', gap:6}}>
+        <Label style={{flexShrink:0}}>{label}</Label>
+        <div style={{display:'flex', gap:5}}>
+          {[true, false].map(val => {
+            const selected = cur === val;
+            return (
+              <button key={String(val)} onClick={() => onSet(p.id, selected ? null : val)}
+                aria-label={`${label} ${val ? 'hit' : 'miss'}`} aria-pressed={selected}
+                style={{
+                  width:38, height:36, borderRadius:9,
+                  border: selected ? 'none' : '1px solid #E7E3D9',
+                  background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
+                  color: selected ? '#FFFFFF' : '#3F5F4A',
+                  fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:16,
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                }}>
+                {val ? '✓' : '✗'}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{background:cardBg, border:cardBorder, borderRadius:18, overflow:'hidden', flexShrink:0}}>
 
       {/* Player header */}
-      <div style={{display:'flex', alignItems:'center', padding:'12px 16px 8px', gap:10}}>
-        <Avatar player={p} size={36}/>
+      <div style={{display:'flex', alignItems:'center', padding:'10px 14px 6px', gap:10}}>
+        <Avatar player={p} size={34}/>
         <div style={{flex:1, minWidth:0}}>
-          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:20, color:'#0E2B20', letterSpacing:0.2, lineHeight:1}}>{p.name}</div>
-          <div style={{fontSize:11, color:'#3F5F4A', marginTop:3, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>HCP {p.handicap}</div>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:19, color:'#0E2B20', letterSpacing:0.2, lineHeight:1}}>{p.name}</div>
+          <div style={{fontSize:11, color:'#3F5F4A', marginTop:2, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>HCP {p.handicap}</div>
         </div>
         {isWolf && !hasWolf && <span style={{fontSize:18}}>🐺</span>}
         {isPartner && !isWolf && <span style={{fontSize:16, opacity:0.8}}>⚑</span>}
@@ -165,7 +202,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
       )}
 
       {/* Score stepper */}
-      <div style={{display:'flex', alignItems:'center', padding:'0 12px 12px', gap:8}}>
+      <div style={{display:'flex', alignItems:'center', padding:'0 12px 10px', gap:8}}>
         <button
           onClick={()=>onScore(p.id, (score||hole.par)-1)}
           disabled={score !== null && score <= 1}
@@ -245,133 +282,97 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </div>
       )}
 
-      {/* Putt tracker */}
-      <div style={{display:'flex', alignItems:'center', padding:'8px 14px 12px',
-        borderTop: isPTMHolder && puttVal === 0 ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
-        gap:10,
-        background: isPTMHolder && puttVal === 0 ? 'rgba(200,161,90,0.04)' : 'transparent'}}>
-        <div style={{display:'flex', flexDirection:'column', gap:1, flexShrink:0}}>
-          <Label style={{flexShrink:0}}>PUTTS</Label>
-          {isPTMHolder && puttVal === 0 && (
-            <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A', letterSpacing:0.5}}>💰 REQUIRED</span>
-          )}
-        </div>
-        <div style={{display:'flex', gap:6, marginLeft:2}}>
-          {[1,2,3,4].map(n=>(
-            <button key={n}
-              onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
-              style={{width:40, height:40, borderRadius:9,
-                border: puttVal===n ? 'none' : '1px solid #E7E3D9',
-                background: puttVal===n ? p.color : '#F0EDE4',
-                color: puttVal===n ? '#0E2B20' : '#3F5F4A',
-                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:17,
-                cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                display:'flex', alignItems:'center', justifyContent:'center'}}>
-              {n}
-            </button>
-          ))}
-        </div>
-        {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>}
-      </div>
-
-      {/* Stat tracking: FIR / GIR (trip mode or stat-tracking rounds) */}
-      {(isTripMode || trackStats) && (
-        <div style={{borderTop:'1px solid #E7E3D9', padding:'8px 14px 12px', display:'flex', flexDirection:'column', gap:8}}>
-          {hole.par !== 3 && (
-            <div style={{display:'flex', alignItems:'center', gap:10}}>
-              <Label style={{width:36, flexShrink:0}}>FIR</Label>
-              <div style={{display:'flex', gap:6}}>
-                {[true, false].map(val => {
-                  const firVal = firData?.[p.id]?.[holeIdx];
-                  const selected = firVal === val;
-                  return (
-                    <button key={String(val)}
-                      onClick={() => onFIR(p.id, selected ? null : val)}
-                      style={{
-                        height:36, borderRadius:9, padding:'0 14px',
-                        border: selected ? 'none' : '1px solid #E7E3D9',
-                        background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
-                        color: selected ? '#FFFFFF' : '#3F5F4A',
-                        fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
-                        cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                      }}>
-                      {val ? '✓ HIT' : '✗ MISS'}
-                    </button>
-                  );
-                })}
+      {/* Stat row — PUTTS · FIR · GIR on a single line (wraps only if needed) */}
+      {(showPutts || showFIR || showGIR) && (
+        <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:16, rowGap:8,
+          padding:'8px 14px 10px',
+          borderTop: puttRequired ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
+          background: puttRequired ? 'rgba(200,161,90,0.04)' : 'transparent'}}>
+          {showPutts && (
+            <div style={{display:'flex', alignItems:'center', gap:8}}>
+              <div style={{display:'flex', flexDirection:'column', gap:1, flexShrink:0}}>
+                <Label style={{flexShrink:0}}>PUTTS</Label>
+                {puttRequired && (
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A', letterSpacing:0.5}}>💰 REQ</span>
+                )}
               </div>
-            </div>
-          )}
-          <div style={{display:'flex', alignItems:'center', gap:10}}>
-            <Label style={{width:36, flexShrink:0}}>GIR</Label>
-            <div style={{display:'flex', gap:6}}>
-              {[true, false].map(val => {
-                const girVal = girData?.[p.id]?.[holeIdx];
-                const selected = girVal === val;
-                return (
-                  <button key={String(val)}
-                    onClick={() => onGIR(p.id, selected ? null : val)}
-                    style={{
-                      height:36, borderRadius:9, padding:'0 14px',
-                      border: selected ? 'none' : '1px solid #E7E3D9',
-                      background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
-                      color: selected ? '#FFFFFF' : '#3F5F4A',
-                      fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+              <div style={{display:'flex', gap:5}}>
+                {[1,2,3,4].map(n=>(
+                  <button key={n}
+                    onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
+                    aria-label={`${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
+                    style={{width:36, height:36, borderRadius:9,
+                      border: puttVal===n ? 'none' : '1px solid #E7E3D9',
+                      background: puttVal===n ? p.color : '#F0EDE4',
+                      color: puttVal===n ? '#0E2B20' : '#3F5F4A',
+                      fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:16,
                       cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                    }}>
-                    {val ? '✓ HIT' : '✗ MISS'}
+                      display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    {n}
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Penalties, sand saves, up & downs (stat-tracking rounds only) */}
-          {trackStats && (() => {
-            const ex = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
-            const pen = ex.pen || 0;
-            const triBtn = (field, val, lbl, color) => {
-              const on = ex[field] === val;
-              return (
-                <button key={field + String(val)}
-                  onClick={() => onExtraStat(p.id, field, on ? null : val)}
-                  style={{
-                    height:32, borderRadius:8, padding:'0 10px',
-                    border: on ? 'none' : '1px solid #E7E3D9',
-                    background: on ? color : '#F0EDE4',
-                    color: on ? '#FFFFFF' : '#3F5F4A',
-                    fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12,
-                    cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                  }}>
-                  {lbl}
-                </button>
-              );
-            };
-            return (
-              <div style={{display:'flex', alignItems:'center', gap:12, flexWrap:'wrap'}}>
-                <div style={{display:'flex', alignItems:'center', gap:6}}>
-                  <Label style={{flexShrink:0}}>PEN</Label>
-                  <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0}
-                    style={{width:30, height:32, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
-                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
-                  <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)}
-                    style={{width:30, height:32, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
-                </div>
-                <div style={{display:'flex', alignItems:'center', gap:6}}>
-                  <Label style={{flexShrink:0}}>SAND</Label>
-                  {triBtn('sand', true, '✓', '#15803D')}
-                  {triBtn('sand', false, '✗', '#DC2626')}
-                </div>
-                <div style={{display:'flex', alignItems:'center', gap:6}}>
-                  <Label style={{flexShrink:0}}>U&D</Label>
-                  {triBtn('ud', true, '✓', '#15803D')}
-                  {triBtn('ud', false, '✗', '#DC2626')}
-                </div>
+                ))}
               </div>
-            );
-          })()}
+              {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', letterSpacing:0.5}}>3-PUTT</span>}
+            </div>
+          )}
+          {showFIR && HitMiss('FIR', firData, onFIR)}
+          {showGIR && HitMiss('GIR', girData, onGIR)}
         </div>
       )}
+
+      {/* Short-game stats (opt-in): penalties / sand saves / up & downs */}
+      {showShort && (() => {
+        const ex = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
+        const pen = ex.pen || 0;
+        const triBtn = (field, val, lbl, color) => {
+          const on = ex[field] === val;
+          return (
+            <button key={field + String(val)}
+              onClick={() => onExtraStat(p.id, field, on ? null : val)}
+              aria-label={`${field} ${val ? 'yes' : 'no'}`} aria-pressed={on}
+              style={{
+                width:34, height:34, borderRadius:8,
+                border: on ? 'none' : '1px solid #E7E3D9',
+                background: on ? color : '#F0EDE4',
+                color: on ? '#FFFFFF' : '#3F5F4A',
+                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+              {lbl}
+            </button>
+          );
+        };
+        return (
+          <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:14, rowGap:8,
+            padding:'0 14px 12px', borderTop:'1px solid #E7E3D9', paddingTop:10}}>
+            {stats.pen && (
+              <div style={{display:'flex', alignItems:'center', gap:6}}>
+                <Label style={{flexShrink:0}}>PEN</Label>
+                <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0} aria-label="One fewer penalty"
+                  style={{width:32, height:34, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
+                <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
+                  style={{width:32, height:34, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
+              </div>
+            )}
+            {stats.sand && (
+              <div style={{display:'flex', alignItems:'center', gap:6}}>
+                <Label style={{flexShrink:0}}>SAND</Label>
+                {triBtn('sand', true, '✓', '#15803D')}
+                {triBtn('sand', false, '✗', '#DC2626')}
+              </div>
+            )}
+            {stats.ud && (
+              <div style={{display:'flex', alignItems:'center', gap:6}}>
+                <Label style={{flexShrink:0}}>U&D</Label>
+                {triBtn('ud', true, '✓', '#15803D')}
+                {triBtn('ud', false, '✗', '#DC2626')}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };
@@ -617,6 +618,18 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const skinsFmt  = formats.find(f => f.type === 'skins');
   const bbbFmt    = formats.find(f => f.type === 'bingobangobongo');
   const teeBallFmt= formats.find(f => f.type === 'teeball');
+
+  // Which per-hole stats this round records. Putts stay on whenever Pass-the-Money
+  // is in play (the holder is derived from putts), regardless of the saved config.
+  const statsCfg = React.useMemo(() => window.StatsService.resolveRoundStatsConfig(round), [round]);
+  const cardStats = React.useMemo(() => ({
+    putts: statsCfg.putts || hasPTM,
+    fir:   statsCfg.fir,
+    gir:   statsCfg.gir,
+    pen:   statsCfg.pen,
+    sand:  statsCfg.sand,
+    ud:    statsCfg.ud,
+  }), [statsCfg, hasPTM]);
 
   const hole       = course.holes[holeIdx];
   const wolfPlayer = hasWolf ? getWolfForHole(players, holeIdx) : null;
@@ -936,8 +949,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
-  const isTripMode = !!round.tripId;
-
   const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData, extraStats); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
@@ -1041,7 +1052,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
-                isTripMode={isTripMode} trackStats={!!round.trackStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
+                stats={cardStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
                 extraStats={extraStats} onExtraStat={setExtraStat}
               />
             );

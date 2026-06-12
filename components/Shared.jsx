@@ -215,7 +215,15 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
 const navStyles = {
   bar: {
     display:'flex', alignItems:'center', justifyContent:'space-between',
-    padding:'0 16px', height:56, background:'#0E2B20',
+    // Safe-area aware: the dark bar fills the status-bar / Dynamic Island inset
+    // so the logo, QR button and sync code never sit under it. Side insets keep
+    // the chrome clear of the notch in landscape. (Global box-sizing:border-box,
+    // so minHeight includes the top padding — keep 56px of usable bar below it.)
+    paddingTop:'env(safe-area-inset-top, 0px)',
+    paddingLeft:'calc(16px + env(safe-area-inset-left, 0px))',
+    paddingRight:'calc(16px + env(safe-area-inset-right, 0px))',
+    minHeight:'calc(56px + env(safe-area-inset-top, 0px))',
+    background:'#0E2B20',
     borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0, zIndex:100, position:'relative',
   },
   logo: {

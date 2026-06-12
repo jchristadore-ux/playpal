@@ -598,7 +598,7 @@ const App = () => {
 
       {/* Bottom Tab Nav — hidden on score, viewround, and trip detail screens */}
       {screen !== 'score' && screen !== 'viewround' && screen !== 'trip' &&
-        <nav aria-label="Main navigation" style={{ display:'flex', borderTop:'1px solid rgba(255,255,255,0.1)', background:'#0E2B20', flexShrink:0, paddingBottom:'env(safe-area-inset-bottom, 0px)' }}>
+        <nav aria-label="Main navigation" style={{ display:'flex', borderTop:'1px solid rgba(255,255,255,0.1)', background:'#0E2B20', flexShrink:0, paddingBottom:'env(safe-area-inset-bottom, 0px)', paddingLeft:'env(safe-area-inset-left, 0px)', paddingRight:'env(safe-area-inset-right, 0px)' }}>
           {[
             { id:'home',    icon:'🏠', label:'HOME' },
             { id:'stats',   icon:'📈', label:'STATS' },

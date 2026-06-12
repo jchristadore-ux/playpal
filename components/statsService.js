@@ -272,6 +272,46 @@ const StatsService = (function () {
   };
 })();
 
+// ── Trackable-stat registry ───────────────────────────────────────────────
+// Single source of truth for which per-hole stats exist and their defaults.
+// Add a future stat here (plus its input UI in ScoreEntry) without touching
+// the selection screen or the config plumbing. All helpers below are pure.
+const STAT_TRACK_DEFS = [
+  { key: 'putts', label: 'Putts',      hint: 'Putts per hole',           icon: '🎯', default: true,  primary: true },
+  { key: 'fir',   label: 'FIR',        hint: 'Fairways in regulation',   icon: '🟢', default: true,  primary: true },
+  { key: 'gir',   label: 'GIR',        hint: 'Greens in regulation',     icon: '⛳', default: true,  primary: true },
+  { key: 'pen',   label: 'Penalties',  hint: 'Penalty strokes',          icon: '⚠️', default: false },
+  { key: 'sand',  label: 'Sand saves', hint: 'Up & down from a bunker',  icon: '🏖️', default: false },
+  { key: 'ud',    label: 'Up & downs', hint: 'Scramble par saves',       icon: '🎽', default: false },
+];
+
+const DEFAULT_STATS_CONFIG = STAT_TRACK_DEFS.reduce((o, d) => { o[d.key] = d.default; return o; }, {});
+
+// Merge a partial/untrusted config over the defaults, keeping only known keys.
+function normalizeStatsConfig(cfg) {
+  const out = { ...DEFAULT_STATS_CONFIG };
+  if (cfg && typeof cfg === 'object') {
+    STAT_TRACK_DEFS.forEach(d => { if (typeof cfg[d.key] === 'boolean') out[d.key] = cfg[d.key]; });
+  }
+  return out;
+}
+
+// The config that should drive the in-round UI for a round, honoring rounds
+// saved before per-stat selection existed (legacy `trackStats`/`tripId`).
+function resolveRoundStatsConfig(round) {
+  if (round && round.statsConfig) return normalizeStatsConfig(round.statsConfig);
+  if (round && round.trackStats)  return { putts: true, fir: true, gir: true, pen: true, sand: true, ud: true };
+  if (round && round.tripId)      return { putts: true, fir: true, gir: true, pen: false, sand: false, ud: false };
+  return { putts: true, fir: false, gir: false, pen: false, sand: false, ud: false };
+}
+
+Object.assign(StatsService, {
+  STAT_TRACK_DEFS,
+  DEFAULT_STATS_CONFIG,
+  normalizeStatsConfig,
+  resolveRoundStatsConfig,
+});
+
 if (typeof window !== 'undefined') {
-  Object.assign(window, { StatsService });
+  Object.assign(window, { StatsService, STAT_TRACK_DEFS });
 }

@@ -4,6 +4,17 @@
 
 const BLANK_HOLES = Array.from({length:18}, (_,i) => ({ num:i+1, par:4, yds:'', hdcp:i+1 }));
 
+// Remembered "Select Stats to Track" preference (pre-populates future rounds).
+const STATS_CONFIG_PREF_KEY = 'pp_stats_config';
+const loadStatsConfigPref = () => {
+  const norm = window.StatsService ? window.StatsService.normalizeStatsConfig : (c => c);
+  try { return norm(JSON.parse(localStorage.getItem(STATS_CONFIG_PREF_KEY))); }
+  catch(e) { return norm(null); }
+};
+const saveStatsConfigPref = (cfg) => {
+  try { localStorage.setItem(STATS_CONFIG_PREF_KEY, JSON.stringify(cfg)); } catch(e) {}
+};
+
 // ─── Engine game configuration (Phase 2 formats) ──────────────────────────────
 
 const GameTeamAssigner = ({ def, config, players, onChange }) => {
@@ -748,7 +759,12 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [games, setGames]                     = React.useState([]);          // MatchEngine games
   const [gamePickerOpen, setGamePickerOpen]   = React.useState(false);
   const [teeId, setTeeId]                     = React.useState(null);        // chosen tee for the round
-  const [trackStats, setTrackStats]           = React.useState(false);       // FIR/GIR/penalties/short game
+  const [statsConfig, setStatsConfig]         = React.useState(loadStatsConfigPref); // which per-hole stats to record
+  const toggleStat = (key) => setStatsConfig(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    saveStatsConfigPref(next);   // remember the latest selection for next round
+    return next;
+  });
   const [favVersion, setFavVersion]           = React.useState(0);           // bump to re-read favorites
   const [startingTee,     setStartingTee]     = React.useState(1); // 1 = front first, 10 = back first
   const [tripMode,        setTripMode]        = React.useState('none'); // 'none' | 'existing' | 'new'
@@ -863,7 +879,9 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
       tripMode === 'existing' ? { mode: 'existing', tripId: selectedTripId } :
       { mode: 'none' };
     const namedGames = games.map(g => ({ ...g, name: window.MatchEngine.get(g.formatId)?.label || g.formatId }));
-    onStart({ players, course, formats: activeFormats, games: namedGames, teeId, trackStats, syncCode: generateSyncCode(), tripSelection, startingTee });
+    // `trackStats` is derived for legacy readers/labels: any detailed stat beyond putts.
+    const trackStats = ['fir','gir','pen','sand','ud'].some(k => statsConfig[k]);
+    onStart({ players, course, formats: activeFormats, games: namedGames, teeId, statsConfig, trackStats, syncCode: generateSyncCode(), tripSelection, startingTee });
   };
 
   const buildStateGroups = (list) => {
@@ -993,17 +1011,41 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                 </div>
               )}
 
-              {/* ── Optional stat tracking ── */}
+              {/* ── Select stats to track ── */}
               {course && (
-                <div onClick={()=>setTrackStats(v=>!v)}
-                  style={{background:'#FFFFFF', border:trackStats?'1px solid #0E2B20':'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16, display:'flex', alignItems:'center', gap:12, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
-                  <span style={{fontSize:20}}>📈</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>Track Round Stats</div>
-                    <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', marginTop:2, lineHeight:1.4}}>Fairways, greens, penalties, sand saves, up &amp; downs — feeds your Stats dashboard</div>
+                <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px 16px', marginTop:16}}>
+                  <div style={{display:'flex', alignItems:'center', gap:12}}>
+                    <span style={{fontSize:20}}>📈</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>Select Stats to Track</div>
+                      <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', marginTop:2, lineHeight:1.4}}>Tap to choose what you'll record each hole — feeds your Stats dashboard. We'll remember this next time.</div>
+                    </div>
                   </div>
-                  <div style={{...setupS.check, background:trackStats?'#0E2B20':'transparent', border:`2px solid ${trackStats?'#0E2B20':'#E7E3D9'}`}}>
-                    {trackStats && <span style={{color:'#F6F4EE', fontSize:14, fontWeight:900}}>✓</span>}
+                  <div role="group" aria-label="Stats to track" style={{display:'flex', flexWrap:'wrap', gap:8, marginTop:12}}>
+                    {(window.STAT_TRACK_DEFS || []).map(def => {
+                      const on = !!statsConfig[def.key];
+                      return (
+                        <button key={def.key} onClick={()=>toggleStat(def.key)}
+                          aria-pressed={on} title={def.hint}
+                          style={{
+                            display:'flex', alignItems:'center', gap:7, cursor:'pointer',
+                            borderRadius:999, padding:'8px 14px', minHeight:40,
+                            background:on?'#0E2B20':'#F6F4EE',
+                            border:on?'1px solid #0E2B20':'1px solid #E7E3D9',
+                            color:on?'#F6F4EE':'#3F5F4A',
+                            fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, letterSpacing:0.2,
+                            WebkitTapHighlightColor:'transparent', transition:'background 0.12s, border-color 0.12s',
+                          }}>
+                          <span aria-hidden="true" style={{
+                            display:'inline-flex', alignItems:'center', justifyContent:'center',
+                            width:16, height:16, borderRadius:5, flexShrink:0, fontSize:11, fontWeight:900,
+                            background:on?'#C8A15A':'transparent', color:on?'#0E2B20':'transparent',
+                            border:on?'none':'1.5px solid #C8D5C0',
+                          }}>{on?'✓':''}</span>
+                          {def.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1141,7 +1183,10 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2.5, color:'#C8A15A', marginBottom:8}}>ROUND SUMMARY</div>
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>
                   <div style={{marginBottom:2}}>📍 {course?.name}{course && (course.tees||[]).length > 1 && teeId ? ` · ${(course.tees.find(t=>t.id===teeId)||course.tees[0]).name} tees` : ''}{course?.holeCount === 9 ? ' · 9 holes' : ''}</div>
-                  <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players{trackStats ? ' · 📈 stat tracking on' : ''}</div>
+                  <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players{(() => {
+                    const on = (window.STAT_TRACK_DEFS || []).filter(d => statsConfig[d.key]);
+                    return on.length ? ` · 📈 ${on.map(d => d.label).join(', ')}` : '';
+                  })()}</div>
                   {games.map(g => {
                     const def = window.MatchEngine.get(g.formatId);
                     if (!def) return null;
