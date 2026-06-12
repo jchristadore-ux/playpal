@@ -421,20 +421,30 @@ var GolfTripSyncService = (function() {
     });
   }
 
+  function _collectTripRounds(snap, tripId) {
+    var rounds = [];
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      if (d.round && d.round.tripId === tripId) rounds.push(d);
+    });
+    // Sorted client-side so the query needs only Firestore's automatic
+    // single-field index (no composite index to deploy).
+    rounds.sort(function(a, b) { return (b.savedAt || 0) - (a.savedAt || 0); });
+    return rounds;
+  }
+
   function fetchTripRounds(tripId, cb) {
     _fbInit(function(ok) {
       if (!ok) { cb([]); return; }
-      _fbFs.collection(ROUNDS_COL).get()
-        .then(function(snap) {
-          var rounds = [];
-          snap.forEach(function(doc) {
-            var d = doc.data();
-            if (d.round && d.round.tripId === tripId) rounds.push(d);
-          });
-          rounds.sort(function(a, b) { return (b.savedAt || 0) - (a.savedAt || 0); });
-          cb(rounds);
-        })
-        .catch(function(e) { console.warn('[TripSync] fetchTripRounds failed:', e); cb([]); });
+      _fbFs.collection(ROUNDS_COL).where('round.tripId', '==', tripId).get()
+        .then(function(snap) { cb(_collectTripRounds(snap, tripId)); })
+        .catch(function(e) {
+          // Fall back to the legacy full scan rather than show an empty trip.
+          console.warn('[TripSync] tripId query failed, falling back to full scan:', e);
+          _fbFs.collection(ROUNDS_COL).get()
+            .then(function(snap) { cb(_collectTripRounds(snap, tripId)); })
+            .catch(function(e2) { console.warn('[TripSync] fetchTripRounds failed:', e2); cb([]); });
+        });
     });
   }
 

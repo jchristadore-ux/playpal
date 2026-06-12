@@ -11,7 +11,7 @@ green + AUDIT/report status flip + progress.md update, committed together.
     ≠ `round.id` (presence-checked so v1.1.0 clients without the field keep
     syncing); add an effect-scoped `cancelled` guard so late callbacks after
     cleanup are dropped.
-- [ ] M3 — Fix AUDIT **H7**: trip dashboard full-collection read
+- [x] M3 — Fix AUDIT **H7**: trip dashboard full-collection read
   - `index.html` `GolfTripSyncService.fetchTripRounds` (~line 424): replace
     full `.get()` + client filter with
     `.where('round.tripId','==',tripId)` (single-field auto-index, no

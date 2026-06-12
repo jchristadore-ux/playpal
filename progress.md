@@ -35,22 +35,30 @@ Key facts already verified (do not re-derive):
   payloads) and drops post-cleanup callbacks via a `cancelled` effect flag.
   AUDIT.md H8 row flipped. dist rebuilt; 85/85 tests pass.
 
+- **M3:** AUDIT H7 fixed in `index.html`: `fetchTripRounds` now queries
+  `where('round.tripId','==',tripId)` (automatic single-field index;
+  client-side `savedAt` sort), with the legacy full scan retained only as
+  an error fallback. AUDIT.md H7 row flipped. 85/85 tests pass.
+
 ## In Progress
 
-- Nothing mid-flight; M2 is complete and committed.
+- Nothing mid-flight; M3 is complete and committed.
 
 ## Remaining
 
-- M3 (H7 trip query) → M4 (M3/M7/console cleanup) → M5 (a11y labels +
-  modal) → M6 (v1.1.1 release pass, push, draft PR). Exact file/line
-  targets for each are in `todo.md`.
+- M4 (Summary venmo/mailto encoding, delete sync-config.js, drop 2 stray
+  console.logs in index.html) → M5 (a11y labels + modal) → M6 (v1.1.1
+  release pass, push, draft PR). Exact targets in `todo.md`.
 
 ## Next Action (exact)
 
-Start **M3**: edit `index.html` `GolfTripSyncService.fetchTripRounds`
-(~line 424) — query
-`_fbFs.collection(ROUNDS_COL).where('round.tripId','==',tripId).get()`,
-keep the client-side `savedAt` sort, and on query failure fall back to the
-legacy full-collection scan. index.html is not compiled (no dist rebuild
-needed), but still run the test suite; flip AUDIT.md H7 row, tick M3 in
-todo.md, update this file, commit.
+Start **M4**:
+1. `components/Summary.jsx` `openVenmo` (~line 177): wrap the handle in
+   `encodeURIComponent` for both `venmo://` and `https://venmo.com` links;
+   encode recipient emails in the `mailto:` build (~line 326 — check how
+   `emails` is assembled first).
+2. `git rm sync-config.js` (verified unreferenced).
+3. Remove `console.log` lines in `index.html` `subscribeRound` /
+   `unsubscribeRound` (~lines 346, 352).
+4. `npm run build`, run tests, flip AUDIT.md M3/M7 (and M6 note) rows, tick
+   M4 in todo.md, update this file, commit.
