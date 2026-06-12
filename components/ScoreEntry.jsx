@@ -91,7 +91,7 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, isTripMode, firData, girData, onFIR, onGIR }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, isTripMode, trackStats, firData, girData, onFIR, onGIR, extraStats, onExtraStat }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -274,8 +274,8 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', marginLeft:2, letterSpacing:0.5}}>3-PUTT</span>}
       </div>
 
-      {/* Trip Mode: FIR / GIR trackers */}
-      {isTripMode && (
+      {/* Stat tracking: FIR / GIR (trip mode or stat-tracking rounds) */}
+      {(isTripMode || trackStats) && (
         <div style={{borderTop:'1px solid #E7E3D9', padding:'8px 14px 12px', display:'flex', flexDirection:'column', gap:8}}>
           {hole.par !== 3 && (
             <div style={{display:'flex', alignItems:'center', gap:10}}>
@@ -325,6 +325,51 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
               })}
             </div>
           </div>
+
+          {/* Penalties, sand saves, up & downs (stat-tracking rounds only) */}
+          {trackStats && (() => {
+            const ex = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
+            const pen = ex.pen || 0;
+            const triBtn = (field, val, lbl, color) => {
+              const on = ex[field] === val;
+              return (
+                <button key={field + String(val)}
+                  onClick={() => onExtraStat(p.id, field, on ? null : val)}
+                  style={{
+                    height:32, borderRadius:8, padding:'0 10px',
+                    border: on ? 'none' : '1px solid #E7E3D9',
+                    background: on ? color : '#F0EDE4',
+                    color: on ? '#FFFFFF' : '#3F5F4A',
+                    fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12,
+                    cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                  }}>
+                  {lbl}
+                </button>
+              );
+            };
+            return (
+              <div style={{display:'flex', alignItems:'center', gap:12, flexWrap:'wrap'}}>
+                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                  <Label style={{flexShrink:0}}>PEN</Label>
+                  <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0}
+                    style={{width:30, height:32, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
+                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
+                  <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)}
+                    style={{width:30, height:32, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                  <Label style={{flexShrink:0}}>SAND</Label>
+                  {triBtn('sand', true, '✓', '#15803D')}
+                  {triBtn('sand', false, '✗', '#DC2626')}
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:6}}>
+                  <Label style={{flexShrink:0}}>U&D</Label>
+                  {triBtn('ud', true, '✓', '#15803D')}
+                  {triBtn('ud', false, '✗', '#DC2626')}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
@@ -491,15 +536,20 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
 
   const { players, course, formats, syncCode } = round;
+  const games = round.games || [];
+
+  // 9- or 18-hole layouts: every hole loop and array below sizes off the course.
+  const holeCount = course.holes.length;
+  const lastSeq = holeCount - 1;
 
   // Play order: which actual hole index is played in what position. Starting on the
   // 10th tee plays holes 10→18 then 1→9. Data arrays stay indexed by actual hole idx.
-  const startingTee = round.startingTee === 10 ? 10 : 1;
+  const startingTee = round.startingTee === 10 && holeCount === 18 ? 10 : 1;
   const playOrder = React.useMemo(() => (
     startingTee === 10
       ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-  ), [startingTee]);
+      : Array.from({ length: holeCount }, (_, i) => i)
+  ), [startingTee, holeCount]);
 
   const nassauFmtObj = formats.find(f => f.type === 'nassau');
 
@@ -519,14 +569,15 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   }, []);
 
   // ── State initializers ────────────────────────────────────────────────────
-  const _initScores  = () => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
-  const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(0)]));    } };
-  const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(false)])); } };
+  const _initScores  = () => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } };
+  const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(0)]));    } };
+  const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(false)])); } };
   const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
   const _initBBB     = () => { try { const s = localStorage.getItem('pp_bbb_'+round.id);    return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
   const _initTeeBall = () => { try { const s = localStorage.getItem('pp_teeball_'+round.id);return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
-  const _initFIR     = () => { try { const s = localStorage.getItem('pp_fir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
-  const _initGIR     = () => { try { const s = localStorage.getItem('pp_gir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(18).fill(null)])); } };
+  const _initFIR     = () => { try { const s = localStorage.getItem('pp_fir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } };
+  const _initGIR     = () => { try { const s = localStorage.getItem('pp_gir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } };
+  const _initExtra   = () => { try { const s = localStorage.getItem('pp_extra_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
 
   const [scores,      setScores]      = React.useState(_initScores);
   const [putts,       setPutts]       = React.useState(_initPutts);
@@ -536,6 +587,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [teeBallData, setTeeBallData] = React.useState(_initTeeBall);
   const [firData,     setFIRData]     = React.useState(_initFIR);
   const [girData,     setGIRData]     = React.useState(_initGIR);
+  const [extraStats,  setExtraStats]  = React.useState(_initExtra);  // {pid:{holeIdx:{pen,sand,ud,drv,lp}}}
 
   const [holeIdx,  setHoleIdx]  = React.useState(() => playOrder[0]);
   const [keypad,   setKeypad]   = React.useState(null);
@@ -579,6 +631,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const teeBallRef   = React.useRef(teeBallData);
   const firRef       = React.useRef(firData);
   const girRef       = React.useRef(girData);
+  const extraRef     = React.useRef(extraStats);
   const holeIdxRef   = React.useRef(holeIdx);
 
   React.useEffect(() => { scoresRef.current   = scores;      }, [scores]);
@@ -589,6 +642,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { teeBallRef.current  = teeBallData; }, [teeBallData]);
   React.useEffect(() => { firRef.current      = firData;     }, [firData]);
   React.useEffect(() => { girRef.current      = girData;     }, [girData]);
+  React.useEffect(() => { extraRef.current    = extraStats;  }, [extraStats]);
   React.useEffect(() => { holeIdxRef.current  = holeIdx;     }, [holeIdx]);
 
   // ── Persist to localStorage ───────────────────────────────────────────────
@@ -600,9 +654,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { localStorage.setItem('pp_teeball_'+round.id,  JSON.stringify(teeBallData)); }, [teeBallData]);
   React.useEffect(() => { localStorage.setItem('pp_fir_'+round.id,      JSON.stringify(firData));     }, [firData]);
   React.useEffect(() => { localStorage.setItem('pp_gir_'+round.id,      JSON.stringify(girData));     }, [girData]);
+  React.useEffect(() => { localStorage.setItem('pp_extra_'+round.id,    JSON.stringify(extraStats));  }, [extraStats]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
-  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall, nextFIR, nextGIR) => {
+  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall, nextFIR, nextGIR, nextExtra) => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
       if (!window.RoundSyncService || !syncCode) return;
@@ -615,6 +670,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         teeBallData:    nextTeeBall  || teeBallRef.current,
         firData:        nextFIR      || firRef.current,
         girData:        nextGIR      || girRef.current,
+        extraStats:     nextExtra    || extraRef.current,
         currentHoleIdx: holeIdxRef.current,
         _writtenBy: deviceId,
         _ts: Date.now(),
@@ -642,6 +698,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (livePayload.teeBallData) { setTeeBallData(livePayload.teeBallData); localStorage.setItem('pp_teeball_'+round.id, JSON.stringify(livePayload.teeBallData)); }
       if (livePayload.firData)     { setFIRData(livePayload.firData);         localStorage.setItem('pp_fir_'+round.id,     JSON.stringify(livePayload.firData)); }
       if (livePayload.girData)     { setGIRData(livePayload.girData);         localStorage.setItem('pp_gir_'+round.id,     JSON.stringify(livePayload.girData)); }
+      if (livePayload.extraStats)  { setExtraStats(livePayload.extraStats);   localStorage.setItem('pp_extra_'+round.id,   JSON.stringify(livePayload.extraStats)); }
       if (livePayload.currentHoleIdx !== undefined) { holeIdxRef.current = livePayload.currentHoleIdx; setHoleIdx(livePayload.currentHoleIdx); }
       // Small delay before clearing flag to let React batch the state updates
       setTimeout(() => { applyingRemoteRef.current = false; }, 50);
@@ -734,7 +791,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const setScore = (playerId, val) => {
     const clamped = Math.max(1, val);
     setScores(prev => {
-      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(null))]};
       next[playerId][holeIdx] = clamped;
       scheduleCloudWrite(next, null, null, null);
       return next;
@@ -743,7 +800,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const setPutt = (playerId, val) => {
     setPutts(prev => {
-      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(0))]};
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(0))]};
       next[playerId][holeIdx] = val;
       scheduleCloudWrite(null, next, null, null);
       return next;
@@ -752,7 +809,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const togglePop = (playerId) => {
     setPopFlags(prev => {
-      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(false))]};
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(false))]};
       next[playerId][holeIdx] = !next[playerId][holeIdx];
       scheduleCloudWrite(null, null, next, null);
       return next;
@@ -812,7 +869,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const setFIR = (playerId, val) => {
     setFIRData(prev => {
-      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(null))]};
       next[playerId][holeIdx] = val;
       scheduleCloudWrite(null, null, null, null, null, null, next, null);
       return next;
@@ -821,9 +878,23 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const setGIR = (playerId, val) => {
     setGIRData(prev => {
-      const next = {...prev, [playerId]: [...(prev[playerId]||Array(18).fill(null))]};
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(null))]};
       next[playerId][holeIdx] = val;
       scheduleCloudWrite(null, null, null, null, null, null, null, next);
+      return next;
+    });
+  };
+
+  const setExtraStat = (playerId, field, val) => {
+    setExtraStats(prev => {
+      const mine = { ...(prev[playerId] || {}) };
+      const holeEntry = { ...(mine[holeIdx] || {}) };
+      if (val === null || val === undefined || val === 0 || val === '') delete holeEntry[field];
+      else holeEntry[field] = val;
+      if (Object.keys(holeEntry).length === 0) delete mine[holeIdx];
+      else mine[holeIdx] = holeEntry;
+      const next = { ...prev, [playerId]: mine };
+      scheduleCloudWrite(null, null, null, null, null, null, null, null, next);
       return next;
     });
   };
@@ -840,7 +911,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
-  const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === 18);
+  const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === holeCount);
   const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
 
   const ptmPuttRequired = hasPTM && !!ptmHoleHolder && !(putts[ptmHoleHolder]?.[holeIdx] > 0);
@@ -848,7 +919,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
 
   const nextHole = () => {
-    if (canAdvance && seqPos < 17) {
+    if (canAdvance && seqPos < lastSeq) {
       const newIdx = playOrder[seqPos + 1];
       holeIdxRef.current = newIdx;
       setHoleIdx(newIdx);
@@ -858,10 +929,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const isTripMode = !!round.tripId;
 
-  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData); };
+  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData, extraStats); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
-  const hasAnyTracker = hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall || hasMarkey;
+  const hasGames = games.length > 0;
+  const hasAnyTracker = hasGames || hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall || hasMarkey;
 
   return (
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#F6F4EE'}}>
@@ -890,11 +962,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             </div>
           </div>
 
-          <button onClick={nextHole} disabled={seqPos===17 || (currentHoleScored && !canAdvance)}
+          <button onClick={nextHole} disabled={seqPos===lastSeq || (currentHoleScored && !canAdvance)}
             style={{width:36, height:36, borderRadius:8, border:'none',
-              background: seqPos===17 ? 'transparent' : 'rgba(255,255,255,0.12)',
-              color: seqPos===17 ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
-              fontSize:20, cursor: seqPos===17 || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
+              background: seqPos===lastSeq ? 'transparent' : 'rgba(255,255,255,0.12)',
+              color: seqPos===lastSeq ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
+              fontSize:20, cursor: seqPos===lastSeq || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ›
@@ -960,7 +1032,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 onScore={setScore} onPutt={setPutt} onWolfTap={() => setWolfPicker(true)}
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
-                isTripMode={isTripMode} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
+                isTripMode={isTripMode} trackStats={!!round.trackStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
+                extraStats={extraStats} onExtraStat={setExtraStat}
               />
             );
           })}
@@ -972,6 +1045,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
         {hasAnyTracker && (
           <TrackersDrawer open={trackersOpen} onToggle={() => setTrackersOpen(v => !v)} formats={formats}>
+            {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
             {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
             {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
             {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
@@ -982,7 +1056,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         )}
 
         <div style={{padding:'16px 12px 24px'}}>
-          {(allScored || seqPos === 17) && (
+          {(allScored || seqPos === lastSeq) && (
             <Btn onClick={() => setShowFinish(true)} variant="gold"
               style={{width:'100%', padding:'16px', fontSize:18, letterSpacing:1}}>
               🏁 FINISH ROUND
@@ -992,7 +1066,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       </div>
 
       {/* Next hole button */}
-      {canAdvance && seqPos < 17 && (
+      {canAdvance && seqPos < lastSeq && (
         <div style={{flexShrink:0, padding:'10px 12px', background:'#F6F4EE', borderTop:'1px solid #E7E3D9'}}>
           <Btn onClick={nextHole} variant="green" style={{width:'100%', padding:'13px', fontSize:16}}>
             NEXT HOLE {course.holes[playOrder[seqPos + 1]].num} →

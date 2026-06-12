@@ -1,15 +1,218 @@
 // Setup.jsx — Course persistence + realtime course sync
 //             Multi-Nassau: supports 1–3 independent Nassau matches per round
+//             Engine games: MatchEngine catalog with team builder + handicaps
 
 const BLANK_HOLES = Array.from({length:18}, (_,i) => ({ num:i+1, par:4, yds:'', hdcp:i+1 }));
+
+// ─── Engine game configuration (Phase 2 formats) ──────────────────────────────
+
+const GameTeamAssigner = ({ def, config, players, onChange }) => {
+  const count = def.teams?.count || 2;
+  const teams = config.teams || [];
+  const teamFor = (pid) => teams.findIndex(t => (t.playerIds||[]).includes(pid));
+
+  const assign = (pid, teamIdx) => {
+    const next = teams.map((t, i) => ({
+      ...t,
+      playerIds: (t.playerIds||[]).filter(id => id !== pid).concat(i === teamIdx ? [pid] : []),
+    }));
+    onChange({ ...config, teams: next });
+  };
+
+  const autoBalance = () => {
+    const cfg = window.MatchEngine.defaultConfig(def.id, players);
+    onChange({ ...config, teams: cfg.teams });
+  };
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:6}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>TEAMS</div>
+        <button onClick={autoBalance} style={{background:'rgba(21,128,61,0.07)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:10, letterSpacing:1, color:'#15803D', WebkitTapHighlightColor:'transparent'}}>⚖️ AUTO-BALANCE</button>
+      </div>
+      {players.map(p => {
+        const myTeam = teamFor(p.id);
+        return (
+          <div key={p.id} style={{display:'flex', alignItems:'center', gap:10, borderRadius:12, padding:'8px 10px', background: myTeam >= 0 ? `${p.color}0A` : '#FFFFFF', border:`1px solid ${myTeam >= 0 ? p.color : '#E7E3D9'}`}}>
+            <Avatar player={p} size={26}/>
+            <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20', flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</span>
+            <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginRight:2}}>HCP {p.handicap || 0}</span>
+            <div style={{display:'flex', gap:4}}>
+              {Array.from({length: count}, (_, ti) => (
+                <div key={ti} onClick={() => assign(p.id, ti)}
+                  style={{padding:'4px 10px', borderRadius:7, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12,
+                    background: myTeam === ti ? p.color : '#F0EDE4', color: myTeam === ti ? '#FFFFFF' : '#8A9E8A',
+                    border: myTeam === ti ? 'none' : '1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+                  {String.fromCharCode(65 + ti)}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const GameConfigCard = ({ game, players, onChange, onRemove }) => {
+  const ME = window.MatchEngine;
+  const def = ME.get(game.formatId);
+  const [showHcp, setShowHcp] = React.useState(false);
+  if (!def) return null;
+  const config = game.config || {};
+  const basisChoice = def.basis === 'choice';
+  const basis = basisChoice ? (config.scoringBasis || 'net') : def.basis;
+  const validation = ME.validateGame(game, players);
+
+  const setCfg = (patch) => onChange({ ...game, config: { ...config, ...patch } });
+
+  return (
+    <div style={{background:'#FFFFFF', border:`1px solid ${validation.ok ? 'rgba(31,61,46,0.25)' : 'rgba(220,38,38,0.3)'}`, borderRadius:14, overflow:'hidden'}}>
+      <div style={{display:'flex', alignItems:'center', gap:8, padding:'10px 14px', background:'rgba(31,61,46,0.04)', borderBottom:'1px solid #E7E3D9'}}>
+        <span style={{fontSize:16}}>{def.icon}</span>
+        <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, color:'#0E2B20', flex:1}}>{def.label}</span>
+        <button onClick={onRemove} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, letterSpacing:1, color:'#8A9E8A', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>REMOVE</button>
+      </div>
+      <div style={{padding:'12px 14px', display:'flex', flexDirection:'column', gap:12}}>
+        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', lineHeight:1.5}}>{def.desc}</div>
+
+        {basisChoice && (
+          <div style={{display:'flex', gap:8, alignItems:'center'}}>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', width:60}}>SCORING</div>
+            {['net','gross'].map(b => (
+              <div key={b} onClick={() => setCfg({ scoringBasis: b })}
+                style={{flex:1, textAlign:'center', padding:'7px 0', borderRadius:9, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                  background: basis === b ? '#0E2B20' : '#F0EDE4', color: basis === b ? '#F6F4EE' : '#3F5F4A',
+                  border: basis === b ? 'none' : '1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+                {b.toUpperCase()}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {basis === 'net' && !def.teamEntry && (
+          <div style={{display:'flex', gap:8, alignItems:'center'}}>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', width:60}}>HCP %</div>
+            <input type="number" min="0" max="100" value={config.allowancePct !== undefined ? config.allowancePct : (def.defaultAllowance ?? 100)}
+              onChange={e => setCfg({ allowancePct: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
+              style={{width:72, background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:9, padding:'7px 10px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20', outline:'none', textAlign:'center'}}/>
+            <div onClick={() => setCfg({ relative: !(config.relative !== undefined ? config.relative : def.defaultRelative) })}
+              style={{flex:1, display:'flex', alignItems:'center', gap:6, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+              <div style={{width:16, height:16, borderRadius:4, flexShrink:0, border:`2px solid ${(config.relative !== undefined ? config.relative : def.defaultRelative) ? '#0E2B20' : '#E7E3D9'}`, background:(config.relative !== undefined ? config.relative : def.defaultRelative) ? '#0E2B20' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {(config.relative !== undefined ? config.relative : def.defaultRelative) && <span style={{color:'#F6F4EE', fontSize:10, fontWeight:900}}>✓</span>}
+              </div>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>Strokes off low ball</span>
+            </div>
+          </div>
+        )}
+
+        {def.teamEntry && (
+          <div style={{background:'rgba(200,161,90,0.05)', border:'1px solid rgba(200,161,90,0.2)', borderRadius:9, padding:'8px 10px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', lineHeight:1.5}}>
+            ☝️ One ball per team: enter the <b>team score</b> on any teammate's card each hole.
+            {basis === 'net' && ' Team handicap is blended automatically.'}
+          </div>
+        )}
+
+        {game.formatId === 'bestBall' && (
+          <div style={{display:'flex', gap:8, alignItems:'center'}}>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', width:60}}>COUNT</div>
+            {[1,2].map(n => (
+              <div key={n} onClick={() => setCfg({ countBalls: n })}
+                style={{flex:1, textAlign:'center', padding:'7px 0', borderRadius:9, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12,
+                  background: (config.countBalls || 1) === n ? '#C8A15A' : '#F0EDE4', color: (config.countBalls || 1) === n ? '#0E2B20' : '#3F5F4A',
+                  border: (config.countBalls || 1) === n ? 'none' : '1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+                {n === 1 ? 'BEST BALL' : '2 BEST BALLS'}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {def.teams && <GameTeamAssigner def={def} config={config} players={players} onChange={cfg => onChange({ ...game, config: cfg })}/>}
+
+        {basis === 'net' && (
+          <div>
+            <button onClick={() => setShowHcp(v => !v)} style={{background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1.5, color:'#C8A15A', WebkitTapHighlightColor:'transparent'}}>
+              {showHcp ? '▾ HIDE HANDICAP OVERRIDES' : '▸ ADJUST HANDICAPS FOR THIS GAME'}
+            </button>
+            {showHcp && (
+              <div style={{display:'flex', flexDirection:'column', gap:6, marginTop:8}}>
+                {players.map(p => (
+                  <div key={p.id} style={{display:'flex', alignItems:'center', gap:8}}>
+                    <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', flex:1}}>{p.name.split(' ')[0]}</span>
+                    <input type="number" step="0.1" placeholder={String(p.handicap || 0)}
+                      value={config.handicapOverrides?.[p.id] ?? ''}
+                      onChange={e => setCfg({ handicapOverrides: { ...(config.handicapOverrides || {}), [p.id]: e.target.value === '' ? undefined : parseFloat(e.target.value) } })}
+                      style={{width:70, background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8, padding:'6px 8px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#0E2B20', outline:'none', textAlign:'center'}}/>
+                  </div>
+                ))}
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A'}}>Blank = use the profile handicap index.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!validation.ok && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#DC2626'}}>{validation.error}</div>}
+        {validation.ok && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D'}}>✓ Ready to play</div>}
+      </div>
+    </div>
+  );
+};
+
+const GamePickerModal = ({ open, onClose, onPick, playerCount }) => {
+  if (!open) return null;
+  const ME = window.MatchEngine;
+  const all = ME.list().filter(f => !f.needsInput);
+  const cats = Object.entries(ME.CATEGORY_INFO).sort((a, b) => a[1].order - b[1].order);
+  return (
+    <Modal open={open} onClose={onClose} title="Add a Game">
+      <div style={{display:'flex', flexDirection:'column', gap:14}}>
+        {cats.map(([catId, cat]) => {
+          const list = all.filter(f => f.category === catId);
+          if (!list.length) return null;
+          return (
+            <div key={catId}>
+              <Label style={{display:'block', marginBottom:8}}>{cat.label}</Label>
+              <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                {list.map(f => {
+                  const tooFew = f.players && playerCount < f.players.min;
+                  return (
+                    <div key={f.id} onClick={() => !tooFew && onPick(f.id)}
+                      style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:12, cursor: tooFew ? 'not-allowed' : 'pointer', opacity: tooFew ? 0.45 : 1,
+                        background:'#F6F4EE', border:'1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+                      <span style={{fontSize:18, flexShrink:0}}>{f.icon}</span>
+                      <div style={{flex:1, minWidth:0}}>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{f.label}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', lineHeight:1.4}}>{f.desc}</div>
+                        {tooFew && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#DC2626', marginTop:2}}>Needs {f.players.min}+ players</div>}
+                      </div>
+                      <span style={{color:'#C8D5C0', fontSize:18}}>+</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+};
 
 const CourseBuilder = ({ onSave, onCancel, prefill }) => {
   const [name,     setName]     = React.useState(prefill?.name     || '');
   const [location, setLocation] = React.useState(prefill?.location || '');
   const [rating,   setRating]   = React.useState(prefill?.rating   ? String(prefill.rating) : '');
   const [slope,    setSlope]    = React.useState(prefill?.slope    ? String(prefill.slope)  : '');
+  const [holeCount, setHoleCount] = React.useState(prefill?.holes?.length === 9 || prefill?.holeCount === 9 ? 9 : 18);
+  const [extraTees, setExtraTees] = React.useState(() =>
+    (prefill?.tees || []).slice(1).map(t => ({ name: t.name || '', rating: String(t.rating || ''), slope: String(t.slope || '') }))
+  );
   const [holes,    setHoles]    = React.useState(() => {
-    if (prefill?.holes?.length === 18) return prefill.holes.map(h => ({ num:h.num, par:h.par||4, yds:h.yds||'', hdcp:h.hdcp||h.num }));
+    if (prefill?.holes?.length >= 9) {
+      const base = prefill.holes.map(h => ({ num:h.num, par:h.par||4, yds:h.yds||'', hdcp:h.hdcp||h.num }));
+      while (base.length < 18) base.push({ ...BLANK_HOLES[base.length] });
+      return base;
+    }
     return BLANK_HOLES.map(h => ({...h}));
   });
 
@@ -17,11 +220,26 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
     setHoles(prev => prev.map((h,i) => i === idx ? {...h, [field]: field === 'yds' ? val : Number(val)||0} : h));
   };
 
-  const totalPar = holes.reduce((a,h) => a + (h.par||0), 0);
-  const valid    = name.trim() && holes.every(h => h.par >= 3 && h.par <= 6 && h.hdcp >= 1 && h.hdcp <= 18);
+  const activeHoles = holes.slice(0, holeCount);
+  const totalPar = activeHoles.reduce((a,h) => a + (h.par||0), 0);
+  const parOk    = holeCount === 9 ? (totalPar >= 33 && totalPar <= 38) : (totalPar >= 68 && totalPar <= 76);
+  const valid    = name.trim() && activeHoles.every(h => h.par >= 3 && h.par <= 6 && h.hdcp >= 1 && h.hdcp <= holeCount);
+
+  const setTeeField = (idx, field, val) => setExtraTees(prev => prev.map((t,i) => i === idx ? { ...t, [field]: val } : t));
+  const addTee      = () => setExtraTees(prev => prev.length < 4 ? [...prev, { name:'', rating:'', slope:'' }] : prev);
+  const removeTee   = (idx) => setExtraTees(prev => prev.filter((_,i) => i !== idx));
 
   const handleSave = () => {
-    const course = { id:'custom_'+Date.now(), name:name.trim(), location:location.trim()||'Custom Course', rating:parseFloat(rating)||72.0, slope:parseInt(slope)||113, custom:true, holes:holes.map(h=>({...h, yds:parseInt(h.yds)||0})) };
+    const tees = [
+      { id:'default', name:'Standard', rating:parseFloat(rating)||72.0, slope:parseInt(slope)||113, yds:null },
+      ...extraTees.filter(t => t.name.trim()).map((t,i) => ({ id:'tee_'+(i+1), name:t.name.trim(), rating:parseFloat(t.rating)||parseFloat(rating)||72.0, slope:parseInt(t.slope)||parseInt(slope)||113, yds:null })),
+    ];
+    const course = window.CourseService.normalizeCourse({
+      id:'custom_'+Date.now(), name:name.trim(), location:location.trim()||'Custom Course',
+      rating:parseFloat(rating)||72.0, slope:parseInt(slope)||113, custom:true,
+      holeCount, tees,
+      holes:activeHoles.map(h=>({...h, yds:parseInt(h.yds)||0})),
+    });
     let existing = [];
     try { existing = JSON.parse(localStorage.getItem('pp_custom_courses') || '[]'); } catch(e) {}
     const updated = [...existing, course];
@@ -46,9 +264,36 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
         </div>
       </div>
       <div>
-        <div style={{display:'flex', alignItems:'baseline', gap:10, marginBottom:8}}>
-          <Label>SCORECARD — 18 HOLES</Label>
-          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:totalPar>=68&&totalPar<=76?'#15803D':'#DC2626'}}>Total par: {totalPar}</span>
+        <Label style={{display:'block', marginBottom:6}}>LAYOUT</Label>
+        <div style={{display:'flex', gap:8, marginBottom:14}}>
+          {[9, 18].map(n => (
+            <div key={n} onClick={()=>setHoleCount(n)}
+              style={{flex:1, textAlign:'center', padding:'9px 0', borderRadius:10, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14,
+                background:holeCount===n?'#0E2B20':'#F0EDE4', color:holeCount===n?'#F6F4EE':'#3F5F4A', border:holeCount===n?'none':'1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+              {n} HOLES
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6}}>
+          <Label>ADDITIONAL TEE SETS (OPTIONAL)</Label>
+          {extraTees.length < 4 && (
+            <button onClick={addTee} style={{background:'rgba(21,128,61,0.07)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:7, padding:'3px 10px', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:10, letterSpacing:1, color:'#15803D', WebkitTapHighlightColor:'transparent'}}>+ TEE</button>
+          )}
+        </div>
+        {extraTees.length === 0 && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginBottom:12}}>The rating/slope above defines the standard tee. Add Blue/White/Red sets with their own rating &amp; slope for accurate course handicaps.</div>}
+        {extraTees.map((t, i) => (
+          <div key={i} style={{display:'flex', gap:6, marginBottom:8, alignItems:'center'}}>
+            <input value={t.name} onChange={e=>setTeeField(i,'name',e.target.value)} placeholder="Name (e.g. Blue)" style={{...holeInputStyle, textAlign:'left', flex:2, padding:'7px 8px'}}/>
+            <input value={t.rating} onChange={e=>setTeeField(i,'rating',e.target.value)} placeholder="Rating" type="number" style={{...holeInputStyle, flex:1, padding:'7px 4px'}}/>
+            <input value={t.slope} onChange={e=>setTeeField(i,'slope',e.target.value)} placeholder="Slope" type="number" style={{...holeInputStyle, flex:1, padding:'7px 4px'}}/>
+            <button onClick={()=>removeTee(i)} aria-label="Remove tee" style={{background:'none', border:'none', cursor:'pointer', color:'#8A9E8A', fontSize:14, padding:'2px 4px', WebkitTapHighlightColor:'transparent'}}>✕</button>
+          </div>
+        ))}
+
+        <div style={{display:'flex', alignItems:'baseline', gap:10, marginBottom:8, marginTop:6}}>
+          <Label>SCORECARD — {holeCount} HOLES</Label>
+          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:parOk?'#15803D':'#DC2626'}}>Total par: {totalPar}</span>
         </div>
         <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
           <table style={{borderCollapse:'collapse', width:'100%', minWidth:300}}>
@@ -56,7 +301,7 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
               <tr>{['#','PAR','YDS','HCP'].map(h=><th key={h} style={{padding:'4px 6px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1.5, color:'#8A9E8A', textAlign:'center', borderBottom:'1px solid #E7E3D9'}}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              {holes.map((h, i) => (
+              {activeHoles.map((h, i) => (
                 <tr key={i} style={{background:i%2===0?'#F6F4EE':'#FFFFFF'}}>
                   <td style={{padding:'4px 6px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#3F5F4A', textAlign:'center'}}>{h.num}</td>
                   <td style={{padding:'3px 4px'}}><input value={h.par} onChange={e=>setHoleField(i,'par',e.target.value)} type="number" inputMode="numeric" min="3" max="5" tabIndex={i*3+1} style={holeInputStyle}/></td>
@@ -332,7 +577,7 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course 
   );
 };
 
-const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
+const CourseGroup = ({ label, list, course, onSelect, defaultOpen, favIds, onToggleFav }) => {
   const [open, setOpen] = React.useState(defaultOpen || false);
   if (list.length === 0) return null;
   const hasSelected = list.some(c => c.id === course?.id);
@@ -353,6 +598,7 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
         <div style={{display:'flex', flexDirection:'column', gap:8, paddingBottom:4}}>
           {list.map(c => {
             const sel = course?.id === c.id;
+            const isFav = favIds ? favIds.includes(c.id) : false;
             return (
               <div key={c.id} onClick={() => onSelect(c)}
                 style={{...setupS.courseCard, border:sel?'1px solid #C8A15A':'1px solid #E7E3D9', background:sel?'rgba(200,161,90,0.06)':'#FFFFFF'}}>
@@ -360,10 +606,18 @@ const CourseGroup = ({ label, list, course, onSelect, defaultOpen }) => {
                   <div style={{display:'flex', alignItems:'center', gap:8}}>
                     <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:sel?'#C8A15A':'#0E2B20'}}>{c.name}</div>
                     {c.custom && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:1, color:'#15803D', background:'rgba(21,128,61,0.1)', border:'1px solid rgba(21,128,61,0.2)', padding:'1px 6px', borderRadius:4}}>CUSTOM</span>}
+                    {(c.holeCount === 9 || (c.holes||[]).length === 9) && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:1, color:'#2563EB', background:'rgba(37,99,235,0.08)', border:'1px solid rgba(37,99,235,0.2)', padding:'1px 6px', borderRadius:4}}>9 HOLES</span>}
                   </div>
                   <div style={{fontSize:11, color:'#3F5F4A', marginTop:2, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{c.location}</div>
-                  <div style={{fontSize:10, color:'#8A9E8A', marginTop:1, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>Rating {c.rating} · Slope {c.slope}</div>
+                  <div style={{fontSize:10, color:'#8A9E8A', marginTop:1, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>Rating {c.rating} · Slope {c.slope}{(c.tees||[]).length > 1 ? ` · ${c.tees.length} tee sets` : ''}</div>
                 </div>
+                {onToggleFav && (
+                  <button onClick={(e) => { e.stopPropagation(); onToggleFav(c.id); }}
+                    aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
+                    style={{background:'none', border:'none', cursor:'pointer', fontSize:18, padding:'4px 6px', flexShrink:0, WebkitTapHighlightColor:'transparent', opacity:isFav?1:0.35}}>
+                    {isFav ? '⭐' : '☆'}
+                  </button>
+                )}
                 {sel && <span style={{color:'#C8A15A', fontSize:20, flexShrink:0}}>✓</span>}
               </div>
             );
@@ -491,6 +745,11 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const [stakes,  setStakes]                  = React.useState({ wolf:2, nassau:2, stableford:2, passmoney:2, skins:2, bingobangobongo:2, teeball:2, markeymatch:5 });
   const [nassauMatches, setNassauMatches]     = React.useState([{ id:'nm_init', matchType:'1v1', playersInMatch:[], teams:null, popHoles:{}, stakes:2 }]);
   const [markeyMatchConfig, setMarkeyMatchConfig] = React.useState({ team1:[], team2:[], stake:5, markeyPopStrokes:{} });
+  const [games, setGames]                     = React.useState([]);          // MatchEngine games
+  const [gamePickerOpen, setGamePickerOpen]   = React.useState(false);
+  const [teeId, setTeeId]                     = React.useState(null);        // chosen tee for the round
+  const [trackStats, setTrackStats]           = React.useState(false);       // FIR/GIR/penalties/short game
+  const [favVersion, setFavVersion]           = React.useState(0);           // bump to re-read favorites
   const [startingTee,     setStartingTee]     = React.useState(1); // 1 = front first, 10 = back first
   const [tripMode,        setTripMode]        = React.useState('none'); // 'none' | 'existing' | 'new'
   const [selectedTripId,  setSelectedTripId]  = React.useState('');
@@ -512,6 +771,16 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
       team1: prev.team1.filter(id => selectedPlayers.includes(id)),
       team2: prev.team2.filter(id => selectedPlayers.includes(id)),
     }));
+    // Engine games: drop deselected players from team assignments
+    setGames(prev => prev.map(g => ({
+      ...g,
+      config: {
+        ...g.config,
+        teams: g.config?.teams
+          ? g.config.teams.map(t => ({ ...t, playerIds: (t.playerIds||[]).filter(id => selectedPlayers.includes(id)) }))
+          : g.config?.teams,
+      },
+    })));
   }, [selectedPlayers.join(',')]);
 
   React.useEffect(() => {
@@ -525,9 +794,35 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const togglePlayer = (id) => setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.length<6?[...prev,id]:prev);
   const toggleFormat = (f) => setFormats(prev => ({...prev,[f]:!prev[f]}));
 
+  // Engine game management
+  const roundPlayersForGames = allPlayers.filter(p => selectedPlayers.includes(p.id));
+  const addGame = (formatId) => {
+    const cfg = window.MatchEngine.defaultConfig(formatId, roundPlayersForGames);
+    setGames(prev => [...prev, { id: 'g_' + Date.now(), formatId, config: cfg }]);
+    setGamePickerOpen(false);
+  };
+  const updateGame = (id, updated) => setGames(prev => prev.map(g => g.id === id ? updated : g));
+  const removeGame = (id) => setGames(prev => prev.filter(g => g.id !== id));
+
+  const selectCourse = (c) => {
+    const normalized = window.CourseService.normalizeCourse(c);
+    setCourse(normalized);
+    setTeeId(normalized.tees[0]?.id || null);
+    if (normalized.holeCount === 9) setStartingTee(1);
+  };
+
   const allCourses    = [...localCourses, ...COURSES];
   const query         = courseSearch.toLowerCase();
   const filtered      = allCourses.filter(c => !query || c.name.toLowerCase().includes(query) || c.location.toLowerCase().includes(query));
+  const favIds        = React.useMemo(() => window.CourseService.getFavoriteIds(), [favVersion]);
+  const favCourses    = filtered.filter(c => favIds.includes(c.id));
+  const recentCourses = React.useMemo(() => {
+    const known = new Set(allCourses.map(c => c.id));
+    return window.CourseService.getRecents().filter(c => !query || c.name.toLowerCase().includes(query) || (c.location||'').toLowerCase().includes(query))
+      .map(rc => allCourses.find(c => c.id === rc.id) || rc)
+      .filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
+  }, [query, favVersion]);
+  const toggleFav     = (id) => { window.CourseService.toggleFavorite(id); setFavVersion(v => v + 1); };
 
   const nassauValid = (() => {
     if (!formats.nassau) return true;
@@ -555,9 +850,11 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
   const tripValid = tripMode === 'none' ||
     (tripMode === 'existing' && !!selectedTripId) ||
     (tripMode === 'new' && !!newTripName.trim());
-  const canStart = selectedPlayers.length >= 2 && course && activeFormats.length > 0 && nassauValid && markeyValid && tripValid;
+  const gamesValid = games.every(g => window.MatchEngine.validateGame(g, roundPlayersForGames).ok);
+  const hasAnyGame = activeFormats.length > 0 || games.length > 0;
+  const canStart = selectedPlayers.length >= 2 && course && hasAnyGame && gamesValid && nassauValid && markeyValid && tripValid;
 
-  const handleSaveCourse = (newCourse) => { setCourse(newCourse); setAddMode('list'); setScanPrefill(null); };
+  const handleSaveCourse = (newCourse) => { selectCourse(newCourse); setAddMode('list'); setScanPrefill(null); };
 
   const handleStart = () => {
     const players = allPlayers.filter(p => selectedPlayers.includes(p.id));
@@ -565,7 +862,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
       tripMode === 'new'      ? { mode: 'new',      newTrip: { name: newTripName.trim(), location: newTripLocation.trim() } } :
       tripMode === 'existing' ? { mode: 'existing', tripId: selectedTripId } :
       { mode: 'none' };
-    onStart({ players, course, formats: activeFormats, syncCode: generateSyncCode(), tripSelection, startingTee });
+    const namedGames = games.map(g => ({ ...g, name: window.MatchEngine.get(g.formatId)?.label || g.formatId }));
+    onStart({ players, course, formats: activeFormats, games: namedGames, teeId, trackStats, syncCode: generateSyncCode(), tripSelection, startingTee });
   };
 
   const buildStateGroups = (list) => {
@@ -642,8 +940,10 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                 <Btn onClick={()=>{setScanPrefill(null);setAddMode('builder');}} variant="surface" style={{flex:1, padding:'11px 10px', fontSize:13}}>✏️ ADD A COURSE MANUALLY</Btn>
               </div>
               <div style={{display:'flex', flexDirection:'column'}}>
-                {customFiltered.length > 0 && <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={setCourse} defaultOpen={true}/>}
-                {stateGroups.map(({state, label, list}) => <CourseGroup key={state} label={label.toUpperCase()} list={list} course={course} onSelect={setCourse} defaultOpen={isSearching}/>)}
+                {favCourses.length > 0 && <CourseGroup label="⭐ FAVORITES" list={favCourses} course={course} onSelect={selectCourse} defaultOpen={true} favIds={favIds} onToggleFav={toggleFav}/>}
+                {recentCourses.length > 0 && <CourseGroup label="🕑 RECENTLY PLAYED" list={recentCourses} course={course} onSelect={selectCourse} defaultOpen={!isSearching} favIds={favIds} onToggleFav={toggleFav}/>}
+                {customFiltered.length > 0 && <CourseGroup label="MY COURSES" list={customFiltered} course={course} onSelect={selectCourse} defaultOpen={true} favIds={favIds} onToggleFav={toggleFav}/>}
+                {stateGroups.map(({state, label, list}) => <CourseGroup key={state} label={label.toUpperCase()} list={list} course={course} onSelect={selectCourse} defaultOpen={isSearching} favIds={favIds} onToggleFav={toggleFav}/>)}
                 {filtered.length===0 && (
                   <div style={{textAlign:'center', padding:'32px 0', color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13}}>
                     No courses match "{courseSearch}"<br/>
@@ -651,8 +951,29 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                   </div>
                 )}
               </div>
-              {/* ── Starting Tee (shown once a course is picked; applies to all formats) ── */}
-              {course && (
+              {/* ── Tee box selection (drives yardages + course handicaps) ── */}
+              {course && (course.tees || []).length > 1 && (
+                <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A', marginBottom:12}}>TEE BOX</div>
+                  <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+                    {course.tees.map(t => {
+                      const on = (teeId || course.tees[0].id) === t.id;
+                      return (
+                        <div key={t.id} onClick={()=>setTeeId(t.id)}
+                          style={{flex:'1 1 30%', minWidth:100, padding:'10px 12px', borderRadius:12, cursor:'pointer', textAlign:'center',
+                            background:on?'rgba(14,43,32,0.05)':'#F6F4EE', border:on?'1px solid #0E2B20':'1px solid #E7E3D9',
+                            WebkitTapHighlightColor:'transparent'}}>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, color:on?'#0E2B20':'#3F5F4A'}}>{t.name}</div>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:2}}>{t.rating} / {t.slope}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Starting Tee (shown once an 18-hole course is picked) ── */}
+              {course && course.holeCount !== 9 && (
                 <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
                   <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A', marginBottom:12}}>STARTING TEE</div>
                   <div style={{display:'flex', gap:10}}>
@@ -671,6 +992,21 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
                   </div>
                 </div>
               )}
+
+              {/* ── Optional stat tracking ── */}
+              {course && (
+                <div onClick={()=>setTrackStats(v=>!v)}
+                  style={{background:'#FFFFFF', border:trackStats?'1px solid #0E2B20':'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16, display:'flex', alignItems:'center', gap:12, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                  <span style={{fontSize:20}}>📈</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>Track Round Stats</div>
+                    <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', marginTop:2, lineHeight:1.4}}>Fairways, greens, penalties, sand saves, up &amp; downs — feeds your Stats dashboard</div>
+                  </div>
+                  <div style={{...setupS.check, background:trackStats?'#0E2B20':'transparent', border:`2px solid ${trackStats?'#0E2B20':'#E7E3D9'}`}}>
+                    {trackStats && <span style={{color:'#F6F4EE', fontSize:14, fontWeight:900}}>✓</span>}
+                  </div>
+                </div>
+              )}
               <div style={{display:'flex', gap:10, marginTop:24}}>
                 <Btn onClick={()=>setStep(1)} variant="ghost" style={{padding:'14px 20px'}}>← BACK</Btn>
                 <Btn onClick={()=>setStep(3)} variant="gold" disabled={!course} style={{flex:1, fontSize:17}}>NEXT: FORMATS →</Btn>
@@ -681,8 +1017,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
 
         {step===3 && (
           <div>
-            <div style={setupS.stepTitle}>FORMATS & STAKES</div>
-            <div style={setupS.stepSub}>Choose one or more formats and set your stakes</div>
+            <div style={setupS.stepTitle}>GAMES & FORMATS</div>
+            <div style={setupS.stepSub}>Pick match formats, money games, or both</div>
 
             {/* ── Golf Trip Selector ── */}
             <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
@@ -734,6 +1070,31 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
               </div>
             </div>
 
+            {/* ── Match formats (MatchEngine) ── */}
+            <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'14px 16px', marginTop:16}}>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:games.length?12:4}}>
+                <div>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A'}}>MATCH FORMATS</div>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', marginTop:3}}>Stroke play, match play, scrambles, stableford &amp; more — gross or net</div>
+                </div>
+                <button onClick={()=>setGamePickerOpen(true)}
+                  style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:1, color:'#15803D', background:'rgba(21,128,61,0.07)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:7, padding:'5px 12px', cursor:'pointer', WebkitTapHighlightColor:'transparent', flexShrink:0}}>
+                  + ADD GAME
+                </button>
+              </div>
+              {games.length > 0 && (
+                <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                  {games.map(g => (
+                    <GameConfigCard key={g.id} game={g} players={roundPlayersForGames}
+                      onChange={updated=>updateGame(g.id, updated)} onRemove={()=>removeGame(g.id)}/>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <GamePickerModal open={gamePickerOpen} onClose={()=>setGamePickerOpen(false)} onPick={addGame} playerCount={selectedPlayers.length}/>
+
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2, color:'#C8A15A', marginTop:20, marginBottom:-4}}>MONEY GAMES</div>
             <div style={{display:'flex', flexDirection:'column', gap:12, marginTop:16}}>
               {Object.entries(FORMAT_INFO).map(([key, info]) => {
                 const on = formats[key];
@@ -775,12 +1136,19 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
               })}
             </div>
 
-            {activeFormats.length > 0 && (
+            {(activeFormats.length > 0 || games.length > 0) && (
               <div style={{marginTop:16, background:'rgba(200,161,90,0.04)', border:'1px solid rgba(200,161,90,0.15)', borderRadius:12, padding:'12px 14px'}}>
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:2.5, color:'#C8A15A', marginBottom:8}}>ROUND SUMMARY</div>
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>
-                  <div style={{marginBottom:2}}>📍 {course?.name}</div>
-                  <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players</div>
+                  <div style={{marginBottom:2}}>📍 {course?.name}{course && (course.tees||[]).length > 1 && teeId ? ` · ${(course.tees.find(t=>t.id===teeId)||course.tees[0]).name} tees` : ''}{course?.holeCount === 9 ? ' · 9 holes' : ''}</div>
+                  <div style={{marginBottom:2}}>👥 {selectedPlayers.length} players{trackStats ? ' · 📈 stat tracking on' : ''}</div>
+                  {games.map(g => {
+                    const def = window.MatchEngine.get(g.formatId);
+                    if (!def) return null;
+                    const basis = def.basis === 'choice' ? (g.config?.scoringBasis || 'net') : def.basis;
+                    const teamStr = (g.config?.teams || []).map(t => (t.playerIds||[]).map(id => roundPlayersForGames.find(p=>p.id===id)?.name.split(' ')[0]).filter(Boolean).join(' & ')).filter(Boolean).join(' vs ');
+                    return <div key={g.id} style={{marginBottom:2}}>{def.icon} {def.label} — <span style={{color:'#C8A15A', fontWeight:700}}>{basis.toUpperCase()}</span>{teamStr ? <span style={{display:'block', marginLeft:16, fontSize:11}}>· {teamStr}</span> : null}</div>;
+                  })}
                   {tripMode==='new' && newTripName.trim() && <div style={{marginBottom:2}}>🗺️ New trip: <span style={{color:'#C8A15A', fontWeight:700}}>{newTripName.trim()}</span></div>}
                   {tripMode==='existing' && selectedTripId && <div style={{marginBottom:2}}>🗺️ Trip: <span style={{color:'#C8A15A', fontWeight:700}}>{availableTrips.find(t=>t.id===selectedTripId)?.name}</span></div>}
                   {activeFormats.map(f => (
@@ -823,7 +1191,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
             </div>
             {!canStart && (
               <div style={{textAlign:'center', marginTop:8, fontSize:12, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
-                {!nassauValid ? 'Complete all Nassau match setups to continue' : !markeyValid ? 'Assign 1–2 players to each Markey Match team to continue' : !tripValid ? 'Enter a trip name to continue' : 'Select at least one format to continue'}
+                {!gamesValid ? 'Finish setting up your match formats (see errors above)' : !nassauValid ? 'Complete all Nassau match setups to continue' : !markeyValid ? 'Assign 1–2 players to each Markey Match team to continue' : !tripValid ? 'Enter a trip name to continue' : 'Add at least one game or format to continue'}
               </div>
             )}
           </div>

@@ -1,10 +1,12 @@
 // Home.jsx — Dashboard / Landing Screen
 
-const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, onViewRound, customCourses, onCourseSaved }) => {
+const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJoinRound, onViewRound, customCourses, onCourseSaved, onOpenStats }) => {
   const [showPlayers, setShowPlayers]   = React.useState(false);
   const [editPlayer,  setEditPlayer]    = React.useState(null);
   const [localPlayers,setLocalPlayers]  = React.useState(players);
-  const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#15803D' });
+  const [form, setForm]                 = React.useState({ name:'', initials:'', ghin:'', ghinLogin:'', email:'', venmo:'', handicap:'', color:'#15803D', preferredTee:'', dominantHand:'R', homeCourseName:'' });
+  const [hcpSyncMsg, setHcpSyncMsg]     = React.useState('');
+  const [resume]                        = React.useState(() => window.RoundHistoryService ? window.RoundHistoryService.unfinishedRound() : null);
   const [joinError,   setJoinError]     = React.useState('');
   const [joining,     setJoining]       = React.useState(false);
   const [showCourses, setShowCourses]   = React.useState(false);
@@ -71,16 +73,29 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
 
   const openEdit = (p) => {
     setEditPlayer(p);
-    setForm(p ? {...p} : {name:'',initials:'',ghin:'',ghinLogin:'',email:'',venmo:'',handicap:'',color:'#15803D'});
+    setHcpSyncMsg('');
+    const normalized = p && window.ProfileService ? window.ProfileService.normalizePlayer(p) : p;
+    setForm(normalized ? {...normalized} : {name:'',initials:'',ghin:'',ghinLogin:'',email:'',venmo:'',handicap:'',color:'#15803D',preferredTee:'',dominantHand:'R',homeCourseName:''});
+  };
+
+  const syncHandicap = () => {
+    if (!window.HandicapService) return;
+    setHcpSyncMsg('Checking…');
+    window.HandicapService.fetchIndex(form, (idx, err) => {
+      if (idx === null) { setHcpSyncMsg(err || 'Handicap service unavailable'); return; }
+      setForm(f => ({ ...f, handicap: String(idx), handicapSource: 'provider', handicapUpdatedAt: Date.now() }));
+      setHcpSyncMsg('Updated from handicap service ✓');
+    });
   };
 
   const savePlayer = () => {
     if (!form.name.trim()) return;
-    const normalized = {
+    const base = {
       ...form,
       name:     form.name.trim(),
       handicap: Math.max(0, parseFloat(form.handicap) || 0),
     };
+    const normalized = window.ProfileService ? window.ProfileService.normalizePlayer(base) : base;
     const updated = normalized.initials ? normalized : {...normalized, initials: normalized.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)};
     if (editPlayer) {
       const next = localPlayers.map(p => p.id === editPlayer.id ? {...updated, id:editPlayer.id} : p);
@@ -207,6 +222,30 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         </div>
       </div>
 
+      {/* Resume unfinished round */}
+      {resume && (
+        <div style={homeS.section}>
+          <Label style={{marginBottom:12, display:'block'}}>Round In Progress</Label>
+          <div style={{...homeS.roundCard, border:'1px solid rgba(200,161,90,0.45)', background:'rgba(200,161,90,0.05)'}}>
+            <div style={{display:'flex', alignItems:'center', gap:10, minWidth:0}}>
+              <span style={{fontSize:22, flexShrink:0}}>⛳</span>
+              <div style={{minWidth:0}}>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{resume.round.course.name}</div>
+                <div style={{fontSize:11, color:'#3F5F4A', marginTop:2, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
+                  {resume.holesScored} hole{resume.holesScored!==1?'s':''} scored · {resume.round.players.length} players
+                </div>
+              </div>
+            </div>
+            <button onClick={()=>onJoinRound(resume.round)}
+              style={{background:'#C8A15A', border:'none', borderRadius:10, padding:'9px 16px', cursor:'pointer', flexShrink:0,
+                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:0.5, color:'#0E2B20',
+                WebkitTapHighlightColor:'transparent', boxShadow:'0 2px 10px rgba(200,161,90,0.3)'}}>
+              RESUME →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Recent Rounds */}
       {recentRounds.length > 0 && (
         <div style={homeS.section}>
@@ -281,7 +320,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           <a href="terms.html" style={{color:'#3F5F4A', textDecoration:'underline'}}>Terms of Use</a>
         </div>
         <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5}}>
-          PlayPal v1.0.0
+          PlayPal v1.1.0
         </div>
       </div>
 
@@ -317,13 +356,54 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       {/* Player Edit Modal */}
       <Modal open={showPlayers} onClose={()=>setShowPlayers(false)} title={editPlayer ? 'Edit Player' : 'New Player'}>
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
-          {[['name','Full Name'],['ghin','GHIN #'],['ghinLogin','GHIN Login / Email'],['email','Email Address'],['venmo','Venmo Handle'],['handicap','Handicap Index']].map(([key,label]) => (
+          {[['name','Full Name'],['ghin','GHIN #'],['ghinLogin','GHIN Login / Email'],['email','Email Address'],['venmo','Venmo Handle']].map(([key,label]) => (
             <div key={key}>
               <Label style={{display:'block', marginBottom:4}}>{label}</Label>
-              <input value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})}
+              <input value={form[key] || ''} onChange={e=>setForm({...form,[key]:e.target.value})}
                 style={inputStyle}/>
             </div>
           ))}
+          <div>
+            <Label style={{display:'block', marginBottom:4}}>Handicap Index</Label>
+            <div style={{display:'flex', gap:8}}>
+              <input value={form.handicap} onChange={e=>setForm({...form,handicap:e.target.value, handicapSource:'manual'})} style={{...inputStyle, flex:1}}/>
+              <button onClick={syncHandicap}
+                style={{background:'#F0EDE4', border:'1px solid #E7E3D9', borderRadius:12, padding:'0 14px', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', WebkitTapHighlightColor:'transparent', flexShrink:0}}>
+                ↻ SYNC
+              </button>
+            </div>
+            {hcpSyncMsg && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:hcpSyncMsg.includes('✓')?'#15803D':'#8A9E8A', marginTop:4}}>{hcpSyncMsg}</div>}
+          </div>
+          <div style={{display:'flex', gap:10}}>
+            <div style={{flex:1}}>
+              <Label style={{display:'block', marginBottom:4}}>Preferred Tees</Label>
+              <input value={form.preferredTee || ''} onChange={e=>setForm({...form,preferredTee:e.target.value})} placeholder="e.g. Blue" style={inputStyle}/>
+            </div>
+            <div>
+              <Label style={{display:'block', marginBottom:4}}>Plays</Label>
+              <div style={{display:'flex', gap:6}}>
+                {[['R','RIGHTY'],['L','LEFTY']].map(([v,lbl]) => (
+                  <div key={v} onClick={()=>setForm({...form, dominantHand:v})}
+                    style={{padding:'12px 12px', borderRadius:12, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12,
+                      background:(form.dominantHand||'R')===v?'#0E2B20':'#F6F4EE', color:(form.dominantHand||'R')===v?'#F6F4EE':'#3F5F4A',
+                      border:(form.dominantHand||'R')===v?'none':'1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+                    {lbl}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div>
+            <Label style={{display:'block', marginBottom:4}}>Home Course</Label>
+            <input value={form.homeCourseName || ''} onChange={e=>setForm({...form,homeCourseName:e.target.value})} placeholder="e.g. Spring Lake Golf Club" style={inputStyle}/>
+          </div>
+          {editPlayer && onOpenStats && (
+            <button onClick={()=>{ setShowPlayers(false); onOpenStats(editPlayer.id); }}
+              style={{background:'rgba(200,161,90,0.08)', border:'1px solid rgba(200,161,90,0.3)', borderRadius:12, padding:'12px', cursor:'pointer',
+                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13, letterSpacing:0.5, color:'#C8A15A', WebkitTapHighlightColor:'transparent'}}>
+              📈 VIEW CAREER STATS
+            </button>
+          )}
           <div>
             <Label style={{display:'block', marginBottom:8}}>Color</Label>
             <div style={{display:'flex', gap:8}}>

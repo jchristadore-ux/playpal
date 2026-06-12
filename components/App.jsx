@@ -57,7 +57,7 @@ const App = () => {
     const ss = sessionStorage.getItem('pp_screen');
     // 'summary', 'viewround', and 'trip' depend on in-memory state that does
     // not survive a reload — restoring them would render a blank screen.
-    const restorable = ['home', 'setup', 'score', 'trips'];
+    const restorable = ['home', 'setup', 'score', 'trips', 'stats'];
     if (ss && restorable.includes(ss)) {
       if (ss === 'score') return localStorage.getItem('pp_round') ? 'score' : 'home';
       return ss;
@@ -104,6 +104,8 @@ const App = () => {
   const [finalTeeBallData, setFinalTeeBallData] = React.useState(null);
   const [finalFirData,     setFinalFirData]     = React.useState(null);
   const [finalGirData,     setFinalGirData]     = React.useState(null);
+  const [finalExtraStats,  setFinalExtraStats]  = React.useState(null);
+  const [statsPlayerId,    setStatsPlayerId]    = React.useState(null);
 
   const [viewedRoundData, setViewedRoundData] = React.useState(null);
   const [viewSyncCode,    setViewSyncCode]    = React.useState(null);
@@ -241,6 +243,9 @@ const App = () => {
 
     const _finishStart = function(tripId) {
       const r = { ...rest, id: Date.now(), tripId: tripId || null };
+      if (window.CourseService && r.course) {
+        try { window.CourseService.recordRecent(r.course); } catch(e) {}
+      }
       setRound(r);
       localStorage.setItem('pp_round', JSON.stringify(r));
       sessionStorage.setItem('pp_screen', 'score');
@@ -278,7 +283,7 @@ const App = () => {
 
   };
 
-  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}) => {
+  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}, extraStats = {}) => {
     setFinalScores(scores);
     setFinalWolf(wolfData);
     setFinalPutts(putts);
@@ -289,6 +294,7 @@ const App = () => {
     setFinalTeeBallData(teeBallData);
     setFinalFirData(firData);
     setFinalGirData(girData);
+    setFinalExtraStats(extraStats);
 
     RoundSyncService.unsubscribeRound();
 
@@ -318,6 +324,7 @@ const App = () => {
       putts:    putts || {},
       firData:  firData || {},
       girData:  girData || {},
+      extraStats: extraStats || {},
       tripId:  round.tripId || null,
       date: new Date().toLocaleDateString('en-US', {
         weekday:'long', month:'long', day:'numeric', year:'numeric',
@@ -338,6 +345,7 @@ const App = () => {
         teeBallData,
         firData,
         girData,
+        extraStats,
         savedAt:       Date.now(),
       };
       try {
@@ -372,6 +380,11 @@ const App = () => {
 
     localStorage.removeItem('pp_active_round');
     setScreen('summary');
+  };
+
+  const handleOpenStats = (playerId) => {
+    setStatsPlayerId(playerId || null);
+    setScreen('stats');
   };
 
   const handleViewRound = (syncCode) => {
@@ -470,6 +483,7 @@ const App = () => {
             onViewRound={handleViewRound}
             customCourses={customCourses}
             onCourseSaved={handleCourseSaved}
+            onOpenStats={handleOpenStats}
           />
         }
 
@@ -479,6 +493,10 @@ const App = () => {
             customCourses={customCourses}
             onStart={handleStartRound}
           />
+        }
+
+        {screen === 'stats' &&
+          <StatsScreen players={players} initialPlayerId={statsPlayerId} />
         }
 
         {screen === 'score' && round &&
@@ -526,6 +544,7 @@ const App = () => {
                   teeBallData={viewedRoundData.teeBallData || {}}
                   firData={viewedRoundData.firData || {}}
                   girData={viewedRoundData.girData || {}}
+                  extraStats={viewedRoundData.extraStats || {}}
                   onNewRound={null}
                   readOnly={true}
                 />
@@ -569,6 +588,7 @@ const App = () => {
             teeBallData={finalTeeBallData || {}}
             firData={finalFirData || {}}
             girData={finalGirData || {}}
+            extraStats={finalExtraStats || {}}
             onNewRound={handleNewRound}
             readOnly={false}
           />
@@ -581,6 +601,7 @@ const App = () => {
         <nav aria-label="Main navigation" style={{ display:'flex', borderTop:'1px solid rgba(255,255,255,0.1)', background:'#0E2B20', flexShrink:0, paddingBottom:'env(safe-area-inset-bottom, 0px)' }}>
           {[
             { id:'home',    icon:'🏠', label:'HOME' },
+            { id:'stats',   icon:'📈', label:'STATS' },
             { id:'trips',   icon:'🗺️', label:'TRIPS' },
             { id:'setup',   icon:'⛳', label:'NEW ROUND' },
             ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }] : []),
