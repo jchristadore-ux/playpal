@@ -1,6 +1,6 @@
 // Summary.jsx — updated design system
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, onNewRound, readOnly }) => {
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, extraStats, onNewRound, readOnly }) => {
   const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus, calcBBBStandings, calcTeeBallStandings } = window;
   const { players, course, formats, syncCode } = round;
 
@@ -13,7 +13,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const _teeBallData = teeBallData || {};
   const _firData     = firData     || {};
   const _girData     = girData     || {};
+  const _extraStats  = extraStats  || {};
   const _presses     = nassauPresses || [];
+  const roundGames   = round.games || [];
 
   const [toast, setToast]         = React.useState(null);
   const [tab, setTab]             = React.useState('scorecard');
@@ -84,6 +86,57 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
       return window.calcMarkeyMatchState(_scores, fmt.markeyMatchConfig.markeyPopStrokes, players, fmt);
     } catch(e) { return []; }
   }, []);
+
+  // Final standings for every MatchEngine game on this round
+  const engineGameResults = React.useMemo(() => {
+    if (!roundGames.length || !window.MatchEngine) return [];
+    return roundGames.map(g => {
+      try {
+        return window.MatchEngine.compute(g, {
+          course, players, scores: _scores,
+          startingTee: round.startingTee,
+          gameState: { wolf: _wolfData, bbb: _bbbData },
+        });
+      } catch(e) { console.warn('[Summary] game compute failed:', e); return null; }
+    }).filter(Boolean);
+  }, []);
+
+  // Net totals (100% course handicap) shown whenever anyone carries an index
+  const netTotals = React.useMemo(() => {
+    try {
+      if (!window.HandicapService || !players.some(p => (p.handicap || 0) > 0)) return null;
+      const tee = window.CourseService
+        ? window.CourseService.getTee(course, round.teeId)
+        : { rating: course.rating, slope: course.slope };
+      const hcp = window.HandicapService.playingHandicaps(players, course.holes, tee, { allowancePct: 100 });
+      return Object.fromEntries(players.map(p => {
+        const strokes = hcp[p.id].strokes;
+        let net = 0;
+        course.holes.forEach((h, i) => {
+          const s = _scores[p.id]?.[i];
+          if (s) net += Math.max(1, s - strokes[i]);
+        });
+        return [p.id, { net, courseHcp: hcp[p.id].rounded }];
+      }));
+    } catch(e) { return null; }
+  }, []);
+
+  const shareRound = () => {
+    const text = window.SharingService.scorecardText(
+      { course, players, date: round.date },
+      _scores,
+      { gameResults: engineGameResults.map(r => ({ name: r.name, status: r.status })), payouts }
+    );
+    window.SharingService.share({ title: 'PlayPal — ' + course.name, text }, (how) => {
+      showToast(how === 'shared' ? 'Scorecard shared' : how === 'copied' ? 'Scorecard copied to clipboard' : 'Could not share on this device', how === 'failed' ? 'error' : 'success');
+    });
+  };
+
+  const exportCSV = () => {
+    const fname = 'playpal-' + (course.name || 'round').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.csv';
+    const ok = window.SharingService.downloadCSV(fname, window.SharingService.scorecardCSV(round, _scores, _putts));
+    showToast(ok ? 'Scorecard CSV downloaded' : 'Export not available here', ok ? 'success' : 'error');
+  };
 
   const leaderboard = [...players].map(p=>({
     ...p,
@@ -486,6 +539,41 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 </div>
               );
             })()}
+            {/* Engine game results */}
+            {engineGameResults.length > 0 && (
+              <div style={{marginTop:16}}>
+                <Label style={{padding:'0 4px'}}>GAME RESULTS</Label>
+                <div style={{marginTop:8, border:'1px solid #E7E3D9', borderRadius:16, overflow:'hidden', background:'#FFFFFF'}}>
+                  {engineGameResults.map((r, i) => <GameStandingsCard key={i} result={r} stake={roundGames[i]?.config?.stake || 0} final={true}/>)}
+                </div>
+              </div>
+            )}
+
+            {/* Gross vs Net */}
+            {netTotals && (
+              <div style={{marginTop:16}}>
+                <Label style={{padding:'0 4px'}}>NET SCORES (FULL COURSE HANDICAP)</Label>
+                <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'wrap'}}>
+                  {players.map(p => {
+                    const gross = totalScore(_scores, p.id);
+                    const n = netTotals[p.id];
+                    return (
+                      <div key={p.id} style={{flex:1, minWidth:90, background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:12, padding:'10px', textAlign:'center'}}>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20'}}>{p.name.split(' ')[0]}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:22, color:'#0E2B20'}}>{n.net || '—'}</div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A'}}>gross {gross || '—'} · CH {n.courseHcp}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Share / export */}
+            <div style={{display:'flex', gap:10, marginTop:16}}>
+              <Btn onClick={shareRound} variant="green" style={{flex:1, fontSize:14}}>📤 SHARE</Btn>
+              <Btn onClick={exportCSV} variant="surface" style={{flex:1, fontSize:14}}>⬇️ EXPORT CSV</Btn>
+            </div>
           </div>
         )}
 
