@@ -39,7 +39,7 @@ jobs:
           cp -r index.html join.html privacy.html terms.html support.html \
                 manifest.webmanifest sw.js playpal-logo.png dist icons _site/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
