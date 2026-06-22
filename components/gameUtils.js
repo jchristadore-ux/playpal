@@ -149,10 +149,13 @@ function computePTMState(scores, putts, players, course, initialHolderId) {
   let holderId = initialHolderId || players[0].id;
   const log          = [];
   const holderAtStart = []; // who held the money at the START of each hole, before any pass
-  for (let i = 0; i < 18; i++) {
+  // Size off the actual course (9- or 18-hole); the last hole gets the carry-back rules.
+  const holeCount = course.holes.length;
+  const lastHole  = holeCount - 1;
+  for (let i = 0; i < holeCount; i++) {
     holderAtStart[i] = holderId;
     const par = course.holes[i].par;
-    if (i < 17) {
+    if (i < lastHole) {
       const score = scores[holderId]?.[i];
       const putt  = (putts[holderId]?.[i]) || 0;
       if (!score) continue;
