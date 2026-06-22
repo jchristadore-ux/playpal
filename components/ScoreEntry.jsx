@@ -1126,7 +1126,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       <Modal open={showFinish} onClose={()=>setShowFinish(false)} title="Finish Round?">
         <div style={{display:'flex', flexDirection:'column', gap:14}}>
           <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.6}}>
-            {!allScored ? `Some holes haven't been scored yet. You can still finish and view results.` : `All 18 holes complete. Ready to view the final results?`}
+            {!allScored ? `Some holes haven't been scored yet. You can still finish and view results.` : `All ${holeCount} holes complete. Ready to view the final results?`}
           </div>
           <div style={{display:'flex', gap:10}}>
             <Btn onClick={()=>setShowFinish(false)} variant="ghost" style={{flex:1}}>KEEP PLAYING</Btn>

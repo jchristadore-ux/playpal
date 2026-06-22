@@ -146,3 +146,19 @@ test('FORMAT_INFO covers every format constant', () => {
     assert.ok(W.FORMAT_INFO?.[key], `FORMAT_INFO missing entry for ${key}`);
   }
 });
+
+test('computePTMState does not throw on a 9-hole course (finish-round regression)', () => {
+  // A 9-hole round only has 9 entries in course.holes. computePTMState must size
+  // off the actual course; indexing a hardcoded hole 10–18 would throw and abort
+  // the finish/"View Results" flow.
+  const nineHole = {
+    name: '9-Hole Course',
+    holes: Array.from({ length: 9 }, (_, i) => ({ num: i + 1, par: 4, hdcp: i + 1 })),
+  };
+  const scores = { a: Array(9).fill(5), b: Array(9).fill(4), c: Array(9).fill(4), d: Array(9).fill(4) };
+  const putts  = { a: Array(9).fill(2), b: Array(9).fill(2), c: Array(9).fill(2), d: Array(9).fill(2) };
+  let state;
+  assert.doesNotThrow(() => { state = W.computePTMState(scores, putts, players, nineHole, 'a'); });
+  assert.ok(state.holderId, 'returns a holder');
+  assert.equal(state.holderAtStart.length, 9, 'tracks exactly 9 holes');
+});
