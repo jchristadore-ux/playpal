@@ -1,40 +1,34 @@
-# TODO — UX/feature pass: customizable stats, compact tiles, iOS safe area
+# TODO — Production audit & redesign (Fable Mode)
 
-Branch `claude/fervent-planck-alq54v` (fast-forwarded to merged main @6a1ad13).
-Milestones: code + rebuild `dist/` + tests green + docs, committed together.
+Branch `claude/golf-scorecard-audit-redesign-wl0b1p` (from main @81bf29f).
+Milestones: code + rebuild `dist/` + tests green, committed together.
 
-- [x] M1 — Analyze; write plan (this file + progress.md)
-- [ ] M2 — Stat registry + config model (`components/statsService.js`)
-  - Add `STAT_TRACK_DEFS` (putts/fir/gir default-on; pen/sand/ud default-off),
-    `DEFAULT_STATS_CONFIG`, pure `normalizeStatsConfig`,
-    `resolveRoundStatsConfig` (legacy `trackStats`/`tripId` fallback).
-    Export on `StatsService` + `window`. Pure (Node-testable).
-  - Add `tests/statsConfig.test.mjs` for normalize/resolve.
-- [ ] M3 — "Select Stats to Track" UI (`components/Setup.jsx`)
-  - Replace single `trackStats` checkbox (~L996) with a 6-chip selector card;
-    state `statsConfig` seeded from `localStorage pp_stats_config` (remembered),
-    persisted on toggle. `onStart` passes `statsConfig` + derived `trackStats`.
-    Update round-summary line (~L1144).
-- [ ] M4 — Drive in-round UI from config + compact tile
-  (`components/ScoreEntry.jsx`)
-  - Resolve `statsCfg` via `resolveRoundStatsConfig(round)`; putts effective =
-    `cfg.putts || hasPTM`. Pass `stats` object to `PlayerScoreCard` (replaces
-    `isTripMode`/`trackStats`). Hide disabled stats entirely.
-  - Redesign tile: PUTTS + FIR + GIR on ONE horizontal wrapping row; PEN/SAND/
-    U&D compact row below (each gated). Trim header/stepper vertical padding.
-- [ ] M5 — iOS safe area (`components/Shared.jsx` NavBar, `components/App.jsx`)
-  - NavBar bar: `minHeight: calc(56px + env(safe-area-inset-top))` +
-    `paddingTop: env(safe-area-inset-top)` + L/R insets (landscape). Drop fixed
-    `height:56`/`padding:'0 16px'`. Add L/R insets to bottom nav.
-- [x] M2 — Stat registry + config model (statsService + tests)
-- [x] M3 — "Select Stats to Track" selector (Setup)
-- [x] M4 — Config-driven in-round UI + compact tile (ScoreEntry)
-- [x] M5 — iOS safe area (Shared NavBar + App bottom nav)
-- [x] M6 — v1.2.0 bump, changelog, removed dead PlayerCard.jsx, build, test
+- [x] M1 — Full audit sweep (baseline: 92/92 tests, no console.logs/TODOs,
+      clean tree; findings recorded in progress.md)
+- [x] M2 — **One-screen adaptive Score Entry** (`components/ScoreEntry.jsx`)
+  - ResizeObserver-driven layout: grid cols/rows by player count +
+    orientation (≤3P → 1 col; 4P+ → 2 cols portrait / N cols landscape).
+  - Scale factor `sz` from measured card box; all card dims scale with
+    readability floors. Cards flex to fill; score stepper absorbs slack.
+  - Compact hole header (2 rows); dots become real buttons (a11y).
+  - Bottom action bar: EXIT · CARD · GAMES icons + always-visible primary
+    (ENTER SCORES → PICK WOLF → ENTER PUTTS → NEXT HOLE / FINISH).
+  - Trackers drawer → bottom-sheet modal (RoundTracker moves inside).
+  - Merge pop pill into meta row; hide manual POP when no game formats.
+  - Merge putts/FIR/GIR/PEN/SAND/U&D into one wrapping stat row.
+  - Score pop animation, haptics (navigator.vibrate), safe-area bottom pad.
+- [x] M3 — App-level resilience & polish
+  - Offline banner in App.jsx (online/offline listeners).
+  - ScoreEntry re-pushes live scores on 'online' event.
+  - SyncPulse below safe-area; WolfPicker safe-area padding.
+  - ppHaptic helper in Shared.jsx.
+- [x] M4 — Performance & consistency
+  - index.html: preconnect hints; trim fonts to Plus Jakarta Sans only;
+    global keyframes (ppSheetUp, ppFadeIn, ppScorePop).
+- [x] M5 — Release: v1.3.0 bump (package.json+lock, ?v=, CACHE_VERSION,
+      Home footer), CHANGELOG, AUDIT.md refresh, build, tests, push, draft PR.
 
-## Notes / constraints
-- `dist/` is committed; CI fails if stale → `npm run build` before every commit.
-- Data model unchanged for saved rounds: firData/girData/extraStats arrays stay;
-  config only drives which inputs render. RoundViewer/Summary unaffected.
-- PlayerCard.jsx is unused (no `<PlayerCard` JSX); remove in M6 + its index.html
-  + sw.js script tags.
+## Constraints
+- `dist/` is committed; CI fails if stale → `npm run build` before commit.
+- All game logic (sync, wolf/PTM/nassau/BBB/teeball/markey) unchanged.
+- Data model unchanged; layout/UX only.

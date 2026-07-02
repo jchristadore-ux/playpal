@@ -117,6 +117,20 @@ const App = () => {
     try { return JSON.parse(localStorage.getItem('pp_recent') || '[]'); } catch(e) { return []; }
   });
 
+  // Connectivity — everything works offline (localStorage-first); the banner
+  // just reassures users that scores are safe and will sync later.
+  const [online, setOnline] = React.useState(() => navigator.onLine !== false);
+  React.useEffect(() => {
+    const goOnline  = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online',  goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online',  goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
   const [trips,           setTrips]           = React.useState([]);
   const [viewedTrip,      setViewedTrip]      = React.useState(null);
   const [tripRounds,      setTripRounds]      = React.useState(null); // null = loading
@@ -470,6 +484,16 @@ const App = () => {
         onHome={() => setScreen(round && screen === 'score' ? 'score' : 'home')}
         currentScreen={screen}
       />
+
+      {!online && (
+        <div role="status" style={{
+          flexShrink:0, background:'#B45309', color:'#FFFFFF', textAlign:'center',
+          padding:'5px 12px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',
+          fontSize:11, fontWeight:700, letterSpacing:0.8,
+        }}>
+          OFFLINE — SCORES SAVE TO THIS DEVICE AND SYNC WHEN YOU'RE BACK
+        </div>
+      )}
 
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
 

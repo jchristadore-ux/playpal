@@ -91,11 +91,17 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, sz = 1, narrow = false, showPopToggle = true }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
   const puttVal  = putts[p.id]?.[holeIdx] || 0;
+
+  // One-screen scaling: every dimension multiplies the base (sz=1) size, with a
+  // readability/touch floor so dense layouts stay usable.
+  const s = (v, min = 0) => Math.max(min, Math.round(v * sz));
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  const statBtn = s(36, narrow ? 26 : 30);
 
   const cardBorder = isWolf ? '1.5px solid rgba(220,38,38,0.35)' : isPartner ? `1.5px solid ${p.color}55` : '1px solid #E7E3D9';
   const cardBg     = isWolf ? 'rgba(220,38,38,0.03)' : '#FFFFFF';
@@ -104,27 +110,30 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const showPutts = !!stats.putts;
   const showFIR   = !!stats.fir && hole.par !== 3;
   const showGIR   = !!stats.gir;
-  const showShort = !!(stats.pen || stats.sand || stats.ud);
   const puttRequired = isPTMHolder && puttVal === 0;
+  const anyStatRow = showPutts || showFIR || showGIR || stats.pen || stats.sand || stats.ud;
+
+  const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
+  const pen = ex.pen || 0;
 
   // Compact ✓/✗ toggle shared by FIR and GIR on the single stat row.
   const HitMiss = (label, data, onSet) => {
     const cur = data?.[p.id]?.[holeIdx];
     return (
-      <div style={{display:'flex', alignItems:'center', gap:6}}>
-        <Label style={{flexShrink:0}}>{label}</Label>
-        <div style={{display:'flex', gap:5}}>
+      <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
+        <Label style={{flexShrink:0, fontSize:s(10,9)}}>{label}</Label>
+        <div style={{display:'flex', gap:s(5,3)}}>
           {[true, false].map(val => {
             const selected = cur === val;
             return (
               <button key={String(val)} onClick={() => onSet(p.id, selected ? null : val)}
-                aria-label={`${label} ${val ? 'hit' : 'miss'}`} aria-pressed={selected}
+                aria-label={`${p.name} ${label} ${val ? 'hit' : 'miss'}`} aria-pressed={selected}
                 style={{
-                  width:38, height:36, borderRadius:9,
+                  width:statBtn + 2, height:statBtn, borderRadius:s(9,7),
                   border: selected ? 'none' : '1px solid #E7E3D9',
                   background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
                   color: selected ? '#FFFFFF' : '#3F5F4A',
-                  fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:16,
+                  fontFamily:F, fontWeight:800, fontSize:s(16,13),
                   cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
                   display:'flex', alignItems:'center', justifyContent:'center',
                 }}>
@@ -137,29 +146,91 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
     );
   };
 
-  return (
-    <div style={{background:cardBg, border:cardBorder, borderRadius:18, overflow:'hidden', flexShrink:0}}>
+  const triBtn = (field, val, lbl, color) => {
+    const on = ex[field] === val;
+    return (
+      <button key={field + String(val)}
+        onClick={() => onExtraStat(p.id, field, on ? null : val)}
+        aria-label={`${field} ${val ? 'yes' : 'no'}`} aria-pressed={on}
+        style={{
+          width:statBtn - 2, height:statBtn - 2, borderRadius:s(8,6),
+          border: on ? 'none' : '1px solid #E7E3D9',
+          background: on ? color : '#F0EDE4',
+          color: on ? '#FFFFFF' : '#3F5F4A',
+          fontFamily:F, fontWeight:800, fontSize:s(13,11),
+          cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>
+        {lbl}
+      </button>
+    );
+  };
 
-      {/* Player header */}
-      <div style={{display:'flex', alignItems:'center', padding:'10px 14px 6px', gap:10}}>
-        <Avatar player={p} size={34}/>
-        <div style={{flex:1, minWidth:0}}>
-          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:19, color:'#0E2B20', letterSpacing:0.2, lineHeight:1}}>{p.name}</div>
-          <div style={{fontSize:11, color:'#3F5F4A', marginTop:2, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>HCP {p.handicap}</div>
+  const goldPill = (icon, text) => (
+    <div style={{
+      borderRadius:999, padding:`${s(4,3)}px ${s(10,7)}px`,
+      border:'1px solid rgba(200,161,90,0.45)', background:'rgba(200,161,90,0.12)', color:'#C8A15A',
+      fontFamily:F, fontWeight:800, fontSize:s(11,10), letterSpacing:0.5,
+      display:'flex', alignItems:'center', gap:4,
+    }}>
+      <span>{icon}</span> {text}
+    </div>
+  );
+
+  // Pop indicator — auto for Nassau/Markey; manual toggle only when a game
+  // format that consumes pops is active (pure stat rounds hide it).
+  const popNode = isNassauPlayer
+    ? (nassauPopActive ? goldPill('💰', 'POP ON') : null)
+    : markeyPopCount !== undefined
+    ? (markeyPopCount > 0 ? goldPill('⚔️', markeyPopCount > 1 ? `${markeyPopCount} POPS` : 'POP ON') : null)
+    : showPopToggle
+    ? (
+      <button
+        onClick={()=>onPopToggle(p.id)}
+        aria-pressed={gettingPop} aria-label={`Pop stroke for ${p.name}`}
+        style={{
+          borderRadius:999, padding:`${s(4,3)}px ${s(10,7)}px`, minHeight:s(28,24),
+          border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1px solid #E7E3D9',
+          background:gettingPop ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
+          color:gettingPop ? '#C8A15A' : '#3F5F4A',
+          fontFamily:F, fontWeight:800, fontSize:s(11,10), letterSpacing:0.5,
+          cursor:'pointer', WebkitTapHighlightColor:'transparent'
+        }}>
+        {gettingPop ? 'POP ON' : 'POP'}
+      </button>
+    )
+    : null;
+
+  const hasMeta = (formatStats && formatStats.length > 0) || hasBBB || !!popNode;
+  const padX = s(12, 8);
+
+  return (
+    <div style={{background:cardBg, border:cardBorder, borderRadius:s(18,12), overflow:'hidden',
+      display:'flex', flexDirection:'column', minHeight:0, minWidth:0, overflowY:'auto'}}>
+
+      {/* Player header — name + HCP on one line */}
+      <div style={{display:'flex', alignItems:'center', padding:`${s(8,5)}px ${padX}px 0`, gap:s(10,6), flexShrink:0}}>
+        <Avatar player={p} size={s(30,22)}/>
+        <div style={{flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:6, overflow:'hidden'}}>
+          <span style={{fontFamily:F, fontWeight:800, fontSize:narrow?s(16,13):s(19,14), color:'#0E2B20', letterSpacing:0.2, lineHeight:1.1,
+            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{narrow ? p.name.split(' ')[0] : p.name}</span>
+          {!(narrow && hasWolf && isWolf) && (
+            <span style={{fontFamily:F, fontSize:s(11,9), color:'#8A9E8A', flexShrink:0}}>HCP {p.handicap}</span>
+          )}
         </div>
-        {isWolf && !hasWolf && <span style={{fontSize:18}}>🐺</span>}
-        {isPartner && !isWolf && <span style={{fontSize:16, opacity:0.8}}>⚑</span>}
+        {isWolf && !hasWolf && <span style={{fontSize:s(18,14)}}>🐺</span>}
+        {isPartner && !isWolf && <span style={{fontSize:s(16,13), opacity:0.8}}>⚑</span>}
         {hasWolf && isWolf && (
           <button onClick={onWolfTap} style={{
             background: !wolfData?.[holeIdx]?.confirmed ? '#DC2626' : 'rgba(14,43,32,0.08)',
             border: !wolfData?.[holeIdx]?.confirmed ? 'none' : '1px solid rgba(14,43,32,0.25)',
             color: !wolfData?.[holeIdx]?.confirmed ? '#FFFFFF' : '#0E2B20',
-            borderRadius:20, padding:'5px 12px 5px 8px', cursor:'pointer',
-            fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:12, letterSpacing:0.5,
+            borderRadius:20, padding:`${s(5,4)}px ${s(12,8)}px ${s(5,4)}px ${s(8,6)}px`, cursor:'pointer',
+            fontFamily:F, fontWeight:800, fontSize:s(12,11), letterSpacing:0.5,
             display:'flex', alignItems:'center', gap:5,
             WebkitTapHighlightColor:'transparent', flexShrink:0,
           }}>
-            <span style={{fontSize:14}}>🐺</span>
+            <span style={{fontSize:s(14,12)}}>🐺</span>
             {!wolfData?.[holeIdx]?.confirmed ? 'PICK →' : wolfData[holeIdx]?.lone ? 'LONE 🐺' : '✓ SET'}
           </button>
         )}
@@ -167,47 +238,48 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
 
       {/* Wolf pick required warning */}
       {isWolf && hasWolf && !wolfData?.[holeIdx]?.confirmed && (
-        <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
-          background:'rgba(220,38,38,0.04)', borderTop:'1px solid rgba(220,38,38,0.2)'}}>
-          <span style={{fontSize:11}}>⚠️</span>
-          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', letterSpacing:0.5}}>PICK PARTNER OR GO LONE WOLF TO ADVANCE</span>
+        <div style={{display:'flex', alignItems:'center', gap:6, padding:`${s(4,3)}px ${padX}px 0`, flexShrink:0}}>
+          <span style={{fontSize:s(11,10)}}>⚠️</span>
+          <span style={{fontFamily:F, fontWeight:700, fontSize:s(11,10), color:'#DC2626', letterSpacing:0.5}}>{narrow ? 'PICK PARTNER OR LONE WOLF' : 'PICK PARTNER OR GO LONE WOLF TO ADVANCE'}</span>
         </div>
       )}
 
       {/* PTM putt required warning */}
-      {isPTMHolder && !(putts[p.id]?.[holeIdx] > 0) && (
-        <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 16px 6px',
-          background:'rgba(200,161,90,0.06)', borderTop:'1px solid rgba(200,161,90,0.15)'}}>
-          <span style={{fontSize:11}}>⚠️</span>
-          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#C8A15A', letterSpacing:0.5}}>ENTER PUTTS TO ADVANCE</span>
+      {puttRequired && (
+        <div style={{display:'flex', alignItems:'center', gap:6, padding:`${s(4,3)}px ${padX}px 0`, flexShrink:0}}>
+          <span style={{fontSize:s(11,10)}}>⚠️</span>
+          <span style={{fontFamily:F, fontWeight:700, fontSize:s(11,10), color:'#C8A15A', letterSpacing:0.5}}>ENTER PUTTS TO ADVANCE</span>
         </div>
       )}
 
-      {/* Format stat pills */}
-      {((formatStats && formatStats.length > 0) || hasBBB) && (
-        <div style={{display:'flex', gap:6, padding:'0 12px 10px', flexWrap:'wrap'}}>
-          {formatStats && formatStats.map((s,i) => (
+      {/* Meta row — format pills · BBB · pop, one wrapping line */}
+      {hasMeta && (
+        <div style={{display:'flex', gap:s(6,4), padding:`${s(6,4)}px ${padX}px 0`, flexWrap:'wrap', alignItems:'center', flexShrink:0}}>
+          {formatStats && formatStats.map((st,i) => (
             <div key={i} style={{
               display:'flex', alignItems:'center', gap:4,
               background:'#F6F4EE', border:'1px solid #E7E3D9',
-              borderRadius:20, padding:'3px 10px 3px 8px',
+              borderRadius:20, padding:`${s(3,2)}px ${s(10,7)}px ${s(3,2)}px ${s(8,6)}px`,
             }}>
-              {s.icon && <span style={{fontSize:11, lineHeight:1}}>{s.icon}</span>}
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13, color:s.color, lineHeight:1}}>{s.value}</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, color:'#8A9E8A', letterSpacing:0.3, marginLeft:2}}>{s.label}</span>
+              {st.icon && <span style={{fontSize:s(11,10), lineHeight:1}}>{st.icon}</span>}
+              <span style={{fontFamily:F, fontWeight:800, fontSize:s(13,11), color:st.color, lineHeight:1}}>{st.value}</span>
+              <span style={{fontFamily:F, fontSize:s(9,8), color:'#8A9E8A', letterSpacing:0.3, marginLeft:2}}>{st.label}</span>
             </div>
           ))}
           {hasBBB && <BBBPill playerId={p.id} holeIdx={holeIdx} bbbData={bbbData} players={players} onSetBBB={onSetBBB}/>}
+          {popNode && <div style={{marginLeft:'auto'}}>{popNode}</div>}
         </div>
       )}
 
-      {/* Score stepper */}
-      <div style={{display:'flex', alignItems:'center', padding:'0 12px 10px', gap:8}}>
+      {/* Score stepper — flexes to absorb spare height, so 2-player layouts get
+          a big, premium score area while 4-player grids stay compact. */}
+      <div style={{display:'flex', alignItems:'stretch', padding:`${s(8,5)}px ${padX}px`, gap:s(8,6), flex:'1 1 auto', minHeight:s(64, narrow ? 44 : 52)}}>
         <button
           onClick={()=>onScore(p.id, (score||hole.par)-1)}
           disabled={score !== null && score <= 1}
-          style={{width:52, height:52, borderRadius:12, border:'none', background:'#EAE7DE',
-            color:'#0E2B20', fontSize:28, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900,
+          aria-label={`Subtract stroke for ${p.name}`}
+          style={{width:s(52, narrow ? 36 : 42), alignSelf:'stretch', borderRadius:s(12,10), border:'none', background:'#EAE7DE',
+            color:'#0E2B20', fontSize:s(28,22), fontFamily:F, fontWeight:900,
             cursor:'pointer', flexShrink:0, opacity:(score === null || score > 1)?1:0.3,
             WebkitTapHighlightColor:'transparent', userSelect:'none',
             display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -216,25 +288,30 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
 
         <div
           onClick={onScoreTap}
-          style={{flex:1, cursor:'pointer', borderRadius:12,
+          role="button" tabIndex={0}
+          aria-label={`Enter score for ${p.name}${score ? `, currently ${score}` : ''}`}
+          onKeyDown={e=>{ if (e.key==='Enter'||e.key===' ') { e.preventDefault(); onScoreTap(); } }}
+          style={{flex:1, cursor:'pointer', borderRadius:s(12,10),
             background:'#F6F4EE', border:'1px solid #E7E3D9',
-            minHeight:72, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            WebkitTapHighlightColor:'transparent', userSelect:'none', gap:2}}>
-          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, lineHeight:1,
-            fontSize:64, color:score?relColor:'#C8D5C0', transition:'color 0.15s'}}>
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            WebkitTapHighlightColor:'transparent', userSelect:'none', gap:2, minWidth:0, overflow:'hidden'}}>
+          <div key={score ?? 'none'} style={{fontFamily:F, fontWeight:900, lineHeight:1,
+            fontSize:s(56, narrow ? 30 : 36), color:score?relColor:'#C8D5C0', transition:'color 0.15s',
+            animation: score ? 'ppScorePop 0.22s ease-out' : 'none'}}>
             {score||'—'}
           </div>
           {score
-            ? <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, fontWeight:700, letterSpacing:1, color:relColor}}>{relLabel}</div>
-            : <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', letterSpacing:0.5}}>TAP TO ENTER</div>
+            ? <div style={{fontFamily:F, fontSize:s(11,9), fontWeight:700, letterSpacing:1, color:relColor, whiteSpace:'nowrap'}}>{relLabel}</div>
+            : !narrow && <div style={{fontFamily:F, fontSize:s(10,8), color:'#8A9E8A', letterSpacing:0.5, whiteSpace:'nowrap'}}>TAP TO ENTER</div>
           }
         </div>
 
         <button
           onClick={()=>onScore(p.id, (score||hole.par)+1)}
-          style={{width:52, height:52, borderRadius:12, border:'none',
+          aria-label={`Add stroke for ${p.name}`}
+          style={{width:s(52, narrow ? 36 : 42), alignSelf:'stretch', borderRadius:s(12,10), border:'none',
             background:'#C8A15A', boxShadow:'0 2px 10px rgba(200,161,90,0.3)',
-            color:'#0E2B20', fontSize:28, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900,
+            color:'#0E2B20', fontSize:s(28,22), fontFamily:F, fontWeight:900,
             cursor:'pointer', flexShrink:0,
             WebkitTapHighlightColor:'transparent', userSelect:'none',
             display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -242,137 +319,67 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Pop pill row — auto for Nassau/Markey, manual toggle for everyone else */}
-      {(isNassauPlayer ? nassauPopActive : markeyPopCount !== undefined ? markeyPopCount > 0 : true) && (
-        <div style={{display:'flex', justifyContent:'flex-end', padding:'0 12px 10px'}}>
-          {(isNassauPlayer && nassauPopActive) ? (
-            <div style={{
-              borderRadius:999, padding:'5px 10px', minHeight:28,
-              border:'1px solid rgba(200,161,90,0.45)',
-              background:'rgba(200,161,90,0.12)', color:'#C8A15A',
-              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, letterSpacing:0.5,
-              display:'flex', alignItems:'center', gap:4,
-            }}>
-              <span>💰</span> POP ON
-            </div>
-          ) : markeyPopCount > 0 ? (
-            <div style={{
-              borderRadius:999, padding:'5px 10px', minHeight:28,
-              border:'1px solid rgba(200,161,90,0.45)',
-              background:'rgba(200,161,90,0.12)', color:'#C8A15A',
-              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, letterSpacing:0.5,
-              display:'flex', alignItems:'center', gap:4,
-            }}>
-              <span>⚔️</span> {markeyPopCount > 1 ? `${markeyPopCount} POPS` : 'POP ON'}
-            </div>
-          ) : (
-            <button
-              onClick={()=>onPopToggle(p.id)}
-              style={{
-                borderRadius:999, padding:'5px 10px', minHeight:28,
-                border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1px solid #E7E3D9',
-                background:gettingPop ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
-                color:gettingPop ? '#C8A15A' : '#3F5F4A',
-                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11, letterSpacing:0.5,
-                cursor:'pointer', WebkitTapHighlightColor:'transparent'
-              }}>
-              {gettingPop ? 'POP ON' : 'POP'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Stat row — PUTTS · FIR · GIR on a single line (wraps only if needed) */}
-      {(showPutts || showFIR || showGIR) && (
-        <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:16, rowGap:8,
-          padding:'8px 14px 10px',
+      {/* Stat row — putts · FIR · GIR · PEN · SAND · U&D on one wrapping line */}
+      {anyStatRow && (
+        <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:s(14, narrow ? 8 : 10), rowGap:s(6,4),
+          padding:`${s(6,4)}px ${padX}px ${s(9,6)}px`, flexShrink:0,
           borderTop: puttRequired ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
           background: puttRequired ? 'rgba(200,161,90,0.04)' : 'transparent'}}>
           {showPutts && (
-            <div style={{display:'flex', alignItems:'center', gap:8}}>
+            <div style={{display:'flex', alignItems:'center', gap:s(8,5)}}>
               <div style={{display:'flex', flexDirection:'column', gap:1, flexShrink:0}}>
-                <Label style={{flexShrink:0}}>PUTTS</Label>
+                <Label style={{flexShrink:0, fontSize:s(10,9)}}>PUTTS</Label>
                 {puttRequired && (
-                  <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, color:'#C8A15A', letterSpacing:0.5}}>💰 REQ</span>
+                  <span style={{fontFamily:F, fontWeight:700, fontSize:s(9,8), color:'#C8A15A', letterSpacing:0.5}}>💰 REQ</span>
                 )}
               </div>
-              <div style={{display:'flex', gap:5}}>
+              <div style={{display:'flex', gap:s(5,3)}}>
                 {[1,2,3,4].map(n=>(
                   <button key={n}
                     onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
-                    aria-label={`${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
-                    style={{width:36, height:36, borderRadius:9,
+                    aria-label={`${p.name}: ${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
+                    style={{width:statBtn, height:statBtn, borderRadius:s(9,7),
                       border: puttVal===n ? 'none' : '1px solid #E7E3D9',
                       background: puttVal===n ? p.color : '#F0EDE4',
                       color: puttVal===n ? '#0E2B20' : '#3F5F4A',
-                      fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:16,
+                      fontFamily:F, fontWeight:800, fontSize:s(16,13),
                       cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
                       display:'flex', alignItems:'center', justifyContent:'center'}}>
                     {n}
                   </button>
                 ))}
               </div>
-              {puttVal >= 3 && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, color:'#DC2626', letterSpacing:0.5}}>3-PUTT</span>}
+              {puttVal >= 3 && <span style={{fontFamily:F, fontWeight:700, fontSize:s(11,9), color:'#DC2626', letterSpacing:0.5}}>3-PUTT</span>}
             </div>
           )}
           {showFIR && HitMiss('FIR', firData, onFIR)}
           {showGIR && HitMiss('GIR', girData, onGIR)}
+          {stats.pen && (
+            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
+              <Label style={{flexShrink:0, fontSize:s(10,9)}}>PEN</Label>
+              <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0} aria-label="One fewer penalty"
+                style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
+              <span style={{fontFamily:F, fontWeight:800, fontSize:s(15,12), color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
+              <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
+                style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
+            </div>
+          )}
+          {stats.sand && (
+            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
+              <Label style={{flexShrink:0, fontSize:s(10,9)}}>SAND</Label>
+              {triBtn('sand', true, '✓', '#15803D')}
+              {triBtn('sand', false, '✗', '#DC2626')}
+            </div>
+          )}
+          {stats.ud && (
+            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
+              <Label style={{flexShrink:0, fontSize:s(10,9)}}>U&D</Label>
+              {triBtn('ud', true, '✓', '#15803D')}
+              {triBtn('ud', false, '✗', '#DC2626')}
+            </div>
+          )}
         </div>
       )}
-
-      {/* Short-game stats (opt-in): penalties / sand saves / up & downs */}
-      {showShort && (() => {
-        const ex = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
-        const pen = ex.pen || 0;
-        const triBtn = (field, val, lbl, color) => {
-          const on = ex[field] === val;
-          return (
-            <button key={field + String(val)}
-              onClick={() => onExtraStat(p.id, field, on ? null : val)}
-              aria-label={`${field} ${val ? 'yes' : 'no'}`} aria-pressed={on}
-              style={{
-                width:34, height:34, borderRadius:8,
-                border: on ? 'none' : '1px solid #E7E3D9',
-                background: on ? color : '#F0EDE4',
-                color: on ? '#FFFFFF' : '#3F5F4A',
-                fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
-                cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                display:'flex', alignItems:'center', justifyContent:'center',
-              }}>
-              {lbl}
-            </button>
-          );
-        };
-        return (
-          <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:14, rowGap:8,
-            padding:'0 14px 12px', borderTop:'1px solid #E7E3D9', paddingTop:10}}>
-            {stats.pen && (
-              <div style={{display:'flex', alignItems:'center', gap:6}}>
-                <Label style={{flexShrink:0}}>PEN</Label>
-                <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0} aria-label="One fewer penalty"
-                  style={{width:32, height:34, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
-                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:15, color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
-                <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
-                  style={{width:32, height:34, borderRadius:8, border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:16, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
-              </div>
-            )}
-            {stats.sand && (
-              <div style={{display:'flex', alignItems:'center', gap:6}}>
-                <Label style={{flexShrink:0}}>SAND</Label>
-                {triBtn('sand', true, '✓', '#15803D')}
-                {triBtn('sand', false, '✗', '#DC2626')}
-              </div>
-            )}
-            {stats.ud && (
-              <div style={{display:'flex', alignItems:'center', gap:6}}>
-                <Label style={{flexShrink:0}}>U&D</Label>
-                {triBtn('ud', true, '✓', '#15803D')}
-                {triBtn('ud', false, '✗', '#DC2626')}
-              </div>
-            )}
-          </div>
-        );
-      })()}
     </div>
   );
 };
@@ -437,7 +444,7 @@ const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
 const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) => (
   <div style={{position:'fixed',inset:0,background:'rgba(14,43,32,0.8)',zIndex:2000,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
     onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:'#FFFFFF',borderRadius:'20px 20px 0 0',padding:'20px 20px 32px',width:'100%',maxWidth:420, border:'1px solid #E7E3D9', borderBottom:'none'}}>
+    <div style={{background:'#FFFFFF',borderRadius:'20px 20px 0 0',padding:'20px 20px calc(24px + env(safe-area-inset-bottom, 0px))',width:'100%',maxWidth:420, border:'1px solid #E7E3D9', borderBottom:'none', animation:'ppSheetUp 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)'}}>
       <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',fontWeight:800,fontSize:20,color:'#DC2626',marginBottom:4}}>
         🐺 {wolfPlayer.name.toUpperCase()} IS WOLF
       </div>
@@ -466,41 +473,54 @@ const WolfPicker = ({ wolfPlayer, players, holeIdx, onPick, onLone, onClose }) =
   </div>
 );
 
-// ── Collapsible Game Trackers Drawer ─────────────────────────────────────────
-const TrackersDrawer = ({ open, onToggle, formats, children }) => {
+// ── Game Trackers Bottom Sheet ───────────────────────────────────────────────
+// Overlays the one-screen score grid instead of expanding inline, so the score
+// entry surface itself never scrolls. Scrolling inside the sheet is fine.
+const TrackersSheet = ({ open, onClose, formats, children }) => {
   const formatIcons = { wolf:'🐺', nassau:'💰', stableford:'⭐', passmoney:'💸', skins:'🎯', bingobangobongo:'🎯', teeball:'🏌️', markeymatch:'⚔️' };
-  const activeTypes = formats.map(f => f.type);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
   return (
-    <div style={{borderTop:'1px solid #E7E3D9'}}>
-      <button
-        onClick={onToggle}
-        style={{
-          width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'11px 16px', background:'#FFFFFF', border:'none', cursor:'pointer',
-          WebkitTapHighlightColor:'transparent',
-          borderBottom: open ? '1px solid #E7E3D9' : 'none',
-        }}>
-        <div style={{display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11,
-            letterSpacing:1.5, color: open ? '#C8A15A' : '#3F5F4A'}}>
-            GAME TRACKERS
-          </span>
-          <div style={{display:'flex', gap:4}}>
-            {activeTypes.map(t => (
-              <span key={t} style={{fontSize:12}}>{formatIcons[t] || '🎯'}</span>
-            ))}
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose();}}
+      style={{position:'fixed', inset:0, background:'rgba(14,43,32,0.55)', zIndex:1500,
+        display:'flex', alignItems:'flex-end', justifyContent:'center', animation:'ppFadeIn 0.15s ease-out'}}>
+      <div role="dialog" aria-modal="true" aria-label="Game trackers"
+        style={{background:'#F6F4EE', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520,
+          maxHeight:'78vh', display:'flex', flexDirection:'column', overflow:'hidden',
+          animation:'ppSheetUp 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)',
+          boxShadow:'0 -12px 40px rgba(14,43,32,0.25)'}}>
+        <div style={{flexShrink:0, padding:'10px 16px 8px', background:'#FFFFFF', borderBottom:'1px solid #E7E3D9'}}>
+          <div style={{width:36, height:4, borderRadius:2, background:'#D4CFC4', margin:'0 auto 8px'}}/>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <div style={{display:'flex', alignItems:'center', gap:8}}>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13,
+                letterSpacing:1.5, color:'#0E2B20'}}>
+                GAME TRACKERS
+              </span>
+              <div style={{display:'flex', gap:4}}>
+                {formats.map(f => (
+                  <span key={f.type} style={{fontSize:13}}>{formatIcons[f.type] || '🎯'}</span>
+                ))}
+              </div>
+            </div>
+            <button onClick={onClose} aria-label="Close game trackers"
+              style={{background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8, color:'#3F5F4A',
+                fontSize:16, cursor:'pointer', width:32, height:32,
+                display:'flex', alignItems:'center', justifyContent:'center', WebkitTapHighlightColor:'transparent'}}>✕</button>
           </div>
         </div>
-        <span style={{
-          fontSize:14, color:'#8A9E8A',
-          display:'inline-block',
-          transform: open ? 'rotate(180deg)' : 'none',
-          transition:'transform 0.2s',
-        }}>▾</span>
-      </button>
-
-      {open && <div>{children}</div>}
+        <div style={{overflowY:'auto', WebkitOverflowScrolling:'touch',
+          paddingBottom:'env(safe-area-inset-bottom, 0px)'}}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 };
@@ -519,7 +539,7 @@ const SyncPulse = ({ syncing }) => {
   if (!syncing) return null;
   return (
     <div style={{
-      position:'fixed', top:60, right:12, zIndex:500,
+      position:'fixed', top:'calc(64px + env(safe-area-inset-top, 0px))', right:12, zIndex:500,
       display:'flex', alignItems:'center', gap:6,
       background:'rgba(14,43,32,0.1)', border:'1px solid rgba(14,43,32,0.3)',
       borderRadius:20, padding:'4px 10px',
@@ -811,6 +831,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   // ── Score / putt / pop setters ────────────────────────────────────────────
   const setScore = (playerId, val) => {
+    window.ppHaptic && window.ppHaptic();
     const clamped = Math.max(1, val);
     setScores(prev => {
       const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(null))]};
@@ -821,6 +842,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   };
 
   const setPutt = (playerId, val) => {
+    window.ppHaptic && window.ppHaptic();
     setPutts(prev => {
       const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(0))]};
       next[playerId][holeIdx] = val;
@@ -942,6 +964,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   const nextHole = () => {
     if (canAdvance && seqPos < lastSeq) {
+      window.ppHaptic && window.ppHaptic(12);
       const newIdx = playOrder[seqPos + 1];
       holeIdxRef.current = newIdx;
       setHoleIdx(newIdx);
@@ -949,11 +972,100 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
+  // ── Reconnect flush — if a live-score write failed offline, re-push the
+  // latest state as soon as the connection returns.
+  React.useEffect(() => {
+    const onOnline = () => scheduleCloudWrite(null, null, null, null);
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [scheduleCloudWrite]);
+
   const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData, extraStats); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
   const hasGames = games.length > 0;
   const hasAnyTracker = hasGames || hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall || hasMarkey;
+
+  // ── One-screen adaptive layout ────────────────────────────────────────────
+  // The player grid is measured with a ResizeObserver; the measured cell size
+  // drives a scale factor so the interface resizes itself to always fit —
+  // large and generous for 2 players, efficient for 4+ — with no scrolling.
+  const gridRef = React.useRef(null);
+  const [gridBox, setGridBox] = React.useState(() => ({
+    w: Math.max(280, window.innerWidth - 20),
+    h: Math.max(320, window.innerHeight - 300),
+  }));
+  React.useEffect(() => {
+    const el = gridRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(entries => {
+      const r = entries[0].contentRect;
+      setGridBox(prev => (Math.abs(prev.w - r.width) < 1 && Math.abs(prev.h - r.height) < 1)
+        ? prev : { w: r.width, h: r.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const nPlayers    = players.length;
+  const isLandscape = gridBox.w > gridBox.h * 1.5;
+  const gridCols    = isLandscape ? Math.min(nPlayers, 4) : (nPlayers <= 3 ? 1 : 2);
+  const gridRows    = Math.ceil(nPlayers / gridCols) || 1;
+  const GAP         = isLandscape ? 8 : 10;
+  const cardW       = (gridBox.w - GAP * (gridCols - 1)) / gridCols;
+  const cardH       = (gridBox.h - GAP * (gridRows - 1)) / gridRows;
+  const showPopToggle = hasAnyTracker; // pops only affect game math — hide in casual rounds
+  const narrowCard = cardW < 260;
+  const compactHeader = gridBox.h < 400; // short viewports (landscape phones)
+
+  // Height budget (at sz=1): header 40 + stepper 86 + meta 36 = 162, plus the
+  // wolf/PTM warning strip and however many rows the stat groups wrap into at
+  // the current card width. Wrap count depends on the scale, so iterate.
+  const statGroupWidths = [
+    cardStats.putts && 210, cardStats.fir && 128, cardStats.gir && 128,
+    cardStats.pen && 132, cardStats.sand && 122, cardStats.ud && 122,
+  ].filter(Boolean);
+  const statRowsAt = (scale) => {
+    if (!statGroupWidths.length) return 0;
+    const innerW = cardW - 24 * scale;
+    let rows = 1, cur = 0;
+    statGroupWidths.forEach(g => {
+      const w = g * scale;
+      if (cur > 0 && cur + w > innerW) { rows++; cur = w; }
+      else cur += w + 14 * scale;
+    });
+    return rows;
+  };
+  const baseFixedH = 162 + (hasWolf ? 28 : 0) + (hasPTM ? 24 : 0);
+  const widthCap   = (cardW / 340) * 1.15;
+  let szCalc = Math.min(cardH / (baseFixedH + (statGroupWidths.length ? 52 : 0)), widthCap);
+  for (let i = 0; i < 3; i++) {
+    const next = Math.min(cardH / (baseFixedH + statRowsAt(szCalc) * 52), widthCap);
+    if (Math.abs(next - szCalc) < 0.01) { szCalc = next; break; }
+    szCalc = next;
+  }
+  const sz = Math.max(0.66, Math.min(1.5, szCalc));
+
+  // Always-visible primary action — tells the golfer exactly what's next.
+  const primary = !currentHoleScored
+    ? { label:'ENTER SCORES TO CONTINUE', disabled:true, variant:'surface' }
+    : wolfPickRequired
+    ? { label:'🐺 PICK WOLF TO CONTINUE', onClick:()=>setWolfPicker(true), variant:'danger' }
+    : ptmPuttRequired
+    ? { label:'💰 ENTER PUTTS TO CONTINUE', disabled:true, variant:'surface' }
+    : (allScored || seqPos === lastSeq)
+    ? { label:'🏁 FINISH ROUND', onClick:()=>setShowFinish(true), variant:'gold' }
+    : { label:`NEXT HOLE ${course.holes[playOrder[seqPos + 1]].num} →`, onClick:nextHole, variant:'green' };
+
+  const footBtn = (icon, label, onClick, ariaLabel) => (
+    <button onClick={onClick} aria-label={ariaLabel}
+      style={{width:54, borderRadius:12, border:'1px solid #E7E3D9', background:'#FFFFFF',
+        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
+        cursor:'pointer', WebkitTapHighlightColor:'transparent', padding:'6px 0', flexShrink:0}}>
+      <span aria-hidden="true" style={{fontSize:17, lineHeight:1}}>{icon}</span>
+      <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:9, letterSpacing:0.8, color:'#3F5F4A'}}>{label}</span>
+    </button>
+  );
 
   return (
     <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'#F6F4EE'}}>
@@ -961,29 +1073,35 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       <SyncPulse syncing={syncing}/>
 
       {/* Hole header */}
-      <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)', padding:'12px 16px 10px'}}>
+      <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)',
+        padding:`${compactHeader?5:8}px calc(12px + env(safe-area-inset-right, 0px)) ${compactHeader?5:8}px calc(12px + env(safe-area-inset-left, 0px))`}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
-          <button onClick={prevHole} disabled={seqPos===0}
-            style={{width:36, height:36, borderRadius:8, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
+          <button onClick={prevHole} disabled={seqPos===0} aria-label="Previous hole"
+            style={{width:40, height:compactHeader?32:40, borderRadius:10, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
               color:seqPos===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:20, cursor:seqPos===0?'default':'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ‹
           </button>
 
-          <div style={{flex:1, textAlign:'center'}}>
+          <div style={{flex:1, textAlign:'center', minWidth:0}}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'center', gap:8}}>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:32, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:18, color:parColor}}>PAR {hole.par}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:compactHeader?20:26, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:compactHeader?13:16, color:parColor}}>PAR {hole.par}</span>
+              {compactHeader && (
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds · HCP {hole.hdcp}</span>
+              )}
             </div>
-            <div style={{display:'flex', justifyContent:'center', gap:16, marginTop:2}}>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>HCP {hole.hdcp}</span>
-            </div>
+            {!compactHeader && (
+              <div style={{display:'flex', justifyContent:'center', gap:14, marginTop:2}}>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds</span>
+                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>HCP {hole.hdcp}</span>
+              </div>
+            )}
           </div>
 
-          <button onClick={nextHole} disabled={seqPos===lastSeq || (currentHoleScored && !canAdvance)}
-            style={{width:36, height:36, borderRadius:8, border:'none',
+          <button onClick={nextHole} disabled={seqPos===lastSeq || (currentHoleScored && !canAdvance)} aria-label="Next hole"
+            style={{width:40, height:compactHeader?32:40, borderRadius:10, border:'none',
               background: seqPos===lastSeq ? 'transparent' : 'rgba(255,255,255,0.12)',
               color: seqPos===lastSeq ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
               fontSize:20, cursor: seqPos===lastSeq || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
@@ -994,40 +1112,27 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         </div>
 
         {/* Hole dots */}
-        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:10, flexWrap:'wrap'}}>
+        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:compactHeader?5:8, flexWrap:'wrap'}}>
           {playOrder.map((i) => {
             const allIn = players.every(p => scores[p.id]?.[i]);
             const some  = players.some(p => scores[p.id]?.[i]);
             return (
-              <div key={i} onClick={()=>{ holeIdxRef.current=i; setHoleIdx(i); scheduleCloudWrite(null,null,null,null); }}
-                style={{width:i===holeIdx?20:8, height:8, borderRadius:4, cursor:'pointer', transition:'all 0.2s',
+              <button key={i} onClick={()=>{ holeIdxRef.current=i; setHoleIdx(i); scheduleCloudWrite(null,null,null,null); }}
+                aria-label={`Go to hole ${course.holes[i].num}`} aria-current={i===holeIdx ? 'true' : undefined}
+                style={{width:i===holeIdx?20:9, height:9, borderRadius:5, cursor:'pointer', transition:'all 0.2s', padding:0,
                   background:i===holeIdx?'#C8A15A':allIn?'rgba(246,244,238,0.9)':some?'rgba(246,244,238,0.4)':'rgba(255,255,255,0.2)',
                   border:i===holeIdx?'none':`1px solid ${allIn?'rgba(246,244,238,0.4)':'rgba(255,255,255,0.15)'}`}}>
-              </div>
+              </button>
             );
           })}
         </div>
-
-        {/* Scorecard button */}
-        <div style={{display:'flex', justifyContent:'center', marginTop:8, paddingBottom:4}}>
-          <button
-            onClick={() => setShowScorecard(true)}
-            style={{
-              background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)',
-              borderRadius:20, padding:'4px 14px', color:'#F6F4EE', cursor:'pointer',
-              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',
-              fontWeight:700, fontSize:11, letterSpacing:1,
-              display:'flex', alignItems:'center', gap:6,
-              WebkitTapHighlightColor:'transparent',
-            }}>
-            📊 SCORECARD
-          </button>
-        </div>
       </div>
 
-      {/* Scrollable body */}
-      <div style={{flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
-        <div style={{padding:'12px 12px 0', display:'flex', flexDirection:'column', gap:10}}>
+      {/* Player grid — sized to always fit the viewport, no scrolling */}
+      <div style={{flex:1, minHeight:0,
+        padding:`${GAP}px calc(${GAP}px + env(safe-area-inset-right, 0px)) ${GAP}px calc(${GAP}px + env(safe-area-inset-left, 0px))`}}>
+        <div ref={gridRef} style={{width:'100%', height:'100%', display:'grid',
+          gridTemplateColumns:`repeat(${gridCols}, 1fr)`, gridAutoRows:'1fr', gap:GAP}}>
           {players.map(p => {
             const isWolf       = hasWolf && wolfPlayer?.id === p.id;
             const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
@@ -1054,54 +1159,36 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
                 stats={cardStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
                 extraStats={extraStats} onExtraStat={setExtraStat}
+                sz={sz} narrow={narrowCard} showPopToggle={showPopToggle}
               />
             );
           })}
         </div>
-
-        <div style={{marginTop:12}}>
-          <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
-        </div>
-
-        {hasAnyTracker && (
-          <TrackersDrawer open={trackersOpen} onToggle={() => setTrackersOpen(v => !v)} formats={formats}>
-            {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
-            {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
-            {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
-            {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
-            {hasBBB     && <BBBTracker          players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         format={bbbFmt}/>}
-            {hasTeeBall && <TeeBallTracker      players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
-            {hasMarkey  && <MarkeyMatchTracker  players={players} scores={scores} format={markeyFmt} holeIdx={holeIdx}/>}
-          </TrackersDrawer>
-        )}
-
-        <div style={{padding:'16px 12px 24px'}}>
-          {(allScored || seqPos === lastSeq) && (
-            <Btn onClick={() => setShowFinish(true)} variant="gold"
-              style={{width:'100%', padding:'16px', fontSize:18, letterSpacing:1}}>
-              🏁 FINISH ROUND
-            </Btn>
-          )}
-        </div>
       </div>
 
-      {/* Next hole button */}
-      {canAdvance && seqPos < lastSeq && (
-        <div style={{flexShrink:0, padding:'10px 12px', background:'#F6F4EE', borderTop:'1px solid #E7E3D9'}}>
-          <Btn onClick={nextHole} variant="green" style={{width:'100%', padding:'13px', fontSize:16}}>
-            NEXT HOLE {course.holes[playOrder[seqPos + 1]].num} →
-          </Btn>
-        </div>
-      )}
-
-      <div style={{flexShrink:0, padding:'6px 12px 10px', background:'#F6F4EE', borderTop:'1px solid #E7E3D9', display:'flex', justifyContent:'center'}}>
-        <button onClick={()=>setShowExit(true)}
-          style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif',
-            fontWeight:700, fontSize:12, letterSpacing:1, color:'#8A9E8A',
-            WebkitTapHighlightColor:'transparent', padding:'6px 16px'}}>
-          EXIT ROUND
-        </button>
+      {/* Action bar — utilities left, one clear primary action right */}
+      <div style={{flexShrink:0, display:'flex', gap:8, alignItems:'stretch',
+        padding:'8px calc(12px + env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px))',
+        background:'#FFFFFF', borderTop:'1px solid #E7E3D9'}}>
+        {footBtn('🚪', 'EXIT', ()=>setShowExit(true), 'Exit round')}
+        {footBtn('📊', 'CARD', ()=>setShowScorecard(true), 'Open live scorecard')}
+        {hasAnyTracker && footBtn('🎯', 'GAMES', ()=>setTrackersOpen(true), 'Open game trackers')}
+        <Btn onClick={primary.onClick} disabled={!!primary.disabled} variant={primary.variant}
+          style={{flex:1, minHeight:52, padding:'10px 12px', fontSize:15, letterSpacing:0.5}}>
+          {primary.label}
+        </Btn>
       </div>
+
+      <TrackersSheet open={trackersOpen} onClose={() => setTrackersOpen(false)} formats={formats}>
+        <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
+        {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
+        {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
+        {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
+        {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
+        {hasBBB     && <BBBTracker          players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         format={bbbFmt}/>}
+        {hasTeeBall && <TeeBallTracker      players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
+        {hasMarkey  && <MarkeyMatchTracker  players={players} scores={scores} format={markeyFmt} holeIdx={holeIdx}/>}
+      </TrackersSheet>
 
       {keypad && (
         <ScoreKeypad player={players.find(p=>p.id===keypad)} hole={hole} current={scores[keypad]?.[holeIdx]}
