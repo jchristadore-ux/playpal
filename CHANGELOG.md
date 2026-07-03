@@ -2,7 +2,36 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
-## [1.3.0] — 2026-07-02
+## [1.4.0] — 2026-07-03
+
+App Store submission readiness: a fully self-contained bundle and a
+committed native iOS project. No user-facing feature changes.
+
+### Added
+- **Native iOS project (`ios/`)** generated with Capacitor 8 (Swift Package
+  Manager — no CocoaPods step on the Mac): bundle id `com.playpal.golf`,
+  marketing version 1.4.0, brand app icon and launch screen installed,
+  `PrivacyInfo.xcprivacy` privacy manifest registered in the build, light
+  status bar over the brand header, and `ITSAppUsesNonExemptEncryption=false`
+  so uploads skip the export-compliance questionnaire.
+- `npm run build:www` assembles the self-contained `www/` bundle that ships
+  inside the binary; `npm run ios:sync` builds + syncs it into the iOS
+  project. `assets-native/` holds the 1024px icon / 2732px splash sources.
+
+### Changed
+- **All runtime dependencies are now vendored** (`vendor/`): React 18.3.1,
+  Firebase 11.9.0 compat SDKs, the QR library, and Plus Jakarta Sans
+  (latin + latin-ext woff2). The app makes **zero CDN requests** — faster
+  first load, no third-party availability risk, full offline capability,
+  and no remote-URL shell inside the iOS binary (App Review guideline 4.2
+  mitigation). The only external traffic left is Firebase's own data API.
+- Service worker precaches the vendored files and drops the now-unused CDN
+  cache branch.
+- `docs/IOS_APP_STORE_PATH.md` rewritten as a beginner-grade, click-by-click
+  submission guide matching the in-repo project;
+  `APP_STORE_READINESS.md` re-scored (12 pass / 2 mitigated cautions / 1
+  fail — the $99 Apple membership + Mac, which code cannot fix).
+
 
 One-screen score entry. The in-round screen now always fits the viewport —
 no scrolling, ever — and scales itself to the player count and device.
