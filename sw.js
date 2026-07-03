@@ -1,13 +1,13 @@
 /* PlayPal service worker
  *
  * Strategy:
- *  - App shell (HTML) and compiled JS: network-first, cache fallback — so new
- *    deploys propagate immediately while the app still opens offline.
- *  - CDN assets (React, Firebase, fonts, QR lib) and images: cache-first —
- *    they are version-pinned URLs and safe to cache long-term.
- *  - Firebase data traffic (firestore/rtdb) is never intercepted.
+ *  - App shell (HTML), compiled JS, and vendored libraries: network-first,
+ *    cache fallback — so new deploys propagate immediately while the app
+ *    still opens offline. All dependencies are vendored (vendor/), so the
+ *    app makes no CDN requests at all.
+ *  - Firebase data traffic (firestore/rtdb/auth) is never intercepted.
  */
-const CACHE_VERSION = 'playpal-v1.3.0';
+const CACHE_VERSION = 'playpal-v1.4.0';
 
 const PRECACHE = [
   './',
@@ -16,37 +16,47 @@ const PRECACHE = [
   './playpal-logo.png',
   './icons/icon-192.png',
   './icons/apple-touch-icon.png',
-  './dist/gameData.js?v=1.3.0',
-  './dist/gameUtils.js?v=1.3.0',
-  './dist/tripUtils.js?v=1.3.0',
-  './dist/handicapService.js?v=1.3.0',
-  './dist/courseService.js?v=1.3.0',
-  './dist/matchEngine.js?v=1.3.0',
-  './dist/statsService.js?v=1.3.0',
-  './dist/profileService.js?v=1.3.0',
-  './dist/roundHistoryService.js?v=1.3.0',
-  './dist/sharingService.js?v=1.3.0',
-  './dist/migrations.js?v=1.3.0',
-  './dist/Shared.js?v=1.3.0',
-  './dist/Home.js?v=1.3.0',
-  './dist/Setup.js?v=1.3.0',
-  './dist/Trackers.js?v=1.3.0',
-  './dist/GameTrackers.js?v=1.3.0',
-  './dist/LiveScorecard.js?v=1.3.0',
-  './dist/ScoreEntry.js?v=1.3.0',
-  './dist/Summary.js?v=1.3.0',
-  './dist/RoundViewer.js?v=1.3.0',
-  './dist/TripDashboard.js?v=1.3.0',
-  './dist/StatsScreen.js?v=1.3.0',
-  './dist/App.js?v=1.3.0',
-];
-
-const CDN_HOSTS = [
-  'unpkg.com',
-  'cdnjs.cloudflare.com',
-  'www.gstatic.com',
-  'fonts.googleapis.com',
-  'fonts.gstatic.com',
+  './vendor/react.production.min.js',
+  './vendor/react-dom.production.min.js',
+  './vendor/qrcode.min.js',
+  './vendor/firebase-app-compat.js',
+  './vendor/firebase-auth-compat.js',
+  './vendor/firebase-database-compat.js',
+  './vendor/firebase-firestore-compat.js',
+  './vendor/fonts.css',
+  './vendor/fonts/plus-jakarta-sans-latin-400-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-500-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-600-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-700-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-800-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-ext-400-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-ext-500-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-ext-600-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-ext-700-normal.woff2',
+  './vendor/fonts/plus-jakarta-sans-latin-ext-800-normal.woff2',
+  './dist/gameData.js?v=1.4.0',
+  './dist/gameUtils.js?v=1.4.0',
+  './dist/tripUtils.js?v=1.4.0',
+  './dist/handicapService.js?v=1.4.0',
+  './dist/courseService.js?v=1.4.0',
+  './dist/matchEngine.js?v=1.4.0',
+  './dist/statsService.js?v=1.4.0',
+  './dist/profileService.js?v=1.4.0',
+  './dist/roundHistoryService.js?v=1.4.0',
+  './dist/sharingService.js?v=1.4.0',
+  './dist/migrations.js?v=1.4.0',
+  './dist/Shared.js?v=1.4.0',
+  './dist/Home.js?v=1.4.0',
+  './dist/Setup.js?v=1.4.0',
+  './dist/Trackers.js?v=1.4.0',
+  './dist/GameTrackers.js?v=1.4.0',
+  './dist/LiveScorecard.js?v=1.4.0',
+  './dist/ScoreEntry.js?v=1.4.0',
+  './dist/Summary.js?v=1.4.0',
+  './dist/RoundViewer.js?v=1.4.0',
+  './dist/TripDashboard.js?v=1.4.0',
+  './dist/StatsScreen.js?v=1.4.0',
+  './dist/App.js?v=1.4.0',
 ];
 
 // Live data endpoints — never cache.
@@ -77,20 +87,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET') return;
   if (DATA_HOSTS.some((h) => url.hostname.endsWith(h))) return;
-
-  if (CDN_HOSTS.includes(url.hostname)) {
-    // Cache-first for version-pinned CDN assets
-    event.respondWith(
-      caches.match(event.request).then((hit) => hit || fetch(event.request).then((resp) => {
-        if (resp.ok || resp.type === 'opaque') {
-          const copy = resp.clone();
-          caches.open(CACHE_VERSION).then((c) => c.put(event.request, copy));
-        }
-        return resp;
-      }))
-    );
-    return;
-  }
 
   if (url.origin === self.location.origin) {
     // Network-first for our own files so updates land immediately

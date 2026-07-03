@@ -1,34 +1,44 @@
-# TODO — Production audit & redesign (Fable Mode)
+# TODO — App Store submission readiness (Fable Mode, v1.4.0)
 
-Branch `claude/golf-scorecard-audit-redesign-wl0b1p` (from main @81bf29f).
-Milestones: code + rebuild `dist/` + tests green, committed together.
+Branch `claude/golf-scorecard-audit-redesign-wl0b1p` (restarted from main
+@cf77d26; open draft PR #59 will carry this work — retitle at the end).
 
-- [x] M1 — Full audit sweep (baseline: 92/92 tests, no console.logs/TODOs,
-      clean tree; findings recorded in progress.md)
-- [x] M2 — **One-screen adaptive Score Entry** (`components/ScoreEntry.jsx`)
-  - ResizeObserver-driven layout: grid cols/rows by player count +
-    orientation (≤3P → 1 col; 4P+ → 2 cols portrait / N cols landscape).
-  - Scale factor `sz` from measured card box; all card dims scale with
-    readability floors. Cards flex to fill; score stepper absorbs slack.
-  - Compact hole header (2 rows); dots become real buttons (a11y).
-  - Bottom action bar: EXIT · CARD · GAMES icons + always-visible primary
-    (ENTER SCORES → PICK WOLF → ENTER PUTTS → NEXT HOLE / FINISH).
-  - Trackers drawer → bottom-sheet modal (RoundTracker moves inside).
-  - Merge pop pill into meta row; hide manual POP when no game formats.
-  - Merge putts/FIR/GIR/PEN/SAND/U&D into one wrapping stat row.
-  - Score pop animation, haptics (navigator.vibrate), safe-area bottom pad.
-- [x] M3 — App-level resilience & polish
-  - Offline banner in App.jsx (online/offline listeners).
-  - ScoreEntry re-pushes live scores on 'online' event.
-  - SyncPulse below safe-area; WolfPicker safe-area padding.
-  - ppHaptic helper in Shared.jsx.
-- [x] M4 — Performance & consistency
-  - index.html: preconnect hints; trim fonts to Plus Jakarta Sans only;
-    global keyframes (ppSheetUp, ppFadeIn, ppScorePop).
-- [x] M5 — Release: v1.3.0 bump (package.json+lock, ?v=, CACHE_VERSION,
-      Home footer), CHANGELOG, AUDIT.md refresh, build, tests, push, draft PR.
+Reality (from AUDIT/APP_STORE_READINESS): PlayPal is a PWA; prior passes
+already shipped privacy/terms/support pages, listing copy, privacy labels,
+hardened Firebase rules, and a Capacitor how-to. The two automatable FAILs:
+CDN-dependent shell (guideline 4.2 web-wrapper risk) and no native project.
+
+- [x] M1 — Self-contained bundle (kills CDN dependence)
+  - Vendor react/react-dom UMD (npm tarballs), firebase *-compat.js (from
+    firebase@11.9.0 tarball), QR lib (qrcodejs2@0.0.2), Plus Jakarta Sans
+    woff2 + local CSS (@fontsource/plus-jakarta-sans) into `vendor/`.
+  - index.html: local <script>/<link> paths (drop SRI/preconnects for CDNs).
+  - sw.js: precache vendor files; drop CDN cache-first branch.
+  - Verify in Chromium: cold load fully offline-capable after install;
+    app boots with zero external requests.
+- [x] M2 — Native iOS project in-repo (Capacitor)
+  - npm i @capacitor/core @capacitor/ios + -D @capacitor/cli.
+  - scripts/build-www.mjs assembles www/ (html pages, dist, icons, vendor,
+    manifest, logo — NO sw.js). Gitignore www/.
+  - capacitor.config.json (appId com.playpal.golf, appName PlayPal,
+    webDir www, backgroundColor #0E2B20).
+  - npx cap add ios; npx cap sync ios; commit ios/.
+  - iOS icons + splash via @capacitor/assets (from icon-512 + brand green).
+  - App/PrivacyInfo.xcprivacy (UserDefaults CA92.1; no tracking, no
+    collected data types beyond what labels declare).
+  - Info.plist: display name PlayPal, UIStatusBarStyle, viewport safe.
+- [x] M3 — Release/docs
+  - v1.4.0 bump (package.json+lock, ?v=, CACHE_VERSION, Home footer),
+    CHANGELOG.
+  - Rewrite docs/IOS_APP_STORE_PATH.md for the new in-repo project (Mac
+    steps shrink to: clone → npm install/build → pod install → sign →
+    archive). Update APP_STORE_READINESS.md scorecard.
+- [x] M4 — Verify + ship
+  - npm test green; Chromium smoke (home/score offline).
+  - Push; retitle/re-body PR #59; final report (readiness score 0-100,
+    changes, beginner manual checklist).
 
 ## Constraints
-- `dist/` is committed; CI fails if stale → `npm run build` before commit.
-- All game logic (sync, wolf/PTM/nassau/BBB/teeball/markey) unchanged.
-- Data model unchanged; layout/UX only.
+- dist/ committed; `npm run build` before every commit.
+- Web/PWA deployment must keep working identically (GH Pages workflow).
+- No game logic changes.

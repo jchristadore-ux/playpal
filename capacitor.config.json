@@ -1,0 +1,9 @@
+{
+  "appId": "com.playpal.golf",
+  "appName": "PlayPal",
+  "webDir": "www",
+  "backgroundColor": "#0E2B20",
+  "ios": {
+    "contentInset": "never"
+  }
+}
