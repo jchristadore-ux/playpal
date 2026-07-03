@@ -2,6 +2,48 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.3.0] — 2026-07-02
+
+One-screen score entry. The in-round screen now always fits the viewport —
+no scrolling, ever — and scales itself to the player count and device.
+
+### Added
+- **Adaptive one-screen score entry:** the player grid is measured live
+  (ResizeObserver) and every control scales to fit — 1-column and generous
+  for 2–3 players, a 2×2 grid for 4+, side-by-side columns in landscape.
+  The scale respects readability floors and accounts for stat-row wrapping
+  and wolf/PTM warning strips, so nothing clips on small phones.
+- **Always-visible primary action** in a new bottom action bar: it walks the
+  golfer through the round — ENTER SCORES → PICK WOLF / ENTER PUTTS →
+  NEXT HOLE → FINISH ROUND — with EXIT, CARD and GAMES utilities beside it.
+- **Game trackers bottom sheet:** trackers (and the round tracker) moved
+  from an inline drawer into a slide-up sheet, keeping the score surface
+  clean. Escape key and backdrop tap close it.
+- **Offline banner:** a slim status strip appears under the nav when the
+  connection drops, and live scores are re-pushed automatically when it
+  returns.
+- **Micro-interactions:** score-change pop animation, sheet slide-up and
+  fade-in transitions (all respect `prefers-reduced-motion`), and light
+  haptic feedback on score/putt taps where the platform supports it.
+
+### Changed
+- Hole header is more compact (and denser still in landscape); the
+  SCORECARD chip moved into the bottom action bar as CARD.
+- Putts / FIR / GIR / penalties / sand / up-&-downs now share one wrapping
+  stat row; the pop pill joined the format-pills row.
+- The manual POP toggle only renders when a game format that uses pops is
+  active — casual stat-only rounds no longer show it.
+- Font payload trimmed to Plus Jakarta Sans only (Inter and Playfair
+  Display were fallback-only and never rendered); added `preconnect` hints
+  for all CDNs used at startup.
+
+### Fixed
+- Score entry (and the wolf picker) now respect the bottom safe-area inset,
+  so controls no longer sit under the iPhone home indicator.
+- Hole-progress dots are real buttons — keyboard-accessible with proper
+  labels; stepper, putt and stat buttons gained descriptive `aria-label`s.
+- The sync pulse indicator no longer overlaps the Dynamic Island.
+
 ## [1.2.0] — 2026-06-12
 
 Customizable stat tracking, a more compact score-entry tile, and proper

@@ -345,4 +345,9 @@ const ScorePill = ({ diff }) => {
   );
 };
 
-Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal, PLAYPAL_THEME: T });
+// ─── Haptics ──────────────────────────────────────────────────────────────────
+// Light tactile feedback where the platform supports it (Android Chrome).
+// Silently a no-op elsewhere (iOS Safari has no vibration API).
+const ppHaptic = (ms = 8) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+
+Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal, ppHaptic, PLAYPAL_THEME: T });

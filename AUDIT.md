@@ -1,5 +1,17 @@
 # PlayPal — Full Repository Audit
 
+> **Addendum — July 2, 2026 (v1.3.0 production redesign pass).** A follow-up
+> full-app audit found the codebase clean (92/92 tests, no debug artifacts,
+> no dead code) with one major UX gap: the score-entry screen scrolled and
+> did not adapt to player count or device. v1.3.0 rebuilt it as a measured,
+> self-scaling one-screen layout, added an always-visible primary action,
+> moved trackers to a bottom sheet, added offline indication + reconnect
+> re-push, haptics, safe-area fixes, a11y labels on all in-round controls,
+> and trimmed the font payload. Remaining strategic items unchanged from
+> below: per-user authentication/data partitioning (rounds are currently
+> shared-by-code with anonymous auth) and moving Firebase writes behind
+> stricter per-user rules. See CHANGELOG [1.3.0] for the full list.
+
 **Date:** June 11, 2026 · **Auditor:** automated engineering audit (code, architecture, security, UX, accessibility, performance)
 **Scope:** entire repository at commit `7754827` (pre-hardening). Items marked ✅ **FIXED** were resolved in the production-hardening pass that accompanies this audit; everything else lists the recommended path.
 
