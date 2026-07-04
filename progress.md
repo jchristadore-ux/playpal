@@ -1,8 +1,9 @@
 # Project Progress
 
-Current task: App Store submission readiness (v1.4.0) — COMPLETE, shipping
-via PR #59 on branch `claude/golf-scorecard-audit-redesign-wl0b1p`.
-(Previous task v1.3.0 one-screen score entry merged as PR #58.)
+All tasks COMPLETE and MERGED. v1.3.0 (one-screen score entry) merged as
+PR #58; v1.4.0 (App Store readiness: vendored self-contained bundle +
+committed iOS Capacitor project) merged as PR #59 on 2026-07-03.
+Do NOT redo or re-push this work.
 
 ## Shipped in v1.4.0 (this pass)
 - vendor/: React 18.3.1 + Firebase 11.9.0 compat + QR lib + Plus Jakarta
@@ -31,6 +32,5 @@ via PR #59 on branch `claude/golf-scorecard-audit-redesign-wl0b1p`.
 - Strategic: per-user auth & data partitioning (see AUDIT.md).
 
 ## Next Action (exact)
-Commit + push to origin claude/golf-scorecard-audit-redesign-wl0b1p
-(PR #59 is open for this branch — retitle/re-body it for v1.4.0), then
-final report to user.
+None — all shipped and merged. Any follow-up work starts a fresh branch
+from latest main. The remaining items are user actions listed above.
