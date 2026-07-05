@@ -286,10 +286,18 @@ const EgtScoring = (function () {
   // One team ball per hole; team net = team gross − the team's scramble pops
   // (team handicap distributed by SI). Loop 1 = holes 1..9.
   function scramble(ctx) {
-    const { teams, course } = ctx;
+    const { teams, course, scores } = ctx;
     const teamGross = ctx.events?.scrambleGross || {}; // { teamName: { hole: gross } }
     const teamHandicaps = ctx.teamHandicaps?.scramble || {}; // { team1: n, team2: n }
     const loopHoles = holesRange(1, 9);
+    // Per-player entry fallback: derive the team ball as the better gross of the
+    // two partners each hole when an explicit team gross wasn't recorded.
+    const teamGrossAt = (team, hole) => {
+      const explicit = teamGross[team.name]?.[hole];
+      if (explicit != null) return explicit;
+      const g = team.players.map(pid => gross(scores, pid, hole)).filter(v => v != null);
+      return g.length ? Math.min(...g) : null;
+    };
     // Distribute each team's handicap across loop-1 holes by 9-hole SI.
     const teamKey = i => (i === 0 ? 'team1' : 'team2');
     const loopSi = loopHoles.map(hole => {
@@ -302,7 +310,7 @@ const EgtScoring = (function () {
       const popAt = hole => (popsArr ? H.popsOnHole(popsArr, hole) : 0);
       let grossTotal = 0, netTotal = 0, complete = true;
       const perHole = loopHoles.map(hole => {
-        const g = teamGross[t.name]?.[hole];
+        const g = teamGrossAt(t, hole);
         if (g == null) { complete = false; return { hole, gross: null, net: null }; }
         const n = g - popAt(hole);
         grossTotal += g; netTotal += n;
@@ -324,15 +332,22 @@ const EgtScoring = (function () {
   // Weaker team gets the combined-difference strokes on the loop's lowest-SI
   // holes (precomputed in _teamHandicaps). Loop 2 = holes 10..18.
   function alternateShot(ctx) {
-    const { teams } = ctx;
+    const { teams, scores } = ctx;
     const teamGross = ctx.events?.altShotGross || {}; // { teamName: { hole: gross } }
     const altCfg = ctx.teamHandicaps?.alternateShot || {};
     const loopHoles = holesRange(10, 18);
     // Which team receives, and on which holes.
     const strokeHoles = altCfg.team2StrokeHolesLoop2 || [];
     const receivingTeamIdx = 1; // team2 by seed convention (higher combined)
+    // Per-player entry fallback: better gross of the partners is the team ball.
+    const teamGrossAt = (idx, hole) => {
+      const explicit = teamGross[teams[idx].name]?.[hole];
+      if (explicit != null) return explicit;
+      const g = teams[idx].players.map(pid => gross(scores, pid, hole)).filter(v => v != null);
+      return g.length ? Math.min(...g) : null;
+    };
     const ballNet = idx => hole => {
-      const g = teamGross[teams[idx].name]?.[hole];
+      const g = teamGrossAt(idx, hole);
       if (g == null) return null;
       const pop = (idx === receivingTeamIdx && strokeHoles.includes(hole)) ? 1 : 0;
       return g - pop;

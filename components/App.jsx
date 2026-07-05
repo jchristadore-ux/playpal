@@ -297,7 +297,46 @@ const App = () => {
 
   };
 
+  // Launch an EGT tournament round in the native scorer (called from the EGT screen).
+  const handleEgtScoreRound = (nativeRound) => {
+    setRound(nativeRound);
+    localStorage.setItem('pp_round', JSON.stringify(nativeRound));
+    sessionStorage.setItem('pp_screen', 'score');
+    localStorage.setItem('pp_active_round', '1');
+    setScreen('score');
+  };
+
+  // Bridge a finished/exited EGT round's native scores into the EGT store, then
+  // return to the EGT Cup screen (skip the native payout summary).
+  const _finishEgtRound = (r, payload, finalize) => {
+    try {
+      if (window.EgtStore && window.EgtBridge) {
+        const st = window.EgtStore.load(r.egtTripId);
+        if (st && st.model) {
+          window.EgtStore.rehydrate(st);
+          if (payload) window.EgtBridge.bridge(st.model, st, r.egtRoundId, payload);
+          if (finalize) {
+            window.EgtStore.finalizeRound(st, r.egtRoundId);
+            try { window.EgtEngine.liveUpdate(st, { season: (st.finalized || []).includes('R6') }); }
+            catch (e) { window.EgtStore.save(st); }
+          } else {
+            window.EgtStore.save(st);
+          }
+        }
+      }
+    } catch (e) { console.warn('[PlayPal] EGT bridge failed:', e); }
+    RoundSyncService.unsubscribeRound();
+    localStorage.removeItem('pp_active_round');
+    sessionStorage.setItem('pp_screen', 'egt');
+    setScreen('egt');
+  };
+
   const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}, extraStats = {}) => {
+    // EGT rounds bridge into the tournament engine and skip the native summary.
+    if (round && round.egtRoundId) {
+      _finishEgtRound(round, { scores, putts, firData, girData, extraStats, wolfData, bbbData }, true);
+      return;
+    }
     setFinalScores(scores);
     setFinalWolf(wolfData);
     setFinalPutts(putts);
@@ -457,6 +496,14 @@ const App = () => {
   };
 
   const handleExitRound = () => {
+    // Exiting an EGT round returns to the Cup screen; scores stay in the native
+    // scorer's storage and bridge in when the round is finalized.
+    if (round && round.egtRoundId) {
+      // Scores are already persisted under the native round id by ScoreEntry;
+      // they bridge into the tournament when the round is finalized. Just return.
+      _finishEgtRound(round, null, false);
+      return;
+    }
     RoundSyncService.unsubscribeRound();
     sessionStorage.removeItem('pp_screen');
     localStorage.removeItem('pp_active_round');
@@ -618,7 +665,7 @@ const App = () => {
           />
         }
 
-        {screen === 'egt' && <EgtTournament />}
+        {screen === 'egt' && <EgtTournament onScoreRound={handleEgtScoreRound} />}
 
       </div>
 

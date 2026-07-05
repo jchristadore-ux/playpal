@@ -43,9 +43,24 @@ task's explicit "courseLibrary is the single source of truth / seed value wins",
 the engine reproduces the seed's White-tee values exactly. R6 (16/22/27/27) matches
 §8 as written.
 
+### Follow-up shipped — native scorer integration (post-merge)
+Each EGT round now opens in the app's real hole-by-hole scorer (ScoreEntry),
+not the compact grid. New `components/egt/egtBridge.js`:
+- `toNativeRound(model, roundId)` builds a native `round` (course {num,par,hdcp}
+  from the played tee, players with index/initials/color, matching format
+  trackers, putts/FIR/GIR/sand on, deterministic id + sync code).
+- `bridge()` translates native score arrays + BBB/Wolf events back into the EGT
+  store; `readNativePayload()` reads them from localStorage on finalize.
+App wiring: EGT card "Score this round" → native ScoreEntry; finishing bridges
+scores in, finalizes the round, recomputes standings, returns to the Cup screen.
+Standings recompute on finalize (per user's choice). R5 scramble/alt-shot derive
+the team ball from the four per-player grosses (per user's choice).
+Verified: 114 tests pass; browser smoke — launch prefilled scorer + bridge/
+finalize updates standings (John 8.5 pts from bridged R6 scores).
+
 ### Next actions (if resumed)
-- Optional: richer score-entry (putts/FIR/GIR/sand toggles) and CTP/LD/Wolf event
-  entry in the UI (engine already supports them).
+- Optional: reflect EGT per-game pops (off-low/allowance) in the native scorer's
+  on-screen dots (today it shows full-handicap pops; EGT engine stays authoritative).
 - Optional: per-hole net-birdie basis toggle for The Rock (currently skinsNet).
 
 ## Previously shipped (merged) — v1.4.0 App Store readiness

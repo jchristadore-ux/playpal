@@ -56,6 +56,7 @@ const PRECACHE = [
   './dist/egt/egtStore.js?v=1.4.0',
   './dist/egt/egtPrintable.js?v=1.4.0',
   './dist/egt/egtEngine.js?v=1.4.0',
+  './dist/egt/egtBridge.js?v=1.4.0',
   './dist/Shared.js?v=1.4.0',
   './dist/Home.js?v=1.4.0',
   './dist/Setup.js?v=1.4.0',

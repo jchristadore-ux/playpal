@@ -3,7 +3,7 @@
 // pending stroke index, and see live standings/money plus a printable packet.
 // All math lives in the engine modules (window.Egt*); this file is view + glue.
 
-const EgtTournament = () => {
+const EgtTournament = ({ onScoreRound }) => {
   const TH = window.PLAYPAL_THEME || {};
   const GREEN = '#0E2B20', GOLD = TH.accentGold || '#C8A15A', INK = '#12241C', LINE = '#cddbd3';
   const seedText = window.EGT_SEED;
@@ -54,12 +54,28 @@ const EgtTournament = () => {
     setState({ ...state });
   };
   const toggleFinalize = rid => {
-    if (state.finalized.includes(rid)) state.finalized = state.finalized.filter(x => x !== rid);
-    else window.EgtStore.finalizeRound(state, rid);
+    if (state.finalized.includes(rid)) {
+      state.finalized = state.finalized.filter(x => x !== rid);
+    } else {
+      // Pull any scores entered in the native scorer into the EGT store first,
+      // so finalizing reflects live-scored rounds.
+      try {
+        const payload = window.EgtBridge.readNativePayload(model, rid);
+        if (payload) window.EgtBridge.bridge(model, state, rid, payload);
+      } catch (e) {}
+      window.EgtStore.finalizeRound(state, rid);
+    }
     // A finalize triggers a full live update + snapshot.
     try { window.EgtEngine.liveUpdate(state, { season: (state.finalized || []).includes('R6') }); } catch (e) {}
     persist(state);
     flash(state.finalized.includes(rid) ? `${rid} finalized — standings updated` : `${rid} reopened`);
+  };
+
+  const scoreRound = rid => {
+    if (!onScoreRound) { flash('Scoring is available from the app shell'); return; }
+    // Make sure the latest model (SI edits etc.) is persisted before launching.
+    window.EgtStore.save(state);
+    onScoreRound(window.EgtBridge.toNativeRound(model, rid));
   };
 
   // ── SI entry ──────────────────────────────────────────────────────────────
@@ -226,8 +242,12 @@ const EgtTournament = () => {
               </table>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <Btn onClick={() => toggleFinalize(round.id)}>{finalized ? 'Reopen round' : 'Finalize round'}</Btn>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <Btn variant="green" onClick={() => scoreRound(round.id)}>🏌️ Score this round</Btn>
+              <Btn variant={finalized ? 'ghost' : 'gold'} onClick={() => toggleFinalize(round.id)}>{finalized ? 'Reopen round' : 'Finalize round'}</Btn>
+            </div>
+            <div style={{ fontSize: 11, color: '#8a988f', marginTop: 8 }}>
+              “Score this round” opens the full hole-by-hole scorer. Finalize when done to update the Cup standings.
             </div>
           </div>
         )}
