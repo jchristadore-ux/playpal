@@ -321,12 +321,10 @@ test('bridge translates native score arrays + BBB/Wolf events into the EGT store
   });
   payload.scores.john[0] = 3;                 // hole 1 gross 3
   payload.putts.john[0] = 3;                  // 3-putt
-  payload.extraStats.john[0] = { sand: true };
   EgtBridge.bridge(m, state, 'R2', payload);
   assert.equal(state.scores.R2.john[1].gross, 3);
   assert.equal(state.scores.R2.john[1].putts, 3);
   assert.equal(state.scores.R2.john[1].fir, true);
-  assert.equal(state.scores.R2.john[1].sand, true);
   assert.equal(state.scores.R2.tj[7].gross, course.holes[6].par);
 
   // R1 BBB events

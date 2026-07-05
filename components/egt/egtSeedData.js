@@ -3110,8 +3110,7 @@ const EGT_SEED = {
       "greensInReg",
       "grossBirdies",
       "netBirdies",
-      "pars",
-      "sandSaves"
+      "pars"
     ]
   },
   "pointsConfig": {

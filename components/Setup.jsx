@@ -880,7 +880,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses }) => {
       { mode: 'none' };
     const namedGames = games.map(g => ({ ...g, name: window.MatchEngine.get(g.formatId)?.label || g.formatId }));
     // `trackStats` is derived for legacy readers/labels: any detailed stat beyond putts.
-    const trackStats = ['fir','gir','pen','sand','ud'].some(k => statsConfig[k]);
+    const trackStats = ['fir','gir'].some(k => statsConfig[k]);
     onStart({ players, course, formats: activeFormats, games: namedGames, teeId, statsConfig, trackStats, syncCode: generateSyncCode(), tripSelection, startingTee });
   };
 

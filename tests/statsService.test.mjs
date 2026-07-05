@@ -43,12 +43,12 @@ test('computePlayerRound: totals, to-par, distribution, front/back', () => {
   assert.equal(c.aces + c.eagles + c.birdies + c.pars + c.bogeys + c.doubles + c.triplePlus, 18);
 });
 
-test('computePlayerRound: putts, FIR/GIR percentages, extra stats', () => {
+test('computePlayerRound: putts, FIR/GIR percentages, longest drive/putt', () => {
   const data = makeData({
     putts: { a: [3, 1, ...Array(16).fill(2)] },
     firData: { a: [true, false, null, true, ...Array(14).fill(null)] },
     girData: { a: [true, true, false, ...Array(15).fill(null)] },
-    extraStats: { a: { 0: { pen: 2, sand: true, drv: 285 }, 1: { ud: false, lp: 22 } } },
+    extraStats: { a: { 0: { drv: 285 }, 1: { lp: 22 } } },
   });
   const r = SS.computePlayerRound(data, 'a');
   assert.equal(r.putts.total, 36);
@@ -59,9 +59,6 @@ test('computePlayerRound: putts, FIR/GIR percentages, extra stats', () => {
   assert.equal(r.fir.hit, 2);
   assert.equal(r.gir.eligible, 3);
   assert.equal(r.gir.pct, 67);
-  assert.equal(r.penalties, 2);
-  jeq(r.sandSaves, { made: 1, att: 1 });
-  jeq(r.upDowns, { made: 0, att: 1 });
   assert.equal(r.longestDrive, 285);
   assert.equal(r.longestPutt, 22);
 });

@@ -91,7 +91,7 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, sz = 1, narrow = false, showPopToggle = true }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, sz = 1, narrow = false, showPopToggle = true }) => {
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
@@ -111,10 +111,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const showFIR   = !!stats.fir && hole.par !== 3;
   const showGIR   = !!stats.gir;
   const puttRequired = isPTMHolder && puttVal === 0;
-  const anyStatRow = showPutts || showFIR || showGIR || stats.pen || stats.sand || stats.ud;
-
-  const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
-  const pen = ex.pen || 0;
+  const anyStatRow = showPutts || showFIR || showGIR;
 
   // Compact ✓/✗ toggle shared by FIR and GIR on the single stat row.
   const HitMiss = (label, data, onSet) => {
@@ -143,26 +140,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
           })}
         </div>
       </div>
-    );
-  };
-
-  const triBtn = (field, val, lbl, color) => {
-    const on = ex[field] === val;
-    return (
-      <button key={field + String(val)}
-        onClick={() => onExtraStat(p.id, field, on ? null : val)}
-        aria-label={`${field} ${val ? 'yes' : 'no'}`} aria-pressed={on}
-        style={{
-          width:statBtn - 2, height:statBtn - 2, borderRadius:s(8,6),
-          border: on ? 'none' : '1px solid #E7E3D9',
-          background: on ? color : '#F0EDE4',
-          color: on ? '#FFFFFF' : '#3F5F4A',
-          fontFamily:F, fontWeight:800, fontSize:s(13,11),
-          cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-          display:'flex', alignItems:'center', justifyContent:'center',
-        }}>
-        {lbl}
-      </button>
     );
   };
 
@@ -319,7 +296,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Stat row — putts · FIR · GIR · PEN · SAND · U&D on one wrapping line */}
+      {/* Stat row — putts · FIR · GIR on one wrapping line */}
       {anyStatRow && (
         <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:s(14, narrow ? 8 : 10), rowGap:s(6,4),
           padding:`${s(6,4)}px ${padX}px ${s(9,6)}px`, flexShrink:0,
@@ -354,30 +331,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
           )}
           {showFIR && HitMiss('FIR', firData, onFIR)}
           {showGIR && HitMiss('GIR', girData, onGIR)}
-          {stats.pen && (
-            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-              <Label style={{flexShrink:0, fontSize:s(10,9)}}>PEN</Label>
-              <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0} aria-label="One fewer penalty"
-                style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
-              <span style={{fontFamily:F, fontWeight:800, fontSize:s(15,12), color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
-              <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
-                style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
-            </div>
-          )}
-          {stats.sand && (
-            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-              <Label style={{flexShrink:0, fontSize:s(10,9)}}>SAND</Label>
-              {triBtn('sand', true, '✓', '#15803D')}
-              {triBtn('sand', false, '✗', '#DC2626')}
-            </div>
-          )}
-          {stats.ud && (
-            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-              <Label style={{flexShrink:0, fontSize:s(10,9)}}>U&D</Label>
-              {triBtn('ud', true, '✓', '#15803D')}
-              {triBtn('ud', false, '✗', '#DC2626')}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -608,7 +561,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const [teeBallData, setTeeBallData] = React.useState(_initTeeBall);
   const [firData,     setFIRData]     = React.useState(_initFIR);
   const [girData,     setGIRData]     = React.useState(_initGIR);
-  const [extraStats,  setExtraStats]  = React.useState(_initExtra);  // {pid:{holeIdx:{pen,sand,ud,drv,lp}}}
+  const [extraStats,  setExtraStats]  = React.useState(_initExtra);  // {pid:{holeIdx:{drv,lp}}}
 
   const [holeIdx,  setHoleIdx]  = React.useState(() => playOrder[0]);
   const [keypad,   setKeypad]   = React.useState(null);
@@ -646,9 +599,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     putts: statsCfg.putts || hasPTM,
     fir:   statsCfg.fir,
     gir:   statsCfg.gir,
-    pen:   statsCfg.pen,
-    sand:  statsCfg.sand,
-    ud:    statsCfg.ud,
   }), [statsCfg, hasPTM]);
 
   const hole       = course.holes[holeIdx];
@@ -929,20 +879,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
-  const setExtraStat = (playerId, field, val) => {
-    setExtraStats(prev => {
-      const mine = { ...(prev[playerId] || {}) };
-      const holeEntry = { ...(mine[holeIdx] || {}) };
-      if (val === null || val === undefined || val === 0 || val === '') delete holeEntry[field];
-      else holeEntry[field] = val;
-      if (Object.keys(holeEntry).length === 0) delete mine[holeIdx];
-      else mine[holeIdx] = holeEntry;
-      const next = { ...prev, [playerId]: mine };
-      scheduleCloudWrite(null, null, null, null, null, null, null, null, next);
-      return next;
-    });
-  };
-
   // Current position within the play order (0–17), independent of which tee we started on.
   const seqPos = playOrder.indexOf(holeIdx);
 
@@ -1023,7 +959,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // the current card width. Wrap count depends on the scale, so iterate.
   const statGroupWidths = [
     cardStats.putts && 210, cardStats.fir && 128, cardStats.gir && 128,
-    cardStats.pen && 132, cardStats.sand && 122, cardStats.ud && 122,
   ].filter(Boolean);
   const statRowsAt = (scale) => {
     if (!statGroupWidths.length) return 0;
@@ -1158,7 +1093,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 onScoreTap={() => setKeypad(p.id)} onPopToggle={togglePop}
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
                 stats={cardStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
-                extraStats={extraStats} onExtraStat={setExtraStat}
                 sz={sz} narrow={narrowCard} showPopToggle={showPopToggle}
               />
             );

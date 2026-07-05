@@ -11,7 +11,7 @@ const EgtStore = (function () {
     return {
       tripId,
       model: null,           // normalized import (EgtImporter.importSeed)
-      scores: {},            // { roundId: { playerId: { hole: {gross,putts,fir,gir,sand} } } }
+      scores: {},            // { roundId: { playerId: { hole: {gross,putts,fir,gir} } } }
       events: {              // side-game / play-order events
         bbb: {}, wolf: {}, scrambleGross: {}, altShotGross: {},
         ctp: [], longDrive: [], singlesPairings: null,

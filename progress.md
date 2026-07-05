@@ -1,6 +1,29 @@
 # Project Progress
 
-## Current work — EGT 2026 Cup tournament engine (branch claude/playpal-egt-tournament-25w5g0)
+## Current work — Remove secondary stat trackers (branch claude/remove-sand-tracker-al009r)
+
+Status: **complete, 115 tests green, browser-smoke verified.**
+
+Trimmed per-hole stat tracking down to just **Putts, FIR, GIR** — removed the
+Sand saves, Penalties, and Up & downs trackers (per user's confirmed scope).
+- `statsService.js` — `STAT_TRACK_DEFS` now only putts/fir/gir; dropped
+  penalties/sandSaves/upDowns from `computePlayerRound` + `aggregatePlayer`;
+  `resolveRoundStatsConfig` returns only the three keys. Longest drive/putt
+  (drv/lp) plumbing left intact.
+- `ScoreEntry.jsx` — removed the PEN/SAND/U&D stat-row UI, the `triBtn` helper,
+  and the `setExtraStat` writer; `cardStats`/`statGroupWidths` trimmed. The
+  `extraStats` state/persist/sync/save path is kept (still carries drv/lp and
+  round-trips saved data).
+- `StatsScreen.jsx` — dropped the SAND SAVES / UP & DOWNS / PENALTIES cards.
+- `Setup.jsx` — the "Select Stats to Track" chips render from
+  `STAT_TRACK_DEFS`, so they auto-trim; `trackStats` derivation updated.
+- EGT — `egtBridge` no longer sets/maps `sand`; `egtSideGames` drops the unused
+  `sandSaves` season stat; seed `trackedStats` list (both embedded + fixture)
+  cleaned. No award consumed sandSaves (only FIR+GIR Iron Man).
+- Tests updated (statsConfig/statsService/egt); browser smoke confirmed the real
+  ScoreEntry renders only PUTTS/FIR/GIR with no JS errors.
+
+## Previously shipped — EGT 2026 Cup tournament engine (branch claude/playpal-egt-tournament-25w5g0)
 
 Status: **engine + UI complete, all tests green (111 pass), browser-smoke verified.**
 
