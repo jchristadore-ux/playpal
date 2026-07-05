@@ -2,6 +2,24 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.5.0] — 2026-07-05
+
+The EGT Cup tournament feature.
+
+### Added
+- **EGT 2026 Cup** (new bottom-nav tab): imports the trip definition and runs
+  live scoring across six mixed-format rounds (Bingo-Bango-Bongo, The Nines,
+  four-ball match + Nassau, Wolf, team & individual Stableford, scramble,
+  alternate shot, championship singles, gross/net skins), with an EGT Cup
+  points engine, a zero-sum money engine, standings with night-over-night
+  deltas, a stroke-index entry flow, and a printable packet.
+- **Score EGT rounds in the native scorer** — each round opens PlayPal's real
+  hole-by-hole scorer, prefilled from the seed, with its format engines
+  triggering (BBB, Nassau, Wolf, Stableford, Skins); results bridge into the
+  Cup standings on finalize.
+- Rounds tab shows a plain-English format note per round and each game's
+  strokes/pops with its basis.
+
 ## [1.4.0] — 2026-07-03
 
 App Store submission readiness: a fully self-contained bundle and a
