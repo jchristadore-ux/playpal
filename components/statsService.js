@@ -2,7 +2,7 @@
 //
 // Works on two data shapes:
 //   • Live round data   — scores {pid:[gross]}, putts {pid:[n]}, firData/girData
-//                         {pid:[true|false|null]}, extraStats {pid:{holeIdx:{pen,sand,ud,drv,lp}}}
+//                         {pid:[true|false|null]}, extraStats {pid:{holeIdx:{drv,lp}}}
 //   • Saved snapshots   — { round, scores, putts, firData, girData, extraStats, savedAt }
 //     or completed round objects carrying holeScores.
 //
@@ -69,7 +69,6 @@ const StatsService = (function () {
     let gross = 0, par = 0, played = 0, front = 0, back = 0;
     let puttsTotal = 0, puttsHoles = 0, threePutts = 0, onePutts = 0;
     let firHit = 0, firEligible = 0, girHit = 0, girEligible = 0;
-    let penalties = 0, sandAtt = 0, sandMade = 0, udAtt = 0, udMade = 0;
     let longestDrive = 0, longestPutt = 0;
     const parBuckets = { 3: { n: 0, total: 0 }, 4: { n: 0, total: 0 }, 5: { n: 0, total: 0 } };
     const diffs = [];
@@ -93,11 +92,6 @@ const StatsService = (function () {
       if (gir[i] !== null && gir[i] !== undefined) { girEligible++; if (gir[i]) girHit++; }
       const ex = extra[i];
       if (ex) {
-        penalties += ex.pen || 0;
-        if (ex.sand === true)  { sandAtt++; sandMade++; }
-        if (ex.sand === false) { sandAtt++; }
-        if (ex.ud === true)    { udAtt++; udMade++; }
-        if (ex.ud === false)   { udAtt++; }
         if (ex.drv && ex.drv > longestDrive) longestDrive = ex.drv;
         if (ex.lp && ex.lp > longestPutt) longestPutt = ex.lp;
       }
@@ -126,9 +120,6 @@ const StatsService = (function () {
       putts: { total: puttsTotal, holes: puttsHoles, perHole: puttsHoles ? puttsTotal / puttsHoles : 0, threePutts, onePutts },
       fir: { hit: firHit, eligible: firEligible, pct: firEligible ? Math.round(100 * firHit / firEligible) : null },
       gir: { hit: girHit, eligible: girEligible, pct: girEligible ? Math.round(100 * girHit / girEligible) : null },
-      penalties,
-      sandSaves: { made: sandMade, att: sandAtt },
-      upDowns:   { made: udMade,   att: udAtt },
       longestDrive: longestDrive || null,
       longestPutt:  longestPutt  || null,
       parAverages: {
@@ -168,14 +159,11 @@ const StatsService = (function () {
       bogeys:  sum(s => s.counts.bogeys),
       doubles: sum(s => s.counts.doubles),
       triplePlus: sum(s => s.counts.triplePlus),
-      penalties:  sum(s => s.penalties),
     };
     const firHit = sum(s => s.fir.hit), firEl = sum(s => s.fir.eligible);
     const girHit = sum(s => s.gir.hit), girEl = sum(s => s.gir.eligible);
     const puttsTotal = sum(s => s.putts.total);
     const puttRounds = complete.filter(r => r.stats.putts.holes === 18);
-    const sandMade = sum(s => s.sandSaves.made), sandAtt = sum(s => s.sandSaves.att);
-    const udMade = sum(s => s.upDowns.made), udAtt = sum(s => s.upDowns.att);
 
     const best = (list, fn, lower) => {
       let out = null;
@@ -199,8 +187,6 @@ const StatsService = (function () {
       firPct: firEl ? Math.round(100 * firHit / firEl) : null,
       girPct: girEl ? Math.round(100 * girHit / girEl) : null,
       puttsPerRound: puttRounds.length ? puttRounds.reduce((a, r) => a + r.stats.putts.total, 0) / puttRounds.length : null,
-      sandSavePct: sandAtt ? Math.round(100 * sandMade / sandAtt) : null,
-      upDownPct: udAtt ? Math.round(100 * udMade / udAtt) : null,
       longestDrive: best(rounds, s => s.longestDrive, false),
       longestPutt:  best(rounds, s => s.longestPutt, false),
       bests: {
@@ -280,9 +266,6 @@ const STAT_TRACK_DEFS = [
   { key: 'putts', label: 'Putts',      hint: 'Putts per hole',           icon: '🎯', default: true,  primary: true },
   { key: 'fir',   label: 'FIR',        hint: 'Fairways in regulation',   icon: '🟢', default: true,  primary: true },
   { key: 'gir',   label: 'GIR',        hint: 'Greens in regulation',     icon: '⛳', default: true,  primary: true },
-  { key: 'pen',   label: 'Penalties',  hint: 'Penalty strokes',          icon: '⚠️', default: false },
-  { key: 'sand',  label: 'Sand saves', hint: 'Up & down from a bunker',  icon: '🏖️', default: false },
-  { key: 'ud',    label: 'Up & downs', hint: 'Scramble par saves',       icon: '🎽', default: false },
 ];
 
 const DEFAULT_STATS_CONFIG = STAT_TRACK_DEFS.reduce((o, d) => { o[d.key] = d.default; return o; }, {});
@@ -300,9 +283,9 @@ function normalizeStatsConfig(cfg) {
 // saved before per-stat selection existed (legacy `trackStats`/`tripId`).
 function resolveRoundStatsConfig(round) {
   if (round && round.statsConfig) return normalizeStatsConfig(round.statsConfig);
-  if (round && round.trackStats)  return { putts: true, fir: true, gir: true, pen: true, sand: true, ud: true };
-  if (round && round.tripId)      return { putts: true, fir: true, gir: true, pen: false, sand: false, ud: false };
-  return { putts: true, fir: false, gir: false, pen: false, sand: false, ud: false };
+  if (round && round.trackStats)  return { putts: true, fir: true, gir: true };
+  if (round && round.tripId)      return { putts: true, fir: true, gir: true };
+  return { putts: true, fir: false, gir: false };
 }
 
 Object.assign(StatsService, {

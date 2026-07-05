@@ -65,7 +65,7 @@ const EgtSideGames = (function () {
   }
 
   // ── Tracked stats per player per round ───────────────────────────────────
-  // Reads HoleScore fields (putts, fir, gir, sand) and derives scoring stats
+  // Reads HoleScore fields (putts, fir, gir) and derives scoring stats
   // (gross/net birdies, pars) from gross vs par + net pops. netBirdies use the
   // round's off-low skinsNet pops by default.
   function trackedStats(model, roundId, scores, opts) {
@@ -76,7 +76,7 @@ const EgtSideGames = (function () {
     const netGame = o.netGame || 'skinsNet';
     const out = {};
     round.players.forEach(pid => {
-      const st = { putts: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, sandSaves: 0, holesEntered: 0 };
+      const st = { putts: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, holesEntered: 0 };
       for (let hole = 1; hole <= 18; hole++) {
         const s = scores?.[pid]?.[hole];
         if (!s || s.gross == null) continue;
@@ -85,7 +85,6 @@ const EgtSideGames = (function () {
         if (typeof s.putts === 'number') st.putts += s.putts;
         if (s.fir) st.fairwaysHit++;
         if (s.gir) st.greensInReg++;
-        if (s.sand) st.sandSaves++;
         if (par != null) {
           if (s.gross - par === -1) st.grossBirdies++;
           else if (s.gross - par <= -2) st.grossBirdies++; // eagles count as birdies-or-better here
@@ -102,7 +101,7 @@ const EgtSideGames = (function () {
   // Season-wide stat rollup across every finalized round (for season awards).
   function seasonStats(model, allRoundScores, opts) {
     const totals = {};
-    model.players.forEach(p => { totals[p.id] = { putts: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, sandSaves: 0, rounds: 0 }; });
+    model.players.forEach(p => { totals[p.id] = { putts: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, rounds: 0 }; });
     model.rounds.forEach(round => {
       const scores = allRoundScores?.[round.id];
       if (!scores) return;
@@ -110,7 +109,7 @@ const EgtSideGames = (function () {
       Object.entries(st).forEach(([pid, s]) => {
         if (!totals[pid]) return;
         if (s.holesEntered > 0) totals[pid].rounds++;
-        ['putts', 'fairwaysHit', 'greensInReg', 'grossBirdies', 'netBirdies', 'pars', 'sandSaves'].forEach(k => { totals[pid][k] += s[k]; });
+        ['putts', 'fairwaysHit', 'greensInReg', 'grossBirdies', 'netBirdies', 'pars'].forEach(k => { totals[pid][k] += s[k]; });
       });
     });
     return totals;

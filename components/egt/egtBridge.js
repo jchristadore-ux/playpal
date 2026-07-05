@@ -100,7 +100,7 @@ const EgtBridge = (function () {
       teeId: course.playedTee,
       startingTee: 1,
       trackStats: true,
-      statsConfig: { putts: true, fir: true, gir: true, sand: true },
+      statsConfig: { putts: true, fir: true, gir: true },
       syncCode: syncCodeFor(model, roundId),
     };
   }
@@ -108,7 +108,6 @@ const EgtBridge = (function () {
   // ── native → EGT translation ──────────────────────────────────────────────
   // payload holds the arrays ScoreEntry hands to onSaveRound:
   //   scores/putts/firData/girData: { pid: Array(18) }  (index 0 = hole 1)
-  //   extraStats: { pid: { holeIdx: { sand, … } } }
   //   wolfData:  { holeIdx: { wolfId, partnerId, confirmed, lone } }
   //   bbbData:   { holeIdx: { bingo, bango, bongo } }
   function bridge(model, state, roundId, payload) {
@@ -126,7 +125,6 @@ const EgtBridge = (function () {
           putts: p.putts?.[pid]?.[i] ?? null,
           fir: p.firData?.[pid]?.[i] === true,
           gir: p.girData?.[pid]?.[i] === true,
-          sand: !!(p.extraStats?.[pid]?.[i]?.sand === true),
         };
       }
     });
