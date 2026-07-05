@@ -31,6 +31,18 @@ Do NOT redo or re-push this work.
 - firebase deploy of hardened rules (firebase/README.md).
 - Strategic: per-user auth & data partitioning (see AUDIT.md).
 
+## Hotfix (branch claude/app-loading-issue-o6rib2)
+- Bug: deployed GitHub Pages app rendered blank ("app isn't loading").
+  Root cause: .github/workflows/deploy-pages.yml "Assemble site" step
+  predates the v1.4.0 vendoring and never copied vendor/ into _site, so
+  all 9 vendored deps (react, react-dom, firebase*, qrcode, fonts.css)
+  404'd on Pages -> "React is not defined" -> blank #root. (Local dev via
+  `npm run dev` was unaffected since it serves the repo root incl. vendor/.)
+- Fix: add `vendor` to the cp list in the Assemble site step (one word).
+  Verified by assembling _site exactly as the workflow does: without
+  vendor -> blank + 9x 404; with vendor -> React loads, #root renders,
+  zero 404s (headless Chromium).
+
 ## Next Action (exact)
-None — all shipped and merged. Any follow-up work starts a fresh branch
+None — hotfix pushed. Any further follow-up work starts a fresh branch
 from latest main. The remaining items are user actions listed above.
