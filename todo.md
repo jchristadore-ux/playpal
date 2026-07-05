@@ -26,6 +26,12 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] R5 scramble/alt-shot derive the team ball from per-player grosses.
 - [x] Bridge tests + browser smoke (launch + finalize updates standings).
 
+## Done — round list clarity (post-merge follow-up)
+- [x] Brief plain-English format explanation on each round in the list.
+- [x] Pops panel now shows course handicap once + EVERY game's strokes/pops with
+      its basis (fixes the "why only 4 pops?" confusion: Skins gives the full
+      off-low strokes, e.g. TJ/Mike 9; The Nines is a 9-hole off-low game = 4).
+
 ## Optional follow-ups (not required by spec)
 - [ ] Show EGT per-game pops in the native scorer's on-screen dots.
 - [ ] UI entry for CTP/LD winners (engine ready).
