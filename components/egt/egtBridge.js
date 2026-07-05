@@ -36,22 +36,51 @@ const EgtBridge = (function () {
     return code;
   }
 
-  // Native format trackers to surface per round (skins runs every round).
-  const FORMATS_FOR = {
-    R1: ['bingobangobongo', 'skins'],
-    R2: ['nassau', 'skins'],
-    R3: ['wolf', 'skins'],
-    R4: ['stableford', 'skins'],
-    R5: ['skins'],
-    R6: ['stableford', 'skins'],
-  };
+  // Native format objects to surface per round, so ScoreEntry's real engines/
+  // trackers fire exactly as they do for a normal round. `formats` is an array
+  // of { type, ... } objects (matching Setup's shape) — NOT bare strings, or
+  // ScoreEntry's `formats.some(f => f.type === …)` checks all read false and no
+  // tracker appears. Skins runs every round.
+  function formatsFor(model, round) {
+    const skins = { type: 'skins', stakes: model.moneyDefaults.skinsAnte || 5 };
+    switch (round.id) {
+      case 'R1': // loop 1 Bingo-Bango-Bongo (loop 2 Nines has no native engine)
+        return [{ type: 'bingobangobongo', stakes: model.moneyDefaults.bbbNinesPerPointDiff || 1 }, skins];
+      case 'R2': { // four-ball best-ball + Nassau, John+Brian vs TJ+Mike (2v2)
+        const t = round.teams;
+        const nassauMatches = [{
+          id: 'egt-R2', matchType: '2v2',
+          playersInMatch: [...t[0].players, ...t[1].players],
+          teams: { team1: t[0].players.slice(), team2: t[1].players.slice() },
+          popHoles: {}, stakes: model.moneyDefaults.nassauPerPoint || 5,
+        }];
+        return [{ type: 'nassau', stakes: model.moneyDefaults.nassauPerPoint || 5, nassauMatches }, skins];
+      }
+      case 'R3': return [{ type: 'wolf', stakes: model.moneyDefaults.wolfPerUnit || 2 }, skins];
+      case 'R4': return [{ type: 'stableford', stakes: 1 }, skins];
+      case 'R5': return [skins]; // scramble/alt-shot scored by the EGT engine
+      case 'R6': return [{ type: 'stableford', stakes: 1 }, skins];
+      default:   return [skins];
+    }
+  }
+
+  // Player order for the round. Wolf rotates by players[holeIdx % n], so R3 uses
+  // the seed's Wolf order (tj, mike, brian, john) to match the tournament.
+  function playerOrder(model, round) {
+    if (round.id === 'R3') {
+      const order = model.formatConfigs?.R3?.order;
+      if (Array.isArray(order) && order.length) return order.filter(id => round.players.includes(id));
+    }
+    return round.players.slice();
+  }
 
   // Build a native `round` object from a seed round.
   function toNativeRound(model, roundId) {
     const round = model.rounds.find(r => r.id === roundId);
     const course = model.courses[round.courseId];
     const tee = course.tees.find(t => t.name === course.playedTee) || course.tees[0];
-    const players = round.players.map((pid, i) => {
+    const order = playerOrder(model, round);
+    const players = order.map((pid, i) => {
       const p = model.playersById[pid];
       return { id: p.id, name: p.name, handicap: p.handicapIndex, initials: initialsFor(p.name), color: PALETTE[i % PALETTE.length] };
     });
@@ -66,7 +95,7 @@ const EgtBridge = (function () {
       name: `${round.id} · ${course.name}`,
       players,
       course: { id: course.courseId, name: course.name, location: course.location, rating: tee.cr, slope: tee.slope, holes },
-      formats: FORMATS_FOR[roundId] || ['skins'],
+      formats: formatsFor(model, round),
       games: [],
       teeId: course.playedTee,
       startingTee: 1,
@@ -102,13 +131,14 @@ const EgtBridge = (function () {
       }
     });
 
-    // R1 Bingo-Bango-Bongo events.
+    // R1 Bingo-Bango-Bongo events — loop 1 only (holes 1-9); loop 2 is The Nines.
     if (roundId === 'R1' && p.bbbData) {
       const events = [];
       Object.keys(p.bbbData).forEach(idx => {
+        const hole = Number(idx) + 1;
         const e = p.bbbData[idx];
-        if (e && (e.bingo || e.bango || e.bongo)) {
-          events.push({ hole: Number(idx) + 1, bingo: e.bingo || null, bango: e.bango || null, bongo: e.bongo || null });
+        if (hole <= 9 && e && (e.bingo || e.bango || e.bongo)) {
+          events.push({ hole, bingo: e.bingo || null, bango: e.bango || null, bongo: e.bongo || null });
         }
       });
       events.sort((a, b) => a.hole - b.hole);
@@ -151,7 +181,7 @@ const EgtBridge = (function () {
     };
   }
 
-  return { PALETTE, initialsFor, nativeRoundId, syncCodeFor, FORMATS_FOR, toNativeRound, bridge, readNativePayload };
+  return { PALETTE, initialsFor, nativeRoundId, syncCodeFor, formatsFor, playerOrder, toNativeRound, bridge, readNativePayload };
 })();
 
 if (typeof window !== 'undefined') {
