@@ -285,7 +285,24 @@ test('toNativeRound builds a scoreable app round from a seed round', () => {
   assert.equal(nr.course.holes[6].hdcp, 1); // Ballyowen hole 7 SI 1
   assert.equal(nr.course.rating, 66.9);     // White tee
   assert.equal(nr.course.slope, 114);
-  assert.ok(nr.formats.includes('skins'));
+  // formats are OBJECTS {type,...} (ScoreEntry reads f.type), not bare strings.
+  assert.ok(nr.formats.every(f => typeof f === 'object' && f.type));
+  assert.ok(nr.formats.some(f => f.type === 'skins'));
+  // R2 four-ball → Nassau 2v2 with the seed teams (John+Brian vs TJ+Mike).
+  const nassau = nr.formats.find(f => f.type === 'nassau');
+  assert.ok(nassau && nassau.nassauMatches[0].matchType === '2v2');
+  jeq(nassau.nassauMatches[0].teams, { team1: ['john', 'brian'], team2: ['tj', 'mike'] });
+});
+
+test('toNativeRound wires each round to its native format engine', () => {
+  const m = freshModel();
+  const typesFor = rid => EgtBridge.toNativeRound(m, rid).formats.map(f => f.type).sort();
+  jeq(typesFor('R1'), ['bingobangobongo', 'skins']);   // BBB tracker fires on R1
+  jeq(typesFor('R3'), ['skins', 'wolf']);
+  jeq(typesFor('R4'), ['skins', 'stableford']);
+  jeq(typesFor('R6'), ['skins', 'stableford']);
+  // R3 Wolf uses the seed's rotation order so the native Wolf-of-the-hole matches.
+  jeq(EgtBridge.toNativeRound(m, 'R3').players.map(p => p.id), ['tj', 'mike', 'brian', 'john']);
 });
 
 test('bridge translates native score arrays + BBB/Wolf events into the EGT store', () => {

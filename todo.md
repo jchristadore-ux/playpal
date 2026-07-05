@@ -32,6 +32,13 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
       its basis (fixes the "why only 4 pops?" confusion: Skins gives the full
       off-low strokes, e.g. TJ/Mike 9; The Nines is a 9-hole off-low game = 4).
 
+## Done — native format engines fire for EGT rounds (post-merge follow-up)
+- [x] toNativeRound emits real format OBJECTS ({type,...}) not strings, so
+      ScoreEntry's trackers trigger: R1 BBB, R2 Nassau (2v2 teams), R3 Wolf
+      (seed rotation order), R4/R6 Stableford, Skins every round.
+- [x] R1 BBB events clamped to loop 1 (holes 1-9); loop 2 is The Nines.
+- [x] Tests + browser smoke: BBB dropdown on R1, Wolf on R3, Nassau on R2.
+
 ## Optional follow-ups (not required by spec)
 - [ ] Show EGT per-game pops in the native scorer's on-screen dots.
 - [ ] UI entry for CTP/LD winners (engine ready).
