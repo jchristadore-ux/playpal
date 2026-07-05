@@ -618,6 +618,8 @@ const App = () => {
           />
         }
 
+        {screen === 'egt' && <EgtTournament />}
+
       </div>
 
       {/* Bottom Tab Nav — hidden on score, viewround, and trip detail screens */}
@@ -627,6 +629,7 @@ const App = () => {
             { id:'home',    icon:'🏠', label:'HOME' },
             { id:'stats',   icon:'📈', label:'STATS' },
             { id:'trips',   icon:'🗺️', label:'TRIPS' },
+            { id:'egt',     icon:'🏆', label:'EGT CUP' },
             { id:'setup',   icon:'⛳', label:'NEW ROUND' },
             ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }] : []),
             ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : []),

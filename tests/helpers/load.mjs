@@ -41,6 +41,17 @@ export function loadPlayPal(opts = {}) {
     'components/roundHistoryService.js',
     'components/sharingService.js',
     'components/migrations.js',
+    // EGT tournament engine (classic scripts, self-assign to window):
+    'components/egt/egtHandicap.js',
+    'components/egt/egtImporter.js',
+    'components/egt/egtScoring.js',
+    'components/egt/egtSideGames.js',
+    'components/egt/egtPoints.js',
+    'components/egt/egtMoney.js',
+    'components/egt/egtStandings.js',
+    'components/egt/egtStore.js',
+    'components/egt/egtPrintable.js',
+    'components/egt/egtEngine.js',
   ]) {
     const code = readFileSync(join(root, file), 'utf8');
     runInContext(code, ctx, { filename: file });
