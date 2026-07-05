@@ -52,6 +52,7 @@ export function loadPlayPal(opts = {}) {
     'components/egt/egtStore.js',
     'components/egt/egtPrintable.js',
     'components/egt/egtEngine.js',
+    'components/egt/egtBridge.js',
   ]) {
     const code = readFileSync(join(root, file), 'utf8');
     runInContext(code, ctx, { filename: file });

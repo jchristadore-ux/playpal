@@ -265,3 +265,84 @@ test('import is idempotent by trip id and preserves entered scores', () => {
   assert.equal(state2.scores.R2.john[1].gross, 4, 'entered score survives re-import');
   EgtStore.reset(SEED.trip.id);
 });
+
+// ── native scorer bridge ────────────────────────────────────────────────────
+const EgtBridge = W.EgtBridge;
+
+test('toNativeRound builds a scoreable app round from a seed round', () => {
+  const m = freshModel();
+  const nr = EgtBridge.toNativeRound(m, 'R2');
+  assert.equal(nr.egtRoundId, 'R2');
+  assert.equal(nr.id, 'egt-egt-2026-R2');
+  assert.equal(nr.players.length, 4);
+  // native player shape: id, name, handicap (index), initials, color
+  const john = nr.players.find(p => p.id === 'john');
+  assert.equal(john.handicap, 18.0);
+  assert.ok(john.initials && john.color);
+  // course holes are {num,par,hdcp} with hdcp = seed SI
+  assert.equal(nr.course.holes.length, 18);
+  assert.equal(nr.course.holes[6].num, 7);
+  assert.equal(nr.course.holes[6].hdcp, 1); // Ballyowen hole 7 SI 1
+  assert.equal(nr.course.rating, 66.9);     // White tee
+  assert.equal(nr.course.slope, 114);
+  assert.ok(nr.formats.includes('skins'));
+});
+
+test('bridge translates native score arrays + BBB/Wolf events into the EGT store', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  // R2 four players, gross = par everywhere, a birdie + 3-putt on hole 1 for john.
+  const payload = { scores: {}, putts: {}, firData: {}, girData: {}, extraStats: {} };
+  const course = m.courses.ballyowen;
+  m.rounds.find(r => r.id === 'R2').players.forEach(pid => {
+    payload.scores[pid] = course.holes.slice(0, 18).map(h => h.par);
+    payload.putts[pid] = course.holes.slice(0, 18).map(() => 2);
+    payload.firData[pid] = course.holes.slice(0, 18).map(() => true);
+    payload.girData[pid] = course.holes.slice(0, 18).map(() => false);
+    payload.extraStats[pid] = {};
+  });
+  payload.scores.john[0] = 3;                 // hole 1 gross 3
+  payload.putts.john[0] = 3;                  // 3-putt
+  payload.extraStats.john[0] = { sand: true };
+  EgtBridge.bridge(m, state, 'R2', payload);
+  assert.equal(state.scores.R2.john[1].gross, 3);
+  assert.equal(state.scores.R2.john[1].putts, 3);
+  assert.equal(state.scores.R2.john[1].fir, true);
+  assert.equal(state.scores.R2.john[1].sand, true);
+  assert.equal(state.scores.R2.tj[7].gross, course.holes[6].par);
+
+  // R1 BBB events
+  const st1 = EgtStore.emptyState(m.trip.id); st1.model = m;
+  EgtBridge.bridge(m, st1, 'R1', { scores: {}, bbbData: { 0: { bingo: 'john', bango: 'tj', bongo: 'mike' }, 5: { bingo: 'mike' } } });
+  jeq(st1.events.bbb.R1, [{ hole: 1, bingo: 'john', bango: 'tj', bongo: 'mike' }, { hole: 6, bingo: 'mike', bango: null, bongo: null }]);
+
+  // R3 Wolf events (pair + lone)
+  const st3 = EgtStore.emptyState(m.trip.id); st3.model = m;
+  EgtBridge.bridge(m, st3, 'R3', { scores: {}, wolfData: { 0: { wolfId: 'tj', partnerId: 'mike', confirmed: true, lone: false }, 1: { wolfId: 'mike', partnerId: null, confirmed: true, lone: true } } });
+  jeq(st3.events.wolf.R3, [{ hole: 1, wolf: 'tj', mode: 'pair', partner: 'mike' }, { hole: 2, wolf: 'mike', mode: 'lone', partner: null }]);
+});
+
+test('R5 scramble & alternate shot derive the team ball from per-player scores', () => {
+  const m = freshModel();
+  const round = m.rounds.find(r => r.id === 'R5');
+  const alloc = m.derived.R5.allocations;
+  const scores = {};
+  // Team 1 (john,mike) better than Team 2 (brian,tj) on every hole.
+  round.players.forEach(pid => { scores[pid] = {}; });
+  for (let h = 1; h <= 18; h++) {
+    scores.john[h] = { gross: 4 }; scores.mike[h] = { gross: 5 };
+    scores.brian[h] = { gross: 6 }; scores.tj[h] = { gross: 6 };
+  }
+  const ctx = {
+    round, course: m.courses.cascades, players: round.players.map(id => m.playersById[id]),
+    teams: round.teams, alloc, scores, config: m.formatConfigs.R5, events: {},
+    teamHandicaps: m.seedStrokeAllocations.R5._teamHandicaps,
+  };
+  const scr = EgtScoring.scramble(ctx);
+  // Team 1 ball = min(4,5)=4; Team 2 = min(6,6)=6 → Team 1 wins the loop.
+  assert.equal(scr.results[0].team, 'Team 1');
+  assert.equal(scr.winner, 'Team 1');
+  const alt = EgtScoring.alternateShot(ctx);
+  assert.equal(alt.winnerTeam, 'Team 1');
+});

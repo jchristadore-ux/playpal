@@ -19,8 +19,16 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] Test suite covering §8 (19 tests) — full `npm test` green (111 pass).
 - [x] Browser smoke: EGT screen renders, finalize recomputes standings, SI badges.
 
+## Done — native scorer integration (post-merge follow-up)
+- [x] EgtBridge: seed round → native `round`; native scores/events → EGT store.
+- [x] "Score this round" launches the full ScoreEntry prefilled from the seed.
+- [x] Finishing a round bridges scores in, finalizes, recomputes standings.
+- [x] R5 scramble/alt-shot derive the team ball from per-player grosses.
+- [x] Bridge tests + browser smoke (launch + finalize updates standings).
+
 ## Optional follow-ups (not required by spec)
-- [ ] UI entry for putts/FIR/GIR/sand, CTP/LD winners, Wolf selections (engine ready).
+- [ ] Show EGT per-game pops in the native scorer's on-screen dots.
+- [ ] UI entry for CTP/LD winners (engine ready).
 - [ ] Configurable net-birdie basis for The Rock.
 
 ## Constraints

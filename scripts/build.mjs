@@ -30,6 +30,7 @@ const SOURCES = [
   'components/egt/egtStore.js',
   'components/egt/egtPrintable.js',
   'components/egt/egtEngine.js',
+  'components/egt/egtBridge.js',
   'components/EgtTournament.jsx',
   'components/Shared.jsx',
   'components/Home.jsx',
