@@ -1,0 +1,28 @@
+const EgtPrintable=(function(){const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);const money=n=>n<0?`-$${Math.abs(n).toFixed(2)}`:`$${(n||0).toFixed(2)}`;const arrow=d=>d==="up"?"▲":d==="down"?"▼":d==="new"?"•":"–";const STYLE=`
+    .egt-print{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#12241c;max-width:900px;margin:0 auto;padding:16px}
+    .egt-print h1{font-size:22px;margin:0 0 2px} .egt-print h2{font-size:16px;margin:18px 0 6px;color:#0E2B20}
+    .egt-print .sub{color:#5b6b63;font-size:12px;margin-bottom:12px}
+    .egt-print table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:8px}
+    .egt-print th,.egt-print td{border:1px solid #cddbd3;padding:4px 6px;text-align:center}
+    .egt-print th{background:#0E2B20;color:#fff;font-weight:600}
+    .egt-print td.name{text-align:left;font-weight:600}
+    .egt-print .up{color:#137a3f} .egt-print .down{color:#b3261e}
+    .egt-print tr.lead td{background:#eef6f0}
+    .egt-print .pend{color:#9a6a00;font-style:italic}
+    @media print{.egt-print{max-width:none} .egt-noprint{display:none}}
+  `;function standingsTable(standings){const rows=standings.map(r=>{var _a;return`
+      <tr class="${r.rank===1?"lead":""}">
+        <td>${r.rank}</td>
+        <td class="name">${esc(r.name)}</td>
+        <td>${r.points}</td>
+        <td class="${r.direction}">${arrow(r.direction)}${r.move?Math.abs(r.move):""}</td>
+        <td>${(_a=r.maxPossible)!=null?_a:"—"}</td>
+      </tr>`}).join("");return`<table><thead><tr><th>Pos</th><th>Player</th><th>EGT Pts</th><th>Move</th><th>Max</th></tr></thead><tbody>${rows}</tbody></table>`}function moneyTable(model,moneyTotal){const rows=model.players.map(p=>`
+      <tr><td class="name">${esc(p.name)}</td><td class="${((moneyTotal==null?void 0:moneyTotal[p.id])||0)<0?"down":"up"}">${money((moneyTotal==null?void 0:moneyTotal[p.id])||0)}</td></tr>`).join("");const sum=model.players.reduce((a,p)=>a+((moneyTotal==null?void 0:moneyTotal[p.id])||0),0);return`<table><thead><tr><th>Player</th><th>Net $</th></tr></thead><tbody>${rows}
+      <tr><td class="name">Balance</td><td>${money(sum)}</td></tr></tbody></table>`}function roundScorecard(model,state,roundId,game){var _a;const round=model.rounds.find(r=>r.id===roundId);const course=model.courses[round.courseId];const alloc=model.derived[roundId].allocations;const scores=((_a=state.scores)==null?void 0:_a[roundId])||{};const H=typeof window!=="undefined"&&window.EgtHandicap||EgtHandicap;const holes=course.holes.slice(0,18);const head=["Hole",...holes.map(h=>h.hole),"Tot"];const parRow=["Par",...holes.map(h=>h.par),holes.reduce((a,h)=>a+h.par,0)];const siRow=["SI",...holes.map(h=>h.si==null?"—":h.si),""];const netGame=game||(roundId==="R6"?"stableford":roundId==="R4"?"teamStableford":roundId==="R2"?"fourBallMatch":roundId==="R3"?"wolf":"skinsNet");const body=round.players.map(pid=>{const name=model.playersById[pid].name;let tot=0;const cells=holes.map(h=>{var _a2,_b,_c,_d;const s=(_a2=scores[pid])==null?void 0:_a2[h.hole];if(!s||s.gross==null)return"·";tot+=s.gross;const pop=H.popsOnHole(((_d=(_c=(_b=alloc[pid])==null?void 0:_b.games)==null?void 0:_c[netGame])==null?void 0:_d.holes)||[],h.hole);return pop?`${s.gross}<sup>${"•".repeat(pop)}</sup>`:`${s.gross}`});return`<tr><td class="name">${esc(name)}</td>${cells.map(c=>`<td>${c}</td>`).join("")}<td>${tot||""}</td></tr>`}).join("");const pendNote=course.strokeIndexVerified?"":`<div class="pend">Stroke index pending for ${esc(course.name)} — pops shown once SI is entered.</div>`;return`<h2>${esc(round.id)} · ${esc(course.name)} — ${esc(round.primaryGame)}</h2>
+      <div class="sub">${esc(round.date)} · ${esc(round.playedTee)} tees</div>${pendNote}
+      <table><thead>
+        <tr>${["Player",...holes.map(h=>h.hole),"Tot"].map(x=>`<th>${x}</th>`).join("")}</tr>
+        <tr>${parRow.map(x=>`<td>${x}</td>`).join("")}</tr>
+        <tr>${siRow.map(x=>`<td>${x}</td>`).join("")}</tr>
+      </thead><tbody>${body}</tbody></table>`}function packet(model,state,live){var _a;const parts=[`<div class="egt-print"><style>${STYLE}</style>`];parts.push(`<h1>${esc(model.trip.name)}</h1>`);parts.push(`<div class="sub">${esc(model.trip.venue)} · ${esc(model.trip.dates.start)}–${esc(model.trip.dates.end)} · updated ${esc((live==null?void 0:live.night)||"")}</div>`);parts.push(`<h2>EGT Cup Standings</h2>`);parts.push(standingsTable((live==null?void 0:live.standings)||[]));parts.push(`<h2>Money (nets to $0)</h2>`);parts.push(moneyTable(model,((_a=live==null?void 0:live.money)==null?void 0:_a.total)||{}));(state.finalized||[]).forEach(rid=>{parts.push(roundScorecard(model,state,rid))});parts.push("</div>");return parts.join("\n")}return{STYLE,standingsTable,moneyTable,roundScorecard,packet}})();if(typeof window!=="undefined"){Object.assign(window,{EgtPrintable})}
