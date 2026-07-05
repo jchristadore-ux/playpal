@@ -3,6 +3,22 @@
 // pending stroke index, and see live standings/money plus a printable packet.
 // All math lives in the engine modules (window.Egt*); this file is view + glue.
 
+// Brief plain-English format notes shown on each round in the list.
+const EGT_ROUND_FORMATS = {
+  R1: 'Loop 1 — Bingo-Bango-Bongo: 3 pts/hole (first on green, closest once all are on, first in the hole), gross. Loop 2 — The Nines: 9 pts/hole split 5/3/1 by net score, ties split; scored on 9-hole handicaps off the low.',
+  R2: 'Four-ball best-ball match play at 90%, plus a Nassau (front 9 · back 9 · overall). Each hole the team’s better net ball counts.',
+  R3: 'Wolf: the rotating Wolf partners the next player or goes lone/blind; ±units per opponent, ties push. Best net ball, 100% off the low ball.',
+  R4: '2-v-2 aggregate net Stableford at 85% — both partners’ points count. Segment matches on holes 1–6, 7–12, 13–18 plus the 18-hole total; pick up at net double bogey.',
+  R5: 'Loop 1 — 2-man scramble (35% low + 15% high), net stroke play. Loop 2 — alternate shot (50% combined), match play; the weaker team gets the difference on the lowest-index holes.',
+  R6: 'Championship singles (seeded 1v2 & 3v4 off the standings; the higher handicap gets the difference in strokes) plus individual net Stableford, full dots.',
+};
+
+// Game labels + a one-line note on how each game's pops are taken.
+const EGT_GAME_LABELS = {
+  skinsNet: 'Skins (net)', nines: 'The Nines', fourBallMatch: 'Four-ball match',
+  wolf: 'Wolf', teamStableford: 'Team Stableford', stableford: 'Stableford',
+};
+
 const EgtTournament = ({ onScoreRound }) => {
   const TH = window.PLAYPAL_THEME || {};
   const GREEN = '#0E2B20', GOLD = TH.accentGold || '#C8A15A', INK = '#12241C', LINE = '#cddbd3';
@@ -185,6 +201,7 @@ const EgtTournament = ({ onScoreRound }) => {
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>{course.name}</div>
             <div style={{ fontSize: 11, color: '#8a988f' }}>{round.date} · {round.primaryGame}</div>
+            <div style={{ fontSize: 11, color: '#5b6b63', marginTop: 3, lineHeight: 1.35 }}>{EGT_ROUND_FORMATS[round.id]}</div>
           </div>
           {!course.strokeIndexVerified && <span style={{ background: '#fff3d6', color: '#9a6a00', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 10 }}>SI PENDING</span>}
           {finalized && <span style={{ background: GREEN, color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 10 }}>FINAL</span>}
@@ -192,22 +209,37 @@ const EgtTournament = ({ onScoreRound }) => {
         </div>
         {isOpen && (
           <div style={{ padding: 12, borderTop: `1px solid ${LINE}` }}>
-            {/* Course handicaps + pops summary */}
-            <div style={{ fontSize: 12, fontWeight: 700, color: GREEN, marginBottom: 6 }}>COURSE HANDICAPS & POPS ({primaryGame})</div>
-            <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 12 }}>
-              <thead><tr>{['Player', 'CH', 'Strokes', 'Pops on holes'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-              <tbody>
-                {round.players.map(pid => {
-                  const g = der.allocations[pid].games[primaryGame];
-                  return <tr key={pid}>
-                    <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>{nameOf(pid)}</td>
-                    <td style={td}>{der.courseHandicaps[pid]}</td>
-                    <td style={td}>{g.strokes}</td>
-                    <td style={{ ...td, textAlign: 'left', fontSize: 11 }}>{g.holes == null ? <em style={{ color: '#9a6a00' }}>pending SI</em> : (g.holes.map(h => h.strokes > 1 ? `${h.hole}(${h.strokes})` : h.hole).join(', ') || '—')}</td>
-                  </tr>;
-                })}
-              </tbody>
-            </table>
+            {/* Handicaps + pops — course handicap once, then EVERY game's pops.
+                Different games take strokes on different bases (skins = full
+                18-hole off the low; The Nines = 9-hole off the low over loop 2),
+                so showing them per game avoids the "why only 4 pops?" confusion. */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: GREEN, marginBottom: 6 }}>HANDICAPS & POPS</div>
+            <div style={{ fontSize: 12, color: INK, marginBottom: 10 }}>
+              <span style={{ color: '#8a988f' }}>Course handicap ({course.loopsForRound === 2 ? '18-hole equivalent' : '18-hole'}): </span>
+              {round.players.map((pid, i) => <span key={pid}>{i ? ' · ' : ''}<strong>{nameOf(pid)}</strong> {der.courseHandicaps[pid]}</span>)}
+            </div>
+            {Object.keys(der.allocations[round.players[0]].games).map(gk => {
+              const basis = der.allocations[round.players[0]].games[gk].basis;
+              return (
+                <div key={gk} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{EGT_GAME_LABELS[gk] || gk}
+                    <span style={{ fontWeight: 400, color: '#8a988f', fontSize: 11 }}> — {basis}</span></div>
+                  <table style={{ borderCollapse: 'collapse', width: '100%', marginTop: 4 }}>
+                    <thead><tr>{['Player', 'Strokes', 'Pops on holes'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {round.players.map(pid => {
+                        const g = der.allocations[pid].games[gk];
+                        return <tr key={pid}>
+                          <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>{nameOf(pid)}</td>
+                          <td style={td}>{g.strokes}</td>
+                          <td style={{ ...td, textAlign: 'left', fontSize: 11 }}>{g.holes == null ? <em style={{ color: '#9a6a00' }}>pending SI</em> : (g.holes.map(h => h.strokes > 1 ? `${h.hole}(${h.strokes})` : h.hole).join(', ') || '—')}</td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
             {!course.strokeIndexVerified && (
               <div style={{ marginBottom: 12 }}>
                 <Btn variant="gold" onClick={() => setSiEditCourse(round.courseId)}>Enter stroke index →</Btn>
