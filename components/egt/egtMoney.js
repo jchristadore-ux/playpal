@@ -59,8 +59,11 @@ const EgtMoney = (function () {
 
   // Money for one finalized round. `results` bundles that round's calculator
   // outputs; `events` supplies CTP/LD winners.
-  function moneyForRound(model, roundId, results, events) {
+  function moneyForRound(model, roundId, results, events, stakes) {
     const md = model.moneyDefaults;
+    // Per-round stake overrides (set on the Rounds tab); fall back to defaults.
+    const S = (stakes && stakes[roundId]) || {};
+    const val = k => (S[k] != null && S[k] !== '' ? Number(S[k]) : md[k]);
     const round = model.rounds.find(r => r.id === roundId);
     const ids = round.players.slice();
     const total = {}; ids.forEach(id => { total[id] = 0; });
@@ -69,8 +72,8 @@ const EgtMoney = (function () {
 
     // Primary cash game per round.
     if (roundId === 'R1') {
-      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, md.bbbNinesPerPointDiff), 'BBB', breakdown);
-      if (results.nines) addVec(total, pairwise(ids, id => results.nines.totals[id] || 0, md.bbbNinesPerPointDiff), 'Nines', breakdown);
+      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
+      if (results.nines) addVec(total, pairwise(ids, id => results.nines.totals[id] || 0, val('bbbNinesPerPointDiff')), 'Nines', breakdown);
     } else if (roundId === 'R2' && results.fourBall) {
       // Nassau: settle each segment team-to-team at nassauPerPoint.
       const segs = results.fourBall.segments;
@@ -79,26 +82,26 @@ const EgtMoney = (function () {
           if (m.winnerTeam === 'halve') return;
           const winner = m.winnerTeam;
           const loser = round.teams.find(t => t.name !== winner).name;
-          addVec(total, teamMatch(teamPlayers, winner, loser, pts, md.nassauPerPoint), `Nassau ${name}`, breakdown);
+          addVec(total, teamMatch(teamPlayers, winner, loser, pts, val('nassauPerPoint')), `Nassau ${name}`, breakdown);
         });
     } else if (roundId === 'R3' && results.wolf) {
       // Wolf units are already zero-sum; value each unit.
-      const vec = {}; ids.forEach(id => { vec[id] = (results.wolf.units[id] || 0) * md.wolfPerUnit; });
+      const vec = {}; ids.forEach(id => { vec[id] = (results.wolf.units[id] || 0) * val('wolfPerUnit'); });
       addVec(total, zeroBalance(vec), 'Wolf', breakdown);
     }
 
     // Skins (both pots) every round, valued per skin won at the ante.
     if (results.skins) {
-      addVec(total, pairwise(ids, id => results.skins.gross.won[id] || 0, md.skinsAnte), 'Skins (gross)', breakdown);
-      addVec(total, pairwise(ids, id => results.skins.net.won[id] || 0, md.skinsAnte), 'Skins (net)', breakdown);
+      addVec(total, pairwise(ids, id => results.skins.gross.won[id] || 0, val('skinsAnte')), 'Skins (gross)', breakdown);
+      addVec(total, pairwise(ids, id => results.skins.net.won[id] || 0, val('skinsAnte')), 'Skins (net)', breakdown);
     }
 
     // CTP / Long Drive prizes for this round.
     (events?.ctp || []).filter(e => e.round === roundId).forEach(e => {
-      addVec(total, prizePot(ids, e.player, md.ctpLd), `CTP h${e.hole}`, breakdown);
+      addVec(total, prizePot(ids, e.player, val('ctpLd')), `CTP h${e.hole}`, breakdown);
     });
     (events?.longDrive || []).filter(e => e.round === roundId).forEach(e => {
-      addVec(total, prizePot(ids, e.player, md.ctpLd), `Long Drive h${e.hole}`, breakdown);
+      addVec(total, prizePot(ids, e.player, val('ctpLd')), `Long Drive h${e.hole}`, breakdown);
     });
 
     zeroBalance(total);
@@ -114,13 +117,14 @@ const EgtMoney = (function () {
   }
 
   // Whole-tournament money: sum finalized rounds + PTM settlement.
-  function compute(model, resultsByRound, events, ptm) {
+  //   stakes: optional { [roundId]: { [key]: number } } overrides (Rounds tab).
+  function compute(model, resultsByRound, events, ptm, stakes) {
     const ids = model.players.map(p => p.id);
     const total = {}; ids.forEach(id => { total[id] = 0; });
     const rounds = {};
     model.rounds.forEach(round => {
       if (!resultsByRound[round.id]) return;
-      const rm = moneyForRound(model, round.id, resultsByRound[round.id], events);
+      const rm = moneyForRound(model, round.id, resultsByRound[round.id], events, stakes);
       rounds[round.id] = rm;
       Object.entries(rm.total).forEach(([pid, amt]) => { total[pid] = (total[pid] || 0) + amt; });
     });

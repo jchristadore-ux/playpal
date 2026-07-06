@@ -363,3 +363,30 @@ test('R5 scramble & alternate shot derive the team ball from per-player scores',
   const alt = EgtScoring.alternateShot(ctx);
   assert.equal(alt.winnerTeam, 'Team 1');
 });
+
+// ── R1 excluded from standings; adjusted Max ────────────────────────────────
+test('R1 (Minerals) awards no Cup points and is excluded from the standings', () => {
+  const m = freshModel();
+  // Even a clean sweep of R1 BBB + Nines yields zero Cup points.
+  const acc = EgtPoints.compute(m, {
+    R1: { bbb: { champions: ['john'] }, nines: { champions: ['john'] } },
+  }, null);
+  assert.equal(acc.john.total, 0, 'R1 contributes no points');
+  assert.ok(EgtPoints.STANDINGS_EXCLUDED_ROUNDS.includes('R1'));
+});
+
+test('adjusted Max possible drops R1 (all four now cap at 30)', () => {
+  const m = freshModel();
+  jeq(m.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+});
+
+// ── per-round stakes override the money engine ──────────────────────────────
+test('stakes override scales a round\'s money (still nets to $0)', () => {
+  const m = freshModel();
+  const results = { skins: { gross: { won: { john: 2, brian: 0, tj: 0, mike: 0 } }, net: { won: {} } } };
+  const base = EgtMoney.moneyForRound(m, 'R2', results, {});                       // default $5 ante
+  const bumped = EgtMoney.moneyForRound(m, 'R2', results, {}, { R2: { skinsAnte: 50 } });
+  assert.ok(Math.abs(bumped.total.john) > Math.abs(base.total.john), 'bigger stake → bigger swing');
+  const sum = Object.values(bumped.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, 'still nets to zero');
+});

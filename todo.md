@@ -39,6 +39,17 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] R1 BBB events clamped to loop 1 (holes 1-9); loop 2 is The Nines.
 - [x] Tests + browser smoke: BBB dropdown on R1, Wolf on R3, Nassau on R2.
 
+## Done — scorer density + EGT stakes/standings (post-merge follow-up)
+- [x] Removed Sand tracking everywhere (scorer stat row, Setup option, defaults,
+      Stats screen card, EGT round config).
+- [x] Player tiles: no per-tile scroll (overflow hidden + centered), smaller
+      "HOLE #" header + tighter padding, lower size floor so 4 players fit with
+      zero scrolling.
+- [x] Editable per-format stakes on the EGT Rounds tab → flow into the money
+      engine and the native scorer's format trackers.
+- [x] R1 (Minerals) excluded from EGT Cup standings (flat/stakes-only): awards
+      no points; adjusted "Max" caps all four at 30.
+
 ## Optional follow-ups (not required by spec)
 - [ ] Show EGT per-game pops in the native scorer's on-screen dots.
 - [ ] UI entry for CTP/LD winners (engine ready).

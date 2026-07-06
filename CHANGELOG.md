@@ -2,6 +2,20 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.5.1] — 2026-07-05
+
+Scoring density + EGT stakes/standings tweaks.
+
+### Changed
+- **Removed Sand-save tracking** from the scorer, round setup, defaults, and the
+  stats screen.
+- **Denser player tiles** — no per-tile scrolling, a smaller "HOLE #" header, and
+  a lower size floor so four players fit on one screen (built for one-handed use).
+- **Editable per-format stakes** on the EGT Rounds tab, flowing into the money
+  engine and the native scorer's format trackers.
+- **R1 (Minerals) is now flat / stakes-only** — it pays out cash but awards no
+  EGT Cup points and is excluded from the standings (Max caps at 30).
+
 ## [1.5.0] — 2026-07-05
 
 The EGT Cup tournament feature.

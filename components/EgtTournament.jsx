@@ -19,6 +19,18 @@ const EGT_GAME_LABELS = {
   wolf: 'Wolf', teamStableford: 'Team Stableford', stableford: 'Stableford',
 };
 
+// Editable money stakes per round (Rounds tab). key maps to moneyDefaults;
+// `per` labels the unit. Skins runs every round; the head-to-head cash game
+// (BBB/Nines, Nassau, Wolf) is listed on the round that plays it.
+const EGT_STAKE_ITEMS = {
+  R1: [{ key: 'bbbNinesPerPointDiff', label: 'BBB / Nines', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R4: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R5: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R6: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+};
+
 const EgtTournament = ({ onScoreRound }) => {
   const TH = window.PLAYPAL_THEME || {};
   const GREEN = '#0E2B20', GOLD = TH.accentGold || '#C8A15A', INK = '#12241C', LINE = '#cddbd3';
@@ -91,7 +103,19 @@ const EgtTournament = ({ onScoreRound }) => {
     if (!onScoreRound) { flash('Scoring is available from the app shell'); return; }
     // Make sure the latest model (SI edits etc.) is persisted before launching.
     window.EgtStore.save(state);
-    onScoreRound(window.EgtBridge.toNativeRound(model, rid));
+    onScoreRound(window.EgtBridge.toNativeRound(model, rid, state.stakes));
+  };
+
+  // Current stake for a round/format: user override, else the tournament default.
+  const stakeValue = (rid, key) => {
+    const override = state.stakes?.[rid]?.[key];
+    if (override != null && override !== '') return override;
+    return model.moneyDefaults[key];
+  };
+  const setStake = (rid, key, raw) => {
+    const v = raw.replace(/[^0-9.]/g, '');
+    window.EgtStore.setStake(state, rid, key, v === '' ? null : v);
+    setState({ ...state });
   };
 
   // ── SI entry ──────────────────────────────────────────────────────────────
@@ -273,6 +297,27 @@ const EgtTournament = ({ onScoreRound }) => {
                 </tbody>
               </table>
             </div>
+
+            {/* Per-format stakes (editable). Flow into the money engine + the
+                native scorer's format trackers. */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: GREEN, margin: '14px 0 6px' }}>STAKES</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 4 }}>
+              {(EGT_STAKE_ITEMS[round.id] || []).map(item => (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${LINE}`, borderRadius: 10, padding: '6px 10px' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>{item.label}</span>
+                  <span style={{ color: '#8a988f' }}>$</span>
+                  <input value={stakeValue(round.id, item.key)} inputMode="decimal"
+                    onChange={e => setStake(round.id, item.key, e.target.value)}
+                    style={{ width: 44, textAlign: 'center', border: `1px solid ${LINE}`, borderRadius: 6, padding: '4px 2px', fontSize: 13, color: INK }} />
+                  <span style={{ fontSize: 11, color: '#8a988f' }}>{item.per}</span>
+                </div>
+              ))}
+            </div>
+            {round.id === 'R1' && (
+              <div style={{ fontSize: 11, color: '#9a6a00', marginBottom: 4 }}>
+                R1 is a flat / stakes-only round — it pays out cash but awards no EGT Cup points.
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <Btn variant="green" onClick={() => scoreRound(round.id)}>🏌️ Score this round</Btn>

@@ -214,6 +214,12 @@ const EgtImporter = (function () {
   function importSeed(seed) {
     const model = normalize(seed);
     recomputeAll(model);
+    // Adjust the "Max possible" ceiling for standings-excluded rounds (R1 is
+    // flat/stakes-only), without mutating the original seed's pointsConfig.
+    const Points = (typeof window !== 'undefined' && window.EgtPoints) || (typeof EgtPoints !== 'undefined' ? EgtPoints : null);
+    if (Points && Points.adjustedMaxPossible) {
+      model.pointsConfig = { ...model.pointsConfig, maxPossible: Points.adjustedMaxPossible(model) };
+    }
     return model;
   }
 

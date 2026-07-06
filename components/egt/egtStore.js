@@ -17,9 +17,19 @@ const EgtStore = (function () {
         ctp: [], longDrive: [], singlesPairings: null,
       },
       finalized: [],         // round ids the user has closed
+      stakes: {},            // { roundId: { stakeKey: dollars } } — Rounds-tab overrides
       snapshots: [],         // StandingsSnapshot list (per night)
       updatedAt: null,
     };
+  }
+
+  // Set a per-round stake override (dollars) for a format key.
+  function setStake(state, roundId, key, value) {
+    state.stakes = state.stakes || {};
+    state.stakes[roundId] = state.stakes[roundId] || {};
+    if (value === '' || value == null) delete state.stakes[roundId][key];
+    else state.stakes[roundId][key] = Number(value);
+    return save(state);
   }
 
   function load(tripId) {
@@ -93,7 +103,7 @@ const EgtStore = (function () {
 
   return {
     KEY, emptyState, load, save, importSeed, rehydrate,
-    setHoleScore, setEvent, finalizeRound, addSnapshot, latestSnapshotBefore, reset,
+    setHoleScore, setEvent, setStake, finalizeRound, addSnapshot, latestSnapshotBefore, reset,
   };
 })();
 
