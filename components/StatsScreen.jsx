@@ -198,7 +198,6 @@ const StatsScreen = ({ players, initialPlayerId }) => {
             <StatCard label="PAR 3 AVG" value={fmt1(career.parAverages[3])} />
             <StatCard label="PAR 4 AVG" value={fmt1(career.parAverages[4])} />
             <StatCard label="PAR 5 AVG" value={fmt1(career.parAverages[5])} />
-            <StatCard label="SAND SAVES" value={pct(career.sandSavePct)} sub="when tracked" />
             <StatCard label="UP & DOWNS" value={pct(career.upDownPct)} sub="when tracked" />
             <StatCard label="PENALTIES" value={career.totals.penalties} sub="lifetime" />
           </div>

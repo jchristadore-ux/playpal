@@ -111,7 +111,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const showFIR   = !!stats.fir && hole.par !== 3;
   const showGIR   = !!stats.gir;
   const puttRequired = isPTMHolder && puttVal === 0;
-  const anyStatRow = showPutts || showFIR || showGIR || stats.pen || stats.sand || stats.ud;
+  const anyStatRow = showPutts || showFIR || showGIR || stats.pen || stats.ud;
 
   const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
   const pen = ex.pen || 0;
@@ -206,7 +206,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
 
   return (
     <div style={{background:cardBg, border:cardBorder, borderRadius:s(18,12), overflow:'hidden',
-      display:'flex', flexDirection:'column', minHeight:0, minWidth:0, overflowY:'auto'}}>
+      display:'flex', flexDirection:'column', minHeight:0, minWidth:0, justifyContent:'center'}}>
 
       {/* Player header — name + HCP on one line */}
       <div style={{display:'flex', alignItems:'center', padding:`${s(8,5)}px ${padX}px 0`, gap:s(10,6), flexShrink:0}}>
@@ -362,13 +362,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
               <span style={{fontFamily:F, fontWeight:800, fontSize:s(15,12), color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
               <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
                 style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
-            </div>
-          )}
-          {stats.sand && (
-            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-              <Label style={{flexShrink:0, fontSize:s(10,9)}}>SAND</Label>
-              {triBtn('sand', true, '✓', '#15803D')}
-              {triBtn('sand', false, '✗', '#DC2626')}
             </div>
           )}
           {stats.ud && (
@@ -647,7 +640,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     fir:   statsCfg.fir,
     gir:   statsCfg.gir,
     pen:   statsCfg.pen,
-    sand:  statsCfg.sand,
     ud:    statsCfg.ud,
   }), [statsCfg, hasPTM]);
 
@@ -1023,7 +1015,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // the current card width. Wrap count depends on the scale, so iterate.
   const statGroupWidths = [
     cardStats.putts && 210, cardStats.fir && 128, cardStats.gir && 128,
-    cardStats.pen && 132, cardStats.sand && 122, cardStats.ud && 122,
+    cardStats.pen && 132, cardStats.ud && 122,
   ].filter(Boolean);
   const statRowsAt = (scale) => {
     if (!statGroupWidths.length) return 0;
@@ -1044,7 +1036,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     if (Math.abs(next - szCalc) < 0.01) { szCalc = next; break; }
     szCalc = next;
   }
-  const sz = Math.max(0.66, Math.min(1.5, szCalc));
+  const sz = Math.max(0.60, Math.min(1.5, szCalc));
 
   // Always-visible primary action — tells the golfer exactly what's next.
   const primary = !currentHoleScored
@@ -1074,10 +1066,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
       {/* Hole header */}
       <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)',
-        padding:`${compactHeader?5:8}px calc(12px + env(safe-area-inset-right, 0px)) ${compactHeader?5:8}px calc(12px + env(safe-area-inset-left, 0px))`}}>
+        padding:`${compactHeader?4:5}px calc(12px + env(safe-area-inset-right, 0px)) ${compactHeader?4:5}px calc(12px + env(safe-area-inset-left, 0px))`}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
           <button onClick={prevHole} disabled={seqPos===0} aria-label="Previous hole"
-            style={{width:40, height:compactHeader?32:40, borderRadius:10, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
+            style={{width:40, height:compactHeader?30:34, borderRadius:10, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
               color:seqPos===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:20, cursor:seqPos===0?'default':'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
@@ -1086,8 +1078,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
           <div style={{flex:1, textAlign:'center', minWidth:0}}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'center', gap:8}}>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:compactHeader?20:26, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:compactHeader?13:16, color:parColor}}>PAR {hole.par}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:compactHeader?16:18, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:compactHeader?12:13, color:parColor}}>PAR {hole.par}</span>
               {compactHeader && (
                 <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds · HCP {hole.hdcp}</span>
               )}
@@ -1101,7 +1093,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
           </div>
 
           <button onClick={nextHole} disabled={seqPos===lastSeq || (currentHoleScored && !canAdvance)} aria-label="Next hole"
-            style={{width:40, height:compactHeader?32:40, borderRadius:10, border:'none',
+            style={{width:40, height:compactHeader?30:34, borderRadius:10, border:'none',
               background: seqPos===lastSeq ? 'transparent' : 'rgba(255,255,255,0.12)',
               color: seqPos===lastSeq ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
               fontSize:20, cursor: seqPos===lastSeq || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',

@@ -6,6 +6,13 @@
 
 const EgtPoints = (function () {
 
+  // Rounds played for money/stakes only — they award NO EGT Cup points and are
+  // excluded from the standings (R1 Minerals is a flat/stakes-only round).
+  const STANDINGS_EXCLUDED_ROUNDS = ['R1'];
+
+  // Max Cup points a round can award a single player (for the "Max" column).
+  const ROUND_MAX_POINTS = { R1: 6, R2: 4, R3: 4, R4: 5, R5: 4, R6: 7 };
+
   // Split a ranked finish table across positions, sharing tied slots evenly.
   //   ranked: [{ player, value }] already sorted best-first
   //   slots:  [4,3,2,1] points for 1st..last. Ties pool and divide.
@@ -114,6 +121,7 @@ const EgtPoints = (function () {
     const acc = {};
     model.players.forEach(p => { acc[p.id] = { total: 0, breakdown: [] }; });
     model.rounds.forEach(round => {
+      if (STANDINGS_EXCLUDED_ROUNDS.includes(round.id)) return; // flat/stakes-only
       if (resultsByRound[round.id]) pointsForRound(model, round.id, resultsByRound[round.id], acc);
     });
     if (seasonInputs && seasonInputs.final) {
@@ -122,7 +130,24 @@ const EgtPoints = (function () {
     return acc;
   }
 
-  return { rankedFinishPoints, pointsForRound, seasonAwards, compute };
+  // Adjusted "Max possible" per player: the seed max minus any excluded round's
+  // ceiling for players who play that round.
+  function adjustedMaxPossible(model) {
+    const seedMax = model.pointsConfig.maxPossible || {};
+    const out = {};
+    model.players.forEach(p => {
+      let m = seedMax[p.id];
+      if (m == null) { out[p.id] = null; return; }
+      STANDINGS_EXCLUDED_ROUNDS.forEach(rid => {
+        const round = model.rounds.find(r => r.id === rid);
+        if (round && round.players.includes(p.id)) m -= (ROUND_MAX_POINTS[rid] || 0);
+      });
+      out[p.id] = m;
+    });
+    return out;
+  }
+
+  return { STANDINGS_EXCLUDED_ROUNDS, ROUND_MAX_POINTS, rankedFinishPoints, pointsForRound, seasonAwards, compute, adjustedMaxPossible };
 })();
 
 if (typeof window !== 'undefined') {

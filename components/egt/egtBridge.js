@@ -41,22 +41,25 @@ const EgtBridge = (function () {
   // of { type, ... } objects (matching Setup's shape) — NOT bare strings, or
   // ScoreEntry's `formats.some(f => f.type === …)` checks all read false and no
   // tracker appears. Skins runs every round.
-  function formatsFor(model, round) {
-    const skins = { type: 'skins', stakes: model.moneyDefaults.skinsAnte || 5 };
+  function formatsFor(model, round, stakes) {
+    const md = model.moneyDefaults;
+    const S = (stakes && stakes[round.id]) || {};
+    const val = (k, d) => (S[k] != null && S[k] !== '' ? Number(S[k]) : (md[k] != null ? md[k] : d));
+    const skins = { type: 'skins', stakes: val('skinsAnte', 5) };
     switch (round.id) {
       case 'R1': // loop 1 Bingo-Bango-Bongo (loop 2 Nines has no native engine)
-        return [{ type: 'bingobangobongo', stakes: model.moneyDefaults.bbbNinesPerPointDiff || 1 }, skins];
+        return [{ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) }, skins];
       case 'R2': { // four-ball best-ball + Nassau, John+Brian vs TJ+Mike (2v2)
         const t = round.teams;
         const nassauMatches = [{
           id: 'egt-R2', matchType: '2v2',
           playersInMatch: [...t[0].players, ...t[1].players],
           teams: { team1: t[0].players.slice(), team2: t[1].players.slice() },
-          popHoles: {}, stakes: model.moneyDefaults.nassauPerPoint || 5,
+          popHoles: {}, stakes: val('nassauPerPoint', 5),
         }];
-        return [{ type: 'nassau', stakes: model.moneyDefaults.nassauPerPoint || 5, nassauMatches }, skins];
+        return [{ type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches }, skins];
       }
-      case 'R3': return [{ type: 'wolf', stakes: model.moneyDefaults.wolfPerUnit || 2 }, skins];
+      case 'R3': return [{ type: 'wolf', stakes: val('wolfPerUnit', 2) }, skins];
       case 'R4': return [{ type: 'stableford', stakes: 1 }, skins];
       case 'R5': return [skins]; // scramble/alt-shot scored by the EGT engine
       case 'R6': return [{ type: 'stableford', stakes: 1 }, skins];
@@ -74,8 +77,9 @@ const EgtBridge = (function () {
     return round.players.slice();
   }
 
-  // Build a native `round` object from a seed round.
-  function toNativeRound(model, roundId) {
+  // Build a native `round` object from a seed round. `stakes` (optional) are the
+  // per-round Rounds-tab overrides that flow into the native format engines.
+  function toNativeRound(model, roundId, stakes) {
     const round = model.rounds.find(r => r.id === roundId);
     const course = model.courses[round.courseId];
     const tee = course.tees.find(t => t.name === course.playedTee) || course.tees[0];
@@ -95,12 +99,12 @@ const EgtBridge = (function () {
       name: `${round.id} · ${course.name}`,
       players,
       course: { id: course.courseId, name: course.name, location: course.location, rating: tee.cr, slope: tee.slope, holes },
-      formats: formatsFor(model, round),
+      formats: formatsFor(model, round, stakes),
       games: [],
       teeId: course.playedTee,
       startingTee: 1,
       trackStats: true,
-      statsConfig: { putts: true, fir: true, gir: true, sand: true },
+      statsConfig: { putts: true, fir: true, gir: true },
       syncCode: syncCodeFor(model, roundId),
     };
   }

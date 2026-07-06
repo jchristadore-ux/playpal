@@ -126,7 +126,7 @@ const EgtEngine = (function () {
     }
 
     const points = P().compute(model, resultsByRound, seasonInputs);
-    const money = M().compute(model, resultsByRound, state.events, ptm);
+    const money = M().compute(model, resultsByRound, state.events, ptm, state.stakes);
 
     const tie = { r6Stableford: r6Stab, headToHead: h2h, skins };
     let board = standingsMod.leaderboard(model, points, tie);
