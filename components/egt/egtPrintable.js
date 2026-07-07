@@ -75,13 +75,24 @@ const EgtPrintable = (function () {
       </thead><tbody>${body}</tbody></table>`;
   }
 
-  // Full packet: header + standings + money + per-round scorecards.
+  // Cumulative R2-R6 stat table (putts / FIR / GIR) — mirrors the standings tab.
+  function statsTable(model, tourneyStats) {
+    const rows = model.players.map(p => {
+      const st = tourneyStats?.[p.id] || {};
+      return `<tr><td class="name">${esc(p.name)}</td><td>${st.putts ?? 0}</td><td>${st.fairwaysHit ?? 0}</td><td>${st.greensInReg ?? 0}</td></tr>`;
+    }).join('');
+    return `<table><thead><tr><th>Player</th><th>Putts</th><th>FIR</th><th>GIR</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // Full packet: header + standings + tourney stats + money + scorecards.
   function packet(model, state, live) {
     const parts = [`<div class="egt-print"><style>${STYLE}</style>`];
     parts.push(`<h1>${esc(model.trip.name)}</h1>`);
     parts.push(`<div class="sub">${esc(model.trip.venue)} · ${esc(model.trip.dates.start)}–${esc(model.trip.dates.end)} · updated ${esc(live?.night || '')}</div>`);
     parts.push(`<h2>EGT Cup Standings</h2>`);
     parts.push(standingsTable(live?.standings || []));
+    parts.push(`<h2>Tourney Stats (R2–R6)</h2>`);
+    parts.push(statsTable(model, live?.tourneyStats));
     parts.push(`<h2>Money (nets to $0)</h2>`);
     parts.push(moneyTable(model, live?.money?.total || {}));
     (state.finalized || []).forEach(rid => { parts.push(roundScorecard(model, state, rid)); });
@@ -89,7 +100,7 @@ const EgtPrintable = (function () {
     return parts.join('\n');
   }
 
-  return { STYLE, standingsTable, moneyTable, roundScorecard, packet };
+  return { STYLE, standingsTable, moneyTable, statsTable, roundScorecard, packet };
 })();
 
 if (typeof window !== 'undefined') {

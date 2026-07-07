@@ -196,6 +196,21 @@ const EgtTournament = ({ onScoreRound }) => {
           ))}
         </tbody>
       </table>
+      <div style={{ fontWeight: 800, color: GREEN, fontSize: 14, margin: '4px 0 6px' }}>TOURNEY STATS · R2–R6</div>
+      <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 16 }}>
+        <thead><tr>{['Player', 'Putts', 'FIR', 'GIR'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+        <tbody>
+          {model.players.map(p => {
+            const st = live.tourneyStats?.[p.id] || {};
+            return <tr key={p.id}>
+              <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>{p.name}</td>
+              <td style={td}>{st.putts ?? 0}</td>
+              <td style={td}>{st.fairwaysHit ?? 0}</td>
+              <td style={td}>{st.greensInReg ?? 0}</td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
       <div style={{ fontWeight: 800, color: GREEN, fontSize: 14, margin: '4px 0 6px' }}>MONEY · nets to $0</div>
       <table style={{ borderCollapse: 'collapse', width: '100%' }}>
         <thead><tr>{['Player', 'Net $'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>

@@ -2,6 +2,13 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.5.3] — 2026-07-07
+
+### Added
+- **Tourney stats on the standings page** — cumulative putts, fairways hit, and
+  greens in regulation across R2–R6 (live from entered scores; R1 excluded),
+  shown on the EGT standings tab and in the printable packet.
+
 ## [1.5.2] — 2026-07-06
 
 The EGT Cup is worth 30 points, period — Tuesday (R1) is fully out.
