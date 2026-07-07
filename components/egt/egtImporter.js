@@ -207,6 +207,14 @@ const EgtImporter = (function () {
         allocations: computeStrokeAllocations(round, course, model.playersById),
       };
     });
+    // Recompute the "Max possible" ceiling (excluded flat rounds contribute
+    // nothing). Lives here — not just in importSeed — so persisted states pick
+    // it up on rehydrate; the computation is from first principles, so
+    // re-running it is safe.
+    const Points = (typeof window !== 'undefined' && window.EgtPoints) || (typeof EgtPoints !== 'undefined' ? EgtPoints : null);
+    if (Points && Points.adjustedMaxPossible) {
+      model.pointsConfig = { ...model.pointsConfig, maxPossible: Points.adjustedMaxPossible(model) };
+    }
     return model;
   }
 
@@ -214,12 +222,6 @@ const EgtImporter = (function () {
   function importSeed(seed) {
     const model = normalize(seed);
     recomputeAll(model);
-    // Adjust the "Max possible" ceiling for standings-excluded rounds (R1 is
-    // flat/stakes-only), without mutating the original seed's pointsConfig.
-    const Points = (typeof window !== 'undefined' && window.EgtPoints) || (typeof EgtPoints !== 'undefined' ? EgtPoints : null);
-    if (Points && Points.adjustedMaxPossible) {
-      model.pointsConfig = { ...model.pointsConfig, maxPossible: Points.adjustedMaxPossible(model) };
-    }
     return model;
   }
 

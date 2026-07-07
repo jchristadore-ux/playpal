@@ -2,6 +2,19 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.5.2] — 2026-07-06
+
+The EGT Cup is worth 30 points, period — Tuesday (R1) is fully out.
+
+### Fixed
+- **Max column showed stale seed ceilings (36) on installed devices** — the
+  adjustment only ran on fresh imports. It now recomputes from first principles
+  on every rehydrate, so all four players show a 30-point max.
+- **R1 no longer leaks into the tourney:** its skins are out of the Skins King
+  award and the total-skins tiebreaker, and its stats are out of the season
+  awards (Birdie King / Flat Stick / Iron Man). R1 stays cash-only.
+- Standings tab notes the scoring basis: 30 pts max, R2–R6 count.
+
 ## [1.5.1] — 2026-07-05
 
 Scoring density + EGT stakes/standings tweaks.

@@ -320,7 +320,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           <a href="terms.html" style={{color:'#3F5F4A', textDecoration:'underline'}}>Terms of Use</a>
         </div>
         <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5}}>
-          PlayPal v1.5.1
+          PlayPal v1.5.2
         </div>
       </div>
 

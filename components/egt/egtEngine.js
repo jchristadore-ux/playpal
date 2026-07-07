@@ -70,12 +70,20 @@ const EgtEngine = (function () {
     return out;
   }
 
-  // Cumulative skins won (gross + net) across finalized rounds — a tiebreaker
-  // and a money input.
+  // Round ids that count toward the tournament (standings, awards, tiebreakers).
+  // R1 is flat/stakes-only — its skins and stats stay out of everything but money.
+  function tourneyRoundIds() {
+    const excluded = (P().STANDINGS_EXCLUDED_ROUNDS) || [];
+    return rid => !excluded.includes(rid);
+  }
+
+  // Cumulative skins won (gross + net) across finalized TOURNEY rounds (R2-R6)
+  // — the Skins King award and the total-skins tiebreaker.
   function skinsTotals(resultsByRound) {
+    const counts = tourneyRoundIds();
     const totals = {};
-    Object.values(resultsByRound).forEach(r => {
-      if (!r.skins) return;
+    Object.entries(resultsByRound).forEach(([rid, r]) => {
+      if (!counts(rid) || !r.skins) return;
       ['gross', 'net'].forEach(pot => {
         Object.entries(r.skins[pot].won).forEach(([pid, n]) => { totals[pid] = (totals[pid] || 0) + n; });
       });
@@ -117,12 +125,16 @@ const EgtEngine = (function () {
     const h2h = headToHead(model, resultsByRound);
     const r6Stab = resultsByRound.R6?.stableford?.totals || {};
 
-    // Season inputs (final settlement only).
+    // Season inputs (final settlement only). Season awards read tourney rounds
+    // only (R2-R6) — R1 stats never feed Birdie King / Flat Stick / Iron Man.
     let seasonInputs = null, ptm = null;
     if (o.season) {
-      const seasonStats = SG().seasonStats(model, state.scores);
+      const counts = tourneyRoundIds();
+      const tourneyScores = {};
+      Object.keys(state.scores || {}).forEach(rid => { if (counts(rid)) tourneyScores[rid] = state.scores[rid]; });
+      const seasonStats = SG().seasonStats(model, tourneyScores);
       seasonInputs = { final: true, seasonStats, skinsTotals: skins };
-      ptm = SG().passTheMoney(model, state.scores);
+      ptm = SG().passTheMoney(model, state.scores); // The Rock runs R2-R6 already
     }
 
     const points = P().compute(model, resultsByRound, seasonInputs);

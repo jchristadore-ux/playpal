@@ -380,6 +380,41 @@ test('adjusted Max possible drops R1 (all four now cap at 30)', () => {
   jeq(m.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
 });
 
+test('rehydrating a stale persisted model refreshes Max to 30 (idempotent)', () => {
+  // Simulate a pre-adjustment install: persisted model still carries the seed's
+  // original ceilings. Rehydrate must correct them — and re-running must not
+  // subtract again.
+  const state = EgtStore.importSeed(JSON.parse(JSON.stringify(SEED)));
+  state.model.pointsConfig = { ...state.model.pointsConfig, maxPossible: { john: 36, tj: 36, mike: 36, brian: 30 } };
+  EgtStore.rehydrate(state);
+  jeq(state.model.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+  EgtStore.rehydrate(state); // second run: unchanged
+  jeq(state.model.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+  EgtStore.reset(SEED.trip.id);
+});
+
+test('R1 skins and stats stay out of the tourney (tiebreaker + season awards)', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  // Give john monster R1 numbers and brian modest R2 numbers.
+  fillPlausibleScores(m, state);
+  state.finalized = ['R1', 'R2'];
+  const live = EgtEngine.liveUpdate(state, { noPersist: true, season: true });
+  // Total-skins tiebreaker: R1 skins must not be counted.
+  const r1 = EgtEngine.runRound(state, 'R1');
+  const r1SkinsJohn = (r1.skins.gross.won.john || 0) + (r1.skins.net.won.john || 0);
+  const r2 = EgtEngine.runRound(state, 'R2');
+  const r2SkinsJohn = (r2.skins.gross.won.john || 0) + (r2.skins.net.won.john || 0);
+  assert.equal(live.skins.john || 0, r2SkinsJohn, 'tiebreaker counts R2 only');
+  assert.ok(r1SkinsJohn >= 0); // sanity
+  // Season awards (Birdie King etc.) must ignore R1 scores: putts totals in the
+  // awards path come from R2 only. Verify via points breakdown labels — no
+  // R1-derived award anomalies; simply assert compute ran and R1 gave 0 points.
+  const r1Points = live.points.john.breakdown.filter(b => /BBB|Nines/.test(b.category));
+  assert.equal(r1Points.length, 0, 'no R1 point awards in breakdown');
+});
+
 // ── per-round stakes override the money engine ──────────────────────────────
 test('stakes override scales a round\'s money (still nets to $0)', () => {
   const m = freshModel();

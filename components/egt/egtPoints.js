@@ -130,17 +130,20 @@ const EgtPoints = (function () {
     return acc;
   }
 
-  // Adjusted "Max possible" per player: the seed max minus any excluded round's
-  // ceiling for players who play that round.
+  // "Max possible" per player, computed from first principles so it is
+  // idempotent (safe to re-run on rehydrated persisted models): the sum of each
+  // tourney round's ceiling for rounds the player plays, plus the season
+  // awards. Excluded (flat/stakes-only) rounds contribute nothing — with R1
+  // out, every player caps at 24 + 6 = 30.
   function adjustedMaxPossible(model) {
-    const seedMax = model.pointsConfig.maxPossible || {};
+    const awardsTotal = Object.values(model.pointsConfig.seasonAwards || {})
+      .reduce((a, v) => a + (typeof v === 'number' ? v : 0), 0);
     const out = {};
     model.players.forEach(p => {
-      let m = seedMax[p.id];
-      if (m == null) { out[p.id] = null; return; }
-      STANDINGS_EXCLUDED_ROUNDS.forEach(rid => {
-        const round = model.rounds.find(r => r.id === rid);
-        if (round && round.players.includes(p.id)) m -= (ROUND_MAX_POINTS[rid] || 0);
+      let m = awardsTotal;
+      model.rounds.forEach(r => {
+        if (STANDINGS_EXCLUDED_ROUNDS.includes(r.id)) return;
+        if (r.players.includes(p.id)) m += (ROUND_MAX_POINTS[r.id] || 0);
       });
       out[p.id] = m;
     });
