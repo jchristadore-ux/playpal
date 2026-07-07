@@ -88,6 +88,21 @@ const EgtMoney = (function () {
       // Wolf units are already zero-sum; value each unit.
       const vec = {}; ids.forEach(id => { vec[id] = (results.wolf.units[id] || 0) * val('wolfPerUnit'); });
       addVec(total, zeroBalance(vec), 'Wolf', breakdown);
+    } else if (roundId === 'R5') {
+      // Full-18 BBB pays per point difference; each round-robin pairing settles
+      // Nassau-style (front 1 / back 1 / overall 2 units at nassauPerPoint).
+      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
+      if (results.matchPlay) {
+        results.matchPlay.pairings.forEach(m => {
+          [['front', m.front, 1], ['back', m.back, 1], ['overall', m.overall, 2]].forEach(([name, seg, units]) => {
+            if (!seg || seg.winner === 'halve') return;
+            const winner = seg.winner === 'A' ? m.a : m.b;
+            const loser = winner === m.a ? m.b : m.a;
+            const vec = { [winner]: units * val('nassauPerPoint'), [loser]: -units * val('nassauPerPoint') };
+            addVec(total, zeroBalance(vec), `Match ${m.a.slice(0, 2)}v${m.b.slice(0, 2)} ${name}`, breakdown);
+          });
+        });
+      }
     }
 
     // Skins (both pots) every round, valued per skin won at the ante.

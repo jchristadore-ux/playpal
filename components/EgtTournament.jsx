@@ -9,7 +9,7 @@ const EGT_ROUND_FORMATS = {
   R2: 'Four-ball best-ball match play at 90%, plus a Nassau (front 9 · back 9 · overall). Each hole the team’s better net ball counts.',
   R3: 'Wolf: the rotating Wolf partners the next player or goes lone/blind; ±units per opponent, ties push. Best net ball, 100% off the low ball.',
   R4: '2-v-2 aggregate net Stableford at 85% — both partners’ points count. Segment matches on holes 1–6, 7–12, 13–18 plus the 18-hole total; pick up at net double bogey.',
-  R5: 'Loop 1 — 2-man scramble (35% low + 15% high), net stroke play. Loop 2 — alternate shot (50% combined), match play; the weaker team gets the difference on the lowest-index holes.',
+  R5: 'Full-round Bingo-Bango-Bongo: 3 pts/hole (first on green, closest once all are on, first in the hole), gross. Plus round-robin match play — every player plays every other head-to-head; the higher handicap gets the difference in strokes; each match settles Nassau-style (front · back · overall).',
   R6: 'Championship singles (seeded 1v2 & 3v4 off the standings; the higher handicap gets the difference in strokes) plus individual net Stableford, full dots.',
 };
 
@@ -27,7 +27,7 @@ const EGT_STAKE_ITEMS = {
   R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R4: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R5: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R5: [{ key: 'bbbNinesPerPointDiff', label: 'BBB', per: 'per point' }, { key: 'nassauPerPoint', label: 'Match play', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R6: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
 };
 

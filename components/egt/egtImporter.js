@@ -41,9 +41,35 @@ const EgtImporter = (function () {
     'fourBallMatchPlay':            ['fourBallMatch'],
     'wolf':                         ['wolf'],
     'fourBallAggregateStableford':  ['teamStableford'],
-    'scramble+alternateShot':       [],
+    'scramble+alternateShot':       [],   // legacy R5 (superseded)
+    'bingoBangoBongo+matchPlay':    [],   // R5: BBB is gross; match pops are pairwise
     'championshipSingles+stableford': ['stableford'],
   };
+
+  // Post-seed tournament design changes, applied over the imported model (the
+  // seed file stays untouched). R5 dropped scramble/alternate-shot for a full
+  // 18-hole Bingo-Bango-Bongo plus round-robin 1v1 match play (Nassau engine).
+  // Runs in recomputeAll so persisted installs pick it up; idempotent.
+  function applyFormatOverrides(model) {
+    const r5 = model.rounds.find(r => r.id === 'R5');
+    if (r5) {
+      r5.primaryGame = 'bingoBangoBongo+matchPlay';
+      r5.teams = [];
+      model.formatConfigs = {
+        ...model.formatConfigs,
+        R5: {
+          game: 'bingoBangoBongo+matchPlay',
+          bbb: { scoring: 'gross', pointsPerHole: 3, over: 'all 18' },
+          matchPlay: { style: 'roundRobin1v1', allowance: 1.0, basis: 'CH difference on lowest-SI holes; Nassau front/back/overall' },
+        },
+      };
+      model.pointsConfig = {
+        ...model.pointsConfig,
+        R5: { bbbChampion: 2, matchPlayChampion: 2 },
+      };
+    }
+    return model;
+  }
 
   function gamesForRound(round) {
     const primary = PRIMARY_GAMES[round.primaryGame] || [];
@@ -199,6 +225,7 @@ const EgtImporter = (function () {
   // Recompute derived course handicaps + allocations for every round. Called on
   // import and again whenever a course's SI is edited (seed §6.3).
   function recomputeAll(model) {
+    applyFormatOverrides(model);
     model.derived = {};
     model.rounds.forEach(round => {
       const course = model.courses[round.courseId];
@@ -273,6 +300,7 @@ const EgtImporter = (function () {
     computeCourseHandicaps,
     computeStrokeAllocations,
     normalize,
+    applyFormatOverrides,
     recomputeAll,
     importSeed,
     enterStrokeIndex,

@@ -282,82 +282,52 @@ const EgtScoring = (function () {
     return { game, totals, perHole, ranked, pending };
   }
 
-  // ── 6. Two-man scramble, net stroke play per loop (R5 loop 1) ────────────
-  // One team ball per hole; team net = team gross − the team's scramble pops
-  // (team handicap distributed by SI). Loop 1 = holes 1..9.
-  function scramble(ctx) {
-    const { teams, course, scores } = ctx;
-    const teamGross = ctx.events?.scrambleGross || {}; // { teamName: { hole: gross } }
-    const teamHandicaps = ctx.teamHandicaps?.scramble || {}; // { team1: n, team2: n }
-    const loopHoles = holesRange(1, 9);
-    // Per-player entry fallback: derive the team ball as the better gross of the
-    // two partners each hole when an explicit team gross wasn't recorded.
-    const teamGrossAt = (team, hole) => {
-      const explicit = teamGross[team.name]?.[hole];
-      if (explicit != null) return explicit;
-      const g = team.players.map(pid => gross(scores, pid, hole)).filter(v => v != null);
-      return g.length ? Math.min(...g) : null;
-    };
-    // Distribute each team's handicap across loop-1 holes by 9-hole SI.
-    const teamKey = i => (i === 0 ? 'team1' : 'team2');
-    const loopSi = loopHoles.map(hole => {
-      const h = course.holes.find(x => x.hole === hole);
-      return { hole, si: h && h.si != null ? H.nineHoleSi(h.si) : null };
-    });
-    const results = teams.map((t, i) => {
-      const ch = teamHandicaps[teamKey(i)] || 0;
-      const popsArr = H.allocatePops(ch, loopSi); // null if SI pending
-      const popAt = hole => (popsArr ? H.popsOnHole(popsArr, hole) : 0);
-      let grossTotal = 0, netTotal = 0, complete = true;
-      const perHole = loopHoles.map(hole => {
-        const g = teamGrossAt(t, hole);
-        if (g == null) { complete = false; return { hole, gross: null, net: null }; }
-        const n = g - popAt(hole);
-        grossTotal += g; netTotal += n;
-        return { hole, gross: g, pops: popAt(hole), net: n };
-      });
-      return { team: t.name, handicap: ch, perHole, grossTotal, netTotal, complete, pending: popsArr == null };
-    });
-    const done = results.every(r => r.complete);
-    let winner = null;
-    if (done) {
-      if (results[0].netTotal < results[1].netTotal) winner = results[0].team;
-      else if (results[1].netTotal < results[0].netTotal) winner = results[1].team;
-      else winner = 'halve';
+  // ── 6. Round-robin 1v1 match play (R5) ────────────────────────────────────
+  // Every player plays every other player head-to-head over 18 holes: the
+  // higher-CH player gets the CH difference in strokes on the lowest-SI holes,
+  // and each pairing settles Nassau-style (front 9 / back 9 / overall). This
+  // replaced R5's scramble/alternate-shot. Standings points go to the best
+  // overall-match record.
+  //   ctx.singlesCourseHandicaps: { pid: CH } (the round's course handicaps).
+  function roundRobinMatchPlay(ctx) {
+    const { players, scores, course } = ctx;
+    const chById = ctx.singlesCourseHandicaps || {};
+    const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+    const ids = players.map(p => p.id);
+    const record = {}; ids.forEach(id => { record[id] = { w: 0, l: 0, h: 0 }; });
+    const pairings = [];
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = ids[i], b = ids[j];
+        const chA = chById[a] ?? 0, chB = chById[b] ?? 0;
+        const diff = Math.abs(chA - chB);
+        const receives = chA > chB ? a : chB > chA ? b : null;
+        const popsArr = receives ? H.allocatePops(diff, holes18) : [];
+        const popAt = (pid, hole) => (pid === receives && popsArr ? H.popsOnHole(popsArr, hole) : 0);
+        const ballNet = pid => hole => {
+          const g = gross(scores, pid, hole);
+          return g == null ? null : g - popAt(pid, hole);
+        };
+        const sideA = { name: a, ballNet: ballNet(a) };
+        const sideB = { name: b, ballNet: ballNet(b) };
+        const front = playMatch(holesRange(1, 9), sideA, sideB);
+        const back = playMatch(holesRange(10, 18), sideA, sideB);
+        const overall = playMatch(holesRange(1, 18), sideA, sideB);
+        const winner = overall.winner === 'A' ? a : overall.winner === 'B' ? b : 'halve';
+        if (winner === 'halve') { record[a].h++; record[b].h++; }
+        else { record[winner].w++; record[winner === a ? b : a].l++; }
+        pairings.push({ a, b, chA, chB, diff, receives, front, back, overall, winner,
+          pending: popsArr == null });
+      }
     }
-    return { game: 'scramble', loop: 1, results, winner, pending: results.some(r => r.pending) };
-  }
-
-  // ── 7. Alternate shot, match play over a loop (R5 loop 2) ─────────────────
-  // Weaker team gets the combined-difference strokes on the loop's lowest-SI
-  // holes (precomputed in _teamHandicaps). Loop 2 = holes 10..18.
-  function alternateShot(ctx) {
-    const { teams, scores } = ctx;
-    const teamGross = ctx.events?.altShotGross || {}; // { teamName: { hole: gross } }
-    const altCfg = ctx.teamHandicaps?.alternateShot || {};
-    const loopHoles = holesRange(10, 18);
-    // Which team receives, and on which holes.
-    const strokeHoles = altCfg.team2StrokeHolesLoop2 || [];
-    const receivingTeamIdx = 1; // team2 by seed convention (higher combined)
-    // Per-player entry fallback: better gross of the partners is the team ball.
-    const teamGrossAt = (idx, hole) => {
-      const explicit = teamGross[teams[idx].name]?.[hole];
-      if (explicit != null) return explicit;
-      const g = teams[idx].players.map(pid => gross(scores, pid, hole)).filter(v => v != null);
-      return g.length ? Math.min(...g) : null;
-    };
-    const ballNet = idx => hole => {
-      const g = teamGrossAt(idx, hole);
-      if (g == null) return null;
-      const pop = (idx === receivingTeamIdx && strokeHoles.includes(hole)) ? 1 : 0;
-      return g - pop;
-    };
-    const sideA = { name: teams[0].name, ballNet: ballNet(0) };
-    const sideB = { name: teams[1].name, ballNet: ballNet(1) };
-    const match = playMatch(loopHoles, sideA, sideB);
-    const winnerTeam = match.winner === 'A' ? teams[0].name : match.winner === 'B' ? teams[1].name : 'halve';
-    return { game: 'alternateShot', loop: 2, match, winnerTeam,
-      strokesToTeam2: altCfg.strokesToTeam2 || 0, strokeHoles };
+    // Best overall record (wins, halves as 0.5) → matchPlayChampion candidates.
+    const score = id => record[id].w + record[id].h * 0.5;
+    const ranked = ids.map(id => ({ player: id, wins: record[id].w, points: score(id) }))
+      .sort((x, y) => y.points - x.points);
+    const top = ranked.length ? ranked[0].points : 0;
+    const champions = ranked.filter(r => r.points === top).map(r => r.player);
+    return { game: 'matchPlay', pairings, record, ranked, champions,
+      pending: pairings.some(p => p.pending) };
   }
 
   // ── 8. Championship singles (R6) ─────────────────────────────────────────
@@ -430,8 +400,7 @@ const EgtScoring = (function () {
     wolf,
     teamStableford,
     individualStableford,
-    scramble,
-    alternateShot,
+    roundRobinMatchPlay,
     singles,
     skins,
   };

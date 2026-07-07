@@ -24,13 +24,14 @@ const EgtEngine = (function () {
     const events = {
       bbb: state.events.bbb?.[roundId] || [],
       wolf: state.events.wolf?.[roundId] || [],
-      scrambleGross: state.events.scrambleGross?.[roundId] || {},
-      altShotGross: state.events.altShotGross?.[roundId] || {},
     };
     const config = model.formatConfigs[roundId];
     const ctx = { round, course, players, teams: round.teams, alloc, scores, config, events };
     // Round-specific extras.
-    if (roundId === 'R5') ctx.teamHandicaps = model.seedStrokeAllocations.R5._teamHandicaps;
+    if (roundId === 'R5') {
+      // Round-robin match play settles off each pairing's CH difference.
+      ctx.singlesCourseHandicaps = model.derived.R5.courseHandicaps;
+    }
     if (roundId === 'R6') {
       ctx.singlesCourseHandicaps = model.derived.R6.courseHandicaps;
       ctx.pairings = state.events.singlesPairings || [];
@@ -52,8 +53,8 @@ const EgtEngine = (function () {
       case 'R3': out.wolf = sc.wolf(ctx); break;
       case 'R4': out.teamStableford = sc.teamStableford(ctx); break;
       case 'R5':
-        out.scramble = sc.scramble(ctx);
-        out.alternateShot = sc.alternateShot(ctx);
+        out.bbb = sc.bingoBangoBongo(ctx);          // full 18, gross
+        out.matchPlay = sc.roundRobinMatchPlay(ctx); // every player vs every player
         break;
       case 'R6':
         out.singles = sc.singles(ctx);
@@ -104,9 +105,7 @@ const EgtEngine = (function () {
       teamPlayers('R2', r2.fourBall.segments.overall.winnerTeam).forEach(pid => { wins[pid] += 1; });
     }
     const r5 = resultsByRound.R5;
-    if (r5?.alternateShot && r5.alternateShot.winnerTeam !== 'halve') {
-      teamPlayers('R5', r5.alternateShot.winnerTeam).forEach(pid => { wins[pid] += 1; });
-    }
+    if (r5?.matchPlay) r5.matchPlay.pairings.forEach(m => { if (m.winner !== 'halve') wins[m.winner] += 1; });
     const r6 = resultsByRound.R6;
     if (r6?.singles) r6.singles.results.forEach(m => { if (m.winner !== 'halve') wins[m.winner] += 1; });
     return wins;

@@ -13,7 +13,7 @@ const EgtStore = (function () {
       model: null,           // normalized import (EgtImporter.importSeed)
       scores: {},            // { roundId: { playerId: { hole: {gross,putts,fir,gir,sand} } } }
       events: {              // side-game / play-order events
-        bbb: {}, wolf: {}, scrambleGross: {}, altShotGross: {},
+        bbb: {}, wolf: {},
         ctp: [], longDrive: [], singlesPairings: null,
       },
       finalized: [],         // round ids the user has closed

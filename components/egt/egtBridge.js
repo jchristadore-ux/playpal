@@ -61,7 +61,39 @@ const EgtBridge = (function () {
       }
       case 'R3': return [{ type: 'wolf', stakes: val('wolfPerUnit', 2) }, skins];
       case 'R4': return [{ type: 'stableford', stakes: 1 }, skins];
-      case 'R5': return [skins]; // scramble/alt-shot scored by the EGT engine
+      case 'R5': { // full-18 BBB + round-robin 1v1 match play via the Nassau engine
+        const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
+        const course = model.courses[round.courseId];
+        const chById = (model.derived && model.derived.R5 && model.derived.R5.courseHandicaps) || {};
+        const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+        const ids = round.players;
+        const nassauMatches = [];
+        for (let i = 0; i < ids.length; i++) {
+          for (let j = i + 1; j < ids.length; j++) {
+            const a = ids[i], b = ids[j];
+            const diff = Math.abs((chById[a] ?? 0) - (chById[b] ?? 0));
+            const receives = (chById[a] ?? 0) > (chById[b] ?? 0) ? a : (chById[b] ?? 0) > (chById[a] ?? 0) ? b : null;
+            // Nassau pops are boolean per hole: {pid: bool[18]}, index 0 = hole 1.
+            const popHoles = {};
+            if (receives && diff > 0) {
+              const popsArr = H.allocatePops(diff, holes18) || [];
+              const flags = Array(18).fill(false);
+              popsArr.forEach(p => { if (p.hole >= 1 && p.hole <= 18) flags[p.hole - 1] = true; });
+              popHoles[receives] = flags;
+            }
+            nassauMatches.push({
+              id: `egt-R5-${a}-${b}`, matchType: '1v1',
+              playersInMatch: [a, b], teams: null, popHoles,
+              stakes: val('nassauPerPoint', 5),
+            });
+          }
+        }
+        return [
+          { type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) },
+          { type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches },
+          skins,
+        ];
+      }
       case 'R6': return [{ type: 'stableford', stakes: 1 }, skins];
       default:   return [skins];
     }
@@ -135,13 +167,15 @@ const EgtBridge = (function () {
       }
     });
 
-    // R1 Bingo-Bango-Bongo events — loop 1 only (holes 1-9); loop 2 is The Nines.
-    if (roundId === 'R1' && p.bbbData) {
+    // Bingo-Bango-Bongo events. R1 plays BBB on loop 1 only (holes 1-9; loop 2
+    // is The Nines); R5 plays it over the full 18.
+    if ((roundId === 'R1' || roundId === 'R5') && p.bbbData) {
+      const maxHole = roundId === 'R1' ? 9 : 18;
       const events = [];
       Object.keys(p.bbbData).forEach(idx => {
         const hole = Number(idx) + 1;
         const e = p.bbbData[idx];
-        if (hole <= 9 && e && (e.bingo || e.bango || e.bongo)) {
+        if (hole <= maxHole && e && (e.bingo || e.bango || e.bongo)) {
           events.push({ hole, bingo: e.bingo || null, bango: e.bango || null, bongo: e.bongo || null });
         }
       });
