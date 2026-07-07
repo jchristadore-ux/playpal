@@ -2,6 +2,19 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.5.4] — 2026-07-07
+
+### Changed
+- **R5 (Cascades) format replaced:** scramble/alternate shot are gone. R5 now
+  plays full-round Bingo-Bango-Bongo (gross, 3 pts/hole) plus round-robin 1v1
+  match play — every player plays every other, the higher handicap receives the
+  CH difference on the lowest-index holes, and each match settles Nassau-style
+  (front/back/overall) via the existing Nassau engine in the scorer.
+- R5 Cup points: BBB champion 2 + match-play champion 2 (best overall record,
+  ties split) — the round stays worth 4 toward the 30-point ceiling.
+- R5 stakes editable on the Rounds tab (BBB per point, match play per point,
+  skins); head-to-head tiebreaker now counts R5 match wins.
+
 ## [1.5.3] — 2026-07-07
 
 ### Added

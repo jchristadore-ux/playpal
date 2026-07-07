@@ -206,13 +206,10 @@ function fillPlausibleScores(m, state) {
       });
     });
   });
-  // R1 needs BBB events; R5 needs team gross; provide minimal ones.
+  // R1/R5 need BBB events; R3 needs Wolf picks; provide minimal ones.
   state.events.bbb.R1 = [{ hole: 1, bingo: 'john', bango: 'tj', bongo: 'mike' }];
+  state.events.bbb.R5 = [{ hole: 1, bingo: 'john', bango: 'brian', bongo: 'tj' }, { hole: 12, bingo: 'mike' }];
   state.events.wolf.R3 = [{ hole: 1, wolf: 'tj', mode: 'lone' }, { hole: 2, wolf: 'mike', mode: 'pair', partner: 'brian' }];
-  state.events.scrambleGross.R5 = { 'Team 1': {}, 'Team 2': {} };
-  state.events.altShotGross.R5 = { 'Team 1': {}, 'Team 2': {} };
-  for (let h = 1; h <= 9; h++) { state.events.scrambleGross.R5['Team 1'][h] = 4; state.events.scrambleGross.R5['Team 2'][h] = 5; }
-  for (let h = 10; h <= 18; h++) { state.events.altShotGross.R5['Team 1'][h] = 4; state.events.altShotGross.R5['Team 2'][h] = 5; }
   state.events.ctp = [{ round: 'R2', hole: 4, player: 'john' }];
   state.events.longDrive = [{ round: 'R3', hole: 3, player: 'mike' }];
 }
@@ -300,9 +297,28 @@ test('toNativeRound wires each round to its native format engine', () => {
   jeq(typesFor('R1'), ['bingobangobongo', 'skins']);   // BBB tracker fires on R1
   jeq(typesFor('R3'), ['skins', 'wolf']);
   jeq(typesFor('R4'), ['skins', 'stableford']);
+  jeq(typesFor('R5'), ['bingobangobongo', 'nassau', 'skins']); // full-18 BBB + round-robin matches
   jeq(typesFor('R6'), ['skins', 'stableford']);
   // R3 Wolf uses the seed's rotation order so the native Wolf-of-the-hole matches.
   jeq(EgtBridge.toNativeRound(m, 'R3').players.map(p => p.id), ['tj', 'mike', 'brian', 'john']);
+});
+
+test('R5 native Nassau is a 6-match round robin with CH-difference pops', () => {
+  const m = freshModel();
+  const nassau = EgtBridge.toNativeRound(m, 'R5').formats.find(f => f.type === 'nassau');
+  assert.equal(nassau.nassauMatches.length, 6, 'every player plays every other');
+  nassau.nassauMatches.forEach(match => {
+    assert.equal(match.matchType, '1v1');
+    assert.equal(match.playersInMatch.length, 2);
+  });
+  // John (CH 17) vs TJ (CH 28): TJ receives 11 pops as booleans on hole indexes.
+  const jt = nassau.nassauMatches.find(x => x.playersInMatch.includes('john') && x.playersInMatch.includes('tj'));
+  const flags = jt.popHoles.tj;
+  assert.equal(flags.filter(Boolean).length, 11);
+  assert.equal(jt.popHoles.john, undefined, 'low player gets no pops');
+  // TJ vs Mike: equal CH → no pops either way.
+  const tm = nassau.nassauMatches.find(x => x.playersInMatch.includes('tj') && x.playersInMatch.includes('mike'));
+  jeq(tm.popHoles, {});
 });
 
 test('bridge translates native score arrays + BBB/Wolf events into the EGT store', () => {
@@ -340,28 +356,68 @@ test('bridge translates native score arrays + BBB/Wolf events into the EGT store
   jeq(st3.events.wolf.R3, [{ hole: 1, wolf: 'tj', mode: 'pair', partner: 'mike' }, { hole: 2, wolf: 'mike', mode: 'lone', partner: null }]);
 });
 
-test('R5 scramble & alternate shot derive the team ball from per-player scores', () => {
+test('R5 is now full-18 BBB + round-robin match play (format override)', () => {
+  const m = freshModel();
+  const r5 = m.rounds.find(r => r.id === 'R5');
+  assert.equal(r5.primaryGame, 'bingoBangoBongo+matchPlay');
+  jeq(m.pointsConfig.R5, { bbbChampion: 2, matchPlayChampion: 2 }); // stays worth 4
+  jeq(m.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+});
+
+test('R5 round-robin match play: 6 pairings, CH-difference pops, W-L record', () => {
   const m = freshModel();
   const round = m.rounds.find(r => r.id === 'R5');
-  const alloc = m.derived.R5.allocations;
   const scores = {};
-  // Team 1 (john,mike) better than Team 2 (brian,tj) on every hole.
+  // John shoots par everywhere; the rest gross par+2 — John's CH edge is
+  // overcome pairwise only where the receiver's pops exceed the 2-shot gap.
   round.players.forEach(pid => { scores[pid] = {}; });
-  for (let h = 1; h <= 18; h++) {
-    scores.john[h] = { gross: 4 }; scores.mike[h] = { gross: 5 };
-    scores.brian[h] = { gross: 6 }; scores.tj[h] = { gross: 6 };
-  }
+  m.courses.cascades.holes.slice(0, 18).forEach(h => {
+    scores.john[h.hole] = { gross: h.par };
+    scores.brian[h.hole] = { gross: h.par + 2 };
+    scores.tj[h.hole] = { gross: h.par + 2 };
+    scores.mike[h.hole] = { gross: h.par + 2 };
+  });
   const ctx = {
     round, course: m.courses.cascades, players: round.players.map(id => m.playersById[id]),
-    teams: round.teams, alloc, scores, config: m.formatConfigs.R5, events: {},
-    teamHandicaps: m.seedStrokeAllocations.R5._teamHandicaps,
+    scores, config: m.formatConfigs.R5, events: {},
+    singlesCourseHandicaps: m.derived.R5.courseHandicaps, // john 17, brian 22, tj/mike 28
   };
-  const scr = EgtScoring.scramble(ctx);
-  // Team 1 ball = min(4,5)=4; Team 2 = min(6,6)=6 → Team 1 wins the loop.
-  assert.equal(scr.results[0].team, 'Team 1');
-  assert.equal(scr.winner, 'Team 1');
-  const alt = EgtScoring.alternateShot(ctx);
-  assert.equal(alt.winnerTeam, 'Team 1');
+  const mp = EgtScoring.roundRobinMatchPlay(ctx);
+  assert.equal(mp.pairings.length, 6, 'every player plays every other');
+  // A single pop only closes 1 of the 2-shot gross gap, so John wins every
+  // hole (even pop holes: par vs net par+1) → John sweeps all three matches.
+  const jb = mp.pairings.find(p => (p.a === 'john' && p.b === 'brian') || (p.a === 'brian' && p.b === 'john'));
+  assert.equal(jb.winner, 'john');
+  const jt = mp.pairings.find(p => (p.a === 'john' && p.b === 'tj') || (p.a === 'tj' && p.b === 'john'));
+  assert.equal(jt.winner, 'john');
+  // Brian vs TJ: equal gross, TJ receives 6 pops (28-22) → TJ nets better on
+  // those 6 holes and wins the match.
+  const bt = mp.pairings.find(p => (p.a === 'brian' && p.b === 'tj') || (p.a === 'tj' && p.b === 'brian'));
+  assert.equal(bt.winner, 'tj');
+  // TJ vs Mike: identical scores and CH → halved.
+  const tm = mp.pairings.find(p => (p.a === 'tj' && p.b === 'mike') || (p.a === 'mike' && p.b === 'tj'));
+  assert.equal(tm.winner, 'halve');
+  jeq(mp.record.john, { w: 3, l: 0, h: 0 });
+  jeq(mp.record.brian, { w: 0, l: 3, h: 0 });
+  // Records reconcile: total wins + halves*0.5 across players = 6 matches.
+  const totalPts = Object.values(mp.record).reduce((a, r) => a + r.w + r.h * 0.5, 0);
+  assert.equal(totalPts, 6);
+});
+
+test('R5 money: BBB + per-pairing Nassau still nets to $0', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  state.finalized = ['R5'];
+  const live = EgtEngine.liveUpdate(state, { noPersist: true });
+  const rm = live.money.rounds.R5;
+  assert.ok(rm, 'R5 money computed');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R5 money nets to zero, got ${sum}`);
+  // Match play must contribute (per-pairing Nassau settles at least one seg).
+  const hasMatchMoney = Object.values(rm.breakdown).some(rows => rows.some(r => /^Match /.test(r.label)));
+  assert.ok(hasMatchMoney, 'match-play Nassau settlements present');
 });
 
 // ── R1 excluded from standings; adjusted Max ────────────────────────────────

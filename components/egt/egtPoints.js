@@ -74,12 +74,14 @@ const EgtPoints = (function () {
       });
       if (ts.overallWinner !== 'halve') teamPlayers(ts.overallWinner).forEach(pid => addPoints(acc, pid, 'Stableford 18 total', cfg.overall18 || 2));
     } else if (roundId === 'R5') {
-      if (results.scramble && results.scramble.winner && results.scramble.winner !== 'halve') {
-        teamPlayers(results.scramble.winner).forEach(pid => addPoints(acc, pid, 'Scramble loop', cfg.scrambleLoop || 2));
-      }
-      if (results.alternateShot && results.alternateShot.winnerTeam && results.alternateShot.winnerTeam !== 'halve') {
-        teamPlayers(results.alternateShot.winnerTeam).forEach(pid => addPoints(acc, pid, 'Alt-shot loop', cfg.alternateShotLoop || 2));
-      }
+      // Full-18 BBB champion + best round-robin match-play record, 2 pts each
+      // (ties split the pool) — R5 stays worth 4 toward the 30-point ceiling.
+      if (results.bbb) results.bbb.champions.forEach(pid => {
+        addPoints(acc, pid, 'BBB champion', (cfg.bbbChampion || 2) / results.bbb.champions.length);
+      });
+      if (results.matchPlay) results.matchPlay.champions.forEach(pid => {
+        addPoints(acc, pid, 'Match play champion', (cfg.matchPlayChampion || 2) / results.matchPlay.champions.length);
+      });
     } else if (roundId === 'R6') {
       if (results.singles) results.singles.results.forEach(m => {
         if (m.winner === 'halve') {
