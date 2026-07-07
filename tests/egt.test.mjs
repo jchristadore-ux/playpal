@@ -415,6 +415,22 @@ test('R1 skins and stats stay out of the tourney (tiebreaker + season awards)', 
   assert.equal(r1Points.length, 0, 'no R1 point awards in breakdown');
 });
 
+// ── tourney stats (R2-R6) on the standings page ─────────────────────────────
+test('liveUpdate exposes cumulative putts/FIR/GIR over R2-R6 only', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state); // every round: putts 2/hole, FIR on evens, GIR on 3s
+  const live = EgtEngine.liveUpdate(state, { noPersist: true });
+  const john = live.tourneyStats.john;
+  // 5 tourney rounds (R2-R6) × 18 holes × 2 putts = 180; R1's 36 putts excluded.
+  assert.equal(john.putts, 180, 'putts sum R2-R6 only');
+  assert.equal(john.fairwaysHit, 5 * 9, 'FIR: 9 even holes per round × 5 rounds');
+  assert.equal(john.greensInReg, 5 * 6, 'GIR: 6 holes divisible by 3 × 5 rounds');
+  // Brian skips R1 anyway; totals match the same 5-round math.
+  assert.equal(live.tourneyStats.brian.putts, 180);
+});
+
 // ── per-round stakes override the money engine ──────────────────────────────
 test('stakes override scales a round\'s money (still nets to $0)', () => {
   const m = freshModel();

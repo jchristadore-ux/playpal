@@ -125,15 +125,19 @@ const EgtEngine = (function () {
     const h2h = headToHead(model, resultsByRound);
     const r6Stab = resultsByRound.R6?.stableford?.totals || {};
 
+    // Cumulative tourney stats (putts / FIR / GIR / birdies …) over R2-R6,
+    // live from whatever scores are entered — shown on the standings page and
+    // reused as the season-award inputs at final settlement.
+    const counts = tourneyRoundIds();
+    const tourneyScores = {};
+    Object.keys(state.scores || {}).forEach(rid => { if (counts(rid)) tourneyScores[rid] = state.scores[rid]; });
+    const tourneyStats = SG().seasonStats(model, tourneyScores);
+
     // Season inputs (final settlement only). Season awards read tourney rounds
     // only (R2-R6) — R1 stats never feed Birdie King / Flat Stick / Iron Man.
     let seasonInputs = null, ptm = null;
     if (o.season) {
-      const counts = tourneyRoundIds();
-      const tourneyScores = {};
-      Object.keys(state.scores || {}).forEach(rid => { if (counts(rid)) tourneyScores[rid] = state.scores[rid]; });
-      const seasonStats = SG().seasonStats(model, tourneyScores);
-      seasonInputs = { final: true, seasonStats, skinsTotals: skins };
+      seasonInputs = { final: true, seasonStats: tourneyStats, skinsTotals: skins };
       ptm = SG().passTheMoney(model, state.scores); // The Rock runs R2-R6 already
     }
 
@@ -164,7 +168,7 @@ const EgtEngine = (function () {
     });
     if (!o.noPersist) store.addSnapshot(state, snapshot);
 
-    return { resultsByRound, points, money, standings: board, night, snapshot, r6Pairings, skins, headToHead: h2h, ptm };
+    return { resultsByRound, points, money, standings: board, night, snapshot, r6Pairings, skins, headToHead: h2h, ptm, tourneyStats };
   }
 
   return { buildRoundCtx, runRound, resultsForFinalized, skinsTotals, headToHead, liveUpdate };
