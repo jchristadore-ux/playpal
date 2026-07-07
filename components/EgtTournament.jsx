@@ -179,6 +179,9 @@ const EgtTournament = ({ onScoreRound }) => {
   // ── standings tab ─────────────────────────────────────────────────────────
   const Standings = () => (
     <div>
+      <div style={{ fontSize: 11, color: '#8a988f', marginBottom: 8 }}>
+        EGT Cup · 30 pts max · R2–R6 count (R1 Minerals is flat/stakes-only)
+      </div>
       <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 16 }}>
         <thead><tr>{['Pos', 'Player', 'EGT Pts', 'Move', 'Max'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
         <tbody>
