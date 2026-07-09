@@ -9,7 +9,7 @@ const EGT_ROUND_FORMATS = {
   R2: 'Four-ball best-ball match play at 90%, plus a Nassau (front 9 · back 9 · overall). Each hole the team’s better net ball counts.',
   R3: 'Wolf: the rotating Wolf partners the next player or goes lone/blind; ±units per opponent, ties push. Best net ball, 100% off the low ball.',
   R4: '2-v-2 aggregate net Stableford at 85% — both partners’ points count. Segment matches on holes 1–6, 7–12, 13–18 plus the 18-hole total; pick up at net double bogey.',
-  R5: 'Full-round Bingo-Bango-Bongo: 3 pts/hole (first on green, closest once all are on, first in the hole), gross. Plus round-robin match play — every player plays every other head-to-head; the higher handicap gets the difference in strokes; each match settles Nassau-style (front · back · overall).',
+  R5: 'Full-round Bingo-Bango-Bongo: 3 pts/hole (first on green, closest once all are on, first in the hole), gross. Plus match play — set the matches before the round (1v1 or 2v2, any players); the higher handicap gets the difference in strokes; each match settles Nassau-style (front · back · overall).',
   R6: 'Championship singles (seeded 1v2 & 3v4 off the standings; the higher handicap gets the difference in strokes) plus individual net Stableford, full dots.',
 };
 
@@ -27,7 +27,7 @@ const EGT_STAKE_ITEMS = {
   R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R4: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R5: [{ key: 'bbbNinesPerPointDiff', label: 'BBB', per: 'per point' }, { key: 'nassauPerPoint', label: 'Match play', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R5: [{ key: 'bbbNinesPerPointDiff', label: 'BBB', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R6: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
 };
 
@@ -103,7 +103,8 @@ const EgtTournament = ({ onScoreRound }) => {
     if (!onScoreRound) { flash('Scoring is available from the app shell'); return; }
     // Make sure the latest model (SI edits etc.) is persisted before launching.
     window.EgtStore.save(state);
-    onScoreRound(window.EgtBridge.toNativeRound(model, rid, state.stakes));
+    const opts = rid === 'R5' ? { matchConfigs: state.events.r5Matches || [] } : undefined;
+    onScoreRound(window.EgtBridge.toNativeRound(model, rid, state.stakes, opts));
   };
 
   // Current stake for a round/format: user override, else the tournament default.
@@ -236,6 +237,8 @@ const EgtTournament = ({ onScoreRound }) => {
     const isOpen = openRound === round.id;
     const finalized = state.finalized.includes(round.id);
     const primaryGame = Object.keys(model.derived[round.id].allocations[round.players[0]].games).filter(g => g !== 'skinsNet')[0] || 'skinsNet';
+    // Native-shaped players/course for the R5 match-config UI.
+    const r5Native = round.id === 'R5' ? window.EgtBridge.toNativeRound(model, 'R5', state.stakes) : null;
     return (
       <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, marginBottom: 12, overflow: 'hidden' }}>
         <div onClick={() => setOpenRound(isOpen ? null : round.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', background: finalized ? '#eef6f0' : '#fff' }}>
@@ -334,6 +337,35 @@ const EgtTournament = ({ onScoreRound }) => {
             {round.id === 'R1' && (
               <div style={{ fontSize: 11, color: '#9a6a00', marginBottom: 4 }}>
                 R1 is a flat / stakes-only round — it pays out cash but awards no EGT Cup points.
+              </div>
+            )}
+
+            {/* R5: choose the match-play matches before the round — any mix of
+                1v1 and 2v2, any players, via the native Nassau match config.
+                Pops auto-fill from the EGT course handicaps unless set manually. */}
+            {round.id === 'R5' && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: GREEN }}>MATCH PLAY · SET MATCHES BEFORE THE ROUND</div>
+                <div style={{ fontSize: 11, color: '#8a988f', margin: '2px 0 4px' }}>
+                  Add the matches you want — 1v1 or 2v2, any players (e.g. one 2v2, or John in just two 1v1s).
+                  Strokes auto-fill from course handicaps (off the low in each match); tap holes in a match to override.
+                </div>
+                {typeof NassauMultiMatchConfig !== 'undefined' ? (
+                  <NassauMultiMatchConfig
+                    roundPlayers={r5Native.players}
+                    nassauMatches={state.events.r5Matches || []}
+                    onChange={ms => { window.EgtStore.setEvent(state, 'r5Matches', ms); setState({ ...state }); }}
+                    course={r5Native.course}
+                    maxMatches={6}
+                  />
+                ) : (
+                  <div style={{ fontSize: 12, color: '#b3261e' }}>Match setup unavailable — reload the app.</div>
+                )}
+                {!(state.events.r5Matches || []).length && (
+                  <div style={{ fontSize: 11, color: '#9a6a00', marginTop: 6 }}>
+                    No matches yet — the round will launch with BBB + Skins only until you add matches.
+                  </div>
+                )}
               </div>
             )}
 
