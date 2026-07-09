@@ -36,7 +36,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp -r index.html join.html privacy.html terms.html support.html \
+          cp -r index.html bottomline.html join.html privacy.html terms.html support.html \
                 manifest.webmanifest sw.js playpal-logo.png dist icons vendor _site/
 
       - uses: actions/upload-pages-artifact@v3
