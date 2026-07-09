@@ -546,8 +546,8 @@ const NassauSingleMatchConfig = ({ roundPlayers, matchConfig, onChange, matchLab
 const MATCH_COLORS = ['#C8A15A', '#7B9FE0', '#E07BE0'];
 const MATCH_LABELS = ['MATCH 1', 'MATCH 2', 'MATCH 3'];
 
-const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course }) => {
-  const MAX_MATCHES = 3;
+const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course, maxMatches = 3 }) => {
+  const MAX_MATCHES = maxMatches;
 
   const addMatch = () => {
     if (nassauMatches.length >= MAX_MATCHES) return;
@@ -570,11 +570,11 @@ const NassauMultiMatchConfig = ({ roundPlayers, nassauMatches, onChange, course 
       </div>
       {nassauMatches.length===0 && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#8A9E8A', textAlign:'center', padding:'12px 0'}}>No matches configured. Tap + ADD MATCH to begin.</div>}
       {nassauMatches.map((match, idx) => (
-        <div key={match.id} style={{background:'#FFFFFF', border:`1px solid ${MATCH_COLORS[idx]}33`, borderRadius:14, overflow:'hidden'}}>
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:`${MATCH_COLORS[idx]}08`, borderBottom:`1px solid ${MATCH_COLORS[idx]}22`}}>
+        <div key={match.id} style={{background:'#FFFFFF', border:`1px solid ${MATCH_COLORS[idx % MATCH_COLORS.length]}33`, borderRadius:14, overflow:'hidden'}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:`${MATCH_COLORS[idx % MATCH_COLORS.length]}08`, borderBottom:`1px solid ${MATCH_COLORS[idx % MATCH_COLORS.length]}22`}}>
             <div style={{display:'flex', alignItems:'center', gap:8}}>
-              <div style={{width:7, height:7, borderRadius:'50%', background:MATCH_COLORS[idx]}}/>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, letterSpacing:1.5, color:MATCH_COLORS[idx]}}>{MATCH_LABELS[idx]}</span>
+              <div style={{width:7, height:7, borderRadius:'50%', background:MATCH_COLORS[idx % MATCH_COLORS.length]}}/>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, letterSpacing:1.5, color:MATCH_COLORS[idx % MATCH_COLORS.length]}}>{MATCH_LABELS[idx] || ('MATCH ' + (idx + 1))}</span>
               {match.playersInMatch.length===2&&(()=>{const p1=roundPlayers.find(p=>p.id===match.playersInMatch[0]);const p2=roundPlayers.find(p=>p.id===match.playersInMatch[1]);return p1&&p2?<span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{p1.name.split(' ')[0]} vs {p2.name.split(' ')[0]}</span>:null;})()}
             </div>
             {nassauMatches.length>1&&<button onClick={()=>removeMatch(idx)} style={{background:'none', border:'none', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, letterSpacing:1, color:'#8A9E8A', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>REMOVE</button>}
