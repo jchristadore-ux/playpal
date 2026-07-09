@@ -41,7 +41,7 @@ const EgtBridge = (function () {
   // of { type, ... } objects (matching Setup's shape) — NOT bare strings, or
   // ScoreEntry's `formats.some(f => f.type === …)` checks all read false and no
   // tracker appears. Skins runs every round.
-  function formatsFor(model, round, stakes) {
+  function formatsFor(model, round, stakes, matchConfigs) {
     const md = model.moneyDefaults;
     const S = (stakes && stakes[round.id]) || {};
     const val = (k, d) => (S[k] != null && S[k] !== '' ? Number(S[k]) : (md[k] != null ? md[k] : d));
@@ -61,38 +61,28 @@ const EgtBridge = (function () {
       }
       case 'R3': return [{ type: 'wolf', stakes: val('wolfPerUnit', 2) }, skins];
       case 'R4': return [{ type: 'stableford', stakes: 1 }, skins];
-      case 'R5': { // full-18 BBB + round-robin 1v1 match play via the Nassau engine
+      case 'R5': { // full-18 BBB + the match play configured before the round
         const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
         const course = model.courses[round.courseId];
         const chById = (model.derived && model.derived.R5 && model.derived.R5.courseHandicaps) || {};
         const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
-        const ids = round.players;
-        const nassauMatches = [];
-        for (let i = 0; i < ids.length; i++) {
-          for (let j = i + 1; j < ids.length; j++) {
-            const a = ids[i], b = ids[j];
-            const diff = Math.abs((chById[a] ?? 0) - (chById[b] ?? 0));
-            const receives = (chById[a] ?? 0) > (chById[b] ?? 0) ? a : (chById[b] ?? 0) > (chById[a] ?? 0) ? b : null;
-            // Nassau pops are boolean per hole: {pid: bool[18]}, index 0 = hole 1.
-            const popHoles = {};
-            if (receives && diff > 0) {
-              const popsArr = H.allocatePops(diff, holes18) || [];
-              const flags = Array(18).fill(false);
-              popsArr.forEach(p => { if (p.hole >= 1 && p.hole <= 18) flags[p.hole - 1] = true; });
-              popHoles[receives] = flags;
-            }
-            nassauMatches.push({
-              id: `egt-R5-${a}-${b}`, matchType: '1v1',
-              playersInMatch: [a, b], teams: null, popHoles,
-              stakes: val('nassauPerPoint', 5),
-            });
-          }
-        }
-        return [
-          { type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) },
-          { type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches },
-          skins,
-        ];
+        // The matches the user set on the Rounds tab (1v1 or 2v2, any players).
+        // No default — no matches configured means no Nassau tracker.
+        const configured = (matchConfigs || []).filter(m => (m.matchType === '2v2'
+          ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
+          : (m.playersInMatch || []).length === 2));
+        const nassauMatches = configured.map(m => ({
+          id: m.id, matchType: m.matchType || '1v1',
+          playersInMatch: (m.playersInMatch || []).slice(),
+          teams: m.teams ? { team1: (m.teams.team1 || []).slice(), team2: (m.teams.team2 || []).slice() } : null,
+          // Manual pops win; otherwise CH difference off the low within the match.
+          popHoles: H.matchPopFlags(chById, holes18, m.playersInMatch || [], m.popHoles),
+          stakes: (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint', 5),
+        }));
+        const formats = [{ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) }];
+        if (nassauMatches.length) formats.push({ type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches });
+        formats.push(skins);
+        return formats;
       }
       case 'R6': return [{ type: 'stableford', stakes: 1 }, skins];
       default:   return [skins];
@@ -110,8 +100,9 @@ const EgtBridge = (function () {
   }
 
   // Build a native `round` object from a seed round. `stakes` (optional) are the
-  // per-round Rounds-tab overrides that flow into the native format engines.
-  function toNativeRound(model, roundId, stakes) {
+  // per-round Rounds-tab overrides; `opts.matchConfigs` carries the pre-round
+  // match setup (R5) into the native Nassau engine.
+  function toNativeRound(model, roundId, stakes, opts) {
     const round = model.rounds.find(r => r.id === roundId);
     const course = model.courses[round.courseId];
     const tee = course.tees.find(t => t.name === course.playedTee) || course.tees[0];
@@ -131,7 +122,7 @@ const EgtBridge = (function () {
       name: `${round.id} · ${course.name}`,
       players,
       course: { id: course.courseId, name: course.name, location: course.location, rating: tee.cr, slope: tee.slope, holes },
-      formats: formatsFor(model, round, stakes),
+      formats: formatsFor(model, round, stakes, opts && opts.matchConfigs),
       games: [],
       teeId: course.playedTee,
       startingTee: 1,

@@ -29,8 +29,22 @@ const EgtEngine = (function () {
     const ctx = { round, course, players, teams: round.teams, alloc, scores, config, events };
     // Round-specific extras.
     if (roundId === 'R5') {
-      // Round-robin match play settles off each pairing's CH difference.
-      ctx.singlesCourseHandicaps = model.derived.R5.courseHandicaps;
+      // Match play runs on the matches configured before the round (1v1 or
+      // 2v2, chosen on the Rounds tab). Pops resolve here — manual popHoles
+      // win, otherwise CH difference off the low within each match — via the
+      // same helper the scorer bridge uses, so engine and tracker agree.
+      const H = g('EgtHandicap');
+      const chById = model.derived.R5.courseHandicaps;
+      const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+      const configured = state.events.r5Matches || [];
+      ctx.matches = configured
+        .filter(m => (m.matchType === '2v2'
+          ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
+          : (m.playersInMatch || []).length === 2))
+        .map(m => ({
+          ...m,
+          popFlags: H.matchPopFlags(chById, holes18, m.playersInMatch || [], m.popHoles),
+        }));
     }
     if (roundId === 'R6') {
       ctx.singlesCourseHandicaps = model.derived.R6.courseHandicaps;
@@ -53,8 +67,8 @@ const EgtEngine = (function () {
       case 'R3': out.wolf = sc.wolf(ctx); break;
       case 'R4': out.teamStableford = sc.teamStableford(ctx); break;
       case 'R5':
-        out.bbb = sc.bingoBangoBongo(ctx);          // full 18, gross
-        out.matchPlay = sc.roundRobinMatchPlay(ctx); // every player vs every player
+        out.bbb = sc.bingoBangoBongo(ctx);   // full 18, gross
+        out.matchPlay = sc.matchPlay(ctx);   // the matches configured pre-round
         break;
       case 'R6':
         out.singles = sc.singles(ctx);
@@ -105,7 +119,7 @@ const EgtEngine = (function () {
       teamPlayers('R2', r2.fourBall.segments.overall.winnerTeam).forEach(pid => { wins[pid] += 1; });
     }
     const r5 = resultsByRound.R5;
-    if (r5?.matchPlay) r5.matchPlay.pairings.forEach(m => { if (m.winner !== 'halve') wins[m.winner] += 1; });
+    if (r5?.matchPlay) r5.matchPlay.matches.forEach(m => { m.winnerIds.forEach(pid => { if (wins[pid] != null) wins[pid] += 1; }); });
     const r6 = resultsByRound.R6;
     if (r6?.singles) r6.singles.results.forEach(m => { if (m.winner !== 'halve') wins[m.winner] += 1; });
     return wins;

@@ -282,52 +282,58 @@ const EgtScoring = (function () {
     return { game, totals, perHole, ranked, pending };
   }
 
-  // ── 6. Round-robin 1v1 match play (R5) ────────────────────────────────────
-  // Every player plays every other player head-to-head over 18 holes: the
-  // higher-CH player gets the CH difference in strokes on the lowest-SI holes,
-  // and each pairing settles Nassau-style (front 9 / back 9 / overall). This
-  // replaced R5's scramble/alternate-shot. Standings points go to the best
-  // overall-match record.
-  //   ctx.singlesCourseHandicaps: { pid: CH } (the round's course handicaps).
-  function roundRobinMatchPlay(ctx) {
-    const { players, scores, course } = ctx;
-    const chById = ctx.singlesCourseHandicaps || {};
-    const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+  // ── 6. Configured match play (R5) ────────────────────────────────────────
+  // The matches are chosen before the round (any mix of 1v1 and 2v2, any
+  // players — set on the EGT Rounds tab via the Nassau match config). Each
+  // match plays best net ball per side and settles Nassau-style (front 9 /
+  // back 9 / overall). Pops per match come pre-resolved as popFlags
+  // ({pid: bool[18]}, manual config or CH-difference off the low — see
+  // EgtHandicap.matchPopFlags). Standings points go to the best overall
+  // match record. No matches configured → no results, no champion.
+  //   ctx.matches: [{ id, matchType, playersInMatch, teams, popFlags, stakes }]
+  function matchPlay(ctx) {
+    const { players, scores } = ctx;
+    const configured = ctx.matches || [];
     const ids = players.map(p => p.id);
     const record = {}; ids.forEach(id => { record[id] = { w: 0, l: 0, h: 0 }; });
-    const pairings = [];
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        const a = ids[i], b = ids[j];
-        const chA = chById[a] ?? 0, chB = chById[b] ?? 0;
-        const diff = Math.abs(chA - chB);
-        const receives = chA > chB ? a : chB > chA ? b : null;
-        const popsArr = receives ? H.allocatePops(diff, holes18) : [];
-        const popAt = (pid, hole) => (pid === receives && popsArr ? H.popsOnHole(popsArr, hole) : 0);
-        const ballNet = pid => hole => {
-          const g = gross(scores, pid, hole);
-          return g == null ? null : g - popAt(pid, hole);
-        };
-        const sideA = { name: a, ballNet: ballNet(a) };
-        const sideB = { name: b, ballNet: ballNet(b) };
-        const front = playMatch(holesRange(1, 9), sideA, sideB);
-        const back = playMatch(holesRange(10, 18), sideA, sideB);
-        const overall = playMatch(holesRange(1, 18), sideA, sideB);
-        const winner = overall.winner === 'A' ? a : overall.winner === 'B' ? b : 'halve';
-        if (winner === 'halve') { record[a].h++; record[b].h++; }
-        else { record[winner].w++; record[winner === a ? b : a].l++; }
-        pairings.push({ a, b, chA, chB, diff, receives, front, back, overall, winner,
-          pending: popsArr == null });
-      }
-    }
+    const matches = [];
+    configured.forEach(m => {
+      const sides = m.matchType === '2v2' && m.teams
+        ? [m.teams.team1 || [], m.teams.team2 || []]
+        : [[m.playersInMatch?.[0]].filter(Boolean), [m.playersInMatch?.[1]].filter(Boolean)];
+      if (!sides[0].length || !sides[1].length) return; // incomplete config
+      const popFlags = m.popFlags || {};
+      const netOf = (pid, hole) => {
+        const g = gross(scores, pid, hole);
+        if (g == null) return null;
+        return g - (popFlags[pid]?.[hole - 1] ? 1 : 0);
+      };
+      const ballNet = side => hole => {
+        const nets = side.map(pid => netOf(pid, hole)).filter(n => n != null);
+        return nets.length ? Math.min(...nets) : null;
+      };
+      const label = side => side.join('+');
+      const sideA = { name: label(sides[0]), ballNet: ballNet(sides[0]) };
+      const sideB = { name: label(sides[1]), ballNet: ballNet(sides[1]) };
+      const front = playMatch(holesRange(1, 9), sideA, sideB);
+      const back = playMatch(holesRange(10, 18), sideA, sideB);
+      const overall = playMatch(holesRange(1, 18), sideA, sideB);
+      const winnerIds = overall.winner === 'A' ? sides[0] : overall.winner === 'B' ? sides[1] : [];
+      const loserIds = overall.winner === 'A' ? sides[1] : overall.winner === 'B' ? sides[0] : [];
+      winnerIds.forEach(pid => { if (record[pid]) record[pid].w++; });
+      loserIds.forEach(pid => { if (record[pid]) record[pid].l++; });
+      if (overall.winner === 'halve') sides.flat().forEach(pid => { if (record[pid]) record[pid].h++; });
+      matches.push({ id: m.id, matchType: m.matchType || '1v1', sides, popFlags,
+        stakes: m.stakes, front, back, overall,
+        winner: overall.winner, winnerIds, loserIds });
+    });
     // Best overall record (wins, halves as 0.5) → matchPlayChampion candidates.
     const score = id => record[id].w + record[id].h * 0.5;
     const ranked = ids.map(id => ({ player: id, wins: record[id].w, points: score(id) }))
       .sort((x, y) => y.points - x.points);
     const top = ranked.length ? ranked[0].points : 0;
-    const champions = ranked.filter(r => r.points === top).map(r => r.player);
-    return { game: 'matchPlay', pairings, record, ranked, champions,
-      pending: pairings.some(p => p.pending) };
+    const champions = matches.length ? ranked.filter(r => r.points === top).map(r => r.player) : [];
+    return { game: 'matchPlay', matches, record, ranked, champions };
   }
 
   // ── 8. Championship singles (R6) ─────────────────────────────────────────
@@ -400,7 +406,7 @@ const EgtScoring = (function () {
     wolf,
     teamStableford,
     individualStableford,
-    roundRobinMatchPlay,
+    matchPlay,
     singles,
     skins,
   };

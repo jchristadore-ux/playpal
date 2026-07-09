@@ -2,6 +2,18 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.5.5] — 2026-07-07
+
+### Changed
+- **R5 match play is now configurable before the round** — no more default
+  round-robin. Set the matches on the Rounds tab with the native Nassau match
+  config (up to six, any mix of 1v1 and 2v2, any players — e.g. one 2v2, or a
+  player in just two 1v1s), each with its own stake. Strokes auto-fill from
+  course handicaps (off the low within each match); tapping holes in a match
+  overrides them. The scorer, Cup points (best match record), money, and the
+  head-to-head tiebreaker all honor exactly the configured matches; with no
+  matches set, R5 runs BBB + skins only.
+
 ## [1.5.4] — 2026-07-07
 
 ### Changed

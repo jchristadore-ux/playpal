@@ -130,6 +130,35 @@ const EgtHandicap = (function () {
     return Math.ceil(si18 / 2);
   }
 
+  // Pop flags for a configured match (1v1 or 2v2), as the native Nassau engine
+  // consumes them: { pid: bool[18] } with index 0 = hole 1. Manually-set pops
+  // (any true flag) win; otherwise strokes go off the low course handicap
+  // within the match, allocated by stroke index. Used by both the scorer
+  // bridge and the EGT match-play calculator so they can never disagree.
+  function matchPopFlags(chById, holes18, playerIds, manualPopHoles) {
+    const manual = manualPopHoles || {};
+    const hasManual = Object.values(manual).some(arr => Array.isArray(arr) && arr.some(Boolean));
+    if (hasManual) {
+      const out = {};
+      Object.entries(manual).forEach(([pid, arr]) => {
+        if (Array.isArray(arr) && arr.some(Boolean)) out[pid] = Array.from({ length: 18 }, (_, i) => !!arr[i]);
+      });
+      return out;
+    }
+    const chs = playerIds.map(pid => chById[pid] ?? 0);
+    const low = Math.min(...chs);
+    const out = {};
+    playerIds.forEach(pid => {
+      const strokes = (chById[pid] ?? 0) - low;
+      if (strokes <= 0) return;
+      const pops = allocatePops(strokes, holes18) || [];
+      const flags = Array(18).fill(false);
+      pops.forEach(p => { if (p.hole >= 1 && p.hole <= 18) flags[p.hole - 1] = true; });
+      out[pid] = flags;
+    });
+    return out;
+  }
+
   return {
     roundHalfUp,
     courseHandicap,
@@ -142,6 +171,7 @@ const EgtHandicap = (function () {
     isPermutation,
     eighteenFromNine,
     nineHoleSi,
+    matchPopFlags,
   };
 })();
 

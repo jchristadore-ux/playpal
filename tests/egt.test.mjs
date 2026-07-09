@@ -297,28 +297,41 @@ test('toNativeRound wires each round to its native format engine', () => {
   jeq(typesFor('R1'), ['bingobangobongo', 'skins']);   // BBB tracker fires on R1
   jeq(typesFor('R3'), ['skins', 'wolf']);
   jeq(typesFor('R4'), ['skins', 'stableford']);
-  jeq(typesFor('R5'), ['bingobangobongo', 'nassau', 'skins']); // full-18 BBB + round-robin matches
+  jeq(typesFor('R5'), ['bingobangobongo', 'skins']); // no matches configured -> no Nassau tracker
   jeq(typesFor('R6'), ['skins', 'stableford']);
   // R3 Wolf uses the seed's rotation order so the native Wolf-of-the-hole matches.
   jeq(EgtBridge.toNativeRound(m, 'R3').players.map(p => p.id), ['tj', 'mike', 'brian', 'john']);
 });
 
-test('R5 native Nassau is a 6-match round robin with CH-difference pops', () => {
+test('R5 native Nassau carries exactly the configured matches (no default)', () => {
   const m = freshModel();
-  const nassau = EgtBridge.toNativeRound(m, 'R5').formats.find(f => f.type === 'nassau');
-  assert.equal(nassau.nassauMatches.length, 6, 'every player plays every other');
-  nassau.nassauMatches.forEach(match => {
-    assert.equal(match.matchType, '1v1');
-    assert.equal(match.playersInMatch.length, 2);
-  });
-  // John (CH 17) vs TJ (CH 28): TJ receives 11 pops as booleans on hole indexes.
-  const jt = nassau.nassauMatches.find(x => x.playersInMatch.includes('john') && x.playersInMatch.includes('tj'));
-  const flags = jt.popHoles.tj;
-  assert.equal(flags.filter(Boolean).length, 11);
-  assert.equal(jt.popHoles.john, undefined, 'low player gets no pops');
-  // TJ vs Mike: equal CH → no pops either way.
-  const tm = nassau.nassauMatches.find(x => x.playersInMatch.includes('tj') && x.playersInMatch.includes('mike'));
-  jeq(tm.popHoles, {});
+  // No matches configured: BBB + skins only.
+  assert.equal(EgtBridge.toNativeRound(m, 'R5').formats.find(f => f.type === 'nassau'), undefined);
+  // Configure one 1v1 (auto pops from CH) and one 2v2.
+  const matchConfigs = [
+    { id: 'm1', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: {}, stakes: 3 },
+    { id: 'm2', matchType: '2v2', playersInMatch: ['john', 'brian', 'tj', 'mike'],
+      teams: { team1: ['john', 'brian'], team2: ['tj', 'mike'] }, popHoles: {}, stakes: 5 },
+    { id: 'incomplete', matchType: '1v1', playersInMatch: ['brian'], teams: null, popHoles: {} },
+  ];
+  const nassau = EgtBridge.toNativeRound(m, 'R5', null, { matchConfigs }).formats.find(f => f.type === 'nassau');
+  assert.equal(nassau.nassauMatches.length, 2, 'incomplete match dropped');
+  // 1v1 john (CH 17) vs tj (CH 28): tj auto-receives 11 pop flags.
+  const m1 = nassau.nassauMatches.find(x => x.id === 'm1');
+  assert.equal(m1.popHoles.tj.filter(Boolean).length, 11);
+  assert.equal(m1.popHoles.john, undefined, 'low player gets no pops');
+  assert.equal(m1.stakes, 3, 'per-match stake honored');
+  // 2v2 off the low within the match: brian +5, tj/mike +11, john none.
+  const m2 = nassau.nassauMatches.find(x => x.id === 'm2');
+  assert.equal(m2.popHoles.brian.filter(Boolean).length, 5);
+  assert.equal(m2.popHoles.tj.filter(Boolean).length, 11);
+  assert.equal(m2.popHoles.john, undefined);
+  // Manual pops win over auto-fill.
+  const manual = Array(18).fill(false); manual[0] = true;
+  const nassau2 = EgtBridge.toNativeRound(m, 'R5', null, { matchConfigs: [
+    { id: 'mm', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: { tj: manual } },
+  ] }).formats.find(f => f.type === 'nassau');
+  assert.equal(nassau2.nassauMatches[0].popHoles.tj.filter(Boolean).length, 1);
 });
 
 test('bridge translates native score arrays + BBB/Wolf events into the EGT store', () => {
@@ -356,7 +369,7 @@ test('bridge translates native score arrays + BBB/Wolf events into the EGT store
   jeq(st3.events.wolf.R3, [{ hole: 1, wolf: 'tj', mode: 'pair', partner: 'mike' }, { hole: 2, wolf: 'mike', mode: 'lone', partner: null }]);
 });
 
-test('R5 is now full-18 BBB + round-robin match play (format override)', () => {
+test('R5 is now full-18 BBB + configurable match play (format override)', () => {
   const m = freshModel();
   const r5 = m.rounds.find(r => r.id === 'R5');
   assert.equal(r5.primaryGame, 'bingoBangoBongo+matchPlay');
@@ -364,58 +377,62 @@ test('R5 is now full-18 BBB + round-robin match play (format override)', () => {
   jeq(m.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
 });
 
-test('R5 round-robin match play: 6 pairings, CH-difference pops, W-L record', () => {
+test('R5 match play honors the configured matches (1v1 + 2v2, records, no default)', () => {
   const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
   const round = m.rounds.find(r => r.id === 'R5');
-  const scores = {};
-  // John shoots par everywhere; the rest gross par+2 — John's CH edge is
-  // overcome pairwise only where the receiver's pops exceed the 2-shot gap.
-  round.players.forEach(pid => { scores[pid] = {}; });
+  // John pars every hole; the rest gross par+2 (a single pop closes only 1).
+  state.scores.R5 = {};
+  round.players.forEach(pid => { state.scores.R5[pid] = {}; });
   m.courses.cascades.holes.slice(0, 18).forEach(h => {
-    scores.john[h.hole] = { gross: h.par };
-    scores.brian[h.hole] = { gross: h.par + 2 };
-    scores.tj[h.hole] = { gross: h.par + 2 };
-    scores.mike[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.john[h.hole] = { gross: h.par };
+    state.scores.R5.brian[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.tj[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.mike[h.hole] = { gross: h.par + 2 };
   });
-  const ctx = {
-    round, course: m.courses.cascades, players: round.players.map(id => m.playersById[id]),
-    scores, config: m.formatConfigs.R5, events: {},
-    singlesCourseHandicaps: m.derived.R5.courseHandicaps, // john 17, brian 22, tj/mike 28
-  };
-  const mp = EgtScoring.roundRobinMatchPlay(ctx);
-  assert.equal(mp.pairings.length, 6, 'every player plays every other');
-  // A single pop only closes 1 of the 2-shot gross gap, so John wins every
-  // hole (even pop holes: par vs net par+1) → John sweeps all three matches.
-  const jb = mp.pairings.find(p => (p.a === 'john' && p.b === 'brian') || (p.a === 'brian' && p.b === 'john'));
-  assert.equal(jb.winner, 'john');
-  const jt = mp.pairings.find(p => (p.a === 'john' && p.b === 'tj') || (p.a === 'tj' && p.b === 'john'));
-  assert.equal(jt.winner, 'john');
-  // Brian vs TJ: equal gross, TJ receives 6 pops (28-22) → TJ nets better on
-  // those 6 holes and wins the match.
-  const bt = mp.pairings.find(p => (p.a === 'brian' && p.b === 'tj') || (p.a === 'tj' && p.b === 'brian'));
-  assert.equal(bt.winner, 'tj');
-  // TJ vs Mike: identical scores and CH → halved.
-  const tm = mp.pairings.find(p => (p.a === 'tj' && p.b === 'mike') || (p.a === 'mike' && p.b === 'tj'));
-  assert.equal(tm.winner, 'halve');
-  jeq(mp.record.john, { w: 3, l: 0, h: 0 });
-  jeq(mp.record.brian, { w: 0, l: 3, h: 0 });
-  // Records reconcile: total wins + halves*0.5 across players = 6 matches.
-  const totalPts = Object.values(mp.record).reduce((a, r) => a + r.w + r.h * 0.5, 0);
-  assert.equal(totalPts, 6);
+  // No matches configured -> no results, no champion, no points.
+  let mp = EgtEngine.runRound(state, 'R5').matchPlay;
+  assert.equal(mp.matches.length, 0);
+  jeq(mp.champions, []);
+  // Configure: john v brian (1v1) and john+brian v tj+mike (2v2).
+  state.events.r5Matches = [
+    { id: 'a', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 2 },
+    { id: 'b', matchType: '2v2', playersInMatch: ['john', 'brian', 'tj', 'mike'],
+      teams: { team1: ['john', 'brian'], team2: ['tj', 'mike'] }, popHoles: {}, stakes: 5 },
+  ];
+  mp = EgtEngine.runRound(state, 'R5').matchPlay;
+  assert.equal(mp.matches.length, 2);
+  // 1v1: brian's 5 pops close 1 of the 2-shot gap -> john wins.
+  const a = mp.matches.find(x => x.id === 'a');
+  jeq(a.winnerIds, ['john']);
+  // 2v2 best ball: team1's ball is john's par; team2's ball is par+2 minus a
+  // pop on tj/mike pop holes -> team1 wins.
+  const b = mp.matches.find(x => x.id === 'b');
+  jeq(b.winnerIds, ['john', 'brian']);
+  // Records: john 2-0, brian 1-1, tj/mike 0-1 each; champion is john.
+  jeq(mp.record.john, { w: 2, l: 0, h: 0 });
+  jeq(mp.record.brian, { w: 1, l: 1, h: 0 });
+  jeq(mp.champions, ['john']);
 });
 
-test('R5 money: BBB + per-pairing Nassau still nets to $0', () => {
+test('R5 money: BBB + configured-match Nassau still nets to $0', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
   fillPlausibleScores(m, state);
+  state.events.r5Matches = [
+    { id: 'a', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 2 },
+    { id: 'b', matchType: '2v2', playersInMatch: ['john', 'brian', 'tj', 'mike'],
+      teams: { team1: ['john', 'brian'], team2: ['tj', 'mike'] }, popHoles: {}, stakes: 5 },
+  ];
   state.finalized = ['R5'];
   const live = EgtEngine.liveUpdate(state, { noPersist: true });
   const rm = live.money.rounds.R5;
   assert.ok(rm, 'R5 money computed');
   const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, `R5 money nets to zero, got ${sum}`);
-  // Match play must contribute (per-pairing Nassau settles at least one seg).
+  // Match settlements present under per-match stakes.
   const hasMatchMoney = Object.values(rm.breakdown).some(rows => rows.some(r => /^Match /.test(r.label)));
   assert.ok(hasMatchMoney, 'match-play Nassau settlements present');
 });
