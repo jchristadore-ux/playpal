@@ -2,6 +2,26 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.6.1] — 2026-07-09
+
+### Changed
+- **EGT Bottom Line is now EGT-only.** The ticker aggregates data exclusively
+  from EGT Cup tournament rounds (R1–R6). Casual rounds and other golf trips
+  synced to the same project are ignored entirely — every leaderboard, money
+  card, stat, format board, fun fact, record, spotlight, and alert is sourced
+  only from scores/stats entered in EGT rounds.
+- **Money is single-source-of-truth.** The running bankroll comes straight from
+  the EGT tournament engine (cumulative over finalized rounds, including
+  Pass-the-Money and stake overrides), topped up with live native money for any
+  EGT round still in progress — so per-round cards can never contradict it. The
+  redundant "EGT CUP MONEY" card was removed (the bankroll already reflects it),
+  and a "Current Last Place" card was added from the Cup standings.
+- Dropped the generic trip-leaderboard code path from the provider.
+
+### Fixed
+- Publish `bottomline.html` to GitHub Pages (the deploy step's file allowlist
+  was missing it, so `/bottomline` 404'd).
+
 ## [1.6.0] — 2026-07-09
 
 ### Added

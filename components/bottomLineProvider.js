@@ -323,41 +323,9 @@ const BottomLineProvider = (function () {
     return { model, state, live, rounds: egtRounds, climber, dropper };
   }
 
-  // ── trip + records + career facts ─────────────────────────────────────────
-  function computeTripFacts(world, rounds) {
-    const buildTripLeaderboard = g('buildTripLeaderboard');
-    const byTrip = [];
-    (world.trips || []).forEach(trip => {
-      const docs = rounds.filter(r => r.tripId === trip.id && r.hasScores)
-        .map(r => ({ syncCode: r.syncCode, savedAt: r.savedAt, round: Object.assign({}, r.round, {
-          // trip aggregation reads holeScores — synthesize from live scores too
-          holeScores: r.round.holeScores || _liveHoleScores(r),
-          putts: r.putts, firData: r.firData, girData: r.girData,
-          payouts: r.money || r.round.payouts || {},
-        }) }));
-      if (!docs.length) return;
-      let leaderboard = [];
-      try { leaderboard = buildTripLeaderboard ? buildTripLeaderboard(docs) : []; } catch (e) {}
-      byTrip.push({ trip, docs, leaderboard });
-    });
-    return byTrip;
-  }
-
-  function _liveHoleScores(r) {
-    const out = {};
-    r.players.forEach(p => {
-      const arr = r.scores[p.id] || [];
-      if (!arr.some(s => s > 0)) return;
-      out[p.id] = r.course.holes.map((h, i) => ({
-        strokes: arr[i] > 0 ? arr[i] : null,
-        putts: (r.putts[p.id] || [])[i] || 0,
-      }));
-    });
-    return out;
-  }
-
+  // ── records + career facts (EGT rounds only) ──────────────────────────────
   function computeRecords(rounds) {
-    // Every round ever synced feeds the record book.
+    // Every EGT round scored so far feeds the record book.
     const rec = { bestRound: null, worstRound: null, mostBirdies: null, lowNine: null,
                   biggestPayday: null, mostSkinsRound: null };
     const career = {}; // by lowercased name
@@ -434,6 +402,30 @@ const BottomLineProvider = (function () {
     return fun;
   }
 
+  // Running bankroll for the EGT Cup. The tournament engine is authoritative:
+  // its cumulative money over finalized rounds (which folds in Pass-the-Money
+  // and per-round stake overrides) is the base, and live native money for any
+  // EGT round still in progress is added on top. Keyed by player id; a round is
+  // either finalized (engine) or live (native), never both, so no double count.
+  function buildEgtMoneyBoard(egt, rounds) {
+    const map = {};
+    const nameOf = pid => (egt && egt.model && (egt.model.playersById[pid] || {}).name) || pid;
+    const add = (pid, name, v) => {
+      if (!pid) return;
+      map[pid] = map[pid] || { name: name || pid, total: 0 };
+      map[pid].total += v || 0;
+    };
+    if (egt && egt.live && egt.live.money && egt.live.money.total) {
+      Object.entries(egt.live.money.total).forEach(([pid, v]) => add(pid, nameOf(pid), v));
+    }
+    const finalized = new Set(egt && egt.state ? egt.state.finalized : []);
+    rounds.forEach(r => {
+      if (!r.egtRoundId || finalized.has(r.egtRoundId) || !r.money) return;
+      r.players.forEach(p => add(p.id, p.name, r.money[p.id] || 0));
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }
+
   // ── FACTS: the cached computed statistics the ticker renders from ─────────
   function computeFacts(world) {
     const now = world.now || Date.now();
@@ -445,31 +437,30 @@ const BottomLineProvider = (function () {
     } catch (e) {}
     const egtBySync = _egtNativeRounds(egtModelForSync);
 
-    const rounds = (world.docs || [])
+    const allRounds = (world.docs || [])
       .map(d => normalizeRound(d, egtBySync, now))
       .filter(Boolean)
       .map(computeRoundFacts)
       .sort((a, b) => b.lastTouch - a.lastTouch);
 
+    // The Bottom Line is an EGT Cup broadcast: ONLY rounds that belong to the
+    // EGT tournament feed it. Any other round synced to the same project
+    // (casual rounds, other golf trips) is ignored entirely.
+    const rounds = allRounds.filter(r => r.isEgt);
+
     const liveRounds = rounds.filter(r => r.status === 'live');
     const { records, career } = computeRecords(rounds);
+    const egt = computeEgtFacts(world, rounds);
 
-    // Money board — everyone's running bankroll across every synced round.
-    const bank = {};
-    rounds.forEach(r => {
-      if (!r.money) return;
-      r.players.forEach(p => {
-        const key = String(p.name || p.id).toLowerCase();
-        bank[key] = bank[key] || { name: p.name, total: 0 };
-        bank[key].total += r.money[p.id] || 0;
-      });
-    });
-    const moneyBoard = Object.values(bank).sort((a, b) => b.total - a.total);
+    // Running bankroll — the tournament engine is the single source of truth
+    // for money (finalized rounds, incl. Pass-the-Money + stake overrides),
+    // topped up with live native money for any EGT round still in progress.
+    const moneyBoard = buildEgtMoneyBoard(egt, rounds);
 
     return {
       now, rounds, liveRounds,
-      trips: computeTripFacts(world, rounds),
-      egt: computeEgtFacts(world, rounds),
+      trips: [],                 // EGT-only: generic trip leaderboards excluded
+      egt,
       records, career, moneyBoard,
       fun: computeFunFacts(rounds),
       players: world.players || [],
@@ -540,29 +531,6 @@ const BottomLineProvider = (function () {
     return segs;
   }});
 
-  // Trip leaderboards (generic golf trips).
-  register({ id: 'tripBoard', category: 'leaderboard', build(f) {
-    const segs = [];
-    f.trips.forEach(({ trip, leaderboard }) => {
-      if (!leaderboard.length) return;
-      const parts = [];
-      leaderboard.forEach((p, i) => {
-        if (i) parts.push(P.sep());
-        parts.push(P.dim(`${i + 1}.`), P.name(p.name),
-          P.val(`${p.avgVsPar >= 0 ? '+' : ''}${p.avgVsPar.toFixed(1)} avg`), P.dim(`${p.rounds}R`));
-      });
-      segs.push({ id: `trip:${trip.id}`, category: 'leaderboard', icon: '🏆',
-        label: `${(trip.name || 'TRIP').toUpperCase()} STANDINGS`, parts });
-      const last = leaderboard[leaderboard.length - 1];
-      if (leaderboard.length > 2) {
-        segs.push({ id: `trip:last:${trip.id}`, category: 'fun', icon: '🐢',
-          label: 'BRINGING UP THE REAR',
-          parts: [P.name(last.name), P.down(`${last.avgVsPar >= 0 ? '+' : ''}${last.avgVsPar.toFixed(1)} avg`), P.dim('current last place')] });
-      }
-    });
-    return segs;
-  }});
-
   // MONEY — running bankroll, biggest up/down, per-round payouts.
   register({ id: 'money', category: 'money', build(f) {
     const segs = [];
@@ -581,14 +549,27 @@ const BottomLineProvider = (function () {
                   P.sep(), P.dim('DOWN THE MOST'), P.name(down.name), P.down(fmtMoney(down.total))] });
       }
     }
-    f.rounds.filter(r => r.money && r.hasScores).slice(0, 4).forEach(r => {
-      const ranked = r.players.map(p => ({ name: p.name, v: r.money[p.id] || 0 }))
+    // Per-round money. Finalized EGT rounds use the engine's authoritative
+    // per-round totals; in-progress rounds use live native payouts — so the
+    // per-round cards never contradict the running bankroll above.
+    const egtByRound = (f.egt && f.egt.live && f.egt.live.money && f.egt.live.money.byRound) || {};
+    const finalized = new Set(f.egt && f.egt.state ? f.egt.state.finalized : []);
+    const nameOf = pid => (f.egt && f.egt.model && (f.egt.model.playersById[pid] || {}).name) || pid;
+    f.rounds.filter(r => r.hasScores).slice(0, 6).forEach(r => {
+      let totals = null, live = true;
+      if (r.egtRoundId && finalized.has(r.egtRoundId) && egtByRound[r.egtRoundId]) {
+        totals = egtByRound[r.egtRoundId].total; live = false;
+      } else if (r.money) {
+        totals = r.money;
+      }
+      if (!totals) return;
+      const ranked = Object.entries(totals).map(([pid, v]) => ({ name: nameOf(pid), v }))
         .filter(x => x.v !== 0).sort((a, b) => b.v - a.v);
       if (!ranked.length) return;
       const parts = [];
       ranked.forEach((x, i) => { if (i) parts.push(P.sep()); parts.push(P.name(x.name), upDown(x.v, fmtMoney(x.v))); });
       segs.push({ id: `money:${r.syncCode}`, category: 'money', icon: '💵',
-        label: `${r.status === 'live' ? 'LIVE MONEY · ' : 'PAYOUTS · '}${r.course.name.toUpperCase()}`, parts });
+        label: `${live ? 'LIVE MONEY · ' : 'PAYOUTS · '}${r.course.name.toUpperCase()}`, parts });
     });
     return segs;
   }});
@@ -670,15 +651,14 @@ const BottomLineProvider = (function () {
       segs.push({ id: 'egt:leader', category: 'egt', icon: '👑', label: 'TRIP LEADER',
         parts: [P.name(leader.name.toUpperCase()), P.val(`${leader.points} pts`),
                 P.dim(`of ${leader.maxPossible} possible`)] });
+      if (L.standings.length > 2) {
+        const last = L.standings[L.standings.length - 1];
+        segs.push({ id: 'egt:last', category: 'fun', icon: '🐢', label: 'CURRENT LAST PLACE',
+          parts: [P.name(last.name), P.down(`${last.points} pts`), P.dim(`${last.rank}th`)] });
+      }
     }
-    if (L.money && L.money.total) {
-      const ranked = Object.entries(L.money.total)
-        .map(([pid, v]) => ({ name: (e.model.playersById[pid] || {}).name || pid, v }))
-        .sort((a, b) => b.v - a.v);
-      const parts = [];
-      ranked.forEach((x, i) => { if (i) parts.push(P.sep()); parts.push(P.name(x.name), upDown(x.v, fmtMoney(x.v))); });
-      segs.push({ id: 'egt:money', category: 'money', icon: '💰', label: 'EGT CUP MONEY', parts });
-    }
+    // (Cup money is surfaced by the RUNNING BANKROLL segment, which is built
+    // from this same engine total — no separate EGT-money card needed.)
     if (e.climber) segs.push({ id: 'egt:climber', category: 'fun', icon: '📈', label: 'BIGGEST CLIMBER',
       parts: [P.name(e.climber.name), P.up(`▲${e.climber.moved} spots`)] });
     if (e.dropper) segs.push({ id: 'egt:dropper', category: 'fun', icon: '📉', label: 'BIGGEST DROP',
