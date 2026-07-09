@@ -2,6 +2,33 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.6.0] — 2026-07-09
+
+### Added
+- **EGT Bottom Line (`/bottomline`)** — an always-on, ESPN-style broadcast
+  ticker built for TV displays (75"–98", landscape). A full-width strip
+  scrolls right-to-left forever with no visible seam, telling the story of
+  the trip: live round status (course, current hole, who's on the course),
+  round and trip leaderboards (gross/net/nines/high-low), live money for
+  every format (Skins, Nassau, Wolf, BBB, Stableford, Pass the Money,
+  Tee Ball), every stat the stats engine computes (putts, 1-/3-putts,
+  FIR/GIR, sand saves, penalties, scrambling, par-3/4/5 scoring, longest
+  drive/putt), EGT Cup standings + money + award races, fun stats (streaks,
+  blowups, recoveries, worst hole), the record book, player spotlights, and
+  the round schedule.
+- **Realtime, no refreshes** — the page subscribes to the same Firestore/RTDB
+  sync the app writes; scores entered anywhere appear on the ticker within
+  seconds, changed cards flash, and breaking-news alert cards (birdies,
+  eagles, doubles, meltdowns, lead changes, new records, money swings) are
+  injected into the stream and flashed on a banner.
+- **`BottomLineProvider`** — a modular, pure data provider that aggregates
+  every scoring model into one unified feed through a registry of segment
+  builders (new stats added later surface automatically); the ticker renders
+  from cached computed facts and only recomputes when data changes.
+- Ticker niceties: category rotation (money → leaderboard → stats → format →
+  fun → spotlight → records → …), configurable speed, fullscreen toggle,
+  pause-on-hover (desktop only), 60 fps transform-only animation.
+
 ## [1.5.4] — 2026-07-07
 
 ### Changed
