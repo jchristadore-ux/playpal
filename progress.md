@@ -66,3 +66,36 @@ finalize updates standings (John 8.5 pts from bridged R6 scores).
 ## Previously shipped (merged) — v1.4.0 App Store readiness
 Self-contained vendored bundle + in-repo Capacitor iOS project. Merged as PR #59.
 Do NOT redo. (Prior detail preserved in git history / CHANGELOG.)
+
+## EGT Bottom Line ticker (branch claude/egt-bottom-line-ticker-347cku) — v1.6.0
+
+Status: **complete — 136 tests green, browser-smoke verified (empty state,
+live data via stubbed Firebase, alert banner + alert card injection).**
+
+Built `/bottomline` (bottomline.html on GitHub Pages): an always-on ESPN-style
+broadcast ticker for TVs.
+
+- `components/bottomLineProvider.js` — pure, modular data provider
+  (`window.BottomLineProvider`). Registry of segment builders (live now,
+  round/trip leaderboards, money, formats, stats, EGT Cup, fun stats,
+  spotlight, records, schedule) round-robined by category so the feed rotates
+  topics. `computeFacts(world)` = cached computed statistics;
+  `buildFeed(facts)` = ticker segments; `diffAlerts(prev, next)` = breaking
+  cards (birdie/eagle/ace/double/meltdown, hot streak, lead changes across
+  round/format/trip/money, new trip record). Reuses the app's engines:
+  calcAllPayouts/calcSkins/calcWolfStandings/nassauSegmentStatus/
+  computePTMState/StatsService/buildTripLeaderboard/EgtEngine.liveUpdate.
+- EGT Cup on the TV: reconstructs tournament state from `EGT_SEED` +
+  synced Firestore liveScores via EgtBridge (handles liveScores-only docs by
+  synthesizing the native round from the seed; deterministic sync codes);
+  state.tripId gets a `:bottomline` suffix so nothing clobbers the app store.
+- `components/BottomLine.jsx` — page + imperative rAF ticker engine
+  (transform-only, fill/recycle/rebase with no visual jump, alerts jump the
+  off-screen buffer, changed cards flash, pause-on-hover, speed control,
+  fullscreen, auto-hiding controls, breaking banner, live clock header).
+- Realtime: onSnapshot on the whole `playpal_rounds` + `golf_trips`
+  collections, RTDB `players`; recompute debounced 400ms; first emit is
+  immediate so the seed schedule scrolls with no network.
+- Wired: build.mjs SOURCES, sw.js precache (+bottomline.html), version bump
+  1.6.0 everywhere, CHANGELOG, tests/helpers/load.mjs, 12-test suite in
+  tests/bottomLineProvider.test.mjs.
