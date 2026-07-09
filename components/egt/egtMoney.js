@@ -89,17 +89,22 @@ const EgtMoney = (function () {
       const vec = {}; ids.forEach(id => { vec[id] = (results.wolf.units[id] || 0) * val('wolfPerUnit'); });
       addVec(total, zeroBalance(vec), 'Wolf', breakdown);
     } else if (roundId === 'R5') {
-      // Full-18 BBB pays per point difference; each round-robin pairing settles
-      // Nassau-style (front 1 / back 1 / overall 2 units at nassauPerPoint).
+      // Full-18 BBB pays per point difference; each configured match settles
+      // Nassau-style (front 1 / back 1 / overall 2 units) at that match's own
+      // stake (falling back to the round's nassauPerPoint). 2v2 sides split.
       if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
       if (results.matchPlay) {
-        results.matchPlay.pairings.forEach(m => {
+        results.matchPlay.matches.forEach(m => {
+          const stake = (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint');
+          const label = m.sides.map(s => s.map(pid => pid.slice(0, 2)).join('+')).join(' v ');
           [['front', m.front, 1], ['back', m.back, 1], ['overall', m.overall, 2]].forEach(([name, seg, units]) => {
             if (!seg || seg.winner === 'halve') return;
-            const winner = seg.winner === 'A' ? m.a : m.b;
-            const loser = winner === m.a ? m.b : m.a;
-            const vec = { [winner]: units * val('nassauPerPoint'), [loser]: -units * val('nassauPerPoint') };
-            addVec(total, zeroBalance(vec), `Match ${m.a.slice(0, 2)}v${m.b.slice(0, 2)} ${name}`, breakdown);
+            const winners = seg.winner === 'A' ? m.sides[0] : m.sides[1];
+            const losers = seg.winner === 'A' ? m.sides[1] : m.sides[0];
+            const vec = {};
+            winners.forEach(pid => { vec[pid] = (units * stake) / winners.length; });
+            losers.forEach(pid => { vec[pid] = -(units * stake) / losers.length; });
+            addVec(total, zeroBalance(vec), `Match ${label} ${name}`, breakdown);
           });
         });
       }
