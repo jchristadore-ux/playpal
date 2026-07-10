@@ -36,57 +36,76 @@ const EgtBridge = (function () {
     return code;
   }
 
+  // Normalize the user-configured individual Nassau matches (the "Individual
+  // Matches" overlay available on every round) into native Nassau match objects,
+  // with pops derived off the low course handicap within each match. Shared by
+  // every round so the overlay behaves identically everywhere. Manual pops win.
+  function overlayNassauMatches(model, round, matchConfigs, val) {
+    const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
+    const course = model.courses[round.courseId];
+    const chById = (model.derived && model.derived[round.id] && model.derived[round.id].courseHandicaps) || {};
+    const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+    const configured = (matchConfigs || []).filter(m => (m.matchType === '2v2'
+      ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
+      : (m.playersInMatch || []).length === 2));
+    return configured.map(m => ({
+      id: m.id, matchType: m.matchType || '1v1',
+      playersInMatch: (m.playersInMatch || []).slice(),
+      teams: m.teams ? { team1: (m.teams.team1 || []).slice(), team2: (m.teams.team2 || []).slice() } : null,
+      // Manual pops win; otherwise CH difference off the low within the match.
+      popHoles: H.matchPopFlags(chById, holes18, m.playersInMatch || [], m.popHoles),
+      stakes: (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint', 5),
+    }));
+  }
+
   // Native format objects to surface per round, so ScoreEntry's real engines/
   // trackers fire exactly as they do for a normal round. `formats` is an array
   // of { type, ... } objects (matching Setup's shape) — NOT bare strings, or
   // ScoreEntry's `formats.some(f => f.type === …)` checks all read false and no
   // tracker appears. Skins runs every round.
+  //
+  // Individual Nassau overlay: every round accepts optional 1v1/2v2 matches
+  // (`matchConfigs`) layered on top of its primary format. They share the same
+  // hole-by-hole scoring data (no duplicate entry) and merge into one Nassau
+  // tracker — for R2 they join the four-ball team match; for R5 they ARE the
+  // match play; elsewhere they add a standalone Nassau tracker.
   function formatsFor(model, round, stakes, matchConfigs) {
     const md = model.moneyDefaults;
     const S = (stakes && stakes[round.id]) || {};
     const val = (k, d) => (S[k] != null && S[k] !== '' ? Number(S[k]) : (md[k] != null ? md[k] : d));
     const skins = { type: 'skins', stakes: val('skinsAnte', 5) };
+    const overlay = overlayNassauMatches(model, round, matchConfigs, val);
+
+    // Base (non-skins) formats + any Nassau matches that belong to the primary
+    // format (R2's four-ball team match). The overlay is merged in below.
+    const base = [];
+    const baseNassau = [];
     switch (round.id) {
       case 'R1': // loop 1 Bingo-Bango-Bongo (loop 2 Nines has no native engine)
-        return [{ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) }, skins];
-      case 'R2': { // four-ball best-ball + Nassau, John+Brian vs TJ+Mike (2v2)
+        base.push({ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) });
+        break;
+      case 'R2': { // four-ball best-ball match play as a 2v2 Nassau, John+Brian vs TJ+Mike
         const t = round.teams;
-        const nassauMatches = [{
+        if (t && t[0] && t[1]) baseNassau.push({
           id: 'egt-R2', matchType: '2v2',
           playersInMatch: [...t[0].players, ...t[1].players],
           teams: { team1: t[0].players.slice(), team2: t[1].players.slice() },
           popHoles: {}, stakes: val('nassauPerPoint', 5),
-        }];
-        return [{ type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches }, skins];
+        });
+        break;
       }
-      case 'R3': return [{ type: 'wolf', stakes: val('wolfPerUnit', 2) }, skins];
-      case 'R4': return [{ type: 'stableford', stakes: 1 }, skins];
-      case 'R5': { // full-18 BBB + the match play configured before the round
-        const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
-        const course = model.courses[round.courseId];
-        const chById = (model.derived && model.derived.R5 && model.derived.R5.courseHandicaps) || {};
-        const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
-        // The matches the user set on the Rounds tab (1v1 or 2v2, any players).
-        // No default — no matches configured means no Nassau tracker.
-        const configured = (matchConfigs || []).filter(m => (m.matchType === '2v2'
-          ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
-          : (m.playersInMatch || []).length === 2));
-        const nassauMatches = configured.map(m => ({
-          id: m.id, matchType: m.matchType || '1v1',
-          playersInMatch: (m.playersInMatch || []).slice(),
-          teams: m.teams ? { team1: (m.teams.team1 || []).slice(), team2: (m.teams.team2 || []).slice() } : null,
-          // Manual pops win; otherwise CH difference off the low within the match.
-          popHoles: H.matchPopFlags(chById, holes18, m.playersInMatch || [], m.popHoles),
-          stakes: (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint', 5),
-        }));
-        const formats = [{ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) }];
-        if (nassauMatches.length) formats.push({ type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches });
-        formats.push(skins);
-        return formats;
-      }
-      case 'R6': return [{ type: 'stableford', stakes: 1 }, skins];
-      default:   return [skins];
+      case 'R3': base.push({ type: 'wolf', stakes: val('wolfPerUnit', 2) }); break;
+      case 'R4': base.push({ type: 'stableford', stakes: 1 }); break;
+      case 'R5': base.push({ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) }); break;
+      case 'R6': base.push({ type: 'stableford', stakes: 1 }); break;
+      default: break;
     }
+
+    const formats = base.slice();
+    const nassauMatches = baseNassau.concat(overlay);
+    if (nassauMatches.length) formats.push({ type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches });
+    formats.push(skins);
+    return formats;
   }
 
   // Player order for the round. Wolf rotates by players[holeIdx % n], so R3 uses

@@ -134,14 +134,15 @@ test('stale EGT round is not "live"', () => {
 test('completed EGT round: EGT Cup standings, coherent money, records fill', () => {
   const w = loadWithSeed();
   const now = Date.now();
-  // Full R2: John/Brian +2 a hole, TJ/Mike at par → TJ/Mike side wins.
-  const egt = egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 0, mike: 0 }, 18), { now });
+  // Full R2 (teams John+Mike vs Brian+TJ): John/Mike +2 a hole, Brian/TJ at par
+  // → the Brian/TJ side wins.
+  const egt = egtDoc(w, 'R2', throughFill({ john: 2, mike: 2, brian: 0, tj: 0 }, 18), { now });
   const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
   const r = facts.rounds[0];
   assert.equal(r.status, 'final');
   assert.ok(facts.egt && facts.egt.live, 'EGT engine ran');
   assert.equal(facts.egt.state.finalized.length, 1);
-  assert.ok(['tj', 'mike'].includes(facts.egt.live.standings[0].player));
+  assert.ok(['brian', 'tj'].includes(facts.egt.live.standings[0].player));
 
   // Money board is EGT-engine-authoritative and nets to zero.
   const sum = facts.moneyBoard.reduce((a, m) => a + m.total, 0);
@@ -154,7 +155,7 @@ test('completed EGT round: EGT Cup standings, coherent money, records fill', () 
 
   // Record book fills from the EGT round.
   assert.ok(facts.records.bestRound, 'best round recorded');
-  assert.ok(['TJ', 'Mike'].includes(facts.records.bestRound.name));
+  assert.ok(['Brian', 'TJ'].includes(facts.records.bestRound.name));
 });
 
 test('buildFeed rotates categories with EGT data', () => {

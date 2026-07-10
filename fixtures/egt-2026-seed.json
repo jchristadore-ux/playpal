@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "2.2",
+  "schemaVersion": "2.3",
   "generatedFor": "PlayPal import \u2014 self-contained, all 6 courses loaded (White tees)",
   "loadContract": {
     "description": "Importer reads courseLibrary + rounds + strokeAllocations to auto-populate each round.",
@@ -931,7 +931,11 @@
       "date": "TUE \u00b7 JUL 21",
       "courseId": "minerals",
       "playedTee": "White",
-      "teeTimeTarget": "Loop 1 ~11:00 AM \u00b7 Loop 2 ~1:00 PM",
+      "teeTimeTarget": "Loop 1 10:00 AM \u00b7 Loop 2 12:36 PM",
+      "teeTimes": [
+        { "label": "Loop 1", "time": "10:00 AM" },
+        { "label": "Loop 2", "time": "12:36 PM" }
+      ],
       "players": [
         "john",
         "tj",
@@ -939,6 +943,13 @@
       ],
       "primaryGame": "bingoBangoBongo+nines",
       "teams": [],
+      "pairings": {
+        "carts": [
+          ["john", "tj"],
+          ["mike"]
+        ],
+        "rationale": "Opening threesome \u2014 Brian arrives for R2. R1 is flat / stakes-only (no Cup points), so carts are set purely for pace of play. John (14) rides with TJ (23) to spread the field across carts; Mike (23) rides solo in the two-loop rotation."
+      },
       "courseHandicaps": {
         "john": 14,
         "tj": 23,
@@ -951,7 +962,10 @@
       "date": "WED \u00b7 JUL 22 AM",
       "courseId": "ballyowen",
       "playedTee": "White",
-      "teeTimeTarget": "9:00 AM",
+      "teeTimeTarget": "7:30 AM",
+      "teeTimes": [
+        { "label": "Tee", "time": "7:30 AM" }
+      ],
       "players": [
         "john",
         "brian",
@@ -965,17 +979,24 @@
           "name": "Team 1",
           "players": [
             "john",
-            "brian"
+            "mike"
           ]
         },
         {
           "name": "Team 2",
           "players": [
-            "tj",
-            "mike"
+            "brian",
+            "tj"
           ]
         }
       ],
+      "pairings": {
+        "carts": [
+          ["john", "mike"],
+          ["brian", "tj"]
+        ],
+        "rationale": "First team round, and the split is deliberately balanced to avoid a super-team: rather than pairing the two lowest handicaps together, John (13, low) partners Mike (23, high) against Brian (18) + TJ (23) — 36 vs 41 combined, a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Because R5 is now an individual round, R2 and R4 are the trip's only team rounds, so both use a balanced pairing (the lopsided low-low split is never used). Carts follow the teams so partners can strategize between shots."
+      },
       "courseHandicaps": {
         "john": 13,
         "brian": 18,
@@ -989,7 +1010,10 @@
       "date": "WED \u00b7 JUL 22 PM",
       "courseId": "wildturkey",
       "playedTee": "White",
-      "teeTimeTarget": "2:45 PM",
+      "teeTimeTarget": "1:45 PM",
+      "teeTimes": [
+        { "label": "Tee", "time": "1:45 PM" }
+      ],
       "players": [
         "john",
         "brian",
@@ -999,6 +1023,13 @@
       "primaryGame": "wolf",
       "allowance": 1.0,
       "teams": [],
+      "pairings": {
+        "carts": [
+          ["john", "brian"],
+          ["tj", "mike"]
+        ],
+        "rationale": "Wolf is an individual game — the Wolf rotates partners hole by hole, so there are no fixed teams. Carts rotate the riding partners: John + Brian and TJ + Mike are the pairing NOT used as R2 carts, so after two rounds every player has ridden with two different people. The Wolf order (TJ, Mike, Brian, John) is unaffected by cart assignment."
+      },
       "courseHandicaps": {
         "john": 19,
         "brian": 24,
@@ -1012,7 +1043,10 @@
       "date": "THU \u00b7 JUL 23 AM",
       "courseId": "crystalsprings",
       "playedTee": "White",
-      "teeTimeTarget": "9:00 AM",
+      "teeTimeTarget": "7:30 AM",
+      "teeTimes": [
+        { "label": "Tee", "time": "7:30 AM" }
+      ],
       "players": [
         "john",
         "brian",
@@ -1037,6 +1071,13 @@
           ]
         }
       ],
+      "pairings": {
+        "carts": [
+          ["john", "tj"],
+          ["brian", "mike"]
+        ],
+        "rationale": "New teams to keep partnerships balanced: John (17) + TJ (28) vs Brian (22) + Mike (28). Pairing the lowest with a highest on each side (45 vs 50 combined) is deliberately balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike) — the only cart pairing not yet used, so every pair has now shared a cart exactly once."
+      },
       "courseHandicaps": {
         "john": 17,
         "brian": 22,
@@ -1050,7 +1091,11 @@
       "date": "THU \u00b7 JUL 23 PM",
       "courseId": "cascades",
       "playedTee": "White",
-      "teeTimeTarget": "3:00 PM",
+      "teeTimeTarget": "Loop 1 2:02 PM · Loop 2 4:08 PM",
+      "teeTimes": [
+        { "label": "Loop 1", "time": "2:02 PM" },
+        { "label": "Loop 2", "time": "4:08 PM" }
+      ],
       "players": [
         "john",
         "brian",
@@ -1074,6 +1119,13 @@
           ]
         }
       ],
+      "pairings": {
+        "carts": [
+          ["john", "mike"],
+          ["brian", "tj"]
+        ],
+        "rationale": "R5 is an individual round — full-18 Bingo-Bango-Bongo plus round-robin 1v1 match play, so every player faces every other player head-to-head (all six 1v1 matches). Combined with the R2 and R4 team-round match-ups, this evens out the opponent matrix. Carts (John + Mike, Brian + TJ) keep the rotation flat — by the end of Thursday every player has still ridden with all three of the others at least once."
+      },
       "courseHandicaps": {
         "john": 17,
         "brian": 22,
@@ -1087,7 +1139,10 @@
       "date": "FRI \u00b7 JUL 24",
       "courseId": "blackbear",
       "playedTee": "White",
-      "teeTimeTarget": "10:00 AM",
+      "teeTimeTarget": "8:36 AM",
+      "teeTimes": [
+        { "label": "Tee", "time": "8:36 AM" }
+      ],
       "players": [
         "john",
         "brian",
@@ -1097,6 +1152,13 @@
       "primaryGame": "championshipSingles+stableford",
       "allowance": 1.0,
       "teams": [],
+      "pairings": {
+        "carts": [
+          ["john", "brian"],
+          ["tj", "mike"]
+        ],
+        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + Brian, TJ + Mike) close out the trip; across all five riding rounds every player has shared a cart with each of the other three, and no pair rides together more than twice. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
+      },
       "courseHandicaps": {
         "john": 16,
         "brian": 22,

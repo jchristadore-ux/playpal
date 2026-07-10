@@ -196,10 +196,12 @@ const EgtImporter = (function () {
       courseId: r.courseId,
       playedTee: r.playedTee,
       teeTimeTarget: r.teeTimeTarget,
+      teeTimes: r.teeTimes || null,
       players: r.players,
       primaryGame: r.primaryGame,
       allowance: r.allowance,
       teams: r.teams || [],
+      pairings: r.pairings || null,
       seedCourseHandicaps: r.courseHandicaps || {},   // kept for reference/QA
     }));
 

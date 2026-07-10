@@ -15,6 +15,9 @@ const EgtStore = (function () {
       events: {              // side-game / play-order events
         bbb: {}, wolf: {},
         ctp: [], longDrive: [], singlesPairings: null,
+        // Individual Nassau overlay matches per round: { roundId: match[] }.
+        // (Legacy `r5Matches` is migrated into roundMatches.R5 on read.)
+        roundMatches: {},
       },
       finalized: [],         // round ids the user has closed
       stakes: {},            // { roundId: { stakeKey: dollars } } — Rounds-tab overrides
