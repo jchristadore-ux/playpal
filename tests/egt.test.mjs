@@ -285,10 +285,10 @@ test('toNativeRound builds a scoreable app round from a seed round', () => {
   // formats are OBJECTS {type,...} (ScoreEntry reads f.type), not bare strings.
   assert.ok(nr.formats.every(f => typeof f === 'object' && f.type));
   assert.ok(nr.formats.some(f => f.type === 'skins'));
-  // R2 four-ball → Nassau 2v2 with the seed teams (John+Brian vs TJ+Mike).
+  // R2 four-ball → Nassau 2v2 with the balanced seed teams (John+Mike vs Brian+TJ).
   const nassau = nr.formats.find(f => f.type === 'nassau');
   assert.ok(nassau && nassau.nassauMatches[0].matchType === '2v2');
-  jeq(nassau.nassauMatches[0].teams, { team1: ['john', 'brian'], team2: ['tj', 'mike'] });
+  jeq(nassau.nassauMatches[0].teams, { team1: ['john', 'mike'], team2: ['brian', 'tj'] });
 });
 
 test('toNativeRound wires each round to its native format engine', () => {

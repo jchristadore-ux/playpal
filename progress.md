@@ -1,5 +1,37 @@
 # Project Progress
 
+## EGT 2026 pairings + tee times + Nassau overlay (branch claude/egt-2027-pairings-gbh70n) — v1.7.0
+
+Status: **complete — 143 tests green, browser-smoke verified (Rounds redesign,
+Pairings tab matrices, Individual Matches on every round, new tee times).**
+
+Single source of truth is `fixtures/egt-2026-seed.json`; `scripts/gen-seed.mjs`
+regenerates `components/egt/egtSeedData.js` (do not hand-edit the embed).
+
+- **Task 2 — tee times.** Each round now has structured `teeTimes` + an updated
+  `teeTimeTarget` string (Minerals 10:00/12:36, Ballyowen 7:30, Wild Turkey 1:45,
+  Crystal Springs 7:30, Cascades 2:02/4:08, Black Bear 8:36). Propagates to the
+  Rounds page, Bottom Line schedule and SportsCenter automatically (all read the
+  seed). No stale tee-time strings remain in the repo.
+- **Task 1 — pairings.** Each round carries `pairings.carts` + a director
+  rationale. R2 teams rebalanced to John+Mike vs Brian+TJ (avoids the low-low
+  super-team; with R5 individual, R2 & R4 are the only team rounds and both are
+  balanced, avg team Δ 5). New **Pairings** tab renders partner/opponent/cart
+  frequency matrices + handicap-balance table + a fairness scorecard. Written
+  deliverable in `docs/EGT_PAIRINGS.md`.
+- **Task 3 — Rounds page.** RoundCard redesigned: consistent structure, tee-time
+  chips, "Pairings & Logistics" block, unified section headers/typography.
+- **Task 4 — individual Nassau overlay for R1–R6.** Generalized the old R5-only
+  `r5Matches` to `events.roundMatches[rid]` (legacy R5 migrated on read).
+  `egtBridge.formatsFor` now merges configured 1v1/2v2 matches into one Nassau
+  tracker on any round (R2's team match + overlay; R5's overlay = the match
+  play; standalone elsewhere), reusing the existing Nassau engine + the
+  `NassauMultiMatchConfig` UI. No duplicate score entry.
+- Version bumped 1.6.3 → 1.7.0 (package.json, index.html, bottomline.html,
+  sw.js cache + query strings, Home.jsx), CHANGELOG entry added.
+
+
+
 ## Current work — EGT 2026 Cup tournament engine (branch claude/playpal-egt-tournament-25w5g0)
 
 Status: **engine + UI complete, all tests green (111 pass), browser-smoke verified.**

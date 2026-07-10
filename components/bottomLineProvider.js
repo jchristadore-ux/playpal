@@ -1067,8 +1067,9 @@ const BottomLineProvider = (function () {
         teeTime: next.teeTimeTarget, formatLabel: fmt.label });
       mods.push({ id: 'pre-format', type: 'format-rules', roundLabel: next.id, formatLabel: fmt.label, rule: fmt.rule });
       const teams = (next.teams || []).map(t => ({ name: t.name, players: t.players.map(playerInfo) }));
+      const carts = ((next.pairings && next.pairings.carts) || []).map(c => c.map(playerInfo));
       mods.push({ id: 'pre-pairings', type: 'pairings', roundLabel: next.id,
-        teams, players: (next.players || []).map(playerInfo) });
+        teams, carts, players: (next.players || []).map(playerInfo) });
       mods.push({ id: 'pre-schedule', type: 'schedule', tripName: model.trip.name,
         rounds: model.rounds.map(r => ({ id: r.id, course: (model.courses[r.courseId] || {}).name,
           date: r.date, tee: r.teeTimeTarget, done: played.has(r.id) })) });

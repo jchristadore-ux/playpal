@@ -1,9 +1,9 @@
 // egtSeedData.js — the canonical EGT 2026 trip definition, embedded so the
 // offline PWA imports it with no network fetch. Generated from
 // fixtures/egt-2026-seed.json (the single source of truth). Re-generate with:
-//   node -e "..." (see repo). Do not hand-edit.
+//   node scripts/gen-seed.mjs   — Do not hand-edit.
 const EGT_SEED = {
-  "schemaVersion": "2.2",
+  "schemaVersion": "2.3",
   "generatedFor": "PlayPal import \u2014 self-contained, all 6 courses loaded (White tees)",
   "loadContract": {
     "description": "Importer reads courseLibrary + rounds + strokeAllocations to auto-populate each round.",
@@ -38,26 +38,26 @@ const EGT_SEED = {
     {
       "id": "john",
       "name": "John",
-      "handicapIndex": 18.0
+      "handicapIndex": 18
     },
     {
       "id": "brian",
       "name": "Brian",
-      "handicapIndex": 23.0
+      "handicapIndex": 23
     },
     {
       "id": "tj",
       "name": "TJ",
-      "handicapIndex": 28.0
+      "handicapIndex": 28
     },
     {
       "id": "mike",
       "name": "Mike",
-      "handicapIndex": 28.0
+      "handicapIndex": 28
     }
   ],
   "handicapAllowances": {
-    "singlesMatch": 1.0,
+    "singlesMatch": 1,
     "fourBallMatch": 0.9,
     "fourBallStableford": 0.85,
     "scramble2": {
@@ -65,9 +65,9 @@ const EGT_SEED = {
       "high": 0.15
     },
     "foursomes": 0.5,
-    "wolf": 1.0,
-    "nines": 1.0,
-    "skinsNet": 1.0,
+    "wolf": 1,
+    "nines": 1,
+    "skinsNet": 1,
     "courseHandicapFormula": "round(HI*Slope/113 + (CR-Par)); White ratings for the two-loop 9s are the 18-hole figures",
     "strokeAllocationRule": "distribute onto holes by 18-hole SI (2nd stroke where strokes>18); 9-hole loop games use 9-hole SI over that loop"
   },
@@ -378,7 +378,7 @@ const EGT_SEED = {
         },
         {
           "name": "White",
-          "cr": 69.0,
+          "cr": 69,
           "slope": 129,
           "par": 71,
           "yards": 5942
@@ -667,7 +667,7 @@ const EGT_SEED = {
         },
         {
           "name": "White",
-          "cr": 69.0,
+          "cr": 69,
           "slope": 124,
           "par": 72,
           "yards": 6044,
@@ -935,7 +935,17 @@ const EGT_SEED = {
       "date": "TUE \u00b7 JUL 21",
       "courseId": "minerals",
       "playedTee": "White",
-      "teeTimeTarget": "Loop 1 ~11:00 AM \u00b7 Loop 2 ~1:00 PM",
+      "teeTimeTarget": "Loop 1 10:00 AM \u00b7 Loop 2 12:36 PM",
+      "teeTimes": [
+        {
+          "label": "Loop 1",
+          "time": "10:00 AM"
+        },
+        {
+          "label": "Loop 2",
+          "time": "12:36 PM"
+        }
+      ],
       "players": [
         "john",
         "tj",
@@ -943,6 +953,18 @@ const EGT_SEED = {
       ],
       "primaryGame": "bingoBangoBongo+nines",
       "teams": [],
+      "pairings": {
+        "carts": [
+          [
+            "john",
+            "tj"
+          ],
+          [
+            "mike"
+          ]
+        ],
+        "rationale": "Opening threesome \u2014 Brian arrives for R2. R1 is flat / stakes-only (no Cup points), so carts are set purely for pace of play. John (14) rides with TJ (23) to spread the field across carts; Mike (23) rides solo in the two-loop rotation."
+      },
       "courseHandicaps": {
         "john": 14,
         "tj": 23,
@@ -955,7 +977,13 @@ const EGT_SEED = {
       "date": "WED \u00b7 JUL 22 AM",
       "courseId": "ballyowen",
       "playedTee": "White",
-      "teeTimeTarget": "9:00 AM",
+      "teeTimeTarget": "7:30 AM",
+      "teeTimes": [
+        {
+          "label": "Tee",
+          "time": "7:30 AM"
+        }
+      ],
       "players": [
         "john",
         "brian",
@@ -969,17 +997,30 @@ const EGT_SEED = {
           "name": "Team 1",
           "players": [
             "john",
-            "brian"
+            "mike"
           ]
         },
         {
           "name": "Team 2",
           "players": [
-            "tj",
-            "mike"
+            "brian",
+            "tj"
           ]
         }
       ],
+      "pairings": {
+        "carts": [
+          [
+            "john",
+            "mike"
+          ],
+          [
+            "brian",
+            "tj"
+          ]
+        ],
+        "rationale": "First team round, and the split is deliberately balanced to avoid a super-team: rather than pairing the two lowest handicaps together, John (13, low) partners Mike (23, high) against Brian (18) + TJ (23) \u2014 36 vs 41 combined, a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Because R5 is now an individual round, R2 and R4 are the trip's only team rounds, so both use a balanced pairing (the lopsided low-low split is never used). Carts follow the teams so partners can strategize between shots."
+      },
       "courseHandicaps": {
         "john": 13,
         "brian": 18,
@@ -993,7 +1034,13 @@ const EGT_SEED = {
       "date": "WED \u00b7 JUL 22 PM",
       "courseId": "wildturkey",
       "playedTee": "White",
-      "teeTimeTarget": "2:45 PM",
+      "teeTimeTarget": "1:45 PM",
+      "teeTimes": [
+        {
+          "label": "Tee",
+          "time": "1:45 PM"
+        }
+      ],
       "players": [
         "john",
         "brian",
@@ -1001,8 +1048,21 @@ const EGT_SEED = {
         "mike"
       ],
       "primaryGame": "wolf",
-      "allowance": 1.0,
+      "allowance": 1,
       "teams": [],
+      "pairings": {
+        "carts": [
+          [
+            "john",
+            "brian"
+          ],
+          [
+            "tj",
+            "mike"
+          ]
+        ],
+        "rationale": "Wolf is an individual game \u2014 the Wolf rotates partners hole by hole, so there are no fixed teams. Carts rotate the riding partners: John + Brian and TJ + Mike are the pairing NOT used as R2 carts, so after two rounds every player has ridden with two different people. The Wolf order (TJ, Mike, Brian, John) is unaffected by cart assignment."
+      },
       "courseHandicaps": {
         "john": 19,
         "brian": 24,
@@ -1016,7 +1076,13 @@ const EGT_SEED = {
       "date": "THU \u00b7 JUL 23 AM",
       "courseId": "crystalsprings",
       "playedTee": "White",
-      "teeTimeTarget": "9:00 AM",
+      "teeTimeTarget": "7:30 AM",
+      "teeTimes": [
+        {
+          "label": "Tee",
+          "time": "7:30 AM"
+        }
+      ],
       "players": [
         "john",
         "brian",
@@ -1041,6 +1107,19 @@ const EGT_SEED = {
           ]
         }
       ],
+      "pairings": {
+        "carts": [
+          [
+            "john",
+            "tj"
+          ],
+          [
+            "brian",
+            "mike"
+          ]
+        ],
+        "rationale": "New teams to keep partnerships balanced: John (17) + TJ (28) vs Brian (22) + Mike (28). Pairing the lowest with a highest on each side (45 vs 50 combined) is deliberately balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike) \u2014 the only cart pairing not yet used, so every pair has now shared a cart exactly once."
+      },
       "courseHandicaps": {
         "john": 17,
         "brian": 22,
@@ -1054,7 +1133,17 @@ const EGT_SEED = {
       "date": "THU \u00b7 JUL 23 PM",
       "courseId": "cascades",
       "playedTee": "White",
-      "teeTimeTarget": "3:00 PM",
+      "teeTimeTarget": "Loop 1 2:02 PM \u00b7 Loop 2 4:08 PM",
+      "teeTimes": [
+        {
+          "label": "Loop 1",
+          "time": "2:02 PM"
+        },
+        {
+          "label": "Loop 2",
+          "time": "4:08 PM"
+        }
+      ],
       "players": [
         "john",
         "brian",
@@ -1078,6 +1167,19 @@ const EGT_SEED = {
           ]
         }
       ],
+      "pairings": {
+        "carts": [
+          [
+            "john",
+            "mike"
+          ],
+          [
+            "brian",
+            "tj"
+          ]
+        ],
+        "rationale": "R5 is an individual round \u2014 full-18 Bingo-Bango-Bongo plus round-robin 1v1 match play, so every player faces every other player head-to-head (all six 1v1 matches). Combined with the R2 and R4 team-round match-ups, this evens out the opponent matrix. Carts (John + Mike, Brian + TJ) keep the rotation flat \u2014 by the end of Thursday every player has still ridden with all three of the others at least once."
+      },
       "courseHandicaps": {
         "john": 17,
         "brian": 22,
@@ -1091,7 +1193,13 @@ const EGT_SEED = {
       "date": "FRI \u00b7 JUL 24",
       "courseId": "blackbear",
       "playedTee": "White",
-      "teeTimeTarget": "10:00 AM",
+      "teeTimeTarget": "8:36 AM",
+      "teeTimes": [
+        {
+          "label": "Tee",
+          "time": "8:36 AM"
+        }
+      ],
       "players": [
         "john",
         "brian",
@@ -1099,8 +1207,21 @@ const EGT_SEED = {
         "mike"
       ],
       "primaryGame": "championshipSingles+stableford",
-      "allowance": 1.0,
+      "allowance": 1,
       "teams": [],
+      "pairings": {
+        "carts": [
+          [
+            "john",
+            "brian"
+          ],
+          [
+            "tj",
+            "mike"
+          ]
+        ],
+        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + Brian, TJ + Mike) close out the trip; across all five riding rounds every player has shared a cart with each of the other three, and no pair rides together more than twice. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
+      },
       "courseHandicaps": {
         "john": 16,
         "brian": 22,
@@ -1115,13 +1236,13 @@ const EGT_SEED = {
         "courseHandicap": 14,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "off low, over all 18"
           },
           "nines": {
-            "allowance": 1.0,
+            "allowance": 1,
             "nineHoleCH": 7,
             "strokes": 0,
             "holes": [],
@@ -1133,7 +1254,7 @@ const EGT_SEED = {
         "courseHandicap": 23,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 9,
             "holes": [
               {
@@ -1176,7 +1297,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "nines": {
-            "allowance": 1.0,
+            "allowance": 1,
             "nineHoleCH": 11,
             "strokes": 4,
             "holes": [
@@ -1205,7 +1326,7 @@ const EGT_SEED = {
         "courseHandicap": 23,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 9,
             "holes": [
               {
@@ -1248,7 +1369,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "nines": {
-            "allowance": 1.0,
+            "allowance": 1,
             "nineHoleCH": 11,
             "strokes": 4,
             "holes": [
@@ -1279,7 +1400,7 @@ const EGT_SEED = {
         "courseHandicap": 13,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "off low, over all 18"
@@ -1297,7 +1418,7 @@ const EGT_SEED = {
         "courseHandicap": 18,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 5,
             "holes": [
               {
@@ -1353,7 +1474,7 @@ const EGT_SEED = {
         "courseHandicap": 23,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 10,
             "holes": [
               {
@@ -1449,7 +1570,7 @@ const EGT_SEED = {
         "courseHandicap": 23,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 10,
             "holes": [
               {
@@ -1547,13 +1668,13 @@ const EGT_SEED = {
         "courseHandicap": 19,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "off low, over all 18"
           },
           "wolf": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "100% off low; best net ball"
@@ -1564,7 +1685,7 @@ const EGT_SEED = {
         "courseHandicap": 24,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 5,
             "holes": [
               {
@@ -1591,7 +1712,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "wolf": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 5,
             "holes": [
               {
@@ -1623,7 +1744,7 @@ const EGT_SEED = {
         "courseHandicap": 30,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -1674,7 +1795,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "wolf": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -1730,7 +1851,7 @@ const EGT_SEED = {
         "courseHandicap": 30,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -1781,7 +1902,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "wolf": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -1839,7 +1960,7 @@ const EGT_SEED = {
         "courseHandicap": 17,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "off low, over all 18"
@@ -1914,7 +2035,7 @@ const EGT_SEED = {
         "courseHandicap": 22,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 5,
             "holes": [
               {
@@ -2026,7 +2147,7 @@ const EGT_SEED = {
         "courseHandicap": 28,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -2162,7 +2283,7 @@ const EGT_SEED = {
         "courseHandicap": 28,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -2300,7 +2421,7 @@ const EGT_SEED = {
         "courseHandicap": 17,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "off low, over all 18"
@@ -2311,7 +2432,7 @@ const EGT_SEED = {
         "courseHandicap": 22,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 5,
             "holes": [
               {
@@ -2343,7 +2464,7 @@ const EGT_SEED = {
         "courseHandicap": 28,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -2399,7 +2520,7 @@ const EGT_SEED = {
         "courseHandicap": 28,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -2486,13 +2607,13 @@ const EGT_SEED = {
         "courseHandicap": 16,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 0,
             "holes": [],
             "basis": "off low, over all 18"
           },
           "stableford": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 16,
             "holes": [
               {
@@ -2568,7 +2689,7 @@ const EGT_SEED = {
         "courseHandicap": 22,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 6,
             "holes": [
               {
@@ -2599,7 +2720,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "stableford": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 22,
             "holes": [
               {
@@ -2683,7 +2804,7 @@ const EGT_SEED = {
         "courseHandicap": 27,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -2734,7 +2855,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "stableford": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 27,
             "holes": [
               {
@@ -2818,7 +2939,7 @@ const EGT_SEED = {
         "courseHandicap": 27,
         "games": {
           "skinsNet": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 11,
             "holes": [
               {
@@ -2869,7 +2990,7 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "stableford": {
-            "allowance": 1.0,
+            "allowance": 1,
             "strokes": 27,
             "holes": [
               {
@@ -2951,7 +3072,7 @@ const EGT_SEED = {
       },
       "_singles": {
         "seeding": "EGT Cup standings after R5 \u2014 1v2 Championship, 3v4 Bronze",
-        "allowance": 1.0,
+        "allowance": 1,
         "courseHandicaps": {
           "john": 16,
           "brian": 22,
@@ -3056,10 +3177,10 @@ const EGT_SEED = {
     "R6": {
       "singles": {
         "seeding": "EGT Cup standings after R5 \u2014 1v2 Championship, 3v4 Bronze",
-        "allowance": 1.0
+        "allowance": 1
       },
       "stableford": {
-        "allowance": 1.0,
+        "allowance": 1,
         "fullDots": true
       }
     }

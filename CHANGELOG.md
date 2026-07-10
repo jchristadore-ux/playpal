@@ -2,6 +2,36 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.7.0] — 2026-07-10
+
+### Added
+- **Official pairings, from a single source of truth** — every round in
+  `fixtures/egt-2026-seed.json` (regenerated into `egtSeedData.js` via
+  `scripts/gen-seed.mjs`) now carries structured `teeTimes`, cart pairings, and
+  a tournament-director rationale, so tee times and pairings propagate to the
+  Rounds page, EGT SportsCenter, Bottom Line ticker and printable packet with no
+  stale references.
+- **Pairings tab** on the EGT Cup screen — a fairness analysis proving the
+  schedule is balanced: partner, opponent and cart-partner frequency matrices,
+  per-round handicap-balance table, and a scorecard (teammate/opponent spread,
+  cart coverage, average team Δ). Every player rides with all three others; both
+  team rounds are balanced (avg team Δ 5 course-handicap strokes).
+- **Individual Nassau matches on every round (R1–R6)** — the pre-round match
+  overlay, previously R5-only, is now available on all rounds. Layer optional
+  1v1/2v2 Nassau matches on top of any format; they reuse the existing Nassau
+  engine and share the same hole-by-hole scores (no duplicate entry).
+
+### Changed
+- **Official tee times updated** for all six rounds (Minerals 10:00 AM / 12:36
+  PM, Ballyowen 7:30 AM, Wild Turkey 1:45 PM, Crystal Springs 7:30 AM, Cascades
+  2:02 PM / 4:08 PM, Black Bear 8:36 AM).
+- **R2 teams rebalanced** to John + Mike vs Brian + TJ (from John + Brian vs
+  TJ + Mike) to avoid a low-low super-team; with R5 now individual, both team
+  rounds (R2, R4) use a balanced split.
+- **Rounds page redesign** — consistent card structure, tee-time chips, a
+  Pairings & Logistics block (tee time, teams, carts, rationale), and unified
+  section headers, typography and spacing across mobile and desktop.
+
 ## [1.6.3] — 2026-07-10
 
 ### Added
