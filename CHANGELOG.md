@@ -2,6 +2,35 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.6.3] — 2026-07-10
+
+### Added
+- **EGT SportsCenter** — `/bottomline` is now a full broadcast production, not
+  just a ticker. A mode-driven full-screen stage sits above the Bottom Line and
+  transitions automatically from the live data:
+  - **Pre-Round** — rotating cards for the next round: course, tee time, day,
+    format + rules, team matchups / pairings, the full schedule, previous-round
+    winner, and a first-tee card.
+  - **Live** — leaderboard, running bankroll, per-format standings (Skins,
+    Nassau, Wolf, BBB, Stableford, Pass the Money…), who's on the course and on
+    which hole, and Cup standings — all updating in realtime.
+  - **Post-Round (SportsCenter)** — Cup standings with movement arrows + money,
+    a round recap (low round, best net, low front/back), Player of the Round,
+    format winners, rotating player cards, and a cycling stats dashboard
+    (scoring average, fairways, greens, putts per round, birdies, money).
+  - Auto mode selection with manual override controls (AUTO / PRE / LIVE / POST),
+    ticker-speed and fullscreen controls, and a live clock.
+- **Player identities & logos** — each golfer's logo and alias is integrated
+  throughout: Brian = Birdman, John = Gadget, TJ = Straight T, Mike = H7. Logos
+  appear on leaderboards, standings, player cards, recaps, winner reveals, and
+  pairings.
+
+### Fixed
+- **Ticker rendering** — the Bottom Line strip now stays filled two viewports
+  past the right edge with consistent gap spacing and font-load–gated
+  measurement, so items enter fully laid out from the right with no gaps,
+  pop-in, clipped text, or jitter, and the loop is seamless.
+
 ## [1.6.2] — 2026-07-09
 
 ### Changed
