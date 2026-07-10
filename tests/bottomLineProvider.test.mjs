@@ -283,6 +283,11 @@ test('broadcastModules pre: schedule/format/pairings from the seed', () => {
   const hero = mods.find(m => m.type === 'pre-round');
   assert.equal(hero.round, 'R1');
   assert.ok(hero.courseName && hero.formatLabel);
+  assert.equal(hero.teeTime, 'Loop 1 10:00 AM · Loop 2 12:36 PM'); // updated tee times
+  // Cart pairings surface on the pre-round pairings stage (R1: John+TJ, Mike solo).
+  const pairing = mods.find(m => m.type === 'pairings');
+  assert.ok(Array.isArray(pairing.carts) && pairing.carts.length === 2);
+  assert.deepEqual(pairing.carts.map(c => c.map(p => p.name)), [['John', 'TJ'], ['Mike']]);
 });
 
 test('broadcastModules live: leaderboard/money/format/on-course carry logos', () => {

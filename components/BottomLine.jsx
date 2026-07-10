@@ -280,6 +280,25 @@ function StageModule({ m }) {
             ))}
           </div>
         )}
+        {m.carts && m.carts.length > 0 && (
+          <div style={{ marginTop: '3.2vh', display: 'flex', flexDirection: 'column', gap: '1.2vh', alignItems: 'center' }}>
+            <div style={{ fontSize: 'clamp(12px,1.3vw,26px)', fontWeight: 800, letterSpacing: '0.25vw', color: C.gold }}>🛺 CART PAIRINGS</div>
+            <div style={{ display: 'flex', gap: '2vw', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {m.carts.map((c, i) => (
+                <Panel key={i} style={{ display: 'flex', alignItems: 'center', gap: '1vw', padding: '1.1vh 1.8vw' }}>
+                  {c.map((p, j) => (
+                    <React.Fragment key={p.id}>
+                      {j > 0 && <span style={{ fontSize: 'clamp(14px,1.4vw,30px)', fontWeight: 800, color: C.dim }}>+</span>}
+                      <Logo p={p} size="clamp(34px,3.2vw,72px)" />
+                      <NameAlias p={p} size="clamp(14px,1.4vw,32px)" />
+                    </React.Fragment>
+                  ))}
+                  {c.length === 1 && <span style={{ fontSize: 'clamp(12px,1.2vw,24px)', fontWeight: 600, color: C.dim }}>solo</span>}
+                </Panel>
+              ))}
+            </div>
+          </div>
+        )}
       </Stage>
     );
 
