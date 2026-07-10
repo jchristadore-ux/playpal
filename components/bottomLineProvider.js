@@ -901,12 +901,256 @@ const BottomLineProvider = (function () {
     }, a));
   }
 
+  // ════════════════════════════════════════════════════════════════════════
+  // BROADCAST LAYER — the EGT SportsCenter dashboard.
+  //
+  // Everything above powers the Bottom Line ticker. This section turns the same
+  // cached facts into (a) the active broadcast MODE and (b) an ordered list of
+  // full-screen MODULE descriptors the stage rotates through. Modules are plain
+  // data (a `type` + fields); the React layer renders each type. New broadcast
+  // modules are added by emitting one more descriptor here — no UI plumbing.
+  // ════════════════════════════════════════════════════════════════════════
+
+  // Player identities — logo, alias, and brand colors. Keyed by EGT player id;
+  // also resolvable by display name.
+  const PLAYERS = {
+    brian: { id: 'brian', name: 'Brian', alias: 'Birdman',    logo: 'icons/players/brian.png', color: '#D2232A', accent: '#E0A32E' },
+    john:  { id: 'john',  name: 'John',  alias: 'Gadget',     logo: 'icons/players/john.png',  color: '#C39A3B', accent: '#E4C56B' },
+    tj:    { id: 'tj',    name: 'TJ',    alias: 'Straight T',  logo: 'icons/players/tj.png',    color: '#C8CDD4', accent: '#EEF1F4' },
+    mike:  { id: 'mike',  name: 'Mike',  alias: 'H7',          logo: 'icons/players/mike.png',  color: '#2E5BB8', accent: '#D2232A' },
+  };
+  const _playerByName = {};
+  Object.values(PLAYERS).forEach(p => { _playerByName[p.name.toLowerCase()] = p; });
+  function playerInfo(idOrName) {
+    if (!idOrName) return { id: '?', name: '?', alias: null, logo: null, color: '#C8A15A', accent: '#C8A15A' };
+    const k = String(idOrName).toLowerCase();
+    return PLAYERS[k] || _playerByName[k] ||
+      { id: k, name: String(idOrName), alias: null, logo: null, color: '#C8A15A', accent: '#C8A15A' };
+  }
+
+  // Format labels + one-line rules, keyed by the seed's primaryGame value.
+  const FORMAT_RULES = {
+    'fourBallMatchPlay':        { label: 'Four-Ball Match Play + Nassau', rule: 'Better ball of each two-man team goes head to head. Front 9, Back 9, and Overall are three separate bets.' },
+    'wolf':                     { label: 'Wolf',                          rule: 'The Wolf tees off last each hole and picks a partner before the next shot — or goes Lone Wolf to take the field for double.' },
+    'bingoBangoBongo+nines':    { label: 'Bingo-Bango-Bongo + The Nines', rule: 'A point for first on the green (Bingo), closest once all are on (Bango), and first in the hole (Bongo).' },
+    'bingoBangoBongo':          { label: 'Bingo-Bango-Bongo',             rule: 'A point for first on the green, closest once everyone is on, and first to hole out.' },
+    'teamStableford':           { label: 'Team Stableford',               rule: 'Points per hole — eagle 4, birdie 3, par 2, bogey 1. The team’s best balls count.' },
+    'individualStableford':     { label: 'Stableford',                    rule: 'Points per hole; highest total wins. Attack — a blow-up only costs you that hole.' },
+    'roundRobinMatchPlay':      { label: 'Round-Robin Match Play',        rule: 'Everyone plays everyone head to head; the higher handicap receives the difference in strokes.' },
+    'singles':                  { label: 'Singles Match Play',            rule: 'Head-to-head match play, pairings seeded by the current tournament standings.' },
+    'scramble':                 { label: 'Scramble',                      rule: 'One ball per team — everyone hits, take the best, and go again.' },
+  };
+  function formatFor(round) {
+    const key = round && round.primaryGame;
+    return FORMAT_RULES[key] ||
+      { label: String(key || '').replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim() || 'EGT Format', rule: '' };
+  }
+
+  // Cumulative per-player stats across the scored EGT rounds (for stat pages +
+  // player cards). Reads the same StatsService lines the ticker uses.
+  function aggregateEgtStats(rounds) {
+    const agg = {};
+    (rounds || []).forEach(r => {
+      if (!r.hasScores) return;
+      r.players.forEach(p => {
+        const st = r.stats[p.id];
+        if (!st || st.holesPlayed === 0) return;
+        const a = agg[p.id] || (agg[p.id] = {
+          id: p.id, name: p.name, rounds: 0, holes: 0, gross: 0, par: 0, toPar: 0,
+          firHit: 0, firElig: 0, girHit: 0, girElig: 0, putts: 0, puttHoles: 0,
+          onePutts: 0, threePutts: 0, birdies: 0, eagles: 0, pars: 0, bogeys: 0,
+          doubles: 0, penalties: 0, longestDrive: 0,
+        });
+        a.rounds++; a.holes += st.holesPlayed;
+        a.gross += st.gross; a.par += st.par; a.toPar += st.toPar;
+        a.firHit += st.fir.hit; a.firElig += st.fir.eligible;
+        a.girHit += st.gir.hit; a.girElig += st.gir.eligible;
+        a.putts += st.putts.total; a.puttHoles += st.putts.holes;
+        a.onePutts += st.putts.onePutts; a.threePutts += st.putts.threePutts;
+        a.birdies += st.counts.birdies; a.eagles += st.counts.eagles + st.counts.aces;
+        a.pars += st.counts.pars; a.bogeys += st.counts.bogeys;
+        a.doubles += st.counts.doubles + st.counts.triplePlus; a.penalties += st.penalties;
+        if (st.longestDrive && st.longestDrive > a.longestDrive) a.longestDrive = st.longestDrive;
+      });
+    });
+    return Object.values(agg).map(a => Object.assign({}, a, {
+      firPct: a.firElig ? Math.round(100 * a.firHit / a.firElig) : null,
+      girPct: a.girElig ? Math.round(100 * a.girHit / a.girElig) : null,
+      puttsPerRound: a.rounds ? a.putts / a.rounds : null,
+      scoringAvg: a.rounds ? a.gross / a.rounds : null,
+      avgToPar: a.rounds ? a.toPar / a.rounds : null,
+    }));
+  }
+
+  // Recap of one round (winner, best net, low nines, MVP) from its fact lines.
+  function roundRecap(round) {
+    if (!round || !round.lines || !round.lines.length) return null;
+    const gross = round.lines[0];
+    const net = (round.linesNet || [])[0] || null;
+    const fronts = round.nines.filter(n => n.front).sort((a, b) => a.front.toPar - b.front.toPar);
+    const backs = round.nines.filter(n => n.back).sort((a, b) => a.back.toPar - b.back.toPar);
+    return {
+      course: round.course.name, syncCode: round.syncCode, complete: round.complete,
+      winnerGross: { id: gross.id, name: gross.name, gross: gross.gross, toPar: gross.toPar },
+      bestNet: net ? { id: net.id, name: net.name, net: net.net, toPar: net.netToPar } : null,
+      lowFront: fronts[0] ? { id: fronts[0].id, name: fronts[0].name, gross: fronts[0].front.gross, toPar: fronts[0].front.toPar } : null,
+      lowBack: backs[0] ? { id: backs[0].id, name: backs[0].name, gross: backs[0].back.gross, toPar: backs[0].back.toPar } : null,
+      mvp: net ? { id: net.id, name: net.name } : { id: gross.id, name: gross.name },
+    };
+  }
+
+  // Which broadcast mode is active. Data-driven and automatic:
+  //   live  → a round is actively being scored right now
+  //   post  → scoring has happened but nothing is live (EGT SportsCenter)
+  //   pre   → nothing scored yet (pre-round dashboard)
+  // opts.force overrides (manual control on the page).
+  function broadcastMode(facts, opts) {
+    if (opts && opts.force) return opts.force;
+    if (facts.liveRounds && facts.liveRounds.length) return 'live';
+    return (facts.rounds || []).some(r => r.hasScores) ? 'post' : 'pre';
+  }
+
+  function _standingsModule(facts) {
+    const egt = facts.egt;
+    if (!egt || !egt.live || !egt.live.standings || !egt.live.standings.length) return null;
+    const rows = egt.live.standings.map(s => {
+      const info = playerInfo(s.player);
+      const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === info.name.toLowerCase());
+      return Object.assign({}, info, {
+        rank: s.rank, points: s.points, maxPossible: s.maxPossible,
+        move: s.move, direction: s.direction, money: bank ? bank.total : null,
+      });
+    });
+    return { id: 'standings', type: 'standings', tripName: egt.model.trip.name, rows };
+  }
+
+  function _statsModules(facts, agg) {
+    const defs = [
+      { key: 'scoringAvg',    title: 'SCORING AVERAGE',      lower: true,  fmt: v => v.toFixed(1),   get: a => a.scoringAvg },
+      { key: 'firPct',        title: 'FAIRWAYS HIT',         lower: false, fmt: v => v + '%',         get: a => a.firPct },
+      { key: 'girPct',        title: 'GREENS IN REGULATION', lower: false, fmt: v => v + '%',         get: a => a.girPct },
+      { key: 'puttsPerRound', title: 'PUTTS PER ROUND',      lower: true,  fmt: v => v.toFixed(1),    get: a => a.puttsPerRound },
+      { key: 'birdies',       title: 'BIRDIE COUNT',         lower: false, fmt: v => String(v),       get: a => a.birdies },
+    ];
+    const mods = [];
+    defs.forEach(d => {
+      const rows = agg.map(a => Object.assign({}, playerInfo(a.id), { value: d.get(a) }))
+        .filter(r => r.value != null)
+        .sort((x, y) => d.lower ? x.value - y.value : y.value - x.value);
+      if (rows.length) mods.push({
+        id: `stat-${d.key}`, type: 'stat-leaderboard', title: d.title,
+        rows: rows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: d.fmt(r.value) })),
+      });
+    });
+    const money = facts.moneyBoard.map(m => Object.assign({}, playerInfo(m.name), { value: m.total }));
+    if (money.length) mods.push({
+      id: 'stat-money', type: 'stat-leaderboard', title: 'MONEY LEADERS',
+      rows: money.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color,
+        display: (r.value < 0 ? '-$' : '+$') + Math.abs(Math.round(r.value)), tone: r.value >= 0 ? 'up' : 'down' })),
+    });
+    return mods;
+  }
+
+  // The ordered module rotation for a mode. Each entry drives one full-screen
+  // stage card; the page cross-fades between them.
+  function broadcastModules(facts, mode) {
+    const egt = facts.egt, model = egt && egt.model;
+    const mods = [];
+
+    if (mode === 'pre' && model) {
+      const played = new Set(egt.state ? egt.state.finalized : []);
+      const next = model.rounds.find(r => !played.has(r.id)) || model.rounds[0];
+      const course = model.courses[next.courseId] || {};
+      const fmt = formatFor(next);
+      mods.push({ id: 'pre-hero', type: 'pre-round', tripName: model.trip.name, round: next.id,
+        courseName: course.name, location: course.location, date: next.date,
+        teeTime: next.teeTimeTarget, formatLabel: fmt.label });
+      mods.push({ id: 'pre-format', type: 'format-rules', roundLabel: next.id, formatLabel: fmt.label, rule: fmt.rule });
+      const teams = (next.teams || []).map(t => ({ name: t.name, players: t.players.map(playerInfo) }));
+      mods.push({ id: 'pre-pairings', type: 'pairings', roundLabel: next.id,
+        teams, players: (next.players || []).map(playerInfo) });
+      mods.push({ id: 'pre-schedule', type: 'schedule', tripName: model.trip.name,
+        rounds: model.rounds.map(r => ({ id: r.id, course: (model.courses[r.courseId] || {}).name,
+          date: r.date, tee: r.teeTimeTarget, done: played.has(r.id) })) });
+      const lastComplete = (facts.rounds || []).find(r => r.complete);
+      if (lastComplete) {
+        const rec = roundRecap(lastComplete);
+        if (rec) mods.push({ id: 'pre-prev', type: 'prev-winner', course: rec.course,
+          winner: Object.assign({}, playerInfo(rec.winnerGross.id), rec.winnerGross) });
+      }
+      mods.push({ id: 'pre-tee', type: 'tee-off', round: next.id, teeTime: next.teeTimeTarget, courseName: course.name });
+    }
+
+    if (mode === 'live') {
+      (facts.liveRounds || []).forEach(r => {
+        const holeN = r.course.holes.length;
+        mods.push({ id: `live-lb-${r.syncCode}`, type: 'live-leaderboard', courseName: r.course.name,
+          currentHole: r.currentHoleIdx != null ? r.currentHoleIdx + 1 : null,
+          lines: r.lines.map(l => Object.assign({}, playerInfo(l.id),
+            { toPar: l.toPar, thru: l.thru, gross: l.gross, done: l.thru >= holeN })) });
+        const money = facts.moneyBoard.map(m => Object.assign({}, playerInfo(m.name), { total: m.total }));
+        if (money.length) mods.push({ id: `live-money-${r.syncCode}`, type: 'live-money', courseName: r.course.name, lines: money });
+        r.formatBoards.forEach(b => mods.push({ id: `live-fmt-${r.syncCode}-${b.type}`, type: 'format-board',
+          formatLabel: b.label, icon: b.icon, courseName: r.course.name,
+          leader: b.leader ? playerInfo(b.leader) : null, lines: b.lines }));
+        mods.push({ id: `live-onc-${r.syncCode}`, type: 'on-course', courseName: r.course.name,
+          currentHole: r.currentHoleIdx != null ? r.currentHoleIdx + 1 : null,
+          onCourse: r.players.filter(p => r.thru[p.id] < holeN).map(p => Object.assign({}, playerInfo(p.id), { thru: r.thru[p.id] })),
+          done: r.players.filter(p => r.thru[p.id] >= holeN && holeN).map(p => playerInfo(p.id)) });
+      });
+      const sm = _standingsModule(facts); if (sm) mods.push(sm);
+    }
+
+    if (mode === 'post') {
+      const sm = _standingsModule(facts); if (sm) mods.push(sm);
+      const lastScored = (facts.rounds || []).find(r => r.complete) || (facts.rounds || [])[0];
+      if (lastScored) {
+        const rec = roundRecap(lastScored);
+        if (rec) {
+          mods.push({ id: 'post-recap', type: 'round-recap', course: rec.course,
+            winner: Object.assign({}, playerInfo(rec.winnerGross.id), rec.winnerGross),
+            net:   rec.bestNet  ? Object.assign({}, playerInfo(rec.bestNet.id), rec.bestNet)   : null,
+            front: rec.lowFront ? Object.assign({}, playerInfo(rec.lowFront.id), rec.lowFront) : null,
+            back:  rec.lowBack  ? Object.assign({}, playerInfo(rec.lowBack.id), rec.lowBack)   : null });
+          const mvp = playerInfo(rec.mvp.id);
+          const mstats = lastScored.stats[rec.mvp.id];
+          const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === mvp.name.toLowerCase());
+          mods.push({ id: 'post-mvp', type: 'player-of-round', player: mvp, course: rec.course,
+            net: rec.bestNet ? rec.bestNet.net : null, birdies: mstats ? mstats.counts.birdies : 0,
+            putts: mstats ? mstats.putts.total : null, money: bank ? bank.total : null });
+          const fw = lastScored.formatBoards.filter(b => b.leader)
+            .map(b => ({ formatLabel: b.label, icon: b.icon, winner: playerInfo(b.leader) }));
+          if (fw.length) mods.push({ id: 'post-fmtwin', type: 'format-winners', course: rec.course, winners: fw });
+        }
+      }
+      const agg = aggregateEgtStats(facts.rounds);
+      const standings = (egt && egt.live && egt.live.standings) || [];
+      const skinsOf = (egt && egt.live && egt.live.skins) || {};
+      agg.forEach(a => {
+        const info = playerInfo(a.id);
+        const st = standings.find(s => s.player === a.id) || {};
+        const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === info.name.toLowerCase());
+        mods.push({ id: `post-player-${a.id}`, type: 'player-card', player: info,
+          rank: st.rank || null, points: st.points != null ? st.points : null, rounds: a.rounds,
+          scoringAvg: a.scoringAvg, avgToPar: a.avgToPar, money: bank ? bank.total : null,
+          skins: skinsOf[a.id] || 0, firPct: a.firPct, girPct: a.girPct,
+          puttsPerRound: a.puttsPerRound, birdies: a.birdies });
+      });
+      mods.push(..._statsModules(facts, agg));
+    }
+
+    return mods.filter(Boolean);
+  }
+
   return {
     CATEGORY_ORDER, BUILDERS, register,
     computeFacts, buildFeed, diffAlerts,
     normalizeRound, // exposed for tests
     _egtNativeRounds,
     P, fmtToPar, fmtMoney, LIVE_WINDOW_MS,
+    // broadcast layer
+    PLAYERS, playerInfo, FORMAT_RULES, formatFor,
+    aggregateEgtStats, roundRecap, broadcastMode, broadcastModules,
   };
 })();
 

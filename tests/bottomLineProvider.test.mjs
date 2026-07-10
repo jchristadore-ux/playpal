@@ -243,6 +243,94 @@ test('format boards: skins and stableford standings surface for EGT rounds', () 
   assert.ok(feed.some(s => s.category === 'format'));
 });
 
+// ── Broadcast layer (SportsCenter dashboard) ────────────────────────────────
+
+test('playerInfo resolves EGT ids and names to logo + alias + color', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const brian = P.playerInfo('brian');
+  assert.equal(brian.alias, 'Birdman');
+  assert.ok(/icons\/players\/brian\.png/.test(brian.logo));
+  assert.equal(P.playerInfo('TJ').alias, 'Straight T');
+  assert.equal(P.playerInfo('Mike').alias, 'H7');
+  const unknown = P.playerInfo('Randall');
+  assert.equal(unknown.alias, null); // graceful fallback
+});
+
+test('broadcastMode: pre with no scores, live while scoring, post after', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  assert.equal(P.broadcastMode(P.computeFacts({ docs: [], trips: [], players: [], now })), 'pre');
+  const live = P.computeFacts({ docs: [egtDoc(w, 'R2', throughFill({ john: 0, brian: 1 }, 6), { now }).doc], trips: [], players: [], now });
+  assert.equal(P.broadcastMode(live), 'live');
+  const done = P.computeFacts({ docs: [egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 0, mike: 0 }, 18), { ts: now - 8 * 3600 * 1000 }).doc], trips: [], players: [], now });
+  assert.equal(P.broadcastMode(done), 'post');
+  assert.equal(P.broadcastMode(done, { force: 'pre' }), 'pre'); // manual override
+});
+
+test('broadcastModules pre: schedule/format/pairings from the seed', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const facts = P.computeFacts({ docs: [], trips: [], players: [], now: Date.now() });
+  const mods = P.broadcastModules(facts, 'pre');
+  const types = mods.map(m => m.type);
+  assert.ok(types.includes('pre-round'));
+  assert.ok(types.includes('format-rules'));
+  assert.ok(types.includes('pairings'));
+  assert.ok(types.includes('schedule'));
+  const hero = mods.find(m => m.type === 'pre-round');
+  assert.equal(hero.round, 'R1');
+  assert.ok(hero.courseName && hero.formatLabel);
+});
+
+test('broadcastModules live: leaderboard/money/format/on-course carry logos', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const facts = P.computeFacts({ docs: [egtDoc(w, 'R2', throughFill({ john: 0, brian: 1, tj: 1, mike: 2 }, 9), { now }).doc], trips: [], players: [], now });
+  const mods = P.broadcastModules(facts, 'live');
+  const lb = mods.find(m => m.type === 'live-leaderboard');
+  assert.ok(lb, 'leaderboard module present');
+  assert.equal(lb.lines[0].name, 'John');
+  assert.ok(/players\/john/.test(lb.lines[0].logo));
+  assert.ok(mods.some(m => m.type === 'live-money'));
+  assert.ok(mods.some(m => m.type === 'on-course'));
+});
+
+test('broadcastModules post: SportsCenter recap, player cards, stat pages', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const doc = egtDoc(w, 'R2', (pid, k, i, hole) => hole.par + (pid === 'john' || pid === 'brian' ? 2 : 0), { ts: now - 8 * 3600 * 1000 }).doc;
+  // add FIR/GIR so stat pages populate
+  doc.liveScores.firData = {}; doc.liveScores.girData = {};
+  const facts = P.computeFacts({ docs: [doc], trips: [], players: [], now });
+  const mods = P.broadcastModules(facts, 'post');
+  const types = mods.map(m => m.type);
+  assert.ok(types.includes('standings'));
+  assert.ok(types.includes('round-recap'));
+  assert.ok(types.includes('player-of-round'));
+  assert.equal(mods.filter(m => m.type === 'player-card').length, 4, 'a card per player');
+  assert.ok(types.includes('stat-leaderboard'));
+  const recap = mods.find(m => m.type === 'round-recap');
+  assert.ok(['TJ', 'Mike'].includes(recap.winner.name));
+  assert.ok(/players\//.test(recap.winner.logo));
+  // player cards carry the alias + logo identity
+  const card = mods.find(m => m.type === 'player-card');
+  assert.ok(card.player.alias && card.player.logo);
+});
+
+test('aggregateEgtStats sums per player across EGT rounds', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const facts = P.computeFacts({ docs: [egtDoc(w, 'R2', throughFill({ john: 1, brian: 1, tj: 1, mike: 1 }, 18), { now }).doc], trips: [], players: [], now });
+  const agg = P.aggregateEgtStats(facts.rounds);
+  assert.equal(agg.length, 4);
+  agg.forEach(a => { assert.equal(a.rounds, 1); assert.equal(a.holes, 18); assert.ok(a.scoringAvg > 0); });
+});
+
 test('provider is registry-driven: a custom builder surfaces in the feed', () => {
   const w = loadWithSeed();
   w.BottomLineProvider.register({
