@@ -514,3 +514,26 @@ test('stakes override scales a round\'s money (still nets to $0)', () => {
   const sum = Object.values(bumped.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, 'still nets to zero');
 });
+
+test('re-importing a seed refreshes schedule metadata but preserves entered data', () => {
+  // Simulate an install persisted from an older seed (old R4 tee time, no pairings).
+  const oldSeed = JSON.parse(JSON.stringify(SEED));
+  const r4old = oldSeed.rounds.find(r => r.id === 'R4');
+  r4old.teeTimeTarget = '9:00 AM';
+  delete r4old.teeTimes;
+  delete r4old.pairings;
+  EgtStore.reset(oldSeed.trip.id);
+  let st = EgtStore.importSeed(oldSeed);
+  // User enters a score on R4.
+  EgtStore.setHoleScore(st, 'R4', 'john', 1, { gross: 4 });
+  assert.equal(st.model.rounds.find(r => r.id === 'R4').teeTimeTarget, '9:00 AM');
+
+  // Re-import the CURRENT seed (new tee time + pairings): model refreshes,
+  // entered score survives.
+  st = EgtStore.importSeed(JSON.parse(JSON.stringify(SEED)));
+  const r4 = st.model.rounds.find(r => r.id === 'R4');
+  assert.equal(r4.teeTimeTarget, '7:50 AM', 'tee time refreshed from new seed');
+  assert.ok(r4.pairings && r4.pairings.carts, 'pairings refreshed from new seed');
+  assert.equal(st.scores.R4.john[1].gross, 4, 'entered score preserved');
+  EgtStore.reset(SEED.trip.id);
+});

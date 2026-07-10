@@ -2,6 +2,22 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.7.1] — 2026-07-10
+
+### Fixed
+- **Stale schedule on the Rounds tab** — the EGT Cup screen loaded a persisted
+  tournament model from localStorage and never refreshed schedule metadata, so
+  installs that already had saved state kept the old tee times and showed no
+  cart pairings. Boot now always re-imports the embedded seed (idempotent —
+  entered scores/events/finalized/stakes are preserved, only the derived model
+  is swapped), so tee times, cart pairings, teams and formats always reflect the
+  seed. Cache version bumped so the fix ships past the service worker.
+
+### Changed
+- **Crystal Springs (R4) tee time corrected** to **7:50 AM** (was 7:30 AM).
+- **Cart partners shown at a glance** on each round card (collapsed header), so
+  riding partners are visible before starting the round.
+
 ## [1.7.0] — 2026-07-10
 
 ### Added

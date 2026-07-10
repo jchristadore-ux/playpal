@@ -1076,11 +1076,11 @@ const EGT_SEED = {
       "date": "THU \u00b7 JUL 23 AM",
       "courseId": "crystalsprings",
       "playedTee": "White",
-      "teeTimeTarget": "7:30 AM",
+      "teeTimeTarget": "7:50 AM",
       "teeTimes": [
         {
           "label": "Tee",
-          "time": "7:30 AM"
+          "time": "7:50 AM"
         }
       ],
       "players": [

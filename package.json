@@ -1,6 +1,6 @@
 {
   "name": "playpal",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "description": "PlayPal \u2014 golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
   "type": "module",
