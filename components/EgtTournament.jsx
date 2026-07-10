@@ -42,13 +42,15 @@ const EgtTournament = ({ onScoreRound }) => {
   const [toast, setToast] = React.useState('');
   const [tab, setTab] = React.useState('standings');
 
-  // Boot: load persisted state or import the embedded seed.
+  // Boot: always re-import the embedded seed so schedule metadata (tee times,
+  // cart pairings, teams, formats) refreshes even on installs that already have
+  // a persisted state. EgtStore.importSeed is idempotent by trip id — it loads
+  // any existing entered data (scores, events, finalized, stakes) and only swaps
+  // in the freshly-derived model, so nothing the user entered is lost.
   React.useEffect(() => {
     try {
       const seed = typeof seedText === 'string' ? JSON.parse(seedText) : seedText;
-      let st = window.EgtStore.load(seed.trip.id);
-      if (st) window.EgtStore.rehydrate(st);
-      else st = window.EgtStore.importSeed(seed);
+      const st = window.EgtStore.importSeed(seed);
       setState({ ...st });
     } catch (e) { setToast('Could not load seed: ' + e.message); }
   }, []);
@@ -290,6 +292,11 @@ const EgtTournament = ({ onScoreRound }) => {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 2px' }}>
               {teeChips.map((t, i) => <span key={i} style={teePill}>🕐 {teeLabel(t)}</span>)}
             </div>
+            {pairings.carts && (
+              <div style={{ fontSize: 11.5, color: '#3F5F4A', fontWeight: 700, marginTop: 4 }}>
+                🛺 <span style={{ color: '#8a988f', fontWeight: 800, letterSpacing: 0.3 }}>CARTS</span> {cartText(pairings.carts)}
+              </div>
+            )}
             <div style={{ fontSize: 12, color: '#5b6b63', marginTop: 5, lineHeight: 1.4 }}>{EGT_ROUND_FORMATS[round.id]}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
