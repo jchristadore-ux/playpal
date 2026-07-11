@@ -57,6 +57,28 @@ const EgtMoney = (function () {
     });
   }
 
+  // Settle a bundle of configured match-play matches (the individual-Nassau
+  // overlay available on every round, plus R5's primary round-robin) Nassau-
+  // style: front 1 / back 1 / overall 2 units at each match's own stake
+  // (falling back to the round's nassauPerPoint). 2v2 sides split evenly.
+  // Zero-sum per segment. Used on every round so any wagered side match is
+  // tallied into the tournament money.
+  function settleMatchPlay(total, matchPlay, val, breakdown) {
+    ((matchPlay && matchPlay.matches) || []).forEach(m => {
+      const stake = (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint');
+      const label = m.sides.map(s => s.map(pid => pid.slice(0, 2)).join('+')).join(' v ');
+      [['front', m.front, 1], ['back', m.back, 1], ['overall', m.overall, 2]].forEach(([name, seg, units]) => {
+        if (!seg || seg.winner === 'halve') return;
+        const winners = seg.winner === 'A' ? m.sides[0] : m.sides[1];
+        const losers = seg.winner === 'A' ? m.sides[1] : m.sides[0];
+        const vec = {};
+        winners.forEach(pid => { vec[pid] = (units * stake) / winners.length; });
+        losers.forEach(pid => { vec[pid] = -(units * stake) / losers.length; });
+        addVec(total, zeroBalance(vec), `Match ${label} ${name}`, breakdown);
+      });
+    });
+  }
+
   // Money for one finalized round. `results` bundles that round's calculator
   // outputs; `events` supplies CTP/LD winners.
   function moneyForRound(model, roundId, results, events, stakes) {
@@ -88,27 +110,44 @@ const EgtMoney = (function () {
       // Wolf units are already zero-sum; value each unit.
       const vec = {}; ids.forEach(id => { vec[id] = (results.wolf.units[id] || 0) * val('wolfPerUnit'); });
       addVec(total, zeroBalance(vec), 'Wolf', breakdown);
-    } else if (roundId === 'R5') {
-      // Full-18 BBB pays per point difference; each configured match settles
-      // Nassau-style (front 1 / back 1 / overall 2 units) at that match's own
-      // stake (falling back to the round's nassauPerPoint). 2v2 sides split.
-      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
-      if (results.matchPlay) {
-        results.matchPlay.matches.forEach(m => {
-          const stake = (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint');
-          const label = m.sides.map(s => s.map(pid => pid.slice(0, 2)).join('+')).join(' v ');
-          [['front', m.front, 1], ['back', m.back, 1], ['overall', m.overall, 2]].forEach(([name, seg, units]) => {
-            if (!seg || seg.winner === 'halve') return;
-            const winners = seg.winner === 'A' ? m.sides[0] : m.sides[1];
-            const losers = seg.winner === 'A' ? m.sides[1] : m.sides[0];
-            const vec = {};
-            winners.forEach(pid => { vec[pid] = (units * stake) / winners.length; });
-            losers.forEach(pid => { vec[pid] = -(units * stake) / losers.length; });
-            addVec(total, zeroBalance(vec), `Match ${label} ${name}`, breakdown);
-          });
-        });
+    } else if (roundId === 'R4' && results.teamStableford) {
+      // 2v2 aggregate net Stableford: the three segment matches (1-6 / 7-12 /
+      // 13-18) and the 18-hole total settle team-to-team at nassauPerPoint,
+      // valued by the same point weights as the Cup (segment 1 / overall 2).
+      const ts = results.teamStableford;
+      const rate = val('nassauPerPoint');
+      const other = name => (round.teams.find(t => t.name !== name) || {}).name;
+      const pc = model.pointsConfig.R4 || {};
+      ts.segments.forEach((s, i) => {
+        if (s.winner === 'halve') return;
+        addVec(total, teamMatch(teamPlayers, s.winner, other(s.winner), pc.segmentWin || 1, rate), `Stableford seg ${i + 1}`, breakdown);
+      });
+      if (ts.overallWinner !== 'halve') {
+        addVec(total, teamMatch(teamPlayers, ts.overallWinner, other(ts.overallWinner), pc.overall18 || 2, rate), 'Stableford 18 total', breakdown);
       }
+    } else if (roundId === 'R5') {
+      // Full-18 BBB pays per point difference; the round-robin match play is
+      // settled by the general overlay pass below (R5's matches ARE its overlay).
+      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
+    } else if (roundId === 'R6' && results.singles) {
+      // Championship / Bronze singles: each seeded 1v1 settles Nassau-style
+      // (front 1 / back 1 / overall 2 units) at nassauPerPoint. Zero-sum per pair.
+      const rate = val('nassauPerPoint');
+      results.singles.results.forEach(pr => {
+        [['front', pr.front, 1], ['back', pr.back, 1], ['overall', pr.match, 2]].forEach(([name, seg, units]) => {
+          if (!seg || seg.winner === 'halve') return;
+          const w = seg.winner === 'A' ? pr.a : pr.b;
+          const l = seg.winner === 'A' ? pr.b : pr.a;
+          const vec = {}; vec[w] = units * rate; vec[l] = -units * rate;
+          addVec(total, zeroBalance(vec), `Singles ${pr.a.slice(0, 2)}v${pr.b.slice(0, 2)} ${name}`, breakdown);
+        });
+      });
     }
+
+    // Overlay individual-Nassau side matches settle on every round (any money
+    // wagered through the Nassau engine is tallied). For R5 this is the round's
+    // primary round-robin; elsewhere these are side bets layered on the format.
+    settleMatchPlay(total, results.overlayMatchPlay, val, breakdown);
 
     // Skins (both pots) every round, valued per skin won at the ante.
     if (results.skins) {

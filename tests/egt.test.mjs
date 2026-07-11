@@ -230,6 +230,53 @@ test('§8 money: every finalized round nets to $0', () => {
   assert.ok(Math.abs(grand) < 1e-6, `total money must net zero, got ${grand}`);
 });
 
+test('R4 aggregate Stableford carries direct money (segments + 18 total), zero-sum', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  state.finalized = ['R4'];
+  const rm = EgtEngine.liveUpdate(state, { noPersist: true }).money.rounds.R4;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  assert.ok(labels.some(l => /Stableford seg/.test(l)), 'R4 settles segment matches for money');
+  assert.ok(labels.some(l => /Stableford 18 total/.test(l)), 'R4 settles the 18-hole total');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R4 money nets zero, got ${sum}`);
+});
+
+test('R6 championship singles carry direct money (Nassau per seeded match), zero-sum', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  // R5 must be finalized so the singles are seeded; both computed in one pass.
+  state.finalized = ['R5', 'R6'];
+  const live = EgtEngine.liveUpdate(state, { noPersist: true });
+  assert.ok((state.events.singlesPairings || []).length === 2, 'R6 singles seeded off R5 standings');
+  const rm = live.money.rounds.R6;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  assert.ok(labels.some(l => /^Singles /.test(l)), 'R6 singles settle for money');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R6 money nets zero, got ${sum}`);
+});
+
+test('overlay side Nassau matches settle money on a non-match round (R3), zero-sum', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  // A 1v1 side bet layered on the Wolf round.
+  state.events.roundMatches = { R3: [
+    { id: 'side', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: {}, stakes: 3 },
+  ] };
+  state.finalized = ['R3'];
+  const rm = EgtEngine.liveUpdate(state, { noPersist: true }).money.rounds.R3;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  assert.ok(labels.some(l => /^Match jo v tj/.test(l)), 'R3 overlay side match is tallied into money');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R3 money (Wolf + side match) nets zero, got ${sum}`);
+});
+
 // ── standings + reseed ──────────────────────────────────────────────────────
 test('leaderboard ranks by points then tiebreakers; R6 reseeds 1v2 / 3v4', () => {
   const m = freshModel();
@@ -413,6 +460,31 @@ test('R5 match play honors the configured matches (1v1 + 2v2, records, no defaul
   // Records: john 2-0, brian 1-1, tj/mike 0-1 each; champion is john.
   jeq(mp.record.john, { w: 2, l: 0, h: 0 });
   jeq(mp.record.brian, { w: 1, l: 1, h: 0 });
+  jeq(mp.champions, ['john']);
+});
+
+test('R5 match play resolves matches stored under events.roundMatches.R5 (the UI key)', () => {
+  // The EGT Rounds tab persists per-round overlay matches under
+  // events.roundMatches[rid] (setRoundMatches), NOT the legacy events.r5Matches
+  // key. The engine must read the same place the UI writes, or configured R5
+  // round-robin matches silently vanish from standings/points/money.
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  const round = m.rounds.find(r => r.id === 'R5');
+  state.scores.R5 = {};
+  round.players.forEach(pid => { state.scores.R5[pid] = {}; });
+  m.courses.cascades.holes.slice(0, 18).forEach(h => {
+    state.scores.R5.john[h.hole] = { gross: h.par };
+    state.scores.R5.brian[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.tj[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.mike[h.hole] = { gross: h.par + 2 };
+  });
+  state.events.roundMatches = { R5: [
+    { id: 'a', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 2 },
+  ] };
+  const mp = EgtEngine.runRound(state, 'R5').matchPlay;
+  assert.equal(mp.matches.length, 1);
   jeq(mp.champions, ['john']);
 });
 

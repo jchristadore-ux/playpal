@@ -244,6 +244,40 @@ test('format boards: skins and stableford standings surface for EGT rounds', () 
   assert.ok(feed.some(s => s.category === 'format'));
 });
 
+test('SportsCenter reconstructs configured match play from the synced round formats', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  // The app syncs the native round WITH its overlay match config baked into the
+  // Nassau format. The provider must recover it so R5 match play + its money
+  // show on the broadcast, not just BBB + skins.
+  const matchConfigs = [
+    { id: 'm1', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 5 },
+  ];
+  const native = w.EgtBridge.toNativeRound(model, 'R5', null, { matchConfigs });
+  const holes = native.course.holes;
+  const scores = {}, putts = {};
+  native.players.forEach((p, k) => {
+    scores[p.id] = holes.map(h => h.par + k); // john lowest → wins his match
+    putts[p.id] = holes.map(() => 2);
+  });
+  const doc = {
+    syncCode: native.syncCode, savedAt: now - 8 * 3600 * 1000,
+    round: native,
+    liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
+      wolfData: {}, bbbData: {}, teeBallData: {}, popFlags: {},
+      currentHoleIdx: 17, roundId: native.id, _writtenBy: 'phone', _ts: now - 8 * 3600 * 1000 },
+  };
+  const facts = w.BottomLineProvider.computeFacts({ docs: [doc], trips: [], players: [], now });
+  const mp = facts.egt.live.resultsByRound.R5.matchPlay;
+  assert.equal(mp.matches.length, 1, 'configured R5 match recovered from synced formats');
+  const rm = facts.egt.live.money.rounds.R5;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  assert.ok(labels.some(l => /^Match /.test(l)), 'R5 match play settles for money on the broadcast');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R5 broadcast money nets zero, got ${sum}`);
+});
+
 // ── Broadcast layer (SportsCenter dashboard) ────────────────────────────────
 
 test('playerInfo resolves EGT ids and names to logo + alias + color', () => {

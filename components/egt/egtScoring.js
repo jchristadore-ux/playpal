@@ -355,11 +355,16 @@ const EgtScoring = (function () {
         const g = gross(scores, pid, hole);
         return g == null ? null : g - popAt(pid, hole);
       };
-      const match = playMatch(holesRange(1, 18), { name: pr.a, ballNet: ballNet(pr.a) },
-        { name: pr.b, ballNet: ballNet(pr.b) });
+      const sideA = { name: pr.a, ballNet: ballNet(pr.a) };
+      const sideB = { name: pr.b, ballNet: ballNet(pr.b) };
+      // Overall (Cup + tiebreaker) plus front/back segments so the singles
+      // match can settle Nassau-style money (front · back · overall).
+      const match = playMatch(holesRange(1, 18), sideA, sideB);
+      const front = playMatch(holesRange(1, 9), sideA, sideB);
+      const back = playMatch(holesRange(10, 18), sideA, sideB);
       const winner = match.winner === 'A' ? pr.a : match.winner === 'B' ? pr.b : 'halve';
       return { a: pr.a, b: pr.b, chA, chB, diff, receives: higher, tier: pr.tier || null,
-        match, winner, pending: popsArr == null };
+        match, front, back, winner, pending: popsArr == null };
     });
     return { game: 'singles', results };
   }

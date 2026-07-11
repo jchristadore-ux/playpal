@@ -15,7 +15,7 @@ Players (handicap index): **John** 18.0 · **Brian** 23.0 · **TJ** 28.0 · **Mi
 | R1 | Tue Jul 21 | Minerals | Loop 1 **10:00 AM** · Loop 2 **12:36 PM** | Bingo-Bango-Bongo + The Nines (flat / stakes only) |
 | R2 | Wed Jul 22 AM | Ballyowen | **7:30 AM** | Four-ball match play (90%) + Nassau |
 | R3 | Wed Jul 22 PM | Wild Turkey | **1:45 PM** | Wolf |
-| R4 | Thu Jul 23 AM | Crystal Springs | **7:30 AM** | 2-v-2 aggregate net Stableford (85%) |
+| R4 | Thu Jul 23 AM | Crystal Springs | **7:50 AM** | 2-v-2 aggregate net Stableford (85%) |
 | R5 | Thu Jul 23 PM | Cascades | Loop 1 **2:02 PM** · Loop 2 **4:08 PM** | Bingo-Bango-Bongo + round-robin 1v1 match play |
 | R6 | Fri Jul 24 | Black Bear | **8:36 AM** | Championship singles + net Stableford |
 
@@ -45,7 +45,7 @@ format has fixed teams.
 - **Format:** Wolf (100% off the low, best net ball; ±units per opponent, ties push).
 - **Why:** Carts rotate to the one pairing not used as R2 carts, so after two rounds every player has ridden with two different people. Wolf order (TJ, Mike, Brian, John) is independent of cart assignment.
 
-### R4 · Crystal Springs — 7:30 AM
+### R4 · Crystal Springs — 7:50 AM
 - **Foursome:** John, Brian, TJ, Mike
 - **Teams:** John + TJ vs Brian + Mike
 - **Cart pairs:** John + TJ · Brian + Mike (carts follow teams)
