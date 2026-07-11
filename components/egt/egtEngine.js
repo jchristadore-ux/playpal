@@ -36,7 +36,12 @@ const EgtEngine = (function () {
       const H = g('EgtHandicap');
       const chById = model.derived.R5.courseHandicaps;
       const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
-      const configured = state.events.r5Matches || [];
+      // Match configs live under events.roundMatches.R5 (the generalized per-
+      // round overlay the UI writes); fall back to the legacy events.r5Matches
+      // key so older persisted states still resolve. Mirrors the UI's
+      // roundMatchesFor() precedence so engine and scorer agree.
+      const configured = (state.events.roundMatches && state.events.roundMatches.R5)
+        || state.events.r5Matches || [];
       ctx.matches = configured
         .filter(m => (m.matchType === '2v2'
           ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2

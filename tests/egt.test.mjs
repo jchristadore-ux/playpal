@@ -416,6 +416,31 @@ test('R5 match play honors the configured matches (1v1 + 2v2, records, no defaul
   jeq(mp.champions, ['john']);
 });
 
+test('R5 match play resolves matches stored under events.roundMatches.R5 (the UI key)', () => {
+  // The EGT Rounds tab persists per-round overlay matches under
+  // events.roundMatches[rid] (setRoundMatches), NOT the legacy events.r5Matches
+  // key. The engine must read the same place the UI writes, or configured R5
+  // round-robin matches silently vanish from standings/points/money.
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  const round = m.rounds.find(r => r.id === 'R5');
+  state.scores.R5 = {};
+  round.players.forEach(pid => { state.scores.R5[pid] = {}; });
+  m.courses.cascades.holes.slice(0, 18).forEach(h => {
+    state.scores.R5.john[h.hole] = { gross: h.par };
+    state.scores.R5.brian[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.tj[h.hole] = { gross: h.par + 2 };
+    state.scores.R5.mike[h.hole] = { gross: h.par + 2 };
+  });
+  state.events.roundMatches = { R5: [
+    { id: 'a', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 2 },
+  ] };
+  const mp = EgtEngine.runRound(state, 'R5').matchPlay;
+  assert.equal(mp.matches.length, 1);
+  jeq(mp.champions, ['john']);
+});
+
 test('R5 money: BBB + configured-match Nassau still nets to $0', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
