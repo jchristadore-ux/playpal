@@ -26,9 +26,9 @@ const EGT_STAKE_ITEMS = {
   R1: [{ key: 'bbbNinesPerPointDiff', label: 'BBB / Nines', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
   R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R4: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R5: [{ key: 'bbbNinesPerPointDiff', label: 'BBB', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R6: [{ key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R4: [{ key: 'nassauPerPoint', label: 'Stableford match', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R5: [{ key: 'bbbNinesPerPointDiff', label: 'BBB', per: 'per point' }, { key: 'nassauPerPoint', label: 'Match play', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R6: [{ key: 'nassauPerPoint', label: 'Singles', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
 };
 
 const EgtTournament = ({ onScoreRound }) => {

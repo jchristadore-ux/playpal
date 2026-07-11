@@ -275,7 +275,7 @@ const BottomLineProvider = (function () {
       // storage key suffix guards the app's real EGT store if anything saves
       tripId: model.trip.id + ':bottomline',
       model,
-      scores: {}, events: { bbb: {}, wolf: {}, ctp: [], longDrive: [], singlesPairings: null },
+      scores: {}, events: { bbb: {}, wolf: {}, ctp: [], longDrive: [], singlesPairings: null, roundMatches: {} },
       finalized: [], stakes: {}, snapshots: [], updatedAt: null,
     };
 
@@ -286,6 +286,15 @@ const BottomLineProvider = (function () {
           scores: r.scores, putts: r.putts, firData: r.firData, girData: r.girData,
           extraStats: r.extraStats, wolfData: r.wolfData, bbbData: r.bbbData,
         });
+        // Recover the configured overlay match play (incl. R5's round-robin)
+        // from the synced round's Nassau format so match play + its money show
+        // on the broadcast. Skip the synthetic 'egt-*' entries (e.g. R2's
+        // four-ball team match) — those settle via their own money branch and
+        // would double-count if replayed as overlay side matches.
+        const nassau = (r.formats || []).find(f => f && f.type === 'nassau');
+        const overlay = ((nassau && nassau.nassauMatches) || [])
+          .filter(m => m && !String(m.id || '').startsWith('egt-'));
+        if (overlay.length) state.events.roundMatches[r.egtRoundId] = overlay;
         if (r.complete) state.finalized.push(r.egtRoundId);
       } catch (e) {}
     });

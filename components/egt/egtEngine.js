@@ -27,30 +27,28 @@ const EgtEngine = (function () {
     };
     const config = model.formatConfigs[roundId];
     const ctx = { round, course, players, teams: round.teams, alloc, scores, config, events };
-    // Round-specific extras.
-    if (roundId === 'R5') {
-      // Match play runs on the matches configured before the round (1v1 or
-      // 2v2, chosen on the Rounds tab). Pops resolve here — manual popHoles
-      // win, otherwise CH difference off the low within each match — via the
-      // same helper the scorer bridge uses, so engine and tracker agree.
-      const H = g('EgtHandicap');
-      const chById = model.derived.R5.courseHandicaps;
-      const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
-      // Match configs live under events.roundMatches.R5 (the generalized per-
-      // round overlay the UI writes); fall back to the legacy events.r5Matches
-      // key so older persisted states still resolve. Mirrors the UI's
-      // roundMatchesFor() precedence so engine and scorer agree.
-      const configured = (state.events.roundMatches && state.events.roundMatches.R5)
-        || state.events.r5Matches || [];
-      ctx.matches = configured
-        .filter(m => (m.matchType === '2v2'
-          ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
-          : (m.playersInMatch || []).length === 2))
-        .map(m => ({
-          ...m,
-          popFlags: H.matchPopFlags(chById, holes18, m.playersInMatch || [], m.popHoles),
-        }));
-    }
+
+    // Overlay individual-Nassau matches, available on EVERY round (side bets, or
+    // the round's primary format for R5). The UI stores them under
+    // events.roundMatches[roundId]; the legacy events.r5Matches key is honored
+    // for R5 so older persisted states still resolve. Pops resolve here — manual
+    // popHoles win, otherwise CH difference off the low within each match — via
+    // the same helper the scorer bridge uses, so engine and tracker agree.
+    const H = g('EgtHandicap');
+    const chById = model.derived[roundId].courseHandicaps;
+    const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+    const overlaySrc = (state.events.roundMatches && state.events.roundMatches[roundId])
+      || (roundId === 'R5' ? state.events.r5Matches : null) || [];
+    ctx.overlayMatches = overlaySrc
+      .filter(m => (m.matchType === '2v2'
+        ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
+        : (m.playersInMatch || []).length === 2))
+      .map(m => ({
+        ...m,
+        popFlags: H.matchPopFlags(chById, holes18, m.playersInMatch || [], m.popHoles),
+      }));
+    ctx.matches = ctx.overlayMatches; // matchPlay() reads ctx.matches
+
     if (roundId === 'R6') {
       ctx.singlesCourseHandicaps = model.derived.R6.courseHandicaps;
       ctx.pairings = state.events.singlesPairings || [];
@@ -63,6 +61,10 @@ const EgtEngine = (function () {
     const ctx = buildRoundCtx(state, roundId);
     const sc = S();
     const out = { skins: sc.skins(ctx) };
+    // Overlay individual-Nassau matches settle on every round (side bets that
+    // fold into the zero-sum tournament money). For R5 these matches ARE the
+    // round's primary match play, so it also drives Cup points (below).
+    out.overlayMatchPlay = sc.matchPlay(ctx);
     switch (roundId) {
       case 'R1':
         out.bbb = sc.bingoBangoBongo(ctx);
@@ -73,7 +75,7 @@ const EgtEngine = (function () {
       case 'R4': out.teamStableford = sc.teamStableford(ctx); break;
       case 'R5':
         out.bbb = sc.bingoBangoBongo(ctx);   // full 18, gross
-        out.matchPlay = sc.matchPlay(ctx);   // the matches configured pre-round
+        out.matchPlay = out.overlayMatchPlay; // the matches configured pre-round
         break;
       case 'R6':
         out.singles = sc.singles(ctx);
@@ -137,6 +139,20 @@ const EgtEngine = (function () {
     const model = state.model;
     const store = STORE();
     const standingsMod = ST();
+
+    // Seed the R6 singles BEFORE computing round results, so R6 singles points
+    // and money resolve in this same pass (the SportsCenter provider and the
+    // printable run liveUpdate once). Seeding basis is the Cup standings THROUGH
+    // R5 — R6 is excluded from the preliminary board that determines the seeds.
+    if ((state.finalized || []).includes('R5')
+        && (!state.events.singlesPairings || !state.events.singlesPairings.length)) {
+      const preFinalized = (state.finalized || []).filter(rid => rid !== 'R6');
+      const preResults = resultsForFinalized(Object.assign({}, state, { finalized: preFinalized }));
+      const preBoard = standingsMod.leaderboard(model, P().compute(model, preResults, null), {
+        r6Stableford: {}, headToHead: headToHead(model, preResults), skins: skinsTotals(preResults),
+      });
+      store.setEvent(state, 'singlesPairings', standingsMod.reseedR6(preBoard));
+    }
 
     const resultsByRound = resultsForFinalized(state);
     const skins = skinsTotals(resultsByRound);

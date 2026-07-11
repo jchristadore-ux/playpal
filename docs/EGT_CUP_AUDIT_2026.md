@@ -9,9 +9,11 @@ integration, and the season-long data aggregation. Scope: `components/egt/*`,
 `components/bottomLineProvider.js`, `fixtures/egt-2026-seed.json`, `docs/EGT_*`.
 
 **Verdict:** Engine math, points, money zero-sum, standings, tiebreakers, and
-the SI-gap machinery are sound — all 145 tests green. One **live functional
+the SI-gap machinery are sound — all **149 tests green**. One **live functional
 bug** was found and fixed (R5 match play was being dropped from the standings),
-plus two documentation/data-hygiene items. Details below.
+plus two documentation/data-hygiene items. The organizer's three follow-up
+decisions (every match carries money · sync it all · tally every wager) are now
+implemented — see §4. Details below.
 
 ---
 
@@ -39,14 +41,11 @@ to `events.r5Matches`, mirroring the UI's `roundMatchesFor()` precedence.
 Added a regression test that stores matches the way the UI actually does.
 (`components/egt/egtEngine.js`, `dist/egt/egtEngine.js`, `tests/egt.test.mjs`.)
 
-> **Known residual limitation (not fixed — inherent):** the SportsCenter /
-> Bottom Line rebuilds EGT facts from *synced native round scores only*
-> (`bottomLineProvider.computeEgtFacts`), and the pre-round match configuration
-> is **not** part of that synced payload. So R5's match-play results still won't
-> appear on the SportsCenter broadcast — only R5 BBB and skins will. The Cup
-> standings inside the app are now correct; the broadcast simply can't see the
-> match config. If R5 match play should show on SportsCenter, the match config
-> would need to be synced alongside scores. Flagged for a decision — see §4.
+> **Broadcast follow-through (now implemented — see §4.2):** the SportsCenter /
+> Bottom Line rebuilds EGT facts from synced rounds. The match configuration is
+> in fact already carried on the synced round (inside `round.formats`), so the
+> provider now reconstructs it and R5 match play (plus every other round's
+> matches) shows on the broadcast, money and all.
 
 ### 1.2 🟡 R4 tee time stale in the pairings doc
 `docs/EGT_PAIRINGS.md` listed R4 (Crystal Springs) at **7:30 AM** in two places,
@@ -64,7 +63,7 @@ Updated both the master-schedule row and the R4 section header to 7:50 AM.
 | **Pop allocation** | The `⌊N/M⌋ + (si≤extra)` rule reproduces **every** `strokeAllocations[*].holes` array in the seed (golden test). ✓ |
 | **SI-gap machinery (§6)** | `strokeIndexVerified:false` + `si:null` loads as "pending," net===gross, no calculator branches on it; entering a valid permutation flips the flag and recomputes pops everywhere. All 6 courses currently ship **SI verified**. ✓ |
 | **Points engine** | Per-round ceilings 6+4+4+5+4+7 = 30, season awards 6 → 36; Brian caps at 30 (misses R1). `adjustedMaxPossible` recomputes from first principles (idempotent on rehydrate). ✓ |
-| **Money engine** | Every cash game is a zero-sum vector; each finalized round and the full tournament net to $0 to the cent (float residual pushed onto the largest entry). ✓ |
+| **Money engine** | Every cash game is a zero-sum vector; each finalized round and the full tournament net to $0 to the cent (float residual pushed onto the largest entry). Now covers every round's primary format **and** every overlay side match (§4). ✓ |
 | **Standings & tiebreakers** | R6 Stableford → head-to-head → total skins → chip-off; dense ranks; night-over-night snapshots + deltas persisted per night. ✓ |
 | **R6 reseed** | 1v2 Championship / 3v4 Bronze auto-seeded off the R5 standings once R5 finalizes. ✓ |
 | **Partners/pairings fairness** | The Pairings tab reads the **imported** model (see §3), where R5 teams are cleared, so teammate spread is correctly 0–1 over the two real team rounds (R2, R4); cart coverage complete; avg team Δ 5 CH. ✓ |
@@ -100,27 +99,56 @@ override in place; optionally add a one-line note in the fixture pointing at
 
 ---
 
-## 4. Open questions for the organizer (design intent — confirm before the trip)
+## 4. Organizer decisions — now implemented
 
-1. **R4 & R6 carry no direct money match.** `moneyDefaults` has no Stableford or
-   singles stake, so R4 (aggregate Stableford) and R6 (championship singles)
-   pay out only through the always-on **skins / CTP / Long Drive / The Rock** —
-   they're Cup-points rounds. This looks intentional, but R6 singles is the kind
-   of match people often back with cash. Confirm you don't want a singles money
-   stake on Championship Sunday.
-2. **R5 match play on the SportsCenter broadcast** (§1.1 residual): accept that
-   the broadcast shows only R5 BBB + skins, or wire the match config into the
-   sync payload so the round-robin shows live? In-app standings are correct
-   either way.
-3. **Overlay Nassau on R1/R3/R4/R6** are tracked by the native scorer as side
-   bets but are **not** folded into the zero-sum EGT tournament money (only R2's
-   four-ball and R5's matches are). Confirm that's the intended split (tournament
-   money vs. personal side bets).
+The three open questions from the original audit were answered "every match
+carries money · sync it all · tally every wager." All three are implemented as
+zero-sum additions to the money engine (rates editable on the Rounds tab; the
+per-round money still nets to $0 to the cent).
+
+### 4.1 Every match carries direct money
+- **R4 — 2v2 aggregate net Stableford.** The three segment matches (1–6 / 7–12 /
+  13–18) and the 18-hole total now settle team-to-team at `nassauPerPoint`,
+  weighted like the Cup (segment = 1, overall = 2). New "Stableford match" stake
+  on the R4 Rounds card. (`egtMoney.moneyForRound` R4 branch.)
+- **R6 — championship singles.** Each seeded 1v1 (Championship 1v2, Bronze 3v4)
+  settles Nassau-style — front · back · overall (1 / 1 / 2 units) — at
+  `nassauPerPoint`. The `singles()` calculator now also returns front/back
+  segments for this. New "Singles" stake on the R6 card.
+  (`egtScoring.singles`, `egtMoney.moneyForRound` R6 branch.)
+- R1 (BBB/Nines), R2 (four-ball Nassau), R3 (Wolf) and R5 (BBB + match play)
+  already carried money; unchanged.
+
+### 4.2 Sync it all — match play shows on SportsCenter
+The match configuration is already carried on the synced round inside
+`round.formats`, so `bottomLineProvider.computeEgtFacts` now reconstructs each
+round's overlay matches from there (skipping the synthetic `egt-*` four-ball to
+avoid double-counting) and feeds them to the engine. R5's round-robin — and any
+side match on any round — now appears on the broadcast with its money.
+
+Related fix: R6 singles are now **seeded before** round results are computed in
+`egtEngine.liveUpdate` (off the standings *through R5*), so singles points and
+money resolve in the single pass the broadcast and printable use — previously
+they only appeared on a second recompute.
+
+### 4.3 Every wager tallied — overlay side matches, all rounds
+The individual-Nassau overlay (available on R1–R6) is now folded into the
+zero-sum tournament money on **every** round via a shared `settleMatchPlay`
+pass, not just R2/R5. Any 1v1 or 2v2 side bet set through the Nassau engine is
+tallied into the round's net and the running bankroll. (`egtEngine` computes
+`overlayMatchPlay` for every round; `egtMoney` settles it everywhere.)
+
+> **Note on stake structure (adjustable):** R4 and R6 reuse the `nassauPerPoint`
+> rate (default $5/point) with the Nassau front/back/overall weighting, matching
+> R2/R5. If you want a different stake shape for Championship Sunday singles or
+> the R4 Stableford match (e.g. a flat per-match stake, or a different rate),
+> it's a small change — the rate is already editable per round on the Rounds tab.
 
 ---
 
 ## 5. Test status
 
-`npm test` → **145 passing, 0 failing** (was 144; +1 regression test for §1.1).
-Build is clean (`node scripts/build.mjs`); `dist/` regenerated so the browser
-bundle carries the fix.
+`npm test` → **149 passing, 0 failing** (was 144; +5: the §1.1 regression plus
+R4 money, R6 singles money, overlay-side-match money, and the SportsCenter
+match-reconstruction test). Build is clean (`node scripts/build.mjs`); `dist/`
+regenerated so the browser bundle carries every change.
