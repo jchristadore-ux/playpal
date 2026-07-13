@@ -278,6 +278,42 @@ test('SportsCenter reconstructs configured match play from the synced round form
   assert.ok(Math.abs(sum) < 1e-6, `R5 broadcast money nets zero, got ${sum}`);
 });
 
+test('SportsCenter recovers Rounds-tab stake overrides from the synced formats', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  // The organizer bumped R3 stakes on the Rounds tab; the app bakes them into
+  // the synced round's format objects. The broadcast must run its money engine
+  // at those rates, not the tournament defaults.
+  const stakes = { R3: { wolfPerUnit: 7, skinsAnte: 9 } };
+  const mkDoc = stk => {
+    const native = w.EgtBridge.toNativeRound(model, 'R3', stk);
+    const holes = native.course.holes;
+    const scores = {}, putts = {};
+    native.players.forEach((p, k) => {
+      scores[p.id] = holes.map(h => h.par + k); // first player outright low everywhere
+      putts[p.id] = holes.map(() => 2);
+    });
+    return {
+      syncCode: native.syncCode, savedAt: now - 8 * 3600 * 1000,
+      round: native,
+      liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
+        wolfData: {}, bbbData: {}, teeBallData: {}, popFlags: {},
+        currentHoleIdx: 17, roundId: native.id, _writtenBy: 'phone', _ts: now - 8 * 3600 * 1000 },
+    };
+  };
+  const withOverride = w.BottomLineProvider.computeFacts({ docs: [mkDoc(stakes)], trips: [], players: [], now });
+  assert.equal(withOverride.egt.state.stakes.R3.wolfPerUnit, 7, 'wolf stake recovered');
+  assert.equal(withOverride.egt.state.stakes.R3.skinsAnte, 9, 'skins ante recovered');
+  const withDefaults = w.BottomLineProvider.computeFacts({ docs: [mkDoc(null)], trips: [], players: [], now });
+  // Same scores, higher ante → the skins winner's engine money must grow.
+  const top = f => Math.max(...Object.values(f.egt.live.money.rounds.R3.total));
+  assert.ok(top(withOverride) > top(withDefaults),
+    `override money ${top(withOverride)} should beat default ${top(withDefaults)}`);
+  const sum = Object.values(withOverride.egt.live.money.rounds.R3.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, 'still zero-sum at the overridden rates');
+});
+
 // ── Broadcast layer (SportsCenter dashboard) ────────────────────────────────
 
 test('playerInfo resolves EGT ids and names to logo + alias + color', () => {
@@ -359,6 +395,21 @@ test('broadcastModules post: SportsCenter recap, player cards, stat pages', () =
   // player cards carry the alias + logo identity
   const card = mods.find(m => m.type === 'player-card');
   assert.ok(card.player.alias && card.player.logo);
+});
+
+test('broadcastModules post: Skins King and Birdie King leader pages surface', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  // Mike outright low on every hole → he sweeps the gross skins pot.
+  const doc = egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 1, mike: 0 }, 18), { ts: now - 8 * 3600 * 1000 }).doc;
+  const facts = P.computeFacts({ docs: [doc], trips: [], players: [], now });
+  const mods = P.broadcastModules(facts, 'post');
+  const skins = mods.find(m => m.id === 'stat-skins');
+  assert.ok(skins, 'Skins King race page present');
+  assert.equal(skins.rows[0].name, 'Mike');
+  const birdies = mods.find(m => m.id === 'stat-netbirdies');
+  assert.ok(birdies, 'Birdie King (net) race page present');
 });
 
 test('aggregateEgtStats sums per player across EGT rounds', () => {

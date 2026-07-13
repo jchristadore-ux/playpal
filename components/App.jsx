@@ -135,6 +135,23 @@ const App = () => {
   const [viewedTrip,      setViewedTrip]      = React.useState(null);
   const [tripRounds,      setTripRounds]      = React.useState(null); // null = loading
 
+  // Short-viewport (landscape phone) detection: the top NavBar and the bottom
+  // tab nav together eat ~130px, which is a third of a rotated phone screen.
+  // Both compact themselves when height is scarce so the content keeps room.
+  const [shortViewport, setShortViewport] = React.useState(() =>
+    window.matchMedia ? window.matchMedia('(max-height: 480px)').matches : false);
+  React.useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia('(max-height: 480px)');
+    const onChange = e => setShortViewport(e.matches);
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+
   React.useEffect(() => { sessionStorage.setItem('pp_screen', screen); }, [screen]);
 
   // ── Deep-link join — runs exactly once on mount ──────────────────────────
@@ -530,6 +547,7 @@ const App = () => {
         syncCode={tweaks.showSyncCode && round && screen === 'score' ? round.syncCode : null}
         onHome={() => setScreen(round && screen === 'score' ? 'score' : 'home')}
         currentScreen={screen}
+        compact={shortViewport}
       />
 
       {!online && (
@@ -687,9 +705,10 @@ const App = () => {
               aria-label={tab.label}
               aria-current={screen === tab.id ? 'page' : undefined}
               style={{
-                flex:1, display:'flex', flexDirection:'column', alignItems:'center',
-                justifyContent:'center', padding:'12px 4px 10px', cursor:'pointer',
-                background:'none', border:'none', minHeight:48,
+                flex:1, display:'flex', flexDirection:shortViewport ? 'row' : 'column', alignItems:'center',
+                justifyContent:'center', gap:shortViewport ? 5 : 0,
+                padding:shortViewport ? '7px 4px 5px' : '12px 4px 10px', cursor:'pointer',
+                background:'none', border:'none', minHeight:shortViewport ? 36 : 48,
                 color: tab.id === '__exit' ? '#FCA5A5'
                      : screen === tab.id  ? tweaks.accentGold
                      : 'rgba(246,244,238,0.65)',
@@ -698,8 +717,8 @@ const App = () => {
                   : '2px solid transparent',
                 transition: 'color 0.15s',
               }}>
-              <span aria-hidden="true" style={{ fontSize:20, lineHeight:1 }}>{tab.icon}</span>
-              <span style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, fontWeight:700, letterSpacing:0.8, marginTop:4 }}>{tab.label}</span>
+              <span aria-hidden="true" style={{ fontSize:shortViewport ? 15 : 20, lineHeight:1 }}>{tab.icon}</span>
+              <span style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:9, fontWeight:700, letterSpacing:0.8, marginTop:shortViewport ? 0 : 4 }}>{tab.label}</span>
             </button>
           )}
         </nav>

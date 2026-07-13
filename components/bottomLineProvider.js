@@ -295,6 +295,24 @@ const BottomLineProvider = (function () {
         const overlay = ((nassau && nassau.nassauMatches) || [])
           .filter(m => m && !String(m.id || '').startsWith('egt-'));
         if (overlay.length) state.events.roundMatches[r.egtRoundId] = overlay;
+        // Recover the per-round stake overrides (set on the app's Rounds tab)
+        // from the synced native formats, so the broadcast's money engine runs
+        // at the same rates as the app instead of the tournament defaults.
+        // EgtBridge.formatsFor bakes each stake into its format object:
+        //   skins→skinsAnte, bingobangobongo→bbbNinesPerPointDiff,
+        //   wolf→wolfPerUnit, nassau→nassauPerPoint.
+        const stakeKeyByFormat = {
+          skins: 'skinsAnte', bingobangobongo: 'bbbNinesPerPointDiff',
+          wolf: 'wolfPerUnit', nassau: 'nassauPerPoint',
+        };
+        const recovered = {};
+        (r.formats || []).forEach(f => {
+          const key = f && stakeKeyByFormat[f.type];
+          if (key && f.stakes != null && f.stakes !== '' && isFinite(Number(f.stakes))) {
+            recovered[key] = Number(f.stakes);
+          }
+        });
+        if (Object.keys(recovered).length) state.stakes[r.egtRoundId] = recovered;
         if (r.complete) state.finalized.push(r.egtRoundId);
       } catch (e) {}
     });
@@ -1057,6 +1075,30 @@ const BottomLineProvider = (function () {
       rows: money.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color,
         display: (r.value < 0 ? '-$' : '+$') + Math.abs(Math.round(r.value)), tone: r.value >= 0 ? 'up' : 'down' })),
     });
+    // Season-award races from the tournament engine, so every Cup category has
+    // a leaders page: Skins King and Birdie King (net). (Flat Stick and Iron
+    // Man are covered by the putts / FIR / GIR pages above.)
+    const L = facts.egt && facts.egt.live;
+    if (L && L.skins) {
+      const rows = Object.entries(L.skins)
+        .map(([pid, n]) => Object.assign({}, playerInfo(pid), { value: n }))
+        .filter(r => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+      if (rows.length) mods.push({
+        id: 'stat-skins', type: 'stat-leaderboard', title: 'SKINS KING RACE',
+        rows: rows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
+      });
+    }
+    if (L && L.tourneyStats) {
+      const rows = Object.entries(L.tourneyStats)
+        .map(([pid, st]) => Object.assign({}, playerInfo(pid), { value: (st && st.netBirdies) || 0 }))
+        .filter(r => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+      if (rows.length) mods.push({
+        id: 'stat-netbirdies', type: 'stat-leaderboard', title: 'BIRDIE KING RACE (NET)',
+        rows: rows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
+      });
+    }
     return mods;
   }
 

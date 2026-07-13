@@ -622,6 +622,9 @@ const BroadcastPage = () => {
   const [banner, setBanner] = React.useState(null);
   const [speed, setSpeed] = React.useState(() => Number(localStorage.getItem('bl_speed')) || 140);
   const [showControls, setShowControls] = React.useState(false);
+  const [tickerPaused, setTickerPaused] = React.useState(false);
+  const hoverPausedRef = React.useRef(false);
+  const tickerPausedRef = React.useRef(false);
   const bannerTimer = React.useRef(null);
   const controlsTimer = React.useRef(null);
 
@@ -650,6 +653,31 @@ const BroadcastPage = () => {
     return () => engine.stop();
   }, []);
   React.useEffect(() => { if (engineRef.current) engineRef.current.setSpeed(speed); localStorage.setItem('bl_speed', String(speed)); }, [speed]);
+  React.useEffect(() => {
+    tickerPausedRef.current = tickerPaused;
+    if (engineRef.current) engineRef.current.setPaused(tickerPaused || hoverPausedRef.current);
+  }, [tickerPaused]);
+
+  // Screen wake lock — this page lives on a laptop feeding a TV; without it the
+  // laptop's display sleep kills the broadcast mid-trip. Re-acquired whenever
+  // the tab becomes visible again (the lock is released on tab switch).
+  React.useEffect(() => {
+    if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+    let lock = null, disposed = false;
+    const acquire = () => {
+      navigator.wakeLock.request('screen')
+        .then(l => { if (disposed) { l.release().catch(() => {}); } else { lock = l; } })
+        .catch(() => {});
+    };
+    const onVis = () => { if (document.visibilityState === 'visible') acquire(); };
+    acquire();
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      disposed = true;
+      document.removeEventListener('visibilitychange', onVis);
+      if (lock) lock.release().catch(() => {});
+    };
+  }, []);
 
   // Realtime data → facts → feed + alerts.
   React.useEffect(() => {
@@ -679,6 +707,29 @@ const BroadcastPage = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
   };
+
+  // Keyboard controls — on a laptop wired to a TV the keyboard is the remote:
+  //   F fullscreen · Space pause/resume ticker · → / N next stage module ·
+  //   + / − ticker speed · A/P/L/S broadcast mode (auto/pre/live/post).
+  React.useEffect(() => {
+    const onKey = e => {
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      const k = e.key;
+      if (k === 'f' || k === 'F') { toggleFullscreen(); }
+      else if (k === ' ') { e.preventDefault(); setTickerPaused(p => !p); }
+      else if (k === 'ArrowRight' || k === 'n' || k === 'N') { setTick(t => t + 1); }
+      else if (k === '+' || k === '=') { setSpeed(s => Math.min(420, s + 30)); }
+      else if (k === '-' || k === '_') { setSpeed(s => Math.max(60, s - 30)); }
+      else if (k === 'a' || k === 'A') { setForce(null); }
+      else if (k === 'p' || k === 'P') { setForce('pre'); }
+      else if (k === 'l' || k === 'L') { setForce('live'); }
+      else if (k === 's' || k === 'S') { setForce('post'); }
+      else return;
+      pokeControls();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pokeControls]);
 
   const liveNow = facts && facts.liveRounds && facts.liveRounds.length > 0;
 
@@ -730,8 +781,8 @@ const BroadcastPage = () => {
           <div style={{ fontSize: 'clamp(18px,2.4vw,56px)', fontWeight: 800, letterSpacing: '0.1em', color: C.gold, lineHeight: 1 }}>EGT</div>
           <div style={{ fontSize: 'clamp(7px,0.7vw,16px)', fontWeight: 700, letterSpacing: '0.3em', color: C.dim, marginTop: '0.5vh' }}>BOTTOM LINE</div>
         </div>
-        <div onMouseEnter={() => { if (window.matchMedia && window.matchMedia('(hover: hover)').matches && engineRef.current) engineRef.current.setPaused(true); }}
-          onMouseLeave={() => { if (engineRef.current) engineRef.current.setPaused(false); }}
+        <div onMouseEnter={() => { if (window.matchMedia && window.matchMedia('(hover: hover)').matches && engineRef.current) { hoverPausedRef.current = true; engineRef.current.setPaused(true); } }}
+          onMouseLeave={() => { hoverPausedRef.current = false; if (engineRef.current) engineRef.current.setPaused(tickerPausedRef.current); }}
           style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
           <div ref={trackRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }} />
         </div>
@@ -744,9 +795,14 @@ const BroadcastPage = () => {
           <Ctrl key={label} active={force === val || (label === 'AUTO' && !force)} onClick={() => setForce(val)}>{label}</Ctrl>
         ))}
         <Ctrl onClick={() => setTick(t => t + 1)}>NEXT ▸</Ctrl>
+        <Ctrl active={tickerPaused} onClick={() => setTickerPaused(p => !p)}>{tickerPaused ? '▶ RESUME' : '⏸ PAUSE'}</Ctrl>
         <Ctrl onClick={() => setSpeed(s => Math.max(60, s - 30))}>TICKER −</Ctrl>
         <Ctrl onClick={() => setSpeed(s => Math.min(420, s + 30))}>TICKER +</Ctrl>
         <Ctrl onClick={toggleFullscreen}>⛶ FULL</Ctrl>
+        <div style={{ flexBasis: '100%', textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+          color: 'rgba(246,244,238,0.55)', fontFamily: BL.FONT }}>
+          KEYS · F FULLSCREEN · SPACE PAUSE · → NEXT · +/− SPEED · A/P/L/S MODE
+        </div>
       </div>
     </div>
   );

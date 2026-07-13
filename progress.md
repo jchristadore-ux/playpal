@@ -1,5 +1,38 @@
 # Project Progress
 
+## Full audit + GUI optimization (branch claude/playpal-audit-gui-optimization-pwq1ef) — v1.7.2
+
+Status: **complete — 151 tests green, browser smoke verified (focus retention
+while typing scores/stakes, landscape chrome compaction, SportsCenter keyboard
+mode switch, Award Races render).**
+
+Audited PlayPal scoring/tracking/handicap, the EGT Cup engines, the SportsCenter
+integration, and the GUI in both orientations. Engine math (handicaps, pops,
+points, zero-sum money, standings, tiebreakers, R6 reseed) verified sound; the
+live defects were in the view layer and the app→broadcast stake sync.
+
+- **EgtTournament.jsx refactor** — inline component types made React remount the
+  subtree per keystroke (focus loss in score/stake inputs; Individual Matches
+  editor state reset). Tab/card renderers are now invoked as plain functions;
+  `EgtSiEditor` + `EgtStakeInput` hoisted to module scope (see the layout note
+  at the top of the file — keep it that way).
+- **Stake input buffering** — clearing a stake no longer snaps back to the
+  default mid-edit (draft state while focused, commits every keystroke).
+- **SportsCenter stakes** — `computeEgtFacts` recovers per-round stake overrides
+  from the synced native format objects (skins/bbb/wolf/nassau), so broadcast
+  money settles at the app's rates. Known limit: R4/R6 `nassauPerPoint` is only
+  recoverable when the round carries a Nassau format (i.e. matches configured).
+- **Leaders in all categories** — Award Races table (Skins King / Birdie King
+  net / Flat Stick / Iron Man) on the app's Standings tab; `stat-skins` +
+  `stat-netbirdies` stat-leaderboard modules in the SportsCenter post rotation.
+- **GUI** — landscape chrome compaction (NavBar `compact` prop + short-viewport
+  bottom nav in App.jsx, `(max-height: 480px)`); SportsCenter wake lock +
+  keyboard controls (F/Space/→/±/A-P-L-S) + pause button + key legend.
+- Tests: +2 (stake recovery drives engine money; award-race broadcast modules).
+  Version 1.7.2 everywhere (package.json, index.html, bottomline.html, sw.js
+  cache + query strings, Home.jsx), CHANGELOG entry added.
+
+
 ## EGT 2026 pairings + tee times + Nassau overlay (branch claude/egt-2027-pairings-gbh70n) — v1.7.0
 
 Status: **complete — 143 tests green, browser-smoke verified (Rounds redesign,

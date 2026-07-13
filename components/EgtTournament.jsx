@@ -2,6 +2,13 @@
 // pasted one), lets you enter scores per round, finalize rounds, fill in a
 // pending stroke index, and see live standings/money plus a printable packet.
 // All math lives in the engine modules (window.Egt*); this file is view + glue.
+//
+// Layout note: the tab/section renderers are plain functions invoked as
+// {Standings()} — not JSX component tags — and the stateful pieces (SI editor,
+// stake input) are hoisted to module scope. Inner component types re-created on
+// every render make React remount the whole subtree, which dropped input focus
+// after every keystroke in the score grid and reset the Individual Matches
+// editor. Keep it this way.
 
 // Brief plain-English format notes shown on each round in the list.
 const EGT_ROUND_FORMATS = {
@@ -31,9 +38,106 @@ const EGT_STAKE_ITEMS = {
   R6: [{ key: 'nassauPerPoint', label: 'Singles', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
 };
 
-const EgtTournament = ({ onScoreRound }) => {
-  const TH = window.PLAYPAL_THEME || {};
+const EGT_MATCH_HINT = {
+  R2: 'These individual matches run alongside the four-ball team Nassau — same scores, no re-entry.',
+  R5: 'These matches ARE the R5 match play — add the round-robin 1v1s (or any 2v2 mix) layered on Bingo-Bango-Bongo.',
+};
+
+// ── shared styling (module scope so element types/styles stay stable) ────────
+const EGT_UI = (() => {
+  const TH = (typeof window !== 'undefined' && window.PLAYPAL_THEME) || {};
   const GREEN = '#0E2B20', GOLD = TH.accentGold || '#C8A15A', INK = '#12241C', LINE = '#cddbd3';
+  return {
+    GREEN, GOLD, INK, LINE,
+    th: { background: GREEN, color: '#fff', padding: '6px 8px', fontSize: 11, fontWeight: 700, letterSpacing: 0.5 },
+    td: { border: `1px solid ${LINE}`, padding: '5px 8px', textAlign: 'center', fontSize: 13 },
+    secLabel: { fontSize: 11, fontWeight: 800, color: GREEN, letterSpacing: 0.8, textTransform: 'uppercase', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 },
+    secRule: { flex: 1, height: 1, background: LINE },
+    teePill: { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(14,43,32,0.06)', color: GREEN, fontSize: 11, fontWeight: 800, padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' },
+  };
+})();
+
+const egtArrow = d => d === 'up' ? '▲' : d === 'down' ? '▼' : d === 'new' ? '•' : '–';
+const egtArrowColor = d => d === 'up' ? '#137a3f' : d === 'down' ? '#b3261e' : '#8a988f';
+const egtTeeLabel = t => (t.label && t.label !== 'Tee') ? `${t.label} · ${t.time}` : t.time;
+const egtTeeChipsFor = round => (Array.isArray(round.teeTimes) && round.teeTimes.length)
+  ? round.teeTimes : (round.teeTimeTarget ? [{ label: '', time: round.teeTimeTarget }] : []);
+
+const EgtSectionHead = ({ children }) => <div style={EGT_UI.secLabel}>{children}<span style={EGT_UI.secRule} /></div>;
+const EgtField = ({ label, children }) => (
+  <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 5 }}>
+    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: '#8a988f', minWidth: 92, textTransform: 'uppercase' }}>{label}</div>
+    <div style={{ fontSize: 12.5, color: EGT_UI.INK, fontWeight: 600 }}>{children}</div>
+  </div>
+);
+
+// Stake dollar input. Buffers the text while the field is focused so the value
+// can be cleared and retyped — committing on every keystroke used to snap the
+// emptied field straight back to the tournament default.
+const EgtStakeInput = ({ value, onCommit }) => {
+  const [draft, setDraft] = React.useState(null); // null = not editing
+  return (
+    <input
+      value={draft != null ? draft : value}
+      inputMode="decimal"
+      onFocus={() => setDraft(String(value ?? ''))}
+      onBlur={() => setDraft(null)}
+      onChange={e => {
+        const v = e.target.value.replace(/[^0-9.]/g, '');
+        setDraft(v);
+        onCommit(v);
+      }}
+      style={{ width: 44, textAlign: 'center', border: `1px solid ${EGT_UI.LINE}`, borderRadius: 6, padding: '4px 2px', fontSize: 13, color: EGT_UI.INK }}
+    />
+  );
+};
+
+// SI-entry modal. Module scope (it holds state): a parent re-render — a toast,
+// a sync — must not remount it and wipe the half-typed stroke index.
+const EgtSiEditor = ({ model, courseId, onApply, onClose }) => {
+  const { LINE } = EGT_UI;
+  const course = model.courses[courseId];
+  const twoLoop = course.loopsForRound === 2;
+  const n = twoLoop ? 9 : 18;
+  const initial = twoLoop
+    ? course.holes.slice(0, 9).map(h => (h.si == null ? '' : window.EgtHandicap.nineHoleSi(h.si)))
+    : course.holes.slice(0, 18).map(h => (h.si == null ? '' : h.si));
+  const [vals, setVals] = React.useState(initial);
+  const [err, setErr] = React.useState('');
+  const apply = () => {
+    const nums = vals.map(v => parseInt(v, 10));
+    if (!window.EgtHandicap.isPermutation(nums, n)) { setErr(`Enter each number 1–${n} exactly once.`); return; }
+    try {
+      window.EgtImporter.enterStrokeIndex(model, courseId, nums);
+      onApply(course);
+      onClose();
+    } catch (e) { setErr(e.message); }
+  };
+  return (
+    <Modal open onClose={onClose} title={`Stroke index — ${course.name}`}>
+      <div style={{ fontSize: 13, color: '#3F5F4A', marginBottom: 10 }}>
+        Enter the printed card stroke index ({twoLoop ? '9 values for the 9-hole loop' : '18 values'}). Must be a permutation of 1–{n}.
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: 6 }}>
+        {vals.map((v, i) => (
+          <div key={i} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#8a988f' }}>H{i + 1}</div>
+            <input value={v} inputMode="numeric" onChange={e => { const c = vals.slice(); c[i] = e.target.value.replace(/[^0-9]/g, ''); setVals(c); }}
+              style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center', padding: '6px 2px', border: `1px solid ${LINE}`, borderRadius: 6 }} />
+          </div>
+        ))}
+      </div>
+      {err && <div style={{ color: '#b3261e', fontSize: 12, marginTop: 8 }}>{err}</div>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <Btn onClick={apply}>Save & recompute</Btn>
+        <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      </div>
+    </Modal>
+  );
+};
+
+const EgtTournament = ({ onScoreRound }) => {
+  const { GREEN, GOLD, INK, LINE, th, td } = EGT_UI;
   const seedText = window.EGT_SEED;
 
   const [state, setState] = React.useState(null);
@@ -131,52 +235,9 @@ const EgtTournament = ({ onScoreRound }) => {
     return model.moneyDefaults[key];
   };
   const setStake = (rid, key, raw) => {
-    const v = raw.replace(/[^0-9.]/g, '');
+    const v = String(raw).replace(/[^0-9.]/g, '');
     window.EgtStore.setStake(state, rid, key, v === '' ? null : v);
     setState({ ...state });
-  };
-
-  // ── SI entry ──────────────────────────────────────────────────────────────
-  const SiEditor = ({ courseId, onClose }) => {
-    const course = model.courses[courseId];
-    const twoLoop = course.loopsForRound === 2;
-    const n = twoLoop ? 9 : 18;
-    const initial = twoLoop
-      ? course.holes.slice(0, 9).map(h => (h.si == null ? '' : window.EgtHandicap.nineHoleSi(h.si)))
-      : course.holes.slice(0, 18).map(h => (h.si == null ? '' : h.si));
-    const [vals, setVals] = React.useState(initial);
-    const [err, setErr] = React.useState('');
-    const apply = () => {
-      const nums = vals.map(v => parseInt(v, 10));
-      if (!window.EgtHandicap.isPermutation(nums, n)) { setErr(`Enter each number 1–${n} exactly once.`); return; }
-      try {
-        window.EgtImporter.enterStrokeIndex(model, courseId, nums);
-        persist(state);
-        flash(`${course.name} stroke index saved — pops recomputed`);
-        onClose();
-      } catch (e) { setErr(e.message); }
-    };
-    return (
-      <Modal open onClose={onClose} title={`Stroke index — ${course.name}`}>
-        <div style={{ fontSize: 13, color: '#3F5F4A', marginBottom: 10 }}>
-          Enter the printed card stroke index ({twoLoop ? '9 values for the 9-hole loop' : '18 values'}). Must be a permutation of 1–{n}.
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: 6 }}>
-          {vals.map((v, i) => (
-            <div key={i} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#8a988f' }}>H{i + 1}</div>
-              <input value={v} inputMode="numeric" onChange={e => { const c = vals.slice(); c[i] = e.target.value.replace(/[^0-9]/g, ''); setVals(c); }}
-                style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center', padding: '6px 2px', border: `1px solid ${LINE}`, borderRadius: 6 }} />
-            </div>
-          ))}
-        </div>
-        {err && <div style={{ color: '#b3261e', fontSize: 12, marginTop: 8 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <Btn onClick={apply}>Save & recompute</Btn>
-          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
-        </div>
-      </Modal>
-    );
   };
 
   // ── printable ─────────────────────────────────────────────────────────────
@@ -188,13 +249,31 @@ const EgtTournament = ({ onScoreRound }) => {
     w.document.close();
   };
 
-  // ── shared bits ───────────────────────────────────────────────────────────
-  const th = { background: GREEN, color: '#fff', padding: '6px 8px', fontSize: 11, fontWeight: 700, letterSpacing: 0.5 };
-  const td = { border: `1px solid ${LINE}`, padding: '5px 8px', textAlign: 'center', fontSize: 13 };
-  const arrow = d => d === 'up' ? '▲' : d === 'down' ? '▼' : d === 'new' ? '•' : '–';
-  const arrowColor = d => d === 'up' ? '#137a3f' : d === 'down' ? '#b3261e' : '#8a988f';
-
   // ── standings tab ─────────────────────────────────────────────────────────
+  // The four season award races, live from the same engine pass that drives the
+  // standings — so every Cup category (points, money, skins, birdies, putts,
+  // FIR+GIR) has a visible leader before final settlement.
+  const awardRaces = () => {
+    const stats = live.tourneyStats || {};
+    const played = model.players.filter(p => (stats[p.id]?.rounds || 0) > 0);
+    const race = (label, pts, valueOf, lowest, unit) => {
+      const rows = model.players.map(p => ({ pid: p.id, name: p.name, v: valueOf(p.id) }));
+      let leaders = [];
+      if (played.length) {
+        const eligible = rows.filter(r => played.some(p => p.id === r.pid));
+        const best = lowest ? Math.min(...eligible.map(r => r.v)) : Math.max(...eligible.map(r => r.v));
+        leaders = eligible.filter(r => r.v === best && isFinite(r.v)).map(r => r.pid);
+      }
+      return { label, pts, rows, leaders, unit };
+    };
+    return [
+      race('Skins King', '2 pts', pid => live.skins?.[pid] || 0, false, 'skins'),
+      race('Birdie King (net)', '2 pts', pid => stats[pid]?.netBirdies || 0, false, 'net birdies'),
+      race('Flat Stick (fewest putts)', '1 pt', pid => stats[pid]?.putts ?? 0, true, 'putts'),
+      race('Iron Man (FIR+GIR)', '1 pt', pid => (stats[pid]?.fairwaysHit || 0) + (stats[pid]?.greensInReg || 0), false, 'FIR+GIR'),
+    ];
+  };
+
   const Standings = () => (
     <div>
       <div style={{ fontSize: 11, color: '#8a988f', marginBottom: 8 }}>
@@ -208,8 +287,32 @@ const EgtTournament = ({ onScoreRound }) => {
               <td style={{ ...td, fontWeight: 800 }}>{r.rank}</td>
               <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>{r.name}</td>
               <td style={td}>{r.points}</td>
-              <td style={{ ...td, color: arrowColor(r.direction) }}>{arrow(r.direction)}{r.move ? Math.abs(r.move) : ''}</td>
+              <td style={{ ...td, color: egtArrowColor(r.direction) }}>{egtArrow(r.direction)}{r.move ? Math.abs(r.move) : ''}</td>
               <td style={{ ...td, color: '#8a988f' }}>{r.maxPossible ?? '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ fontWeight: 800, color: GREEN, fontSize: 14, margin: '4px 0 6px' }}>AWARD RACES · R2–R6 · settle after R6</div>
+      <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 16 }}>
+        <thead><tr>{['Award', 'Leader', 'Field'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+        <tbody>
+          {awardRaces().map(a => (
+            <tr key={a.label}>
+              <td style={{ ...td, textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {a.label} <span style={{ color: '#8a988f', fontWeight: 400, fontSize: 11 }}>({a.pts})</span>
+              </td>
+              <td style={{ ...td, fontWeight: 700, color: a.leaders.length ? '#137a3f' : '#8a988f', whiteSpace: 'nowrap' }}>
+                {a.leaders.length ? a.leaders.map(nameOf).join(' & ') : '—'}
+              </td>
+              <td style={{ ...td, textAlign: 'left', fontSize: 11.5 }}>
+                {a.rows.map((r, i) => (
+                  <span key={r.pid}>{i ? ' · ' : ''}
+                    <span style={{ fontWeight: a.leaders.includes(r.pid) ? 800 : 500 }}>{r.name} {r.v}</span>
+                  </span>
+                ))}
+                <span style={{ color: '#8a988f' }}> {a.unit}</span>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -247,27 +350,8 @@ const EgtTournament = ({ onScoreRound }) => {
     </div>
   );
 
-  // ── shared round-card styling (consistent structure across every card) ─────
-  const secLabel = { fontSize: 11, fontWeight: 800, color: GREEN, letterSpacing: 0.8, textTransform: 'uppercase', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 };
-  const secRule = { flex: 1, height: 1, background: LINE };
-  const teePill = { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(14,43,32,0.06)', color: GREEN, fontSize: 11, fontWeight: 800, padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' };
-  const teeLabel = t => (t.label && t.label !== 'Tee') ? `${t.label} · ${t.time}` : t.time;
-  const teeChipsFor = round => (Array.isArray(round.teeTimes) && round.teeTimes.length)
-    ? round.teeTimes : (round.teeTimeTarget ? [{ label: '', time: round.teeTimeTarget }] : []);
   const cartText = carts => (carts || []).map(c => c.length > 1 ? c.map(nameOf).join(' + ') : `${nameOf(c[0])} (solo)`).join('  ·  ');
   const teamText = teams => (teams || []).map(t => `${t.name}: ${t.players.map(nameOf).join(' + ')}`).join('  ·  ');
-  const SectionHead = ({ children }) => <div style={secLabel}>{children}<span style={secRule} /></div>;
-  const Field = ({ label, children }) => (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 5 }}>
-      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: '#8a988f', minWidth: 92, textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 12.5, color: INK, fontWeight: 600 }}>{children}</div>
-    </div>
-  );
-
-  const MATCH_HINT = {
-    R2: 'These individual matches run alongside the four-ball team Nassau — same scores, no re-entry.',
-    R5: 'These matches ARE the R5 match play — add the round-robin 1v1s (or any 2v2 mix) layered on Bingo-Bango-Bongo.',
-  };
 
   // ── one round card ────────────────────────────────────────────────────────
   const RoundCard = ({ round }) => {
@@ -275,7 +359,7 @@ const EgtTournament = ({ onScoreRound }) => {
     const der = model.derived[round.id];
     const isOpen = openRound === round.id;
     const finalized = state.finalized.includes(round.id);
-    const teeChips = teeChipsFor(round);
+    const teeChips = egtTeeChipsFor(round);
     const pairings = round.pairings || {};
     // Native-shaped players/course for the per-round Individual Matches config.
     const native = isOpen ? window.EgtBridge.toNativeRound(model, round.id, state.stakes) : null;
@@ -290,7 +374,7 @@ const EgtTournament = ({ onScoreRound }) => {
               <span style={{ fontSize: 11, color: '#8a988f', fontWeight: 700, letterSpacing: 0.3 }}>{round.date}</span>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 2px' }}>
-              {teeChips.map((t, i) => <span key={i} style={teePill}>🕐 {teeLabel(t)}</span>)}
+              {teeChips.map((t, i) => <span key={i} style={EGT_UI.teePill}>🕐 {egtTeeLabel(t)}</span>)}
             </div>
             {pairings.carts && (
               <div style={{ fontSize: 11.5, color: '#3F5F4A', fontWeight: 700, marginTop: 4 }}>
@@ -308,11 +392,11 @@ const EgtTournament = ({ onScoreRound }) => {
         {isOpen && (
           <div style={{ padding: '14px 14px 16px', borderTop: `1px solid ${LINE}`, background: '#fcfdfc' }}>
             {/* Pairings & logistics — tee times, teams, cart rotation, rationale. */}
-            <SectionHead>Pairings &amp; Logistics</SectionHead>
+            <EgtSectionHead>Pairings &amp; Logistics</EgtSectionHead>
             <div style={{ marginBottom: 6 }}>
-              <Field label="Tee time">{teeChips.map(teeLabel).join('  ·  ') || '—'}</Field>
-              {round.teams && round.teams.length > 0 && <Field label="Teams">{teamText(round.teams)}</Field>}
-              {pairings.carts && <Field label="Cart pairs">{cartText(pairings.carts)}</Field>}
+              <EgtField label="Tee time">{teeChips.map(egtTeeLabel).join('  ·  ') || '—'}</EgtField>
+              {round.teams && round.teams.length > 0 && <EgtField label="Teams">{teamText(round.teams)}</EgtField>}
+              {pairings.carts && <EgtField label="Cart pairs">{cartText(pairings.carts)}</EgtField>}
             </div>
             {pairings.rationale && (
               <div style={{ fontSize: 12, color: '#5b6b63', fontStyle: 'italic', lineHeight: 1.5, background: 'rgba(200,161,90,0.06)', borderLeft: `3px solid ${GOLD}`, borderRadius: 6, padding: '8px 11px', marginBottom: 16 }}>
@@ -324,7 +408,7 @@ const EgtTournament = ({ onScoreRound }) => {
                 Different games take strokes on different bases (skins = full
                 18-hole off the low; The Nines = 9-hole off the low over loop 2),
                 so showing them per game avoids the "why only 4 pops?" confusion. */}
-            <SectionHead>Handicaps &amp; Pops</SectionHead>
+            <EgtSectionHead>Handicaps &amp; Pops</EgtSectionHead>
             <div style={{ fontSize: 12, color: INK, marginBottom: 10 }}>
               <span style={{ color: '#8a988f' }}>Course handicap ({course.loopsForRound === 2 ? '18-hole equivalent' : '18-hole'}): </span>
               {round.players.map((pid, i) => <span key={pid}>{i ? ' · ' : ''}<strong>{nameOf(pid)}</strong> {der.courseHandicaps[pid]}</span>)}
@@ -358,7 +442,7 @@ const EgtTournament = ({ onScoreRound }) => {
             )}
 
             {/* Compact score entry: gross (top) + putts (below) per player */}
-            <SectionHead>Scores</SectionHead>
+            <EgtSectionHead>Scores</EgtSectionHead>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
@@ -387,15 +471,13 @@ const EgtTournament = ({ onScoreRound }) => {
 
             {/* Per-format stakes (editable). Flow into the money engine + the
                 native scorer's format trackers. */}
-            <div style={{ marginTop: 16 }}><SectionHead>Stakes</SectionHead></div>
+            <div style={{ marginTop: 16 }}><EgtSectionHead>Stakes</EgtSectionHead></div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 4 }}>
               {(EGT_STAKE_ITEMS[round.id] || []).map(item => (
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${LINE}`, borderRadius: 10, padding: '6px 10px' }}>
                   <span style={{ fontSize: 12, fontWeight: 700 }}>{item.label}</span>
                   <span style={{ color: '#8a988f' }}>$</span>
-                  <input value={stakeValue(round.id, item.key)} inputMode="decimal"
-                    onChange={e => setStake(round.id, item.key, e.target.value)}
-                    style={{ width: 44, textAlign: 'center', border: `1px solid ${LINE}`, borderRadius: 6, padding: '4px 2px', fontSize: 13, color: INK }} />
+                  <EgtStakeInput value={stakeValue(round.id, item.key)} onCommit={v => setStake(round.id, item.key, v)} />
                   <span style={{ fontSize: 11, color: '#8a988f' }}>{item.per}</span>
                 </div>
               ))}
@@ -412,9 +494,9 @@ const EgtTournament = ({ onScoreRound }) => {
                 each match); tap holes to override. Shares the same hole-by-hole
                 scoring data — no duplicate entry. */}
             <div style={{ marginTop: 16 }}>
-              <SectionHead>Individual Matches</SectionHead>
+              <EgtSectionHead>Individual Matches</EgtSectionHead>
               <div style={{ fontSize: 11.5, color: '#8a988f', margin: '0 0 4px', lineHeight: 1.45 }}>
-                {MATCH_HINT[round.id] || 'Optional individual Nassau matches (front · back · overall) layered on this round — same scores, no re-entry.'}
+                {EGT_MATCH_HINT[round.id] || 'Optional individual Nassau matches (front · back · overall) layered on this round — same scores, no re-entry.'}
                 {' '}Add 1v1 or 2v2 matches; strokes auto-fill off the low course handicap in each match.
               </div>
               {typeof NassauMultiMatchConfig !== 'undefined' && native ? (
@@ -451,7 +533,7 @@ const EgtTournament = ({ onScoreRound }) => {
   };
 
   const Rounds = () => (
-    <div>{model.rounds.map(r => <RoundCard key={r.id} round={r} />)}</div>
+    <div>{model.rounds.map(r => <React.Fragment key={r.id}>{RoundCard({ round: r })}</React.Fragment>)}</div>
   );
 
   // ── pairings tab — fairness analysis proving the schedule is balanced ──────
@@ -594,12 +676,19 @@ const EgtTournament = ({ onScoreRound }) => {
         ))}
       </div>
       <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-        {tab === 'standings' && <Standings />}
-        {tab === 'rounds' && <Rounds />}
-        {tab === 'pairings' && <Pairings />}
-        {tab === 'courses' && <Courses />}
+        {tab === 'standings' && Standings()}
+        {tab === 'rounds' && Rounds()}
+        {tab === 'pairings' && Pairings()}
+        {tab === 'courses' && Courses()}
       </div>
-      {siEditCourse && <SiEditor courseId={siEditCourse} onClose={() => setSiEditCourse(null)} />}
+      {siEditCourse && (
+        <EgtSiEditor
+          model={model}
+          courseId={siEditCourse}
+          onApply={course => { persist(state); flash(`${course.name} stroke index saved — pops recomputed`); }}
+          onClose={() => setSiEditCourse(null)}
+        />
+      )}
       {toast && <Toast message={toast} />}
     </div>
   );

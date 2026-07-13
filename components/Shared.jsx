@@ -156,7 +156,9 @@ const QRModal = ({ open, onClose, syncCode }) => {
 };
 
 // ─── NavBar ───────────────────────────────────────────────────────────────────
-const NavBar = ({ syncCode, onHome, currentScreen }) => {
+// `compact` shrinks the bar for short landscape viewports (phones rotated
+// sideways) so the content area keeps as much height as possible.
+const NavBar = ({ syncCode, onHome, currentScreen, compact = false }) => {
   const [copied, setCopied] = React.useState(false);
   const [showQR, setShowQR] = React.useState(false);
 
@@ -166,15 +168,16 @@ const NavBar = ({ syncCode, onHome, currentScreen }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const wordmarkSize = compact ? 16 : 20;
   return (
     <>
-      <nav style={navStyles.bar}>
+      <nav style={{ ...navStyles.bar, minHeight: `calc(${compact ? 40 : 56}px + env(safe-area-inset-top, 0px))` }}>
         <button onClick={onHome} style={navStyles.logo}>
           <span style={{ display:'inline-flex', borderRadius:'50%', boxShadow:'0 0 0 1.5px rgba(200,161,90,0.55)', flexShrink:0 }}>
-            <PPLogo size={32} />
+            <PPLogo size={compact ? 24 : 32} />
           </span>
           <span style={{ marginLeft:9, lineHeight:1 }}>
-            <span style={{ color:'#C8A15A', fontFamily:"'Plus Jakarta Sans', 'Playfair Display', Georgia, serif", fontSize:20, fontWeight:800, letterSpacing:0.3 }}>Play</span><span style={{ color:'#FFFFFF', fontFamily:"'Plus Jakarta Sans', 'Playfair Display', Georgia, serif", fontSize:20, fontWeight:800, letterSpacing:0.3 }}>Pal</span>
+            <span style={{ color:'#C8A15A', fontFamily:"'Plus Jakarta Sans', 'Playfair Display', Georgia, serif", fontSize:wordmarkSize, fontWeight:800, letterSpacing:0.3 }}>Play</span><span style={{ color:'#FFFFFF', fontFamily:"'Plus Jakarta Sans', 'Playfair Display', Georgia, serif", fontSize:wordmarkSize, fontWeight:800, letterSpacing:0.3 }}>Pal</span>
           </span>
         </button>
         <div style={navStyles.center} />
@@ -222,7 +225,6 @@ const navStyles = {
     paddingTop:'env(safe-area-inset-top, 0px)',
     paddingLeft:'calc(16px + env(safe-area-inset-left, 0px))',
     paddingRight:'calc(16px + env(safe-area-inset-right, 0px))',
-    minHeight:'calc(56px + env(safe-area-inset-top, 0px))',
     background:'#0E2B20',
     borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0, zIndex:100, position:'relative',
   },
