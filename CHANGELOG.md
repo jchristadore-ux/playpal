@@ -2,6 +2,47 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.7.2] — 2026-07-13
+
+### Fixed
+- **EGT screen input focus loss** — the EGT Cup screen defined its tab and card
+  renderers as inline component types, so every keystroke re-created them and
+  React remounted the whole subtree: score-grid and stake inputs dropped focus
+  after each digit, and the Individual Matches editor lost its in-progress
+  state on any parent re-render (e.g. a toast). Renderers are now invoked as
+  plain functions and the stateful pieces (SI editor, stake input) are hoisted
+  to module scope — typing flows normally and match setup survives re-renders.
+- **Stake fields snapped back to the default when cleared** — the dollar inputs
+  on the Rounds tab committed on every keystroke, so emptying a field instantly
+  re-showed the tournament default and you couldn't retype a new rate. The
+  input now buffers its text while focused and still commits each keystroke.
+- **SportsCenter ran money at default stakes** — the broadcast rebuilds the Cup
+  from synced rounds with a fresh state, so stake overrides set on the Rounds
+  tab never reached its money engine and the TV bankroll could disagree with
+  the app. The provider now recovers each round's rates from the synced format
+  objects (skins ante, BBB/Nines, Wolf unit, Nassau per-point) — broadcast and
+  app money now settle at the same stakes. Regression tests added.
+
+### Added
+- **Award Races on the Standings tab** — live leaders for all four season award
+  categories (Skins King, Birdie King net, Flat Stick, Iron Man) with the full
+  field's numbers, so every Cup category has a visible leader before final
+  settlement — not just points, stats and money.
+- **Skins King & Birdie King pages on SportsCenter** — the post-round stat
+  rotation now includes both season-award races alongside scoring average,
+  fairways, greens, putts, birdies and money, completing the "leaders in every
+  category" set on the TV.
+- **SportsCenter keyboard remote** — F fullscreen · Space pause/resume ticker ·
+  → / N next stage module · +/− ticker speed · A/P/L/S broadcast mode, with an
+  on-screen key legend and a pause/resume button in the hover controls. Built
+  for the laptop-connected-to-TV setup where the keyboard is the remote.
+- **SportsCenter screen wake lock** — the page now requests a screen wake lock
+  (re-acquired when the tab regains visibility) so the laptop driving the TV
+  doesn't sleep mid-broadcast.
+- **Landscape-aware app chrome** — on short viewports (rotated phones) the top
+  NavBar and bottom tab nav compact themselves (~40px reclaimed), keeping the
+  scorer and EGT screens usable in landscape.
+
 ## [1.7.1] — 2026-07-10
 
 ### Fixed

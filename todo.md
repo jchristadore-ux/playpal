@@ -50,7 +50,21 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] R1 (Minerals) excluded from EGT Cup standings (flat/stakes-only): awards
       no points; adjusted "Max" caps all four at 30.
 
+## Done — full audit + GUI optimization (v1.7.2)
+- [x] EGT screen: fixed input focus loss (inline component types → plain
+      function renderers; SI editor + stake input hoisted to module scope).
+- [x] Stake inputs: draft-buffered so a cleared field can be retyped.
+- [x] SportsCenter: per-round stake overrides recovered from synced formats so
+      broadcast money matches the app.
+- [x] Leaders in all categories: Award Races on the Standings tab; Skins King +
+      Birdie King stat pages in the SportsCenter rotation.
+- [x] Landscape: compact NavBar + bottom tab nav on short viewports.
+- [x] SportsCenter TV: screen wake lock, keyboard remote (F/Space/→/±/A-P-L-S),
+      pause button + key legend.
+
 ## Optional follow-ups (not required by spec)
+- [ ] Recover R4/R6 nassauPerPoint on the broadcast when no Nassau format is on
+      the synced round (needs the stake carried on another format object).
 - [ ] Show EGT per-game pops in the native scorer's on-screen dots.
 - [ ] UI entry for CTP/LD winners (engine ready).
 - [ ] Configurable net-birdie basis for The Rock.
