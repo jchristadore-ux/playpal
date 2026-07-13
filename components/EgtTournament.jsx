@@ -599,9 +599,10 @@ const EgtTournament = ({ onScoreRound }) => {
     return (
       <div>
         <div style={{ fontSize: 12, color: '#5b6b63', lineHeight: 1.5, marginBottom: 14 }}>
-          The official EGT pairings are optimized across the whole trip — not one round at a time — to balance teams by
-          handicap, rotate riding partners so everyone shares a cart with everyone else, and even out teammates and
-          opponents. The matrices below prove it. Counts show how many times each pair appears together.
+          The official EGT pairings are set across the whole trip — not one round at a time. Every player shares a cart
+          with each of the other three at least once, and by request John &amp; TJ ride together as much as possible —
+          four of the six rounds, including Ballyowen (R2) and Crystal Springs (R4), where they also partner up. The
+          matrices below show it. Counts are how many times each pair appears together.
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
           <Stat label="Teammate spread" value={spread(pairVals(partner))} good={Math.max(...pairVals(partner)) - Math.min(...pairVals(partner)) <= 1} />

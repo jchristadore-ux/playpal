@@ -33,10 +33,10 @@ format has fixed teams.
 
 ### R2 · Ballyowen — 7:30 AM
 - **Foursome:** John, Brian, TJ, Mike
-- **Teams:** John + Mike vs Brian + TJ
-- **Cart pairs:** John + Mike · Brian + TJ (carts follow teams)
+- **Teams:** John + TJ vs Brian + Mike
+- **Cart pairs:** John + TJ · Brian + Mike (carts follow teams)
 - **Format:** Four-ball best-ball match play (90%) + Nassau (front · back · overall).
-- **Why:** First team round, deliberately balanced to avoid a super-team. Rather than pairing the two lowest handicaps together, John (low) partners Mike (high) against Brian + TJ — **36 vs 41** combined course handicap, a raw gap of just 5 that the 90% allowance and best-ball scoring tighten further. Because R5 is now individual, R2 and R4 are the only team rounds, so both use a balanced split and the lopsided low-low pairing is never used.
+- **Why:** John and TJ are paired here by request — they ride and partner together at Ballyowen (and again at Crystal Springs, R4). The split still avoids a super-team: John (low) + TJ (high) at **36** combined course handicap face Brian + Mike at **41**, a raw gap of just 5 that the 90% allowance and best-ball scoring tighten further.
 
 ### R3 · Wild Turkey — 1:45 PM
 - **Foursome:** John, Brian, TJ, Mike
@@ -62,27 +62,34 @@ format has fixed teams.
 ### R6 · Black Bear — 8:36 AM
 - **Foursome:** John, Brian, TJ, Mike
 - **Teams:** seeded singles off the R5 standings — 1v2 (Championship), 3v4 (Bronze)
-- **Cart pairs:** John + Brian · TJ + Mike
+- **Cart pairs:** John + TJ · Brian + Mike
 - **Format:** Championship singles + individual net Stableford (full dots).
-- **Why:** Match opponents are only known Friday morning (seeded off standings), so carts are set for riding balance. Across all five riding rounds every player has shared a cart with each of the other three, and no pair rides together more than twice.
+- **Why:** Match opponents are only known Friday morning (seeded off standings). Carts put John + TJ together one last time — their fourth ride together — while cart coverage is already complete by the end of R5 (everyone has ridden with everyone). If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD.
 
 ## Fairness analysis
 
 Computed live on the **Pairings** tab from the schedule above.
 
-- **Teammate spread 0–1.** Team rounds R2 (John+Mike / Brian+TJ) and R4
-  (John+TJ / Brian+Mike) give four of the six pairs exactly one round together;
-  John+Brian and TJ+Mike are never teammates (unavoidable with two team rounds).
-- **Opponent spread 3–5.** Team-round cross-matchups plus the all-play-all
-  individual rounds (R1, R3 Wolf, R5 round-robin) spread head-to-head play
-  evenly. R6 singles are seeded off the standings and excluded (TBD pre-trip).
-- **Cart coverage: complete.** Every player rides with all three others at least
-  once; no pair shares a cart more than twice (spread 1–2).
+- **Cart coverage: complete, John + TJ prioritized.** Every player rides with
+  all three others at least once. By request, John + TJ ride together as much as
+  possible — **4 of the 6 rounds** (R1, R2, R4, R6), including Ballyowen and
+  Crystal Springs. The remaining four pairings each ride together once (R3:
+  John+Brian / TJ+Mike; R5: John+Mike / Brian+TJ), and Brian + Mike — the
+  complement of John + TJ — ride together three times (R2, R4, R6). This is the
+  maximum John + TJ ridealong achievable while still giving every pair at least
+  one shared cart: two rounds must split them so the other four pairs can ride.
+- **Teammate spread 0–2.** John + TJ (and their complement Brian + Mike) are the
+  fixed team in both team rounds (R2, R4), so they partner twice; John+Brian,
+  John+Mike, Brian+TJ and TJ+Mike are never teammates — a deliberate consequence
+  of keeping John + TJ together at Ballyowen and Crystal Springs.
+- **Opponent spread.** Team-round cross-matchups plus the all-play-all
+  individual rounds (R1, R3 Wolf, R5 round-robin) spread head-to-head play. R6
+  singles are seeded off the standings and excluded (TBD pre-trip).
 - **Team balance: avg Δ 5 course-handicap strokes.** Both team rounds split
   36 vs 41 (R2) and 45 vs 50 (R4) — before the 90% / 85% allowances and
   best-ball / aggregate scoring compress them further. No super-teams.
 
-The schedule is optimized globally (across the whole trip), not one round at a
-time: the two team rounds take the two balanced partitions, and the individual
-rounds' cart assignments fill in the remaining pairings so the riding rotation
-covers everyone.
+The schedule is set globally (across the whole trip), not one round at a time:
+John + TJ take a cart together in every round where the coverage constraint
+allows it, and the two individual rounds that split them (R3, R5) fill in the
+remaining pairings so the riding rotation still covers everyone.

@@ -2,6 +2,21 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [Unreleased]
+
+### Changed
+- **EGT cart pairings — John & TJ prioritized** — the trip's riding assignments
+  now pair John and TJ together as much as possible: **4 of the 6 rounds** (R1,
+  R2, R4, R6), including Ballyowen (R2) and Crystal Springs (R4), where they
+  also partner as a team. Every pair still shares a cart at least once — the
+  R3 (John+Brian / TJ+Mike) and R5 (John+Mike / Brian+TJ) cart splits cover the
+  remaining four pairings, which is the maximum John+TJ ridealong achievable
+  while keeping cart coverage complete. R2 teams flip to John+TJ vs Brian+Mike
+  (still a balanced 36-vs-41 course-handicap split) so carts follow teams.
+  Updated in `fixtures/egt-2026-seed.json` (source of truth), the regenerated
+  seed, the Rounds/Pairings tabs, the SportsCenter engine, and the pairings
+  docs. Fairness tests updated for the new R2 teams.
+
 ## [1.7.2] — 2026-07-13
 
 ### Fixed

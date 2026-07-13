@@ -84,7 +84,7 @@ const EgtBridge = (function () {
       case 'R1': // loop 1 Bingo-Bango-Bongo (loop 2 Nines has no native engine)
         base.push({ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) });
         break;
-      case 'R2': { // four-ball best-ball match play as a 2v2 Nassau, John+Brian vs TJ+Mike
+      case 'R2': { // four-ball best-ball match play as a 2v2 Nassau, John+TJ vs Brian+Mike
         const t = round.teams;
         if (t && t[0] && t[1]) baseNassau.push({
           id: 'egt-R2', matchType: '2v2',
