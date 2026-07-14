@@ -209,6 +209,71 @@ const EgtBridge = (function () {
     return state;
   }
 
+  // ── stored-match pop repair ───────────────────────────────────────────────
+  // Before v1.7.3 the Rounds-tab match editor auto-filled 1v1 pops from the
+  // HANDICAP INDEX difference (native players carry the index), while the
+  // tournament rule — and the engine's own fallback — is the COURSE handicap
+  // difference off the low within the match. Those auto-filled arrays count as
+  // "manual" overrides everywhere (engine, native tracker, broadcast), so a
+  // stored match could settle a stroke short (e.g. R5 John v TJ: 10 pops
+  // instead of 11). This scans persisted matches and, when the stored pops are
+  // exactly the legacy auto-fill (i.e. the user never touched them), clears
+  // them so every consumer live-derives the correct CH-based pops instead.
+  // Manually edited pops — anything that differs from the auto-fill — are
+  // left alone. Returns true when something changed (caller persists).
+  function repairMatchPops(state) {
+    const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
+    const model = state && state.model;
+    if (!model || !model.derived) return false;
+    let changed = false;
+
+    const flagsOf = ph => {
+      const out = {};
+      Object.entries(ph || {}).forEach(([pid, arr]) => {
+        if (Array.isArray(arr) && arr.some(Boolean)) out[pid] = Array.from({ length: 18 }, (_, i) => !!arr[i]);
+      });
+      return out;
+    };
+    const sameFlags = (a, b) => {
+      const ka = Object.keys(a).sort(), kb = Object.keys(b).sort();
+      if (ka.length !== kb.length || ka.some((k, i) => k !== kb[i])) return false;
+      return ka.every(k => a[k].every((v, i) => v === !!b[k][i]));
+    };
+
+    const repairList = (rid, list) => {
+      const round = model.rounds.find(r => r.id === rid);
+      const der = model.derived[rid];
+      if (!round || !der || !Array.isArray(list)) return;
+      const course = model.courses[round.courseId];
+      // Both SI variants the legacy auto-fill could have seen: the real card SI
+      // and the hole-number placeholder used while SI was still pending.
+      const holeVariants = [
+        course.holes.slice(0, 18).map((h, i) => ({ hole: h.hole, si: h.si == null ? i + 1 : h.si })),
+        course.holes.slice(0, 18).map((h, i) => ({ hole: h.hole, si: i + 1 })),
+      ];
+      const hiById = {};
+      round.players.forEach(pid => { hiById[pid] = model.playersById[pid]?.handicapIndex || 0; });
+      list.forEach(m => {
+        if (!m || (m.matchType || '1v1') !== '1v1') return;
+        const pids = m.playersInMatch || [];
+        if (pids.length !== 2) return;
+        const stored = flagsOf(m.popHoles);
+        if (!Object.keys(stored).length) return; // nothing baked — already live-derived
+        const isLegacyAutofill = holeVariants.some(holes => sameFlags(stored, H.matchPopFlags(hiById, holes, pids, null)));
+        const chFlags = H.matchPopFlags(der.courseHandicaps, holeVariants[0], pids, null);
+        if (isLegacyAutofill && !sameFlags(stored, chFlags)) {
+          m.popHoles = {};
+          changed = true;
+        }
+      });
+    };
+
+    const rm = (state.events && state.events.roundMatches) || {};
+    Object.keys(rm).forEach(rid => repairList(rid, rm[rid]));
+    if (state.events && Array.isArray(state.events.r5Matches)) repairList('R5', state.events.r5Matches);
+    return changed;
+  }
+
   // Read native scores straight from localStorage (used when finalizing an EGT
   // round from the EGT screen without going through onSaveRound). Returns the
   // same payload shape bridge() expects, or null when nothing was entered.
@@ -229,7 +294,7 @@ const EgtBridge = (function () {
     };
   }
 
-  return { PALETTE, initialsFor, nativeRoundId, syncCodeFor, formatsFor, playerOrder, toNativeRound, bridge, readNativePayload };
+  return { PALETTE, initialsFor, nativeRoundId, syncCodeFor, formatsFor, playerOrder, toNativeRound, bridge, repairMatchPops, readNativePayload };
 })();
 
 if (typeof window !== 'undefined') {

@@ -610,3 +610,81 @@ test('re-importing a seed refreshes schedule metadata but preserves entered data
   assert.equal(st.scores.R4.john[1].gross, 4, 'entered score preserved');
   EgtStore.reset(SEED.trip.id);
 });
+
+// ── v1.7.3 audit regressions ────────────────────────────────────────────────
+test('fmtPoints never shows raw thirds (split champion pools)', () => {
+  assert.equal(EgtStandings.fmtPoints(2 / 3), 0.67);
+  assert.equal(EgtStandings.fmtPoints(19), 19);
+  assert.equal(EgtStandings.fmtPoints(3.5), 3.5);
+  assert.equal(EgtStandings.fmtPoints(22.083333333333332), 22.08);
+  assert.equal(EgtStandings.fmtPoints(null), 0);
+});
+
+test('Flat Stick requires tracked putts — zero putt holes is ineligible, not a winner', () => {
+  const m = freshModel();
+  // john entered gross but never tracked a putt (putts 0 / puttHoles 0);
+  // brian genuinely tracked 120 putts — brian must win, not john.
+  const stats = {
+    john:  { putts: 0,   puttHoles: 0,  netBirdies: 0 },
+    brian: { putts: 120, puttHoles: 90, netBirdies: 0 },
+    tj:    { putts: 130, puttHoles: 90, netBirdies: 0 },
+    mike:  { putts: 140, puttHoles: 90, netBirdies: 0 },
+  };
+  const acc = {}; m.players.forEach(p => { acc[p.id] = { total: 0, breakdown: [] }; });
+  EgtPoints.seasonAwards(m, stats, {}, acc);
+  const flatStick = pid => acc[pid].breakdown.some(b => /Flat Stick/.test(b.category));
+  assert.ok(flatStick('brian'), 'brian (fewest tracked putts) wins');
+  assert.ok(!flatStick('john'), 'untracked john must not win');
+  // Nobody tracked putts → no Flat Stick winner at all.
+  const none = { john: { putts: 0, puttHoles: 0 }, brian: { putts: 0, puttHoles: 0 }, tj: { putts: 0, puttHoles: 0 }, mike: { putts: 0, puttHoles: 0 } };
+  const acc2 = {}; m.players.forEach(p => { acc2[p.id] = { total: 0, breakdown: [] }; });
+  EgtPoints.seasonAwards(m, none, {}, acc2);
+  assert.ok(m.players.every(p => !acc2[p.id].breakdown.some(b => /Flat Stick/.test(b.category))), 'no winner when untracked');
+});
+
+test('seasonStats counts puttHoles per player', () => {
+  const m = freshModel();
+  const scores = { R2: { john: { 1: { gross: 4, putts: 2 }, 2: { gross: 4 } } } };
+  const st = EgtSideGames.seasonStats(m, scores);
+  assert.equal(st.john.puttHoles, 1, 'only the hole with a putt total counts');
+  assert.equal(st.john.putts, 2);
+});
+
+test('repairMatchPops clears legacy HI-based auto-fill so CH pops derive live', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  const { EgtBridge } = W;
+  // Legacy auto-fill exactly as the pre-1.7.3 Rounds tab stored it: HI gap
+  // john(18) v tj(28) = 10 pops on SI 1..10 — but the CH gap at Cascades is 11.
+  const legacy = {}; legacy.tj = m.courses.cascades.holes.slice(0, 18).map(h => h.si <= 10);
+  // A manual config the user actually edited (SI 1..3 only) — must survive.
+  const manual = {}; manual.mike = m.courses.cascades.holes.slice(0, 18).map(h => h.si <= 3);
+  state.events.roundMatches = { R5: [
+    { id: 'a', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: legacy, stakes: 5 },
+    { id: 'b', matchType: '1v1', playersInMatch: ['john', 'mike'], teams: null, popHoles: manual, stakes: 5 },
+  ] };
+  const changed = EgtBridge.repairMatchPops(state);
+  assert.equal(changed, true, 'legacy auto-fill detected and repaired');
+  jeq(state.events.roundMatches.R5[0].popHoles, {}, 'legacy fill cleared → engine derives CH pops');
+  jeq(state.events.roundMatches.R5[1].popHoles, manual, 'manual pops untouched');
+  // The engine now settles the john/tj match on the CH difference: 11 pops.
+  const ctx = EgtEngine.buildRoundCtx(state, 'R5');
+  const tjPops = (ctx.overlayMatches[0].popFlags.tj || []).filter(Boolean).length;
+  assert.equal(tjPops, 11, 'CH 17 v 28 → 11 pops, not the HI-based 10');
+  // Idempotent: a second pass changes nothing.
+  assert.equal(EgtBridge.repairMatchPops(state), false);
+});
+
+test('engine derives match pops from the COURSE handicap difference off the low', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  state.events.roundMatches = { R5: [
+    { id: 'a', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: {}, stakes: 5 },
+  ] };
+  const ctx = EgtEngine.buildRoundCtx(state, 'R5');
+  const flags = ctx.overlayMatches[0].popFlags;
+  assert.equal((flags.tj || []).filter(Boolean).length, 11, 'CH 28 − 17 = 11 strokes for TJ');
+  assert.ok(!flags.john, 'low ball receives nothing');
+});

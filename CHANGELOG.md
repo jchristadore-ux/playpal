@@ -2,7 +2,47 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
-## [Unreleased]
+## [1.7.3] — 2026-07-14
+
+### Fixed
+- **EGT match-play pops were auto-filled from the wrong handicap basis** — the
+  Rounds-tab match editor fed the native players' raw handicap **index** into
+  its stroke auto-fill, while the tournament rule (and the engine's own
+  fallback) is the **course-handicap** difference off the low within each
+  match. Because auto-filled pops count as manual overrides everywhere, a
+  configured R5 match would settle a stroke short in the app, the native
+  tracker, and the SportsCenter alike (e.g. John v TJ at Cascades: 10 pops
+  instead of the correct 11 — CH 17 v 28). The editor now receives each
+  player's derived course handicap for that round, and a one-time repair
+  (`EgtBridge.repairMatchPops`) clears any stored, untouched legacy auto-fill
+  so the engine live-derives the correct CH-based pops; manually edited pop
+  holes are preserved.
+- **SportsCenter never ran the final-night season settlement** — the broadcast
+  rebuilt the Cup from synced rounds but called the engine without the
+  `season` flag, so once R6 finished the TV standings were missing all four
+  season awards (Skins King 2 · Birdie King 2 · Flat Stick 1 · Iron Man 1 —
+  up to 6 of a player's 36 points) and the money board omitted the
+  Pass-the-Money settlement. The broadcast could crown a different champion
+  than the app at the moment it mattered most. It now passes
+  `season: finalized.includes('R6')` exactly like the app (both the live pass
+  and the climber/dropper comparison pass).
+- **Raw float points on screens** — a split champion pool (e.g. a 3-way R5 BBB
+  tie at 2 pts) produced `0.6666666666666666 pts` rendered verbatim in the app
+  standings table, the printable packet, the Bottom Line ticker, and the
+  SportsCenter standings/player cards. All points displays now go through one
+  shared `EgtStandings.fmtPoints` (2-decimal, trailing-zero-free: `0.67`).
+- **Flat Stick could be "won" with zero tracked putts** — a player who entered
+  gross scores but never recorded putts totaled 0 putts and beat everyone who
+  actually tracked. `trackedStats`/`seasonStats` now count `puttHoles`, and
+  both the season-award engine and the Award Races tab treat a player with no
+  recorded putt holes as ineligible (shown as —) rather than the leader.
+- **TV pre-round cards for R4/R5/R6 showed mangled formats with no rules** —
+  the seed's `fourBallAggregateStableford`, `bingoBangoBongo+matchPlay`, and
+  `championshipSingles+stableford` keys had no `FORMAT_RULES` entry, so the
+  "TODAY'S GAME" stage fell back to auto-labels like "Bingo Bango
+  Bongo+match Play" over an empty rules panel, and the schedule ticker printed
+  the raw key. All three now have proper labels + one-line rules, and the
+  schedule segment uses the resolved label.
 
 ### Changed
 - **EGT cart pairings — John & TJ prioritized** — the trip's riding assignments

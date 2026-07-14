@@ -155,6 +155,10 @@ const EgtTournament = ({ onScoreRound }) => {
     try {
       const seed = typeof seedText === 'string' ? JSON.parse(seedText) : seedText;
       const st = window.EgtStore.importSeed(seed);
+      // One-time repair: matches saved before v1.7.3 auto-filled their 1v1 pops
+      // from the handicap-index difference; clear any untouched auto-fill so the
+      // engine live-derives the correct course-handicap pops (manual edits stay).
+      if (window.EgtBridge.repairMatchPops(st)) window.EgtStore.save(st);
       setState({ ...st });
     } catch (e) { setToast('Could not load seed: ' + e.message); }
   }, []);
@@ -269,7 +273,9 @@ const EgtTournament = ({ onScoreRound }) => {
     return [
       race('Skins King', '2 pts', pid => live.skins?.[pid] || 0, false, 'skins'),
       race('Birdie King (net)', '2 pts', pid => stats[pid]?.netBirdies || 0, false, 'net birdies'),
-      race('Flat Stick (fewest putts)', '1 pt', pid => stats[pid]?.putts ?? 0, true, 'putts'),
+      // Fewest putts needs putts actually tracked — no recorded putt holes
+      // means ineligible (Infinity), not a 0-putt leader.
+      race('Flat Stick (fewest putts)', '1 pt', pid => ((stats[pid]?.puttHoles || 0) > 0 ? stats[pid].putts : Infinity), true, 'putts'),
       race('Iron Man (FIR+GIR)', '1 pt', pid => (stats[pid]?.fairwaysHit || 0) + (stats[pid]?.greensInReg || 0), false, 'FIR+GIR'),
     ];
   };
@@ -286,7 +292,7 @@ const EgtTournament = ({ onScoreRound }) => {
             <tr key={r.player} style={{ background: r.rank === 1 ? '#eef6f0' : '#fff' }}>
               <td style={{ ...td, fontWeight: 800 }}>{r.rank}</td>
               <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>{r.name}</td>
-              <td style={td}>{r.points}</td>
+              <td style={td}>{window.EgtStandings.fmtPoints(r.points)}</td>
               <td style={{ ...td, color: egtArrowColor(r.direction) }}>{egtArrow(r.direction)}{r.move ? Math.abs(r.move) : ''}</td>
               <td style={{ ...td, color: '#8a988f' }}>{r.maxPossible ?? '—'}</td>
             </tr>
@@ -308,7 +314,7 @@ const EgtTournament = ({ onScoreRound }) => {
               <td style={{ ...td, textAlign: 'left', fontSize: 11.5 }}>
                 {a.rows.map((r, i) => (
                   <span key={r.pid}>{i ? ' · ' : ''}
-                    <span style={{ fontWeight: a.leaders.includes(r.pid) ? 800 : 500 }}>{r.name} {r.v}</span>
+                    <span style={{ fontWeight: a.leaders.includes(r.pid) ? 800 : 500 }}>{r.name} {isFinite(r.v) ? r.v : '—'}</span>
                   </span>
                 ))}
                 <span style={{ color: '#8a988f' }}> {a.unit}</span>
@@ -363,6 +369,13 @@ const EgtTournament = ({ onScoreRound }) => {
     const pairings = round.pairings || {};
     // Native-shaped players/course for the per-round Individual Matches config.
     const native = isOpen ? window.EgtBridge.toNativeRound(model, round.id, state.stakes) : null;
+    // Match play gives the higher handicap the COURSE-handicap difference (the
+    // engine's basis), so the match editor must see each player's CH for this
+    // round — native players carry the raw index, which auto-fills a stroke
+    // short (e.g. R5 John v TJ: HI gap 10 vs CH gap 11).
+    const matchPlayers = native
+      ? native.players.map(p => ({ ...p, handicap: der.courseHandicaps[p.id] ?? p.handicap }))
+      : null;
     const matches = roundMatchesFor(round.id);
     return (
       <div style={{ border: `1px solid ${LINE}`, borderRadius: 14, marginBottom: 14, overflow: 'hidden', boxShadow: isOpen ? '0 2px 10px rgba(14,43,32,0.06)' : 'none' }}>
@@ -501,7 +514,7 @@ const EgtTournament = ({ onScoreRound }) => {
               </div>
               {typeof NassauMultiMatchConfig !== 'undefined' && native ? (
                 <NassauMultiMatchConfig
-                  roundPlayers={native.players}
+                  roundPlayers={matchPlayers}
                   nassauMatches={matches}
                   onChange={ms => setRoundMatches(round.id, ms)}
                   course={native.course}

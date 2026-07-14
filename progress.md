@@ -164,3 +164,34 @@ broadcast ticker for TVs.
 - Wired: build.mjs SOURCES, sw.js precache (+bottomline.html), version bump
   1.6.0 everywhere, CHANGELOG, tests/helpers/load.mjs, 12-test suite in
   tests/bottomLineProvider.test.mjs.
+
+## Full audit pass #3 — EGT Cup + SportsCenter focus (branch claude/full-audit-egt-focus-g1rrvm) — v1.7.3
+
+Status: **complete — 159 tests green (8 new regressions), dist rebuilt, version 1.7.3.**
+
+Hyper-focused audit of components/egt/*, EgtTournament.jsx, BottomLine.jsx,
+bottomLineProvider.js. Five real defects found, all fixed + regression-tested:
+
+1. 🔴 Match-play pops auto-filled from handicap INDEX, not COURSE handicap.
+   The Rounds-tab match editor got native players (handicap = HI); its
+   auto-fill (calcAutoPopHoles) baked HI-difference pops which count as manual
+   overrides in engine + tracker + broadcast. R5 John v TJ: 10 pops instead of
+   11 (CH 17 v 28). Fixed: EgtTournament passes CH-based players to
+   NassauMultiMatchConfig; new EgtBridge.repairMatchPops clears stored,
+   untouched legacy auto-fills on boot (manual edits preserved).
+2. 🔴 SportsCenter never passed season flag → after R6 the TV was missing all
+   4 season awards (6 pts) + Pass-the-Money settlement; could show wrong
+   champion. computeEgtFacts now passes season: finalized.includes('R6')
+   (live pass + climber/dropper pass).
+3. 🟡 Raw float points (0.6666666666666666) displayed in app standings,
+   printable, ticker, broadcast modules. New shared EgtStandings.fmtPoints
+   used everywhere points render.
+4. 🟡 Flat Stick winnable with 0 tracked putts. trackedStats/seasonStats now
+   carry puttHoles; engine + Award Races require puttHoles > 0.
+5. 🟡 TV pre-round cards for R4/R5/R6: primaryGame keys missing from
+   FORMAT_RULES → mangled labels, empty rules panel. Added all three; the
+   schedule ticker now uses the resolved label.
+
+Files: components/egt/{egtBridge,egtPoints,egtSideGames,egtStandings,egtPrintable}.js,
+components/{EgtTournament.jsx,bottomLineProvider.js}, tests/{egt,bottomLineProvider}.test.mjs,
+version bump 1.7.3 (package.json, index.html, bottomline.html, sw.js), CHANGELOG.

@@ -10,11 +10,11 @@ const EgtPrintable=(function(){const esc=s=>String(s==null?"":s).replace(/[&<>"]
     .egt-print tr.lead td{background:#eef6f0}
     .egt-print .pend{color:#9a6a00;font-style:italic}
     @media print{.egt-print{max-width:none} .egt-noprint{display:none}}
-  `;function standingsTable(standings){const rows=standings.map(r=>{var _a;return`
+  `;function standingsTable(standings){const ST=typeof window!=="undefined"&&window.EgtStandings||(typeof EgtStandings!=="undefined"?EgtStandings:null);const pts=v=>ST&&ST.fmtPoints?ST.fmtPoints(v):v;const rows=standings.map(r=>{var _a;return`
       <tr class="${r.rank===1?"lead":""}">
         <td>${r.rank}</td>
         <td class="name">${esc(r.name)}</td>
-        <td>${r.points}</td>
+        <td>${pts(r.points)}</td>
         <td class="${r.direction}">${arrow(r.direction)}${r.move?Math.abs(r.move):""}</td>
         <td>${(_a=r.maxPossible)!=null?_a:"—"}</td>
       </tr>`}).join("");return`<table><thead><tr><th>Pos</th><th>Player</th><th>EGT Pts</th><th>Move</th><th>Max</th></tr></thead><tbody>${rows}</tbody></table>`}function moneyTable(model,moneyTotal){const rows=model.players.map(p=>`
