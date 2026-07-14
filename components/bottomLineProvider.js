@@ -590,7 +590,7 @@ const BottomLineProvider = (function () {
     // Per-round money. Finalized EGT rounds use the engine's authoritative
     // per-round totals; in-progress rounds use live native payouts — so the
     // per-round cards never contradict the running bankroll above.
-    const egtByRound = (f.egt && f.egt.live && f.egt.live.money && f.egt.live.money.byRound) || {};
+    const egtByRound = (f.egt && f.egt.live && f.egt.live.money && f.egt.live.money.rounds) || {};
     const finalized = new Set(f.egt && f.egt.state ? f.egt.state.finalized : []);
     const nameOf = pid => (f.egt && f.egt.model && (f.egt.model.playersById[pid] || {}).name) || pid;
     f.rounds.filter(r => r.hasScores).slice(0, 6).forEach(r => {
