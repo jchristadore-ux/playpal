@@ -1,5 +1,15 @@
 # Project Progress
 
+## Remove EGT Pairings tab (branch claude/r1-stakes-money-tracker-d6otdm, restarted post-merge) — v1.7.5
+
+Status: **complete — 162 tests green.**
+
+Removed the Pairings tab (fairness matrices + handicap-balance table +
+scorecard stats) from the EGT Cup screen at the user's request — the analysis
+proved the schedule was balanced and isn't needed day-to-day. Cart pairings
+and rationale still show on each round card in the Rounds tab; the written
+analysis remains in `docs/EGT_PAIRINGS.md`. Version 1.7.5 everywhere.
+
 ## R1 stakes in the overall money tracker (branch claude/r1-stakes-money-tracker-d6otdm) — v1.7.4
 
 Status: **complete — 162 tests green.**

@@ -2,6 +2,16 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.7.5] — 2026-07-14
+
+### Removed
+- **Pairings tab on the EGT Cup screen** — the fairness-analysis breakdown
+  (partner/opponent/cart frequency matrices, handicap-balance table, scorecard
+  stats) served its purpose as proof the schedule was balanced and is no
+  longer needed day-to-day. Cart pairings and the per-round rationale remain
+  on each round's card in the Rounds tab; the written analysis lives on in
+  `docs/EGT_PAIRINGS.md`.
+
 ## [1.7.4] — 2026-07-14
 
 ### Fixed
