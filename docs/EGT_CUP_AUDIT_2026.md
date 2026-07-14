@@ -66,7 +66,7 @@ Updated both the master-schedule row and the R4 section header to 7:50 AM.
 | **Money engine** | Every cash game is a zero-sum vector; each finalized round and the full tournament net to $0 to the cent (float residual pushed onto the largest entry). Now covers every round's primary format **and** every overlay side match (§4). ✓ |
 | **Standings & tiebreakers** | R6 Stableford → head-to-head → total skins → chip-off; dense ranks; night-over-night snapshots + deltas persisted per night. ✓ |
 | **R6 reseed** | 1v2 Championship / 3v4 Bronze auto-seeded off the R5 standings once R5 finalizes. ✓ |
-| **Partners/pairings fairness** | The Pairings tab reads the **imported** model (see §3), where R5 teams are cleared, so teammate spread is correctly 0–1 over the two real team rounds (R2, R4); cart coverage complete; avg team Δ 5 CH. ✓ |
+| **Partners/pairings fairness** | The Pairings tab reads the **imported** model (see §3), where R5 teams are cleared, so teammate spread is 0–2 over the two real team rounds (R2, R4 — both John+TJ vs Brian+Mike, paired by request); cart coverage complete with John+TJ riding together 4 of 6 rounds (incl. Ballyowen & Crystal Springs); avg team Δ 5 CH. ✓ |
 | **App→engine scoring bridge** | `toNativeRound` builds a normal scoreable round (stable id, deterministic sync code, real format trackers); `bridge`/`readNativePayload` translate native scores + BBB/Wolf events back into the EGT store on finalize. ✓ |
 | **SportsCenter aggregation** | `bottomLineProvider` rebuilds the whole Cup from the seed + synced scores with no storage writes, filters to EGT-only rounds, and layers live native money on top of finalized-round engine money. Bankroll and records aggregate across all scored EGT rounds. ✓ |
 

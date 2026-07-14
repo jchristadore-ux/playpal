@@ -979,23 +979,23 @@
           "name": "Team 1",
           "players": [
             "john",
-            "mike"
+            "tj"
           ]
         },
         {
           "name": "Team 2",
           "players": [
             "brian",
-            "tj"
+            "mike"
           ]
         }
       ],
       "pairings": {
         "carts": [
-          ["john", "mike"],
-          ["brian", "tj"]
+          ["john", "tj"],
+          ["brian", "mike"]
         ],
-        "rationale": "First team round, and the split is deliberately balanced to avoid a super-team: rather than pairing the two lowest handicaps together, John (13, low) partners Mike (23, high) against Brian (18) + TJ (23) — 36 vs 41 combined, a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Because R5 is now an individual round, R2 and R4 are the trip's only team rounds, so both use a balanced pairing (the lopsided low-low split is never used). Carts follow the teams so partners can strategize between shots."
+        "rationale": "First team round. John and TJ are paired here by request — they ride and partner together at Ballyowen (and again at Crystal Springs in R4). The split stays balanced despite the fixed pairing: John (13, low) + TJ (23, high) at 36 combined face Brian (18) + Mike (23) at 41 — a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Carts follow the teams so partners can strategize between shots."
       },
       "courseHandicaps": {
         "john": 13,
@@ -1154,10 +1154,10 @@
       "teams": [],
       "pairings": {
         "carts": [
-          ["john", "brian"],
-          ["tj", "mike"]
+          ["john", "tj"],
+          ["brian", "mike"]
         ],
-        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + Brian, TJ + Mike) close out the trip; across all five riding rounds every player has shared a cart with each of the other three, and no pair rides together more than twice. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
+        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + TJ, Brian + Mike) put John and TJ together one last time to close out the trip — their fourth ride together (R1, R2, R4, R6) at the request to keep them paired as much as possible. Every player has still shared a cart with each of the other three at least once by the end of R5, so cart coverage is complete regardless of the seeded matches. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
       },
       "courseHandicaps": {
         "john": 16,
