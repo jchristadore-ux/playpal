@@ -22,11 +22,13 @@ const EgtPrintable = (function () {
   `;
 
   function standingsTable(standings) {
+    const ST = (typeof window !== 'undefined' && window.EgtStandings) || (typeof EgtStandings !== 'undefined' ? EgtStandings : null);
+    const pts = v => (ST && ST.fmtPoints ? ST.fmtPoints(v) : v);
     const rows = standings.map(r => `
       <tr class="${r.rank === 1 ? 'lead' : ''}">
         <td>${r.rank}</td>
         <td class="name">${esc(r.name)}</td>
-        <td>${r.points}</td>
+        <td>${pts(r.points)}</td>
         <td class="${r.direction}">${arrow(r.direction)}${r.move ? Math.abs(r.move) : ''}</td>
         <td>${r.maxPossible ?? '—'}</td>
       </tr>`).join('');

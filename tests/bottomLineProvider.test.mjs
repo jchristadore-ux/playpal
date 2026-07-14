@@ -433,3 +433,83 @@ test('provider is registry-driven: a custom builder surfaces in the feed', () =>
   const feed = w.BottomLineProvider.buildFeed(facts);
   assert.ok(feed.some(s => s.id === 'custom:1'));
 });
+
+// ── v1.7.3 audit regressions ────────────────────────────────────────────────
+
+test('SportsCenter runs season settlement once R6 is final (awards + PTM money)', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  // Complete every round; give mike early 3-putts so the PTM pot is non-zero.
+  const docs = model.rounds.map(r => {
+    const nat = w.EgtBridge.toNativeRound(model, r.id);
+    const holes = nat.course.holes;
+    const scores = {}, putts = {};
+    nat.players.forEach((p, k) => {
+      scores[p.id] = holes.map(h => h.par + ({ john: 0, brian: 1, tj: 1, mike: 2 }[p.id] ?? k));
+      putts[p.id] = holes.map((_, i) => (p.id === 'mike' && i < 3 ? 3 : 2));
+    });
+    const ts = now - 8 * 3600 * 1000;
+    return { syncCode: nat.syncCode, savedAt: ts, round: nat,
+      liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
+        wolfData: {}, bbbData: {}, teeBallData: {}, popFlags: {},
+        currentHoleIdx: 17, roundId: nat.id, _writtenBy: 'x', _ts: ts } };
+  });
+  const facts = w.BottomLineProvider.computeFacts({ docs, trips: [], players: [], now });
+  assert.ok(facts.egt.state.finalized.includes('R6'), 'R6 finalized on the broadcast');
+  // Season awards present in the points breakdown (they are 6 of the 36 max).
+  const cats = new Set();
+  Object.values(facts.egt.live.points).forEach(p => p.breakdown.forEach(b => cats.add(b.category)));
+  assert.ok([...cats].some(c => /Skins King/.test(c)), 'Skins King awarded on the broadcast');
+  assert.ok([...cats].some(c => /Birdie King/.test(c)), 'Birdie King awarded on the broadcast');
+  // Pass-the-Money settles into the broadcast money and stays zero-sum.
+  assert.ok(facts.egt.live.money.rounds.passTheMoney, 'PTM settlement folded in');
+  const sum = Object.values(facts.egt.live.money.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, 'final money still nets to zero');
+  // The broadcast standings now agree with the app's season pass.
+  const appLive = w.EgtEngine.liveUpdate(facts.egt.state, { noPersist: true, season: true });
+  assert.equal(facts.egt.live.standings[0].player, appLive.standings[0].player, 'same champion as the app');
+  assert.equal(
+    Math.round(facts.egt.live.standings[0].points * 100),
+    Math.round(appLive.standings[0].points * 100),
+    'same winning points as the app');
+});
+
+test('every seed round resolves to a real format label + rule (no mangled fallback)', () => {
+  const w = loadWithSeed();
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  model.rounds.forEach(r => {
+    const f = w.BottomLineProvider.formatFor(r);
+    assert.ok(f.rule && f.rule.length > 10, `${r.id} (${r.primaryGame}) has a rule`);
+    assert.ok(!/\+[a-z]/.test(f.label), `${r.id} label "${f.label}" is not a mangled key`);
+  });
+});
+
+test('ticker and broadcast standings show formatted points, never raw thirds', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  // R5 with a 3-way BBB champion tie → 2/3-point shares in the standings.
+  const nat = w.EgtBridge.toNativeRound(model, 'R5');
+  const holes = nat.course.holes;
+  const scores = {}, putts = {};
+  nat.players.forEach(p => { scores[p.id] = holes.map(h => h.par); putts[p.id] = holes.map(() => 2); });
+  const bbbData = {};
+  holes.forEach((h, i) => { bbbData[i] = { bingo: ['john', 'brian', 'tj'][i % 3], bango: null, bongo: null }; });
+  const ts = now - 8 * 3600 * 1000;
+  const doc = { syncCode: nat.syncCode, savedAt: ts, round: nat,
+    liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
+      wolfData: {}, bbbData, teeBallData: {}, popFlags: {},
+      currentHoleIdx: 17, roundId: nat.id, _writtenBy: 'x', _ts: ts } };
+  const facts = w.BottomLineProvider.computeFacts({ docs: [doc], trips: [], players: [], now });
+  // 18 holes ÷ 3 champions → 6 bingos each → 3-way champion tie → 2/3 pts each.
+  const feed = w.BottomLineProvider.buildFeed(facts);
+  const standingsSeg = feed.find(s => s.id === 'egt:standings');
+  assert.ok(standingsSeg, 'standings segment present');
+  const text = standingsSeg.parts.map(p => p.s).join(' ');
+  assert.ok(!/\d\.\d{3,}/.test(text), `no raw float points on the ticker: "${text}"`);
+  assert.ok(/0\.67 pts/.test(text), `formatted third present: "${text}"`);
+  const mods = w.BottomLineProvider.broadcastModules(facts, 'post');
+  const sm = mods.find(m => m.type === 'standings');
+  sm.rows.forEach(r => assert.equal(r.points, Math.round(r.points * 100) / 100, 'module points formatted'));
+});

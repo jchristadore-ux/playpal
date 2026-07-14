@@ -73,3 +73,11 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - dist/ committed; run `npm run build` before every commit.
 - Web/PWA + Capacitor bundle must keep working (build-www copies dist/egt/).
 - Seed is the single source of truth; engine derives pops from courseLibrary SI.
+
+## Done — full audit pass #3 (v1.7.3, EGT Cup + SportsCenter focus)
+- [x] Match editor auto-pops now off COURSE handicap; repairMatchPops migration.
+- [x] SportsCenter season settlement (awards + PTM) once R6 is final.
+- [x] Shared fmtPoints for every points display (no raw thirds).
+- [x] Flat Stick requires tracked putts (puttHoles) — engine + Award Races.
+- [x] FORMAT_RULES entries for R4/R5/R6 primaryGame keys; schedule label fixed.
+- [x] 8 new regression tests; 159 green; dist rebuilt; v1.7.3 everywhere.

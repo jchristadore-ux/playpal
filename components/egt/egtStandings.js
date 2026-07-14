@@ -8,6 +8,16 @@ const EgtStandings = (function () {
   const ROUND_NIGHT = { R1: 'TUE', R2: 'WED', R3: 'WED', R4: 'THU', R5: 'THU', R6: 'FRI' };
   const NIGHT_ORDER = ['TUE', 'WED', 'THU', 'FRI'];
 
+  // Display formatter for Cup points. Split pools produce thirds
+  // (e.g. a 3-way champion split of 2 pts = 0.6666666666666666), which must
+  // never hit a screen raw. Rounds to 2 decimals and drops trailing zeros:
+  // 19 → 19, 3.5 → 3.5, 2/3 → 0.67. Every points display (app standings,
+  // printable packet, ticker, SportsCenter) goes through this one helper.
+  function fmtPoints(v) {
+    const n = Math.round((Number(v) || 0) * 100) / 100;
+    return n;
+  }
+
   // Build the ranked leaderboard from points, breaking ties by the seed's order:
   //   R6 Stableford points → head-to-head → total skins → chip-off.
   //   tie: { r6Stableford:{pid:pts}, headToHead:{pid:wins}, skins:{pid:n}, chipOff:{pid:rank} }
@@ -80,7 +90,7 @@ const EgtStandings = (function () {
     };
   }
 
-  return { ROUND_NIGHT, NIGHT_ORDER, leaderboard, reseedR6, withDeltas, makeSnapshot };
+  return { ROUND_NIGHT, NIGHT_ORDER, fmtPoints, leaderboard, reseedR6, withDeltas, makeSnapshot };
 })();
 
 if (typeof window !== 'undefined') {

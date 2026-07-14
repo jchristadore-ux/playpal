@@ -112,7 +112,12 @@ const EgtPoints = (function () {
     const grant = (winners, label, pts) => winners.forEach(pid => addPoints(acc, pid, label, pts / winners.length));
     grant(winnersOf(pid => skinsTotals?.[pid] || 0, false), 'Skins King', cfg.skinsKing || 2);
     grant(winnersOf(pid => seasonStats?.[pid]?.netBirdies || 0, false), 'Birdie King (net)', cfg.birdieKingNet || 2);
-    grant(winnersOf(pid => seasonStats?.[pid]?.putts ?? Infinity, true), 'Flat Stick (fewest putts)', cfg.flatStickFewestPutts || 1);
+    // Fewest putts requires putts to actually be tracked — a player with zero
+    // recorded putt holes is ineligible, not a 0-putt winner.
+    grant(winnersOf(pid => {
+      const s = seasonStats?.[pid];
+      return s && s.puttHoles > 0 ? s.putts : Infinity;
+    }, true), 'Flat Stick (fewest putts)', cfg.flatStickFewestPutts || 1);
     grant(winnersOf(pid => (seasonStats?.[pid]?.fairwaysHit || 0) + (seasonStats?.[pid]?.greensInReg || 0), false), 'Iron Man (FIR+GIR)', cfg.ironManFIRplusGIR || 1);
     return acc;
   }

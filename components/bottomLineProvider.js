@@ -40,6 +40,12 @@ const BottomLineProvider = (function () {
     const v = Math.round(Math.abs(n));
     return (n < 0 ? '-$' : '+$') + v;
   }
+  // Cup points for display — split pools produce thirds (0.6666666666666666)
+  // that must never scroll across a TV raw. Same helper the app standings use.
+  function fmtPts(v) {
+    const ST = g('EgtStandings');
+    return ST && ST.fmtPoints ? ST.fmtPoints(v) : Math.round((Number(v) || 0) * 100) / 100;
+  }
   function upDown(n, s) { return n >= 0 ? P.up(s) : P.down(s); }
   function first(list) { return list && list.length ? list[0] : null; }
 
@@ -322,8 +328,13 @@ const BottomLineProvider = (function () {
       return { model, state, live: null, rounds: egtRounds };
     }
 
+    // season:true once R6 is in — exactly like the app — so the broadcast's
+    // final standings carry the four season awards (Skins King, Birdie King,
+    // Flat Stick, Iron Man) and the money folds in the Pass-the-Money
+    // settlement. Without it the TV would show a different champion than the
+    // app on the final night.
     let live = null;
-    try { live = EgtEngine.liveUpdate(state, { noPersist: true }); } catch (e) {}
+    try { live = EgtEngine.liveUpdate(state, { noPersist: true, season: state.finalized.includes('R6') }); } catch (e) {}
 
     // Biggest climber / biggest drop: standings with vs without the most
     // recently finalized round.
@@ -336,7 +347,7 @@ const BottomLineProvider = (function () {
           finalized: state.finalized.filter(rid => rid !== latest),
           snapshots: [],
         });
-        const prev = EgtEngine.liveUpdate(prevState, { noPersist: true });
+        const prev = EgtEngine.liveUpdate(prevState, { noPersist: true, season: prevState.finalized.includes('R6') });
         const prevRank = {}; prev.standings.forEach(s => { prevRank[s.player] = s.rank; });
         let best = 0, worst = 0;
         live.standings.forEach(s => {
@@ -668,7 +679,7 @@ const BottomLineProvider = (function () {
       const parts = [];
       L.standings.forEach((s, i) => {
         if (i) parts.push(P.sep());
-        parts.push(P.dim(`${s.rank}.`), P.name(s.name), P.val(`${s.points} pts`));
+        parts.push(P.dim(`${s.rank}.`), P.name(s.name), P.val(`${fmtPts(s.points)} pts`));
         if (s.direction === 'up') parts.push(P.up(`▲${s.move}`));
         if (s.direction === 'down') parts.push(P.down(`▼${Math.abs(s.move)}`));
       });
@@ -676,12 +687,12 @@ const BottomLineProvider = (function () {
         label: `${e.model.trip.name} STANDINGS`, parts });
       const leader = L.standings[0];
       segs.push({ id: 'egt:leader', category: 'egt', icon: '👑', label: 'TRIP LEADER',
-        parts: [P.name(leader.name.toUpperCase()), P.val(`${leader.points} pts`),
+        parts: [P.name(leader.name.toUpperCase()), P.val(`${fmtPts(leader.points)} pts`),
                 P.dim(`of ${leader.maxPossible} possible`)] });
       if (L.standings.length > 2) {
         const last = L.standings[L.standings.length - 1];
         segs.push({ id: 'egt:last', category: 'fun', icon: '🐢', label: 'CURRENT LAST PLACE',
-          parts: [P.name(last.name), P.down(`${last.points} pts`), P.dim(`${last.rank}th`)] });
+          parts: [P.name(last.name), P.down(`${fmtPts(last.points)} pts`), P.dim(`${last.rank}th`)] });
       }
     }
     // (Cup money is surfaced by the RUNNING BANKROLL segment, which is built
@@ -728,7 +739,7 @@ const BottomLineProvider = (function () {
       const course = model.courses[next.courseId] || {};
       const parts = [P.val(next.id), P.name((course.name || '').toUpperCase()), P.dim(next.date || '')];
       if (next.teeTimeTarget) parts.push(P.sep(), P.dim('TEE TIME'), P.text(next.teeTimeTarget));
-      if (next.primaryGame) parts.push(P.sep(), P.text(String(next.primaryGame)));
+      if (next.primaryGame) parts.push(P.sep(), P.text(formatFor(next).label));
       segs.push({ id: 'egt:next', category: 'schedule', icon: '📅', label: 'NEXT ROUND', parts });
     }
     const parts = [];
@@ -961,6 +972,12 @@ const BottomLineProvider = (function () {
     'wolf':                     { label: 'Wolf',                          rule: 'The Wolf tees off last each hole and picks a partner before the next shot — or goes Lone Wolf to take the field for double.' },
     'bingoBangoBongo+nines':    { label: 'Bingo-Bango-Bongo + The Nines', rule: 'A point for first on the green (Bingo), closest once all are on (Bango), and first in the hole (Bongo).' },
     'bingoBangoBongo':          { label: 'Bingo-Bango-Bongo',             rule: 'A point for first on the green, closest once everyone is on, and first to hole out.' },
+    // The three below are the seed's own primaryGame keys for R4, R5, and R6 —
+    // every scheduled round must resolve to a real label + rule, or the
+    // pre-round TV cards show a mangled auto-label over an empty rules panel.
+    'fourBallAggregateStableford': { label: 'Team Stableford (2v2)',      rule: 'Both partners’ net Stableford points count every hole — eagle 4, birdie 3, par 2, bogey 1. Segment matches on 1–6, 7–12, 13–18 plus the 18-hole total.' },
+    'bingoBangoBongo+matchPlay': { label: 'Bingo-Bango-Bongo + Match Play', rule: 'Three points a hole — first on, closest on, first in — plus head-to-head Nassau matches where the higher handicap receives the course-handicap difference in strokes.' },
+    'championshipSingles+stableford': { label: 'Championship Singles + Stableford', rule: 'Singles match play seeded off the standings — 1 v 2 for the Cup, 3 v 4 for Bronze — plus individual net Stableford, full dots.' },
     'teamStableford':           { label: 'Team Stableford',               rule: 'Points per hole — eagle 4, birdie 3, par 2, bogey 1. The team’s best balls count.' },
     'individualStableford':     { label: 'Stableford',                    rule: 'Points per hole; highest total wins. Attack — a blow-up only costs you that hole.' },
     'roundRobinMatchPlay':      { label: 'Round-Robin Match Play',        rule: 'Everyone plays everyone head to head; the higher handicap receives the difference in strokes.' },
@@ -1044,7 +1061,7 @@ const BottomLineProvider = (function () {
       const info = playerInfo(s.player);
       const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === info.name.toLowerCase());
       return Object.assign({}, info, {
-        rank: s.rank, points: s.points, maxPossible: s.maxPossible,
+        rank: s.rank, points: fmtPts(s.points), maxPossible: s.maxPossible,
         move: s.move, direction: s.direction, money: bank ? bank.total : null,
       });
     });
@@ -1183,7 +1200,7 @@ const BottomLineProvider = (function () {
         const st = standings.find(s => s.player === a.id) || {};
         const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === info.name.toLowerCase());
         mods.push({ id: `post-player-${a.id}`, type: 'player-card', player: info,
-          rank: st.rank || null, points: st.points != null ? st.points : null, rounds: a.rounds,
+          rank: st.rank || null, points: st.points != null ? fmtPts(st.points) : null, rounds: a.rounds,
           scoringAvg: a.scoringAvg, avgToPar: a.avgToPar, money: bank ? bank.total : null,
           skins: skinsOf[a.id] || 0, firPct: a.firPct, girPct: a.girPct,
           puttsPerRound: a.puttsPerRound, birdies: a.birdies });
