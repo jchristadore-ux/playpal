@@ -314,6 +314,55 @@ test('SportsCenter recovers Rounds-tab stake overrides from the synced formats',
   assert.ok(Math.abs(sum) < 1e-6, 'still zero-sum at the overridden rates');
 });
 
+test('R1 flat round: stakes reach the broadcast money tracker (Nines included), zero Cup points', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  // Completed R1 (Minerals, 3 players) with an unbalanced BBB loop 1.
+  const egt = egtDoc(w, 'R1', throughFill({ john: 0, tj: 1, mike: 2 }, 18), { ts: now - 8 * 3600 * 1000 });
+  egt.doc.liveScores.bbbData = { 0: { bingo: 'john', bango: 'john', bongo: 'mike' } };
+  const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
+  assert.ok(facts.egt.state.finalized.includes('R1'), 'R1 finalized on the broadcast');
+
+  // The engine settles ALL of R1's stakes — including The Nines, which has no
+  // native format engine and would be lost on a native-payout fallback.
+  const rm = facts.egt.live.money.rounds.R1;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  ['BBB', 'Nines'].forEach(l => assert.ok(labels.includes(l), `R1 ${l} money on the broadcast`));
+  assert.ok(Object.values(rm.total).some(v => Math.abs(v) > 0.005), 'R1 money is nonzero');
+
+  // The running bankroll carries exactly the engine's R1 money and nets to $0.
+  const bank = {}; facts.moneyBoard.forEach(m => { bank[m.name] = m.total; });
+  const nameOf = pid => facts.egt.model.playersById[pid].name;
+  Object.entries(rm.total).forEach(([pid, v]) =>
+    assert.ok(Math.abs((bank[nameOf(pid)] || 0) - v) < 1e-6, `${nameOf(pid)} bankroll carries the R1 money`));
+  const sum = facts.moneyBoard.reduce((a, m) => a + m.total, 0);
+  assert.ok(Math.abs(sum) < 1e-6, 'bankroll nets to zero');
+
+  // Cup standings ignore the flat round entirely.
+  facts.egt.live.standings.forEach(s => assert.equal(s.points, 0, 'no Cup points from R1'));
+});
+
+test('finalized round payout card uses the engine totals, not the native live fallback', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  const egt = egtDoc(w, 'R1', throughFill({ john: 0, tj: 1, mike: 2 }, 18), { ts: now - 8 * 3600 * 1000 });
+  egt.doc.liveScores.bbbData = { 0: { bingo: 'john', bango: 'john', bongo: 'mike' } };
+  const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
+  const feed = w.BottomLineProvider.buildFeed(facts);
+  const seg = feed.find(s => s.id === `money:${egt.native.syncCode}`);
+  assert.ok(seg, 'per-round money card present');
+  assert.ok(/^PAYOUTS ·/.test(seg.label), `finalized round card is engine-backed, got "${seg.label}"`);
+  // Amounts on the card are the engine's authoritative R1 totals.
+  const rm = facts.egt.live.money.rounds.R1;
+  const text = seg.parts.map(p => p.s).join(' ');
+  const fmt = v => (v < 0 ? '-$' : '+$') + Math.round(Math.abs(v));
+  const nameOf = pid => facts.egt.model.playersById[pid].name;
+  Object.entries(rm.total).filter(([, v]) => v !== 0).forEach(([pid, v]) => {
+    assert.ok(text.includes(nameOf(pid)) && text.includes(fmt(v)),
+      `card shows ${nameOf(pid)} at engine money ${fmt(v)}: "${text}"`);
+  });
+});
+
 // ── Broadcast layer (SportsCenter dashboard) ────────────────────────────────
 
 test('playerInfo resolves EGT ids and names to logo + alias + color', () => {

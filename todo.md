@@ -50,6 +50,15 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] R1 (Minerals) excluded from EGT Cup standings (flat/stakes-only): awards
       no points; adjusted "Max" caps all four at 30.
 
+## Done — R1 stakes in the overall money tracker (v1.7.4)
+- [x] Verified the engine settles R1 money (BBB + Nines + skins + overlay +
+      CTP/LD) into the overall total while awarding zero Cup points.
+- [x] Fixed SportsCenter per-round payout cards reading `money.byRound`
+      (nonexistent) instead of `money.rounds` — finalized R1's card dropped
+      The Nines money via the native fallback.
+- [x] Regression tests: engine + broadcast lock in "R1 pays money, never
+      points".
+
 ## Done — full audit + GUI optimization (v1.7.2)
 - [x] EGT screen: fixed input focus loss (inline component types → plain
       function renderers; SI editor + stake input hoisted to module scope).

@@ -277,6 +277,30 @@ test('overlay side Nassau matches settle money on a non-match round (R3), zero-s
   assert.ok(Math.abs(sum) < 1e-6, `R3 money (Wolf + side match) nets zero, got ${sum}`);
 });
 
+test('R1 flat/stakes-only: BBB + Nines + skins money is tracked while Cup points stay zero', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  // Unbalanced BBB (john 2, mike 1, tj 0) so BBB money is nonzero.
+  state.events.bbb.R1 = [{ hole: 1, bingo: 'john', bango: 'john', bongo: 'mike' }];
+  state.finalized = ['R1'];
+  const live = EgtEngine.liveUpdate(state, { noPersist: true });
+  const rm = live.money.rounds.R1;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  ['BBB', 'Nines'].forEach(l => assert.ok(labels.includes(l), `R1 ${l} stakes settle for money`));
+  assert.ok(labels.some(l => /^Skins/.test(l)), 'R1 skins settle for money');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R1 money nets zero, got ${sum}`);
+  // The R1 stakes land in the OVERALL money tracker (only round finalized here).
+  const r1Players = m.rounds.find(r => r.id === 'R1').players;
+  assert.ok(r1Players.some(pid => Math.abs(live.money.total[pid]) > 0.005), 'R1 money reaches the overall total');
+  r1Players.forEach(pid => assert.equal(live.money.total[pid], rm.total[pid], 'overall tracker carries the R1 round money'));
+  // …while the Cup side ignores R1 entirely.
+  m.players.forEach(p => assert.equal((live.points[p.id] || { total: 0 }).total, 0, `${p.id} gets no Cup points from R1`));
+  live.standings.forEach(s => assert.equal(s.points, 0, 'standings unaffected by the flat round'));
+});
+
 // ── standings + reseed ──────────────────────────────────────────────────────
 test('leaderboard ranks by points then tiebreakers; R6 reseeds 1v2 / 3v4', () => {
   const m = freshModel();

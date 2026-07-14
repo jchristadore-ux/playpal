@@ -2,6 +2,27 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.7.4] — 2026-07-14
+
+### Fixed
+- **SportsCenter per-round payout cards ignored the tournament engine** — the
+  money segment builder read `live.money.byRound`, a key the money engine has
+  never produced (its per-round map is `live.money.rounds`), so a finalized
+  round's "PAYOUTS" card always fell back to the native live-payout
+  calculation. For R1 (Minerals, flat/stakes-only) that fallback silently
+  dropped The Nines money entirely — the native scorer has no Nines engine —
+  and on any round it bypassed CTP/LD prizes and recovered stake overrides, so
+  the per-round cards could contradict the running bankroll shown right next
+  to them. The card now reads the engine's authoritative per-round totals.
+- **Home screen version label** — stuck at v1.7.2 through the 1.7.3 release;
+  now tracks the app version again.
+
+### Added
+- Regression tests locking in the R1 money rule: R1 is excluded from EGT Cup
+  points/standings, but its stakes (BBB, The Nines, skins, side matches) are
+  always captured in the overall money tracker — in the engine, the running
+  bankroll, and the broadcast's per-round payout card.
+
 ## [1.7.3] — 2026-07-14
 
 ### Fixed

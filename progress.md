@@ -1,5 +1,30 @@
 # Project Progress
 
+## R1 stakes in the overall money tracker (branch claude/r1-stakes-money-tracker-d6otdm) — v1.7.4
+
+Status: **complete — 162 tests green.**
+
+Task: guarantee R1 (Minerals, flat/stakes-only) money is captured in the
+overall money tracker even though its formats/points don't count toward the
+EGT Cup. Audit result: the tournament engine already settles R1 money (BBB +
+Nines + skins + overlay matches + CTP/LD in `egtMoney.moneyForRound`), and the
+app's Standings money table, printable packet, and broadcast bankroll all read
+the engine total — but one real defect was found and fixed:
+
+- **SportsCenter per-round payout cards ignored the engine**
+  (`components/bottomLineProvider.js` money builder read `live.money.byRound`,
+  a key the engine never produces — its map is `live.money.rounds`). Finalized
+  rounds always fell back to native live payouts, which for R1 silently drop
+  The Nines money (no native Nines engine) and skip CTP/LD + recovered stake
+  overrides everywhere. One-line fix + regression tests.
+- New tests: engine level (R1 money in `money.rounds.R1` and the overall
+  total, zero-sum, while Cup points stay 0 for everyone) and broadcast level
+  (Nines money present, bankroll = engine totals, finalized card labeled
+  PAYOUTS with engine amounts).
+- Version 1.7.4 everywhere (package.json, index.html, bottomline.html, sw.js
+  cache + query strings, Home.jsx — which had been stuck at v1.7.2),
+  CHANGELOG entry added.
+
 ## Full audit + GUI optimization (branch claude/playpal-audit-gui-optimization-pwq1ef) — v1.7.2
 
 Status: **complete — 151 tests green, browser smoke verified (focus retention
