@@ -549,111 +549,6 @@ const EgtTournament = ({ onScoreRound }) => {
     <div>{model.rounds.map(r => <React.Fragment key={r.id}>{RoundCard({ round: r })}</React.Fragment>)}</div>
   );
 
-  // ── pairings tab — fairness analysis proving the schedule is balanced ──────
-  const Pairings = () => {
-    const ids = model.players.map(p => p.id);
-    const nm = pid => model.playersById[pid]?.name || pid;
-    const key = (a, b) => [a, b].slice().sort().join('|');
-    const inc = (m, a, b) => { if (a === b) return; const k = key(a, b); m[k] = (m[k] || 0) + 1; };
-    const partner = {}, opponent = {}, cart = {};
-    const teamRounds = [];
-    model.rounds.forEach(r => {
-      (r.teams || []).forEach(t => { const q = t.players; for (let i = 0; i < q.length; i++) for (let j = i + 1; j < q.length; j++) inc(partner, q[i], q[j]); });
-      if (r.teams && r.teams.length === 2) {
-        const a = r.teams[0].players, b = r.teams[1].players;
-        a.forEach(x => b.forEach(y => inc(opponent, x, y)));
-        teamRounds.push(r);
-      } else if (r.id !== 'R6') { // R6 singles seeded off standings — opponents TBD
-        const q = r.players; for (let i = 0; i < q.length; i++) for (let j = i + 1; j < q.length; j++) inc(opponent, q[i], q[j]);
-      }
-      ((r.pairings && r.pairings.carts) || []).forEach(c => { if (c.length === 2) inc(cart, c[0], c[1]); });
-    });
-    const pairVals = m => { const out = []; for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) out.push(m[key(ids[i], ids[j])] || 0); return out; };
-    const spread = arr => arr.length ? `${Math.min(...arr)}–${Math.max(...arr)}` : '—';
-    const everyoneRidesAll = ids.every(pid => { let n = 0; ids.forEach(o => { if (o !== pid && (cart[key(pid, o)] || 0) > 0) n++; }); return n === ids.length - 1; });
-    const balRows = teamRounds.map(r => {
-      const der = model.derived[r.id].courseHandicaps;
-      const sum = t => t.players.reduce((a, pid) => a + (der[pid] || 0), 0);
-      const s1 = sum(r.teams[0]), s2 = sum(r.teams[1]);
-      return { id: r.id, course: model.courses[r.courseId].name, t1: r.teams[0].players.map(nm).join(' + '), t2: r.teams[1].players.map(nm).join(' + '), s1, s2, diff: Math.abs(s1 - s2) };
-    });
-    const avgDiff = balRows.length ? (balRows.reduce((a, r) => a + r.diff, 0) / balRows.length).toFixed(1) : '—';
-
-    const Matrix = ({ title, m, accent }) => (
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, marginBottom: 6 }}>{title}</div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 320 }}>
-            <thead><tr><th style={{ ...th, textAlign: 'left' }}></th>{ids.map(pid => <th key={pid} style={th}>{nm(pid)}</th>)}</tr></thead>
-            <tbody>
-              {ids.map(a => (
-                <tr key={a}>
-                  <td style={{ ...td, textAlign: 'left', fontWeight: 700, background: '#f4f8f5' }}>{nm(a)}</td>
-                  {ids.map(b => {
-                    if (a === b) return <td key={b} style={{ ...td, color: '#c7d3cb', background: '#f4f8f5' }}>—</td>;
-                    const v = m[key(a, b)] || 0;
-                    return <td key={b} style={{ ...td, fontWeight: v >= 2 ? 800 : 600, color: v === 0 ? '#c0392b' : v >= 2 ? accent : INK, background: v === 0 ? '#fdf0ee' : '#fff' }}>{v}</td>;
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-
-    const Stat = ({ label, value, good }) => (
-      <div style={{ border: `1px solid ${LINE}`, borderRadius: 10, padding: '10px 12px', flex: '1 1 140px' }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: '#8a988f', textTransform: 'uppercase' }}>{label}</div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: good ? '#137a3f' : INK, marginTop: 3 }}>{value}</div>
-      </div>
-    );
-
-    return (
-      <div>
-        <div style={{ fontSize: 12, color: '#5b6b63', lineHeight: 1.5, marginBottom: 14 }}>
-          The official EGT pairings are set across the whole trip — not one round at a time. Every player shares a cart
-          with each of the other three at least once, and by request John &amp; TJ ride together as much as possible —
-          four of the six rounds, including Ballyowen (R2) and Crystal Springs (R4), where they also partner up. The
-          matrices below show it. Counts are how many times each pair appears together.
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
-          <Stat label="Teammate spread" value={spread(pairVals(partner))} good={Math.max(...pairVals(partner)) - Math.min(...pairVals(partner)) <= 1} />
-          <Stat label="Opponent spread" value={spread(pairVals(opponent))} good={Math.max(...pairVals(opponent)) - Math.min(...pairVals(opponent)) <= 1} />
-          <Stat label="Cart coverage" value={everyoneRidesAll ? 'All ✓' : 'Partial'} good={everyoneRidesAll} />
-          <Stat label="Avg team Δ (CH)" value={avgDiff} good={Number(avgDiff) <= 6} />
-        </div>
-        <Matrix title="Partner (teammate) frequency" m={partner} accent={GOLD} />
-        <Matrix title="Opponent frequency — team rounds + R1/R3/R5 all-play-all (R6 singles seeded, excluded)" m={opponent} accent="#2563EB" />
-        <Matrix title="Cart-partner frequency" m={cart} accent={GOLD} />
-
-        <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, marginBottom: 6 }}>Handicap balance — team rounds</div>
-        <div style={{ overflowX: 'auto', marginBottom: 8 }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead><tr>{['Round', 'Course', 'Team 1 (Σ CH)', 'Team 2 (Σ CH)', 'Δ'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-            <tbody>
-              {balRows.map(r => (
-                <tr key={r.id}>
-                  <td style={{ ...td, fontWeight: 800 }}>{r.id}</td>
-                  <td style={{ ...td, textAlign: 'left' }}>{r.course}</td>
-                  <td style={td}>{r.t1} ({r.s1})</td>
-                  <td style={td}>{r.t2} ({r.s2})</td>
-                  <td style={{ ...td, fontWeight: 800, color: r.diff <= 6 ? '#137a3f' : '#9a6a00' }}>{r.diff}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div style={{ fontSize: 11, color: '#8a988f', lineHeight: 1.5 }}>
-          Course handicaps are off the White tees. Deltas are raw sums before each format's allowance (four-ball 90%,
-          aggregate Stableford 85%) and best-ball/aggregate scoring compress them further, so the on-course match is
-          tighter than the raw Δ suggests. R3 (Wolf), R5 (Bingo-Bango-Bongo + round-robin 1v1) and R6 (championship
-          singles) are individual formats with no fixed teams.
-        </div>
-      </div>
-    );
-  };
-
   // ── courses tab (SI status + edit) ────────────────────────────────────────
   const Courses = () => (
     <div>
@@ -672,7 +567,7 @@ const EgtTournament = ({ onScoreRound }) => {
     </div>
   );
 
-  const tabs = [['standings', 'Standings'], ['rounds', 'Rounds'], ['pairings', 'Pairings'], ['courses', 'Courses']];
+  const tabs = [['standings', 'Standings'], ['rounds', 'Rounds'], ['courses', 'Courses']];
   return (
     <div style={{ flex: 1, overflow: 'auto', background: '#fff', fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', color: INK }}>
       <div style={{ background: GREEN, color: '#fff', padding: '16px 16px 12px' }}>
@@ -692,7 +587,6 @@ const EgtTournament = ({ onScoreRound }) => {
       <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
         {tab === 'standings' && Standings()}
         {tab === 'rounds' && Rounds()}
-        {tab === 'pairings' && Pairings()}
         {tab === 'courses' && Courses()}
       </div>
       {siEditCourse && (

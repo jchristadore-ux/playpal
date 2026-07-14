@@ -50,6 +50,10 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] R1 (Minerals) excluded from EGT Cup standings (flat/stakes-only): awards
       no points; adjusted "Max" caps all four at 30.
 
+## Done — remove EGT Pairings tab (v1.7.5)
+- [x] Dropped the Pairings tab + fairness analysis from the EGT Cup screen;
+      cart callouts stay on the Rounds tab, doc stays in docs/EGT_PAIRINGS.md.
+
 ## Done — R1 stakes in the overall money tracker (v1.7.4)
 - [x] Verified the engine settles R1 money (BBB + Nines + skins + overlay +
       CTP/LD) into the overall total while awarding zero Cup points.
