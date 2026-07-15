@@ -1,0 +1,3970 @@
+{
+  "project": "Crystal Springs Golf Trip Playlist Generator",
+  "generated": "2026-07-14",
+  "total_playlists": 9,
+  "total_songs": 553,
+  "total_runtime": "36h 01m",
+  "playlists": [
+    {
+      "name": "Minerals",
+      "theme": "The Arrival",
+      "description": "Day 1. Starts with coffee-and-breakfast reggae-rock and acoustic country, builds through cruising mid-tempo into party country and feel-good rap, and closes with full-volume sing-alongs. The energy curve of an arrival day: mellow morning, loud by sundown.",
+      "target_runtime": "4h 45m",
+      "actual_runtime": "4h 42m",
+      "song_count": 74,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Stick Figure",
+          "title": "Above the Storm",
+          "length": "4:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 2,
+          "artist": "Jack Johnson",
+          "title": "Banana Pancakes",
+          "length": "3:11",
+          "genre": "Rock"
+        },
+        {
+          "position": 3,
+          "artist": "Zach Bryan",
+          "title": "Better Days",
+          "length": "3:20",
+          "genre": "Country"
+        },
+        {
+          "position": 4,
+          "artist": "O.A.R.",
+          "title": "I Feel Home",
+          "length": "4:31",
+          "genre": "Rock"
+        },
+        {
+          "position": 5,
+          "artist": "Stick Figure feat. Citizen Cope",
+          "title": "Breathe",
+          "length": "4:12",
+          "genre": "Rock"
+        },
+        {
+          "position": 6,
+          "artist": "Tyler Childers",
+          "title": "Universal Sound",
+          "length": "4:18",
+          "genre": "Country"
+        },
+        {
+          "position": 7,
+          "artist": "Bob Marley & The Wailers",
+          "title": "Three Little Birds",
+          "length": "3:00",
+          "genre": "Rock"
+        },
+        {
+          "position": 8,
+          "artist": "Zach Bryan",
+          "title": "God Speed",
+          "length": "3:56",
+          "genre": "Country"
+        },
+        {
+          "position": 9,
+          "artist": "The Lumineers",
+          "title": "Ho Hey",
+          "length": "2:43",
+          "genre": "Rock"
+        },
+        {
+          "position": 10,
+          "artist": "Dispatch",
+          "title": "The General",
+          "length": "4:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 11,
+          "artist": "Chris Stapleton",
+          "title": "Traveller",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 12,
+          "artist": "Jimmy Buffett",
+          "title": "Come Monday",
+          "length": "3:10",
+          "genre": "Country"
+        },
+        {
+          "position": 13,
+          "artist": "Tom Petty",
+          "title": "Wildflowers",
+          "length": "3:11",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 14,
+          "artist": "O.A.R.",
+          "title": "Shattered (Turn the Car Around)",
+          "length": "3:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 15,
+          "artist": "Sublime",
+          "title": "Badfish",
+          "length": "3:05",
+          "genre": "Rock"
+        },
+        {
+          "position": 16,
+          "artist": "Luke Combs",
+          "title": "Doin' This",
+          "length": "3:01",
+          "genre": "Country"
+        },
+        {
+          "position": 17,
+          "artist": "Fleetwood Mac",
+          "title": "Dreams",
+          "length": "4:14",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 18,
+          "artist": "Morgan Wallen",
+          "title": "Chasin' You",
+          "length": "3:45",
+          "genre": "Country"
+        },
+        {
+          "position": 19,
+          "artist": "Dirty Heads",
+          "title": "Cabin by the Sea",
+          "length": "3:44",
+          "genre": "Rock"
+        },
+        {
+          "position": 20,
+          "artist": "Eric Church",
+          "title": "Talladega",
+          "length": "4:05",
+          "genre": "Country"
+        },
+        {
+          "position": 21,
+          "artist": "Steve Miller Band",
+          "title": "The Joker",
+          "length": "4:26",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 22,
+          "artist": "Zach Bryan",
+          "title": "Highway Boys",
+          "length": "2:47",
+          "genre": "Country"
+        },
+        {
+          "position": 23,
+          "artist": "Kings of Leon",
+          "title": "Back Down South",
+          "length": "4:01",
+          "genre": "Rock"
+        },
+        {
+          "position": 24,
+          "artist": "Snoop Dogg feat. Pharrell",
+          "title": "Beautiful",
+          "length": "4:59",
+          "genre": "Rap"
+        },
+        {
+          "position": 25,
+          "artist": "Whiskey Myers",
+          "title": "On the River",
+          "length": "3:53",
+          "genre": "Country"
+        },
+        {
+          "position": 26,
+          "artist": "Tom Petty",
+          "title": "Learning to Fly",
+          "length": "4:02",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 27,
+          "artist": "311",
+          "title": "Amber",
+          "length": "3:28",
+          "genre": "Rock"
+        },
+        {
+          "position": 28,
+          "artist": "Kanye West feat. T-Pain",
+          "title": "Good Life",
+          "length": "3:27",
+          "genre": "Rap"
+        },
+        {
+          "position": 29,
+          "artist": "The Black Keys",
+          "title": "Tighten Up",
+          "length": "3:31",
+          "genre": "Rock"
+        },
+        {
+          "position": 30,
+          "artist": "Riley Green",
+          "title": "There Was This Girl",
+          "length": "3:15",
+          "genre": "Country"
+        },
+        {
+          "position": 31,
+          "artist": "Jay-Z feat. Pharrell",
+          "title": "I Just Wanna Love U (Give It 2 Me)",
+          "length": "3:48",
+          "genre": "Rap"
+        },
+        {
+          "position": 32,
+          "artist": "Sublime",
+          "title": "Doin' Time",
+          "length": "4:12",
+          "genre": "Rock"
+        },
+        {
+          "position": 33,
+          "artist": "Midland",
+          "title": "Drinkin' Problem",
+          "length": "4:00",
+          "genre": "Country"
+        },
+        {
+          "position": 34,
+          "artist": "Red Hot Chili Peppers",
+          "title": "Scar Tissue",
+          "length": "3:36",
+          "genre": "Rock"
+        },
+        {
+          "position": 35,
+          "artist": "Nelly",
+          "title": "Country Grammar (Hot Shit)",
+          "length": "4:47",
+          "genre": "Rap"
+        },
+        {
+          "position": 36,
+          "artist": "Eagles",
+          "title": "Peaceful Easy Feeling",
+          "length": "4:16",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 37,
+          "artist": "Cody Jinks",
+          "title": "Hippies and Cowboys",
+          "length": "4:33",
+          "genre": "Country"
+        },
+        {
+          "position": 38,
+          "artist": "50 Cent feat. Nate Dogg",
+          "title": "21 Questions",
+          "length": "3:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 39,
+          "artist": "Counting Crows",
+          "title": "Mr. Jones",
+          "length": "4:32",
+          "genre": "Rock"
+        },
+        {
+          "position": 40,
+          "artist": "Turnpike Troubadours",
+          "title": "Gin, Smoke, Lies",
+          "length": "3:03",
+          "genre": "Country"
+        },
+        {
+          "position": 41,
+          "artist": "O.A.R.",
+          "title": "Hey Girl",
+          "length": "3:37",
+          "genre": "Rock"
+        },
+        {
+          "position": 42,
+          "artist": "Eminem",
+          "title": "My Name Is",
+          "length": "4:28",
+          "genre": "Rap"
+        },
+        {
+          "position": 43,
+          "artist": "HARDY feat. Lauren Alaina & Devin Dawson",
+          "title": "One Beer",
+          "length": "3:13",
+          "genre": "Country"
+        },
+        {
+          "position": 44,
+          "artist": "Third Eye Blind",
+          "title": "Never Let You Go",
+          "length": "3:58",
+          "genre": "Rock"
+        },
+        {
+          "position": 45,
+          "artist": "Ludacris",
+          "title": "Rollout (My Business)",
+          "length": "4:33",
+          "genre": "Rap"
+        },
+        {
+          "position": 46,
+          "artist": "Morgan Wallen feat. Florida Georgia Line",
+          "title": "Up Down",
+          "length": "2:54",
+          "genre": "Country"
+        },
+        {
+          "position": 47,
+          "artist": "Ma$e",
+          "title": "Feel So Good",
+          "length": "3:54",
+          "genre": "Rap"
+        },
+        {
+          "position": 48,
+          "artist": "Blink-182",
+          "title": "The Rock Show",
+          "length": "2:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 49,
+          "artist": "Outkast",
+          "title": "Rosa Parks",
+          "length": "5:24",
+          "genre": "Rap"
+        },
+        {
+          "position": 50,
+          "artist": "Creedence Clearwater Revival",
+          "title": "Up Around the Bend",
+          "length": "2:42",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 51,
+          "artist": "Koe Wetzel",
+          "title": "Something to Talk About",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 52,
+          "artist": "Big Tymers",
+          "title": "Still Fly",
+          "length": "4:58",
+          "genre": "Rap"
+        },
+        {
+          "position": 53,
+          "artist": "Brooks & Dunn",
+          "title": "Boot Scootin' Boogie",
+          "length": "3:17",
+          "genre": "Country"
+        },
+        {
+          "position": 54,
+          "artist": "2Pac feat. Digital Underground",
+          "title": "I Get Around",
+          "length": "4:19",
+          "genre": "Rap"
+        },
+        {
+          "position": 55,
+          "artist": "Green Day",
+          "title": "When I Come Around",
+          "length": "2:58",
+          "genre": "Rock"
+        },
+        {
+          "position": 56,
+          "artist": "LL Cool J",
+          "title": "Mama Said Knock You Out",
+          "length": "4:53",
+          "genre": "Rap"
+        },
+        {
+          "position": 57,
+          "artist": "Snoop Dogg",
+          "title": "Who Am I? (What's My Name?)",
+          "length": "4:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 58,
+          "artist": "Jason Aldean",
+          "title": "Hicktown",
+          "length": "3:31",
+          "genre": "Country"
+        },
+        {
+          "position": 59,
+          "artist": "Eminem",
+          "title": "Berzerk",
+          "length": "3:58",
+          "genre": "Rap"
+        },
+        {
+          "position": 60,
+          "artist": "The Offspring",
+          "title": "Self Esteem",
+          "length": "4:17",
+          "genre": "Rock"
+        },
+        {
+          "position": 61,
+          "artist": "Toby Keith",
+          "title": "Should've Been a Cowboy",
+          "length": "3:29",
+          "genre": "Country"
+        },
+        {
+          "position": 62,
+          "artist": "Ice Cube",
+          "title": "Check Yo Self (Remix)",
+          "length": "3:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 63,
+          "artist": "Pearl Jam",
+          "title": "Corduroy",
+          "length": "4:37",
+          "genre": "Rock"
+        },
+        {
+          "position": 64,
+          "artist": "Chris Janson",
+          "title": "Buy Me a Boat",
+          "length": "2:52",
+          "genre": "Country"
+        },
+        {
+          "position": 65,
+          "artist": "Busta Rhymes feat. P. Diddy & Pharrell",
+          "title": "Pass the Courvoisier, Part II",
+          "length": "3:45",
+          "genre": "Rap"
+        },
+        {
+          "position": 66,
+          "artist": "Nas",
+          "title": "Street Dreams",
+          "length": "4:39",
+          "genre": "Rap"
+        },
+        {
+          "position": 67,
+          "artist": "Kid Rock",
+          "title": "Cowboy",
+          "length": "4:17",
+          "genre": "Rock"
+        },
+        {
+          "position": 68,
+          "artist": "Method Man & Redman",
+          "title": "Da Rockwilder",
+          "length": "2:18",
+          "genre": "Rap"
+        },
+        {
+          "position": 69,
+          "artist": "Alabama",
+          "title": "Mountain Music",
+          "length": "4:10",
+          "genre": "Country"
+        },
+        {
+          "position": 70,
+          "artist": "Ja Rule feat. Case",
+          "title": "Livin' It Up",
+          "length": "4:17",
+          "genre": "Rap"
+        },
+        {
+          "position": 71,
+          "artist": "Bon Jovi",
+          "title": "You Give Love a Bad Name",
+          "length": "3:43",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 72,
+          "artist": "Alan Jackson",
+          "title": "Chattahoochee",
+          "length": "3:57",
+          "genre": "Country"
+        },
+        {
+          "position": 73,
+          "artist": "Journey",
+          "title": "Any Way You Want It",
+          "length": "3:22",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 74,
+          "artist": "Bryan Adams",
+          "title": "Summer of '69",
+          "length": "3:34",
+          "genre": "Classic Rock"
+        }
+      ]
+    },
+    {
+      "name": "Ballyowen",
+      "theme": "We're Here",
+      "description": "Day 2, big golf day. Pure confidence: strutting rock openers, swagger rap, and party country. Blue skies, good swings, no doubts. Heavier on rock and country as requested, with rap for the walk to the first tee.",
+      "target_runtime": "5h 00m",
+      "actual_runtime": "4h 55m",
+      "song_count": 80,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Tom Petty",
+          "title": "American Girl",
+          "length": "3:34",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 2,
+          "artist": "Foo Fighters",
+          "title": "Learn to Fly",
+          "length": "3:55",
+          "genre": "Rock"
+        },
+        {
+          "position": 3,
+          "artist": "Luke Combs",
+          "title": "1, 2 Many",
+          "length": "3:04",
+          "genre": "Country"
+        },
+        {
+          "position": 4,
+          "artist": "O.A.R.",
+          "title": "City on Down",
+          "length": "4:44",
+          "genre": "Rock"
+        },
+        {
+          "position": 5,
+          "artist": "Morgan Wallen",
+          "title": "Still Goin Down",
+          "length": "3:39",
+          "genre": "Country"
+        },
+        {
+          "position": 6,
+          "artist": "The Black Crowes",
+          "title": "Hard to Handle",
+          "length": "3:08",
+          "genre": "Rock"
+        },
+        {
+          "position": 7,
+          "artist": "Jay-Z",
+          "title": "Roc Boys (And the Winner Is)...",
+          "length": "4:41",
+          "genre": "Rap"
+        },
+        {
+          "position": 8,
+          "artist": "Eric Church",
+          "title": "How 'Bout You",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 9,
+          "artist": "Kings of Leon",
+          "title": "Molly's Chambers",
+          "length": "2:15",
+          "genre": "Rock"
+        },
+        {
+          "position": 10,
+          "artist": "Zach Bryan",
+          "title": "Open the Gate",
+          "length": "2:56",
+          "genre": "Country"
+        },
+        {
+          "position": 11,
+          "artist": "AC/DC",
+          "title": "Shoot to Thrill",
+          "length": "5:17",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 12,
+          "artist": "Ludacris",
+          "title": "Southern Hospitality",
+          "length": "4:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 13,
+          "artist": "Whiskey Myers",
+          "title": "Ballad of a Southern Man",
+          "length": "4:29",
+          "genre": "Country"
+        },
+        {
+          "position": 14,
+          "artist": "Stick Figure",
+          "title": "Fire on the Horizon",
+          "length": "3:48",
+          "genre": "Rock"
+        },
+        {
+          "position": 15,
+          "artist": "Dierks Bentley",
+          "title": "5-1-5-0",
+          "length": "3:10",
+          "genre": "Country"
+        },
+        {
+          "position": 16,
+          "artist": "50 Cent",
+          "title": "If I Can't",
+          "length": "3:17",
+          "genre": "Rap"
+        },
+        {
+          "position": 17,
+          "artist": "Green Day",
+          "title": "Holiday",
+          "length": "3:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 18,
+          "artist": "Jon Pardi",
+          "title": "Dirt on My Boots",
+          "length": "3:32",
+          "genre": "Country"
+        },
+        {
+          "position": 19,
+          "artist": "The Rolling Stones",
+          "title": "Start Me Up",
+          "length": "3:33",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 20,
+          "artist": "Nas feat. Puff Daddy",
+          "title": "Hate Me Now",
+          "length": "4:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 21,
+          "artist": "Parker McCollum",
+          "title": "To Be Loved by You",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 22,
+          "artist": "Jimmy Eat World",
+          "title": "Sweetness",
+          "length": "3:40",
+          "genre": "Rock"
+        },
+        {
+          "position": 23,
+          "artist": "HARDY",
+          "title": "Rednecker",
+          "length": "3:00",
+          "genre": "Country"
+        },
+        {
+          "position": 24,
+          "artist": "T.I.",
+          "title": "Top Back",
+          "length": "4:23",
+          "genre": "Rap"
+        },
+        {
+          "position": 25,
+          "artist": "The Killers",
+          "title": "Somebody Told Me",
+          "length": "3:17",
+          "genre": "Rock"
+        },
+        {
+          "position": 26,
+          "artist": "Randy Houser",
+          "title": "How Country Feels",
+          "length": "3:29",
+          "genre": "Country"
+        },
+        {
+          "position": 27,
+          "artist": "Beastie Boys",
+          "title": "No Sleep Till Brooklyn",
+          "length": "4:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 28,
+          "artist": "Blink-182",
+          "title": "What's My Age Again?",
+          "length": "2:28",
+          "genre": "Rock"
+        },
+        {
+          "position": 29,
+          "artist": "Morgan Wallen",
+          "title": "Ain't That Some",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 30,
+          "artist": "Boston",
+          "title": "Rock and Roll Band",
+          "length": "2:59",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 31,
+          "artist": "Jay-Z",
+          "title": "U Don't Know",
+          "length": "3:19",
+          "genre": "Rap"
+        },
+        {
+          "position": 32,
+          "artist": "Pecos & the Rooftops",
+          "title": "This Damn Song",
+          "length": "3:36",
+          "genre": "Country"
+        },
+        {
+          "position": 33,
+          "artist": "Sublime",
+          "title": "Wrong Way",
+          "length": "2:16",
+          "genre": "Rock"
+        },
+        {
+          "position": 34,
+          "artist": "Eric Church",
+          "title": "Desperate Man",
+          "length": "3:33",
+          "genre": "Country"
+        },
+        {
+          "position": 35,
+          "artist": "DMX",
+          "title": "What's My Name?",
+          "length": "3:33",
+          "genre": "Rap"
+        },
+        {
+          "position": 36,
+          "artist": "Foo Fighters",
+          "title": "Times Like These",
+          "length": "4:26",
+          "genre": "Rock"
+        },
+        {
+          "position": 37,
+          "artist": "Koe Wetzel",
+          "title": "Good Die Young",
+          "length": "3:37",
+          "genre": "Country"
+        },
+        {
+          "position": 38,
+          "artist": "Outkast",
+          "title": "ATLiens",
+          "length": "3:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 39,
+          "artist": "Tom Petty",
+          "title": "You Wreck Me",
+          "length": "3:22",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 40,
+          "artist": "Chris Stapleton",
+          "title": "Nobody to Blame",
+          "length": "3:00",
+          "genre": "Country"
+        },
+        {
+          "position": 41,
+          "artist": "Third Eye Blind",
+          "title": "Graduate",
+          "length": "3:08",
+          "genre": "Rock"
+        },
+        {
+          "position": 42,
+          "artist": "Nelly feat. St. Lunatics",
+          "title": "Air Force Ones",
+          "length": "5:03",
+          "genre": "Rap"
+        },
+        {
+          "position": 43,
+          "artist": "Riley Green",
+          "title": "Damn Good Day to Leave",
+          "length": "2:56",
+          "genre": "Country"
+        },
+        {
+          "position": 44,
+          "artist": "Lynyrd Skynyrd",
+          "title": "What's Your Name",
+          "length": "3:31",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 45,
+          "artist": "Kanye West",
+          "title": "Can't Tell Me Nothing",
+          "length": "4:31",
+          "genre": "Rap"
+        },
+        {
+          "position": 46,
+          "artist": "Cage the Elephant",
+          "title": "Ain't No Rest for the Wicked",
+          "length": "2:55",
+          "genre": "Rock"
+        },
+        {
+          "position": 47,
+          "artist": "Luke Combs",
+          "title": "Cold as You",
+          "length": "2:44",
+          "genre": "Country"
+        },
+        {
+          "position": 48,
+          "artist": "Snoop Dogg & Wiz Khalifa feat. Bruno Mars",
+          "title": "Young, Wild & Free",
+          "length": "3:27",
+          "genre": "Rap"
+        },
+        {
+          "position": 49,
+          "artist": "Matchbox Twenty",
+          "title": "Real World",
+          "length": "3:50",
+          "genre": "Rock"
+        },
+        {
+          "position": 50,
+          "artist": "Turnpike Troubadours",
+          "title": "Every Girl",
+          "length": "4:17",
+          "genre": "Country"
+        },
+        {
+          "position": 51,
+          "artist": "Eminem",
+          "title": "Superman",
+          "length": "5:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 52,
+          "artist": "ZZ Top",
+          "title": "Sharp Dressed Man",
+          "length": "4:15",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 53,
+          "artist": "Zach Bryan",
+          "title": "Quittin' Time",
+          "length": "3:20",
+          "genre": "Country"
+        },
+        {
+          "position": 54,
+          "artist": "50 Cent",
+          "title": "Disco Inferno",
+          "length": "3:35",
+          "genre": "Rap"
+        },
+        {
+          "position": 55,
+          "artist": "Mike Jones feat. Slim Thug & Paul Wall",
+          "title": "Still Tippin'",
+          "length": "4:33",
+          "genre": "Rap"
+        },
+        {
+          "position": 56,
+          "artist": "Brantley Gilbert",
+          "title": "Country Must Be Country Wide",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 57,
+          "artist": "Incubus",
+          "title": "Pardon Me",
+          "length": "3:44",
+          "genre": "Rock"
+        },
+        {
+          "position": 58,
+          "artist": "The Game feat. 50 Cent",
+          "title": "How We Do",
+          "length": "3:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 59,
+          "artist": "Hank Williams Jr.",
+          "title": "A Country Boy Can Survive",
+          "length": "4:22",
+          "genre": "Country"
+        },
+        {
+          "position": 60,
+          "artist": "Weezer",
+          "title": "Hash Pipe",
+          "length": "3:06",
+          "genre": "Rock"
+        },
+        {
+          "position": 61,
+          "artist": "Fabolous feat. Tamia",
+          "title": "Breathe",
+          "length": "3:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 62,
+          "artist": "Travis Tritt",
+          "title": "T-R-O-U-B-L-E",
+          "length": "2:59",
+          "genre": "Country"
+        },
+        {
+          "position": 63,
+          "artist": "Stone Temple Pilots",
+          "title": "Vasoline",
+          "length": "2:56",
+          "genre": "Rock"
+        },
+        {
+          "position": 64,
+          "artist": "Young Jeezy feat. Kanye West",
+          "title": "Put On",
+          "length": "5:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 65,
+          "artist": "Eagles",
+          "title": "Already Gone",
+          "length": "4:13",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 66,
+          "artist": "Cody Jinks",
+          "title": "Must Be the Whiskey",
+          "length": "3:36",
+          "genre": "Country"
+        },
+        {
+          "position": 67,
+          "artist": "Audioslave",
+          "title": "Show Me How to Live",
+          "length": "4:37",
+          "genre": "Rock"
+        },
+        {
+          "position": 68,
+          "artist": "Rick Ross",
+          "title": "Hustlin'",
+          "length": "3:53",
+          "genre": "Rap"
+        },
+        {
+          "position": 69,
+          "artist": "Toby Keith feat. Willie Nelson",
+          "title": "Beer for My Horses",
+          "length": "3:30",
+          "genre": "Country"
+        },
+        {
+          "position": 70,
+          "artist": "Tim McGraw",
+          "title": "Real Good Man",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 71,
+          "artist": "The White Stripes",
+          "title": "Fell in Love with a Girl",
+          "length": "1:50",
+          "genre": "Rock"
+        },
+        {
+          "position": 72,
+          "artist": "Lil Wayne",
+          "title": "Fireman",
+          "length": "4:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 73,
+          "artist": "Led Zeppelin",
+          "title": "Good Times Bad Times",
+          "length": "2:46",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 74,
+          "artist": "Charlie Daniels Band",
+          "title": "The Devil Went Down to Georgia",
+          "length": "3:34",
+          "genre": "Country"
+        },
+        {
+          "position": 75,
+          "artist": "U2",
+          "title": "Beautiful Day",
+          "length": "4:06",
+          "genre": "Rock"
+        },
+        {
+          "position": 76,
+          "artist": "Alan Jackson",
+          "title": "Good Time",
+          "length": "4:03",
+          "genre": "Country"
+        },
+        {
+          "position": 77,
+          "artist": "Dropkick Murphys",
+          "title": "I'm Shipping Up to Boston",
+          "length": "2:33",
+          "genre": "Rock"
+        },
+        {
+          "position": 78,
+          "artist": "Queen",
+          "title": "Fat Bottomed Girls",
+          "length": "4:16",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 79,
+          "artist": "Def Leppard",
+          "title": "Pour Some Sugar on Me",
+          "length": "4:25",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 80,
+          "artist": "Big & Rich",
+          "title": "Save a Horse (Ride a Cowboy)",
+          "length": "3:12",
+          "genre": "Country"
+        }
+      ]
+    },
+    {
+      "name": "Wild Turkey",
+      "theme": "Let's Get Loud",
+      "description": "The rowdiest day. Rap-heavy wall-to-wall bangers — Ruff Ryders to crunk to Shady Records — cut with loud rock and party country so it never flatlines. Built for trash talk, press bets, and volume.",
+      "target_runtime": "4h 30m",
+      "actual_runtime": "4h 34m",
+      "song_count": 65,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "DMX",
+          "title": "Ruff Ryders' Anthem",
+          "length": "3:34",
+          "genre": "Rap"
+        },
+        {
+          "position": 2,
+          "artist": "Lil Jon & The East Side Boyz feat. Ying Yang Twins",
+          "title": "Get Low",
+          "length": "5:34",
+          "genre": "Rap"
+        },
+        {
+          "position": 3,
+          "artist": "Dr. Dre feat. Eminem",
+          "title": "Forgot About Dre",
+          "length": "3:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 4,
+          "artist": "Juvenile feat. Mannie Fresh & Lil Wayne",
+          "title": "Back That Azz Up",
+          "length": "4:25",
+          "genre": "Rap"
+        },
+        {
+          "position": 5,
+          "artist": "50 Cent",
+          "title": "P.I.M.P.",
+          "length": "4:09",
+          "genre": "Rap"
+        },
+        {
+          "position": 6,
+          "artist": "Jay-Z feat. UGK",
+          "title": "Big Pimpin'",
+          "length": "4:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 7,
+          "artist": "Ludacris feat. Mystikal & I-20",
+          "title": "Move Bitch",
+          "length": "4:29",
+          "genre": "Rap"
+        },
+        {
+          "position": 8,
+          "artist": "Outkast",
+          "title": "B.O.B. (Bombs Over Baghdad)",
+          "length": "5:04",
+          "genre": "Rap"
+        },
+        {
+          "position": 9,
+          "artist": "Terror Squad",
+          "title": "Lean Back",
+          "length": "4:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 10,
+          "artist": "Nelly",
+          "title": "Hot in Herre",
+          "length": "3:48",
+          "genre": "Rap"
+        },
+        {
+          "position": 11,
+          "artist": "Snoop Dogg",
+          "title": "Gin and Juice",
+          "length": "3:31",
+          "genre": "Rap"
+        },
+        {
+          "position": 12,
+          "artist": "Kid Rock",
+          "title": "Bawitdaba",
+          "length": "4:26",
+          "genre": "Rock"
+        },
+        {
+          "position": 13,
+          "artist": "Chamillionaire feat. Krayzie Bone",
+          "title": "Ridin'",
+          "length": "5:03",
+          "genre": "Rap"
+        },
+        {
+          "position": 14,
+          "artist": "T.I.",
+          "title": "Bring 'Em Out",
+          "length": "3:34",
+          "genre": "Rap"
+        },
+        {
+          "position": 15,
+          "artist": "Busta Rhymes",
+          "title": "Break Ya Neck",
+          "length": "3:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 16,
+          "artist": "HARDY",
+          "title": "Sold Out",
+          "length": "3:15",
+          "genre": "Country"
+        },
+        {
+          "position": 17,
+          "artist": "Lil Wayne",
+          "title": "A Milli",
+          "length": "3:41",
+          "genre": "Rap"
+        },
+        {
+          "position": 18,
+          "artist": "Three 6 Mafia feat. Young Buck & 8Ball & MJG",
+          "title": "Stay Fly",
+          "length": "4:13",
+          "genre": "Rap"
+        },
+        {
+          "position": 19,
+          "artist": "Kanye West",
+          "title": "POWER",
+          "length": "4:52",
+          "genre": "Rap"
+        },
+        {
+          "position": 20,
+          "artist": "DMX",
+          "title": "Party Up (Up in Here)",
+          "length": "4:32",
+          "genre": "Rap"
+        },
+        {
+          "position": 21,
+          "artist": "Eminem feat. Dr. Dre & 50 Cent",
+          "title": "Crack a Bottle",
+          "length": "4:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 22,
+          "artist": "Ja Rule feat. Fat Joe & Jadakiss",
+          "title": "New York",
+          "length": "4:19",
+          "genre": "Rap"
+        },
+        {
+          "position": 23,
+          "artist": "Blink-182",
+          "title": "Feeling This",
+          "length": "2:53",
+          "genre": "Rock"
+        },
+        {
+          "position": 24,
+          "artist": "Jay-Z",
+          "title": "Show Me What You Got",
+          "length": "4:29",
+          "genre": "Rap"
+        },
+        {
+          "position": 25,
+          "artist": "Nas",
+          "title": "Made You Look",
+          "length": "3:26",
+          "genre": "Rap"
+        },
+        {
+          "position": 26,
+          "artist": "Waka Flocka Flame feat. Roscoe Dash & Wale",
+          "title": "No Hands",
+          "length": "4:23",
+          "genre": "Rap"
+        },
+        {
+          "position": 27,
+          "artist": "Koe Wetzel",
+          "title": "Creeps",
+          "length": "3:26",
+          "genre": "Country"
+        },
+        {
+          "position": 28,
+          "artist": "2Pac",
+          "title": "Hit 'Em Up",
+          "length": "5:13",
+          "genre": "Rap"
+        },
+        {
+          "position": 29,
+          "artist": "Beastie Boys",
+          "title": "(You Gotta) Fight for Your Right (To Party)",
+          "length": "3:28",
+          "genre": "Rap"
+        },
+        {
+          "position": 30,
+          "artist": "Petey Pablo",
+          "title": "Raise Up",
+          "length": "4:19",
+          "genre": "Rap"
+        },
+        {
+          "position": 31,
+          "artist": "Brantley Gilbert",
+          "title": "Bottoms Up",
+          "length": "4:14",
+          "genre": "Country"
+        },
+        {
+          "position": 32,
+          "artist": "50 Cent",
+          "title": "Just a Lil Bit",
+          "length": "3:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 33,
+          "artist": "Young Jeezy feat. Akon",
+          "title": "Soul Survivor",
+          "length": "4:40",
+          "genre": "Rap"
+        },
+        {
+          "position": 34,
+          "artist": "Eminem",
+          "title": "Rap God",
+          "length": "6:03",
+          "genre": "Rap"
+        },
+        {
+          "position": 35,
+          "artist": "Rage Against the Machine",
+          "title": "Killing in the Name",
+          "length": "5:14",
+          "genre": "Rock"
+        },
+        {
+          "position": 36,
+          "artist": "Trick Daddy feat. Twista & Lil Jon",
+          "title": "Let's Go",
+          "length": "4:35",
+          "genre": "Rap"
+        },
+        {
+          "position": 37,
+          "artist": "Lil Durk feat. Morgan Wallen",
+          "title": "Broadway Girls",
+          "length": "3:27",
+          "genre": "Rap"
+        },
+        {
+          "position": 38,
+          "artist": "AC/DC",
+          "title": "T.N.T.",
+          "length": "3:34",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 39,
+          "artist": "The Notorious B.I.G. feat. Bone Thugs-N-Harmony",
+          "title": "Notorious Thugs",
+          "length": "6:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 40,
+          "artist": "Nelly",
+          "title": "#1",
+          "length": "4:47",
+          "genre": "Rap"
+        },
+        {
+          "position": 41,
+          "artist": "Limp Bizkit",
+          "title": "Rollin' (Air Raid Vehicle)",
+          "length": "3:33",
+          "genre": "Rock"
+        },
+        {
+          "position": 42,
+          "artist": "Lil Wayne",
+          "title": "Go DJ",
+          "length": "4:22",
+          "genre": "Rap"
+        },
+        {
+          "position": 43,
+          "artist": "Usher feat. Lil Jon & Ludacris",
+          "title": "Yeah!",
+          "length": "4:10",
+          "genre": "Rap"
+        },
+        {
+          "position": 44,
+          "artist": "Jason Aldean",
+          "title": "She's Country",
+          "length": "3:29",
+          "genre": "Country"
+        },
+        {
+          "position": 45,
+          "artist": "Kanye West feat. Big Sean, Pusha T & 2 Chainz",
+          "title": "Mercy",
+          "length": "5:29",
+          "genre": "Rap"
+        },
+        {
+          "position": 46,
+          "artist": "Cypress Hill",
+          "title": "Insane in the Brain",
+          "length": "3:28",
+          "genre": "Rap"
+        },
+        {
+          "position": 47,
+          "artist": "Green Day",
+          "title": "American Idiot",
+          "length": "2:54",
+          "genre": "Rock"
+        },
+        {
+          "position": 48,
+          "artist": "T.I.",
+          "title": "What You Know",
+          "length": "4:33",
+          "genre": "Rap"
+        },
+        {
+          "position": 49,
+          "artist": "Lil Scrappy feat. Young Buck",
+          "title": "Money in the Bank",
+          "length": "4:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 50,
+          "artist": "Luke Bryan",
+          "title": "Country Girl (Shake It for Me)",
+          "length": "3:45",
+          "genre": "Country"
+        },
+        {
+          "position": 51,
+          "artist": "DMX",
+          "title": "Where the Hood At",
+          "length": "4:24",
+          "genre": "Rap"
+        },
+        {
+          "position": 52,
+          "artist": "Ludacris feat. Shawnna",
+          "title": "What's Your Fantasy",
+          "length": "4:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 53,
+          "artist": "Foo Fighters",
+          "title": "All My Life",
+          "length": "4:23",
+          "genre": "Rock"
+        },
+        {
+          "position": 54,
+          "artist": "2Pac",
+          "title": "Ambitionz Az a Ridah",
+          "length": "4:39",
+          "genre": "Rap"
+        },
+        {
+          "position": 55,
+          "artist": "Kid Rock",
+          "title": "American Bad Ass",
+          "length": "4:26",
+          "genre": "Rock"
+        },
+        {
+          "position": 56,
+          "artist": "E-40 feat. Keak da Sneak",
+          "title": "Tell Me When to Go",
+          "length": "3:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 57,
+          "artist": "Eric Church",
+          "title": "Smoke a Little Smoke",
+          "length": "3:59",
+          "genre": "Country"
+        },
+        {
+          "position": 58,
+          "artist": "Jay-Z feat. Jermaine Dupri",
+          "title": "Money Ain't a Thang",
+          "length": "4:26",
+          "genre": "Rap"
+        },
+        {
+          "position": 59,
+          "artist": "Ram Jam",
+          "title": "Black Betty",
+          "length": "3:57",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 60,
+          "artist": "Nappy Roots",
+          "title": "Awnaw",
+          "length": "4:14",
+          "genre": "Rap"
+        },
+        {
+          "position": 61,
+          "artist": "Twista feat. Kanye West & Jamie Foxx",
+          "title": "Slow Jamz",
+          "length": "5:16",
+          "genre": "Rap"
+        },
+        {
+          "position": 62,
+          "artist": "Sublime",
+          "title": "Same in the End",
+          "length": "2:36",
+          "genre": "Rock"
+        },
+        {
+          "position": 63,
+          "artist": "Onyx",
+          "title": "Slam",
+          "length": "3:38",
+          "genre": "Rap"
+        },
+        {
+          "position": 64,
+          "artist": "DJ Khaled feat. T-Pain, Ludacris, Snoop Dogg & Rick Ross",
+          "title": "All I Do Is Win",
+          "length": "3:51",
+          "genre": "Rap"
+        },
+        {
+          "position": 65,
+          "artist": "Guns N' Roses",
+          "title": "Welcome to the Jungle",
+          "length": "4:31",
+          "genre": "Classic Rock"
+        }
+      ]
+    },
+    {
+      "name": "Crystal Springs",
+      "theme": "Prime Time",
+      "description": "The peak playlist. Every track is a first-ballot hall-of-famer — the biggest songs from every genre in the rotation, sequenced so there is never a reason to touch the skip button.",
+      "target_runtime": "4h 45m",
+      "actual_runtime": "4h 48m",
+      "song_count": 74,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Kings of Leon",
+          "title": "Sex on Fire",
+          "length": "3:23",
+          "genre": "Rock"
+        },
+        {
+          "position": 2,
+          "artist": "Jay-Z",
+          "title": "Izzo (H.O.V.A.)",
+          "length": "4:00",
+          "genre": "Rap"
+        },
+        {
+          "position": 3,
+          "artist": "Luke Combs",
+          "title": "Beer Never Broke My Heart",
+          "length": "3:06",
+          "genre": "Country"
+        },
+        {
+          "position": 4,
+          "artist": "AC/DC",
+          "title": "You Shook Me All Night Long",
+          "length": "3:30",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 5,
+          "artist": "Eminem",
+          "title": "The Real Slim Shady",
+          "length": "4:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 6,
+          "artist": "Zach Bryan",
+          "title": "Oklahoma Smokeshow",
+          "length": "3:15",
+          "genre": "Country"
+        },
+        {
+          "position": 7,
+          "artist": "The Killers",
+          "title": "When You Were Young",
+          "length": "3:40",
+          "genre": "Rock"
+        },
+        {
+          "position": 8,
+          "artist": "Dr. Dre feat. Snoop Dogg",
+          "title": "Still D.R.E.",
+          "length": "4:30",
+          "genre": "Rap"
+        },
+        {
+          "position": 9,
+          "artist": "Morgan Wallen",
+          "title": "Last Night",
+          "length": "2:43",
+          "genre": "Country"
+        },
+        {
+          "position": 10,
+          "artist": "Lynyrd Skynyrd",
+          "title": "Gimme Three Steps",
+          "length": "4:30",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 11,
+          "artist": "House of Pain",
+          "title": "Jump Around",
+          "length": "3:37",
+          "genre": "Rap"
+        },
+        {
+          "position": 12,
+          "artist": "Eric Church",
+          "title": "Springsteen",
+          "length": "4:23",
+          "genre": "Country"
+        },
+        {
+          "position": 13,
+          "artist": "Foo Fighters",
+          "title": "The Pretender",
+          "length": "4:29",
+          "genre": "Rock"
+        },
+        {
+          "position": 14,
+          "artist": "Warren G feat. Nate Dogg",
+          "title": "Regulate",
+          "length": "4:08",
+          "genre": "Rap"
+        },
+        {
+          "position": 15,
+          "artist": "Tyler Childers",
+          "title": "Whitehouse Road",
+          "length": "3:47",
+          "genre": "Country"
+        },
+        {
+          "position": 16,
+          "artist": "Guns N' Roses",
+          "title": "Paradise City",
+          "length": "6:46",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 17,
+          "artist": "Kanye West feat. Jamie Foxx",
+          "title": "Gold Digger",
+          "length": "3:28",
+          "genre": "Rap"
+        },
+        {
+          "position": 18,
+          "artist": "Turnpike Troubadours",
+          "title": "Long Hot Summer Day",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 19,
+          "artist": "Lit",
+          "title": "My Own Worst Enemy",
+          "length": "2:49",
+          "genre": "Rock"
+        },
+        {
+          "position": 20,
+          "artist": "Snoop Dogg",
+          "title": "Drop It Like It's Hot",
+          "length": "4:30",
+          "genre": "Rap"
+        },
+        {
+          "position": 21,
+          "artist": "Chris Stapleton",
+          "title": "White Horse",
+          "length": "4:00",
+          "genre": "Country"
+        },
+        {
+          "position": 22,
+          "artist": "Tom Petty and the Heartbreakers",
+          "title": "Mary Jane's Last Dance",
+          "length": "4:33",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 23,
+          "artist": "Nelly feat. City Spud",
+          "title": "Ride wit Me",
+          "length": "4:52",
+          "genre": "Rap"
+        },
+        {
+          "position": 24,
+          "artist": "Koe Wetzel",
+          "title": "February 28, 2016",
+          "length": "3:47",
+          "genre": "Country"
+        },
+        {
+          "position": 25,
+          "artist": "Blink-182",
+          "title": "All the Small Things",
+          "length": "2:47",
+          "genre": "Rock"
+        },
+        {
+          "position": 26,
+          "artist": "2Pac feat. Dr. Dre",
+          "title": "California Love",
+          "length": "4:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 27,
+          "artist": "Alabama",
+          "title": "Dixieland Delight",
+          "length": "3:53",
+          "genre": "Country"
+        },
+        {
+          "position": 28,
+          "artist": "Van Halen",
+          "title": "Panama",
+          "length": "3:31",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 29,
+          "artist": "The Notorious B.I.G.",
+          "title": "Big Poppa",
+          "length": "4:13",
+          "genre": "Rap"
+        },
+        {
+          "position": 30,
+          "artist": "HARDY",
+          "title": "Truck Bed",
+          "length": "3:15",
+          "genre": "Country"
+        },
+        {
+          "position": 31,
+          "artist": "Sublime",
+          "title": "What I Got",
+          "length": "2:51",
+          "genre": "Rock"
+        },
+        {
+          "position": 32,
+          "artist": "Kendrick Lamar",
+          "title": "HUMBLE.",
+          "length": "2:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 33,
+          "artist": "Riley Green feat. Ella Langley",
+          "title": "You Look Like You Love Me",
+          "length": "3:03",
+          "genre": "Country"
+        },
+        {
+          "position": 34,
+          "artist": "Beastie Boys",
+          "title": "Sabotage",
+          "length": "2:58",
+          "genre": "Rap"
+        },
+        {
+          "position": 35,
+          "artist": "Eminem",
+          "title": "Without Me",
+          "length": "4:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 36,
+          "artist": "Toby Keith",
+          "title": "As Good as I Once Was",
+          "length": "3:57",
+          "genre": "Country"
+        },
+        {
+          "position": 37,
+          "artist": "Weezer",
+          "title": "Buddy Holly",
+          "length": "2:39",
+          "genre": "Rock"
+        },
+        {
+          "position": 38,
+          "artist": "Outkast",
+          "title": "Ms. Jackson",
+          "length": "4:30",
+          "genre": "Rap"
+        },
+        {
+          "position": 39,
+          "artist": "Garth Brooks",
+          "title": "Callin' Baton Rouge",
+          "length": "2:37",
+          "genre": "Country"
+        },
+        {
+          "position": 40,
+          "artist": "Led Zeppelin",
+          "title": "Black Dog",
+          "length": "4:55",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 41,
+          "artist": "50 Cent feat. Olivia",
+          "title": "Candy Shop",
+          "length": "3:29",
+          "genre": "Rap"
+        },
+        {
+          "position": 42,
+          "artist": "Whiskey Myers",
+          "title": "Stone",
+          "length": "4:04",
+          "genre": "Country"
+        },
+        {
+          "position": 43,
+          "artist": "Red Hot Chili Peppers",
+          "title": "Can't Stop",
+          "length": "4:29",
+          "genre": "Rock"
+        },
+        {
+          "position": 44,
+          "artist": "Jay-Z",
+          "title": "Dirt Off Your Shoulder",
+          "length": "4:05",
+          "genre": "Rap"
+        },
+        {
+          "position": 45,
+          "artist": "Morgan Wallen",
+          "title": "You Proof",
+          "length": "2:37",
+          "genre": "Country"
+        },
+        {
+          "position": 46,
+          "artist": "Creedence Clearwater Revival",
+          "title": "Fortunate Son",
+          "length": "2:20",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 47,
+          "artist": "Ice Cube",
+          "title": "It Was a Good Day",
+          "length": "4:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 48,
+          "artist": "Zach Bryan",
+          "title": "Something in the Orange",
+          "length": "3:46",
+          "genre": "Country"
+        },
+        {
+          "position": 49,
+          "artist": "Nirvana",
+          "title": "Smells Like Teen Spirit",
+          "length": "5:01",
+          "genre": "Rock"
+        },
+        {
+          "position": 50,
+          "artist": "UGK feat. Outkast",
+          "title": "Int'l Players Anthem (I Choose You)",
+          "length": "4:12",
+          "genre": "Rap"
+        },
+        {
+          "position": 51,
+          "artist": "Cody Jinks",
+          "title": "Loud and Heavy",
+          "length": "4:33",
+          "genre": "Country"
+        },
+        {
+          "position": 52,
+          "artist": "Queen",
+          "title": "Don't Stop Me Now",
+          "length": "3:29",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 53,
+          "artist": "T.I. feat. Rihanna",
+          "title": "Live Your Life",
+          "length": "5:38",
+          "genre": "Rap"
+        },
+        {
+          "position": 54,
+          "artist": "Dierks Bentley",
+          "title": "Drunk on a Plane",
+          "length": "4:15",
+          "genre": "Country"
+        },
+        {
+          "position": 55,
+          "artist": "The White Stripes",
+          "title": "Seven Nation Army",
+          "length": "3:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 56,
+          "artist": "The Notorious B.I.G. feat. Mase & Puff Daddy",
+          "title": "Mo Money Mo Problems",
+          "length": "4:17",
+          "genre": "Rap"
+        },
+        {
+          "position": 57,
+          "artist": "Luke Combs",
+          "title": "Hurricane",
+          "length": "3:43",
+          "genre": "Country"
+        },
+        {
+          "position": 58,
+          "artist": "The Rolling Stones",
+          "title": "Honky Tonk Women",
+          "length": "3:03",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 59,
+          "artist": "Kendrick Lamar",
+          "title": "Not Like Us",
+          "length": "4:34",
+          "genre": "Rap"
+        },
+        {
+          "position": 60,
+          "artist": "Jason Aldean",
+          "title": "Dirt Road Anthem",
+          "length": "3:51",
+          "genre": "Country"
+        },
+        {
+          "position": 61,
+          "artist": "O.A.R.",
+          "title": "Love and Memories",
+          "length": "3:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 62,
+          "artist": "J. Cole",
+          "title": "No Role Modelz",
+          "length": "4:52",
+          "genre": "Rap"
+        },
+        {
+          "position": 63,
+          "artist": "Zach Top",
+          "title": "Sounds Like the Radio",
+          "length": "2:57",
+          "genre": "Country"
+        },
+        {
+          "position": 64,
+          "artist": "Dirty Heads",
+          "title": "Vacation",
+          "length": "3:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 65,
+          "artist": "DMX",
+          "title": "X Gon' Give It to Ya",
+          "length": "3:37",
+          "genre": "Rap"
+        },
+        {
+          "position": 66,
+          "artist": "Eagles",
+          "title": "Life in the Fast Lane",
+          "length": "4:46",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 67,
+          "artist": "Ludacris",
+          "title": "Stand Up",
+          "length": "3:33",
+          "genre": "Rap"
+        },
+        {
+          "position": 68,
+          "artist": "Stick Figure feat. Slightly Stoopid",
+          "title": "World on Fire",
+          "length": "4:23",
+          "genre": "Rock"
+        },
+        {
+          "position": 69,
+          "artist": "Kid Cudi",
+          "title": "Pursuit of Happiness",
+          "length": "4:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 70,
+          "artist": "Travis Tritt",
+          "title": "It's a Great Day to Be Alive",
+          "length": "4:35",
+          "genre": "Country"
+        },
+        {
+          "position": 71,
+          "artist": "Jimmy Eat World",
+          "title": "The Middle",
+          "length": "2:45",
+          "genre": "Rock"
+        },
+        {
+          "position": 72,
+          "artist": "Kanye West feat. Lupe Fiasco",
+          "title": "Touch the Sky",
+          "length": "3:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 73,
+          "artist": "Outkast",
+          "title": "Hey Ya!",
+          "length": "3:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 74,
+          "artist": "Bon Jovi",
+          "title": "It's My Life",
+          "length": "3:44",
+          "genre": "Rock"
+        }
+      ]
+    },
+    {
+      "name": "Cascades",
+      "theme": "Golden Hour",
+      "description": "Late afternoon, drinks flowing, sun getting low. Country comes back and classic rock takes over — warm, melodic, feel-good songs for the patio and the last few holes of daylight.",
+      "target_runtime": "2h 30m",
+      "actual_runtime": "2h 34m",
+      "song_count": 38,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Van Morrison",
+          "title": "Into the Mystic",
+          "length": "3:29",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 2,
+          "artist": "Zach Bryan",
+          "title": "Pink Skies",
+          "length": "3:07",
+          "genre": "Country"
+        },
+        {
+          "position": 3,
+          "artist": "Tom Petty",
+          "title": "Free Fallin'",
+          "length": "4:16",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 4,
+          "artist": "Kenny Chesney feat. Uncle Kracker",
+          "title": "When the Sun Goes Down",
+          "length": "3:56",
+          "genre": "Country"
+        },
+        {
+          "position": 5,
+          "artist": "The Allman Brothers Band",
+          "title": "Blue Sky",
+          "length": "5:09",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 6,
+          "artist": "Morgan Wallen",
+          "title": "Sand in My Boots",
+          "length": "3:38",
+          "genre": "Country"
+        },
+        {
+          "position": 7,
+          "artist": "Bob Seger",
+          "title": "Night Moves",
+          "length": "5:25",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 8,
+          "artist": "Chris Stapleton",
+          "title": "Starting Over",
+          "length": "4:03",
+          "genre": "Country"
+        },
+        {
+          "position": 9,
+          "artist": "Fleetwood Mac",
+          "title": "Everywhere",
+          "length": "3:41",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 10,
+          "artist": "Eric Church",
+          "title": "Give Me Back My Hometown",
+          "length": "4:03",
+          "genre": "Country"
+        },
+        {
+          "position": 11,
+          "artist": "Eagles",
+          "title": "Tequila Sunrise",
+          "length": "2:52",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 12,
+          "artist": "Luke Combs",
+          "title": "Fast Car",
+          "length": "4:25",
+          "genre": "Country"
+        },
+        {
+          "position": 13,
+          "artist": "Steve Miller Band",
+          "title": "Fly Like an Eagle",
+          "length": "4:42",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 14,
+          "artist": "Tyler Childers",
+          "title": "All Your'n",
+          "length": "3:43",
+          "genre": "Country"
+        },
+        {
+          "position": 15,
+          "artist": "Creedence Clearwater Revival",
+          "title": "Have You Ever Seen the Rain",
+          "length": "2:38",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 16,
+          "artist": "Parker McCollum",
+          "title": "Pretty Heart",
+          "length": "3:05",
+          "genre": "Country"
+        },
+        {
+          "position": 17,
+          "artist": "The Marshall Tucker Band",
+          "title": "Can't You See",
+          "length": "6:01",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 18,
+          "artist": "Jimmy Buffett",
+          "title": "Margaritaville",
+          "length": "4:11",
+          "genre": "Country"
+        },
+        {
+          "position": 19,
+          "artist": "Lynyrd Skynyrd",
+          "title": "Simple Man",
+          "length": "5:57",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 20,
+          "artist": "Alan Jackson feat. Jimmy Buffett",
+          "title": "It's Five O'Clock Somewhere",
+          "length": "3:50",
+          "genre": "Country"
+        },
+        {
+          "position": 21,
+          "artist": "The Doobie Brothers",
+          "title": "Black Water",
+          "length": "4:15",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 22,
+          "artist": "Whiskey Myers",
+          "title": "Broken Window Serenade",
+          "length": "4:47",
+          "genre": "Country"
+        },
+        {
+          "position": 23,
+          "artist": "Bob Seger",
+          "title": "Against the Wind",
+          "length": "5:33",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 24,
+          "artist": "Zach Bryan",
+          "title": "Burn, Burn, Burn",
+          "length": "4:03",
+          "genre": "Country"
+        },
+        {
+          "position": 25,
+          "artist": "Turnpike Troubadours",
+          "title": "7&7",
+          "length": "3:20",
+          "genre": "Country"
+        },
+        {
+          "position": 26,
+          "artist": "America",
+          "title": "Ventura Highway",
+          "length": "3:32",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 27,
+          "artist": "Cody Jinks",
+          "title": "Cast No Stones",
+          "length": "4:20",
+          "genre": "Country"
+        },
+        {
+          "position": 28,
+          "artist": "The Band",
+          "title": "The Weight",
+          "length": "4:34",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 29,
+          "artist": "Jon Pardi",
+          "title": "Head Over Boots",
+          "length": "3:14",
+          "genre": "Country"
+        },
+        {
+          "position": 30,
+          "artist": "Stick Figure",
+          "title": "Golden Hour",
+          "length": "4:34",
+          "genre": "Rock"
+        },
+        {
+          "position": 31,
+          "artist": "Charles Wesley Godwin",
+          "title": "Family Ties",
+          "length": "3:39",
+          "genre": "Country"
+        },
+        {
+          "position": 32,
+          "artist": "Eddie Money",
+          "title": "Take Me Home Tonight",
+          "length": "3:57",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 33,
+          "artist": "Dire Straits",
+          "title": "Walk of Life",
+          "length": "4:12",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 34,
+          "artist": "Randy Houser",
+          "title": "Runnin' Outta Moonlight",
+          "length": "3:14",
+          "genre": "Country"
+        },
+        {
+          "position": 35,
+          "artist": "Tom Petty",
+          "title": "You Don't Know How It Feels",
+          "length": "4:47",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 36,
+          "artist": "Jamey Johnson",
+          "title": "In Color",
+          "length": "5:05",
+          "genre": "Country"
+        },
+        {
+          "position": 37,
+          "artist": "George Strait",
+          "title": "Amarillo by Morning",
+          "length": "2:29",
+          "genre": "Country"
+        },
+        {
+          "position": 38,
+          "artist": "Van Morrison",
+          "title": "Brown Eyed Girl",
+          "length": "3:03",
+          "genre": "Classic Rock"
+        }
+      ]
+    },
+    {
+      "name": "Black Bear",
+      "theme": "Last Dance",
+      "description": "Final round. Nostalgia-loaded — the 90s and 2000s songs everyone grew up on, building to an emotional big finish. Ends with the song that ends everything.",
+      "target_runtime": "4h 30m",
+      "actual_runtime": "4h 33m",
+      "song_count": 68,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Zach Bryan",
+          "title": "Nine Ball",
+          "length": "3:17",
+          "genre": "Country"
+        },
+        {
+          "position": 2,
+          "artist": "O.A.R.",
+          "title": "Black Rock",
+          "length": "4:16",
+          "genre": "Rock"
+        },
+        {
+          "position": 3,
+          "artist": "Eminem",
+          "title": "Sing for the Moment",
+          "length": "5:40",
+          "genre": "Rap"
+        },
+        {
+          "position": 4,
+          "artist": "Third Eye Blind",
+          "title": "Jumper",
+          "length": "4:33",
+          "genre": "Rock"
+        },
+        {
+          "position": 5,
+          "artist": "Morgan Wallen",
+          "title": "'98 Braves",
+          "length": "3:41",
+          "genre": "Country"
+        },
+        {
+          "position": 6,
+          "artist": "Boston",
+          "title": "More Than a Feeling",
+          "length": "4:45",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 7,
+          "artist": "Jay-Z",
+          "title": "Hard Knock Life (Ghetto Anthem)",
+          "length": "3:59",
+          "genre": "Rap"
+        },
+        {
+          "position": 8,
+          "artist": "Luke Combs",
+          "title": "She Got the Best of Me",
+          "length": "3:12",
+          "genre": "Country"
+        },
+        {
+          "position": 9,
+          "artist": "Green Day",
+          "title": "Basket Case",
+          "length": "3:01",
+          "genre": "Rock"
+        },
+        {
+          "position": 10,
+          "artist": "Tom Petty",
+          "title": "I Won't Back Down",
+          "length": "2:56",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 11,
+          "artist": "Nelly",
+          "title": "Just a Dream",
+          "length": "3:58",
+          "genre": "Rap"
+        },
+        {
+          "position": 12,
+          "artist": "Eric Church",
+          "title": "Record Year",
+          "length": "3:45",
+          "genre": "Country"
+        },
+        {
+          "position": 13,
+          "artist": "Oasis",
+          "title": "Wonderwall",
+          "length": "4:18",
+          "genre": "Rock"
+        },
+        {
+          "position": 14,
+          "artist": "Zach Bryan",
+          "title": "Oklahoma City",
+          "length": "4:20",
+          "genre": "Country"
+        },
+        {
+          "position": 15,
+          "artist": "Skee-Lo",
+          "title": "I Wish",
+          "length": "4:08",
+          "genre": "Rap"
+        },
+        {
+          "position": 16,
+          "artist": "Whiskey Myers",
+          "title": "Early Morning Shakes",
+          "length": "4:31",
+          "genre": "Country"
+        },
+        {
+          "position": 17,
+          "artist": "Foo Fighters",
+          "title": "My Hero",
+          "length": "4:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 18,
+          "artist": "2Pac feat. Talent",
+          "title": "Changes",
+          "length": "4:31",
+          "genre": "Rap"
+        },
+        {
+          "position": 19,
+          "artist": "Alan Jackson",
+          "title": "Drive (For Daddy Gene)",
+          "length": "4:02",
+          "genre": "Country"
+        },
+        {
+          "position": 20,
+          "artist": "Matchbox Twenty",
+          "title": "3AM",
+          "length": "3:46",
+          "genre": "Rock"
+        },
+        {
+          "position": 21,
+          "artist": "Fort Minor feat. Styles of Beyond",
+          "title": "Remember the Name",
+          "length": "3:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 22,
+          "artist": "Chris Stapleton",
+          "title": "Broken Halos",
+          "length": "3:03",
+          "genre": "Country"
+        },
+        {
+          "position": 23,
+          "artist": "Counting Crows",
+          "title": "Hanginaround",
+          "length": "4:07",
+          "genre": "Rock"
+        },
+        {
+          "position": 24,
+          "artist": "Ludacris feat. Nate Dogg",
+          "title": "Area Codes",
+          "length": "4:25",
+          "genre": "Rap"
+        },
+        {
+          "position": 25,
+          "artist": "Tim McGraw",
+          "title": "Something Like That",
+          "length": "3:03",
+          "genre": "Country"
+        },
+        {
+          "position": 26,
+          "artist": "The Wallflowers",
+          "title": "One Headlight",
+          "length": "5:14",
+          "genre": "Rock"
+        },
+        {
+          "position": 27,
+          "artist": "Jay-Z feat. Alicia Keys",
+          "title": "Empire State of Mind",
+          "length": "4:36",
+          "genre": "Rap"
+        },
+        {
+          "position": 28,
+          "artist": "Joe Diffie",
+          "title": "Pickup Man",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 29,
+          "artist": "Gin Blossoms",
+          "title": "Hey Jealousy",
+          "length": "3:56",
+          "genre": "Rock"
+        },
+        {
+          "position": 30,
+          "artist": "Eminem",
+          "title": "The Way I Am",
+          "length": "4:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 31,
+          "artist": "Hootie & the Blowfish",
+          "title": "Only Wanna Be with You",
+          "length": "3:46",
+          "genre": "Rock"
+        },
+        {
+          "position": 32,
+          "artist": "Zach Top",
+          "title": "I Never Lie",
+          "length": "3:15",
+          "genre": "Country"
+        },
+        {
+          "position": 33,
+          "artist": "Stick Figure feat. Slightly Stoopid",
+          "title": "Choice Is Yours",
+          "length": "3:47",
+          "genre": "Rock"
+        },
+        {
+          "position": 34,
+          "artist": "Nas",
+          "title": "If I Ruled the World (Imagine That)",
+          "length": "4:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 35,
+          "artist": "Flatland Cavalry",
+          "title": "A Life Where We Work Out",
+          "length": "3:59",
+          "genre": "Country"
+        },
+        {
+          "position": 36,
+          "artist": "Nine Days",
+          "title": "Absolutely (Story of a Girl)",
+          "length": "3:09",
+          "genre": "Rock"
+        },
+        {
+          "position": 37,
+          "artist": "Dr. Dre feat. Snoop Dogg",
+          "title": "Nuthin' but a 'G' Thang",
+          "length": "3:58",
+          "genre": "Rap"
+        },
+        {
+          "position": 38,
+          "artist": "Kenny Chesney",
+          "title": "Young",
+          "length": "3:53",
+          "genre": "Country"
+        },
+        {
+          "position": 39,
+          "artist": "Blink-182",
+          "title": "First Date",
+          "length": "2:51",
+          "genre": "Rock"
+        },
+        {
+          "position": 40,
+          "artist": "Coolio feat. L.V.",
+          "title": "Gangsta's Paradise",
+          "length": "4:00",
+          "genre": "Rap"
+        },
+        {
+          "position": 41,
+          "artist": "Brooks & Dunn",
+          "title": "My Maria",
+          "length": "3:48",
+          "genre": "Country"
+        },
+        {
+          "position": 42,
+          "artist": "Vertical Horizon",
+          "title": "Everything You Want",
+          "length": "4:15",
+          "genre": "Rock"
+        },
+        {
+          "position": 43,
+          "artist": "50 Cent",
+          "title": "Wanksta",
+          "length": "3:47",
+          "genre": "Rap"
+        },
+        {
+          "position": 44,
+          "artist": "David Lee Murphy",
+          "title": "Dust on the Bottle",
+          "length": "3:53",
+          "genre": "Country"
+        },
+        {
+          "position": 45,
+          "artist": "Incubus",
+          "title": "Drive",
+          "length": "3:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 46,
+          "artist": "Outkast",
+          "title": "Elevators (Me & You)",
+          "length": "4:24",
+          "genre": "Rap"
+        },
+        {
+          "position": 47,
+          "artist": "George Strait",
+          "title": "Check Yes or No",
+          "length": "3:12",
+          "genre": "Country"
+        },
+        {
+          "position": 48,
+          "artist": "Collective Soul",
+          "title": "Shine",
+          "length": "5:05",
+          "genre": "Rock"
+        },
+        {
+          "position": 49,
+          "artist": "The Notorious B.I.G.",
+          "title": "Juicy",
+          "length": "5:02",
+          "genre": "Rap"
+        },
+        {
+          "position": 50,
+          "artist": "John Michael Montgomery",
+          "title": "Sold (The Grundy County Auction Incident)",
+          "length": "2:52",
+          "genre": "Country"
+        },
+        {
+          "position": 51,
+          "artist": "Red Hot Chili Peppers",
+          "title": "Under the Bridge",
+          "length": "4:24",
+          "genre": "Rock"
+        },
+        {
+          "position": 52,
+          "artist": "Kanye West feat. Chris Martin",
+          "title": "Homecoming",
+          "length": "3:23",
+          "genre": "Rap"
+        },
+        {
+          "position": 53,
+          "artist": "Garth Brooks",
+          "title": "Ain't Goin' Down ('Til the Sun Comes Up)",
+          "length": "4:28",
+          "genre": "Country"
+        },
+        {
+          "position": 54,
+          "artist": "Chingy",
+          "title": "Right Thurr",
+          "length": "4:08",
+          "genre": "Rap"
+        },
+        {
+          "position": 55,
+          "artist": "Ja Rule feat. Ashanti",
+          "title": "Always on Time",
+          "length": "4:05",
+          "genre": "Rap"
+        },
+        {
+          "position": 56,
+          "artist": "Dierks Bentley",
+          "title": "What Was I Thinkin'",
+          "length": "3:45",
+          "genre": "Country"
+        },
+        {
+          "position": 57,
+          "artist": "D12",
+          "title": "My Band",
+          "length": "4:59",
+          "genre": "Rap"
+        },
+        {
+          "position": 58,
+          "artist": "T.I. feat. Justin Timberlake",
+          "title": "Dead and Gone",
+          "length": "4:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 59,
+          "artist": "Alan Jackson",
+          "title": "Where I Come From",
+          "length": "4:07",
+          "genre": "Country"
+        },
+        {
+          "position": 60,
+          "artist": "Bruce Springsteen",
+          "title": "Glory Days",
+          "length": "4:15",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 61,
+          "artist": "Mark Morrison",
+          "title": "Return of the Mack",
+          "length": "3:32",
+          "genre": "Rap"
+        },
+        {
+          "position": 62,
+          "artist": "Luke Combs",
+          "title": "Even Though I'm Leaving",
+          "length": "3:43",
+          "genre": "Country"
+        },
+        {
+          "position": 63,
+          "artist": "Foo Fighters",
+          "title": "Best of You",
+          "length": "4:15",
+          "genre": "Rock"
+        },
+        {
+          "position": 64,
+          "artist": "Montell Jordan",
+          "title": "This Is How We Do It",
+          "length": "3:59",
+          "genre": "Rap"
+        },
+        {
+          "position": 65,
+          "artist": "Zac Brown Band",
+          "title": "Chicken Fried",
+          "length": "3:58",
+          "genre": "Country"
+        },
+        {
+          "position": 66,
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "length": "5:41",
+          "genre": "Rock"
+        },
+        {
+          "position": 67,
+          "artist": "John Mellencamp",
+          "title": "Jack & Diane",
+          "length": "4:17",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 68,
+          "artist": "Green Day",
+          "title": "Good Riddance (Time of Your Life)",
+          "length": "2:34",
+          "genre": "Rock"
+        }
+      ]
+    },
+    {
+      "name": "Airbnb Morning",
+      "theme": "Coffee & Breakfast",
+      "description": "Slow starts. Acoustic country, coffee-shop reggae-rock, and warm folk for eggs, hangovers, and the first cup. Nothing louder than the griddle until the last few tracks ease the day open.",
+      "target_runtime": "3h 00m",
+      "actual_runtime": "2h 56m",
+      "song_count": 48,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Jack Johnson",
+          "title": "Better Together",
+          "length": "3:27",
+          "genre": "Rock"
+        },
+        {
+          "position": 2,
+          "artist": "Zach Bryan",
+          "title": "Sun to Me",
+          "length": "3:26",
+          "genre": "Country"
+        },
+        {
+          "position": 3,
+          "artist": "Stick Figure",
+          "title": "Once in a Lifetime",
+          "length": "5:22",
+          "genre": "Rock"
+        },
+        {
+          "position": 4,
+          "artist": "Chris Stapleton",
+          "title": "Millionaire",
+          "length": "3:56",
+          "genre": "Country"
+        },
+        {
+          "position": 5,
+          "artist": "Jason Mraz",
+          "title": "I'm Yours",
+          "length": "4:02",
+          "genre": "Rock"
+        },
+        {
+          "position": 6,
+          "artist": "Tyler Childers",
+          "title": "Lady May",
+          "length": "3:03",
+          "genre": "Country"
+        },
+        {
+          "position": 7,
+          "artist": "O.A.R.",
+          "title": "Peace",
+          "length": "3:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 8,
+          "artist": "Ray LaMontagne",
+          "title": "You Are the Best Thing",
+          "length": "3:56",
+          "genre": "Rock"
+        },
+        {
+          "position": 9,
+          "artist": "Zach Bryan feat. The Lumineers",
+          "title": "Spotless",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 10,
+          "artist": "Dispatch",
+          "title": "Elias",
+          "length": "3:40",
+          "genre": "Rock"
+        },
+        {
+          "position": 11,
+          "artist": "Willie Nelson",
+          "title": "On the Road Again",
+          "length": "2:38",
+          "genre": "Country"
+        },
+        {
+          "position": 12,
+          "artist": "Jack Johnson",
+          "title": "Upside Down",
+          "length": "3:28",
+          "genre": "Rock"
+        },
+        {
+          "position": 13,
+          "artist": "Charles Wesley Godwin",
+          "title": "All Again",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 14,
+          "artist": "Slightly Stoopid",
+          "title": "Closer to the Sun",
+          "length": "3:53",
+          "genre": "Rock"
+        },
+        {
+          "position": 15,
+          "artist": "Luke Combs",
+          "title": "Beautiful Crazy",
+          "length": "3:13",
+          "genre": "Country"
+        },
+        {
+          "position": 16,
+          "artist": "The Lumineers",
+          "title": "Stubborn Love",
+          "length": "4:38",
+          "genre": "Rock"
+        },
+        {
+          "position": 17,
+          "artist": "Sturgill Simpson",
+          "title": "Turtles All the Way Down",
+          "length": "2:56",
+          "genre": "Country"
+        },
+        {
+          "position": 18,
+          "artist": "Bob Marley & The Wailers",
+          "title": "Is This Love",
+          "length": "3:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 19,
+          "artist": "John Mayer",
+          "title": "Waiting on the World to Change",
+          "length": "3:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 20,
+          "artist": "Riley Green",
+          "title": "I Wish Grandpas Never Died",
+          "length": "3:12",
+          "genre": "Country"
+        },
+        {
+          "position": 21,
+          "artist": "Donavon Frankenreiter",
+          "title": "Free",
+          "length": "3:29",
+          "genre": "Rock"
+        },
+        {
+          "position": 22,
+          "artist": "Flatland Cavalry",
+          "title": "War with My Mind",
+          "length": "3:26",
+          "genre": "Country"
+        },
+        {
+          "position": 23,
+          "artist": "Dave Matthews Band",
+          "title": "Satellite",
+          "length": "4:51",
+          "genre": "Rock"
+        },
+        {
+          "position": 24,
+          "artist": "Morgan Wallen",
+          "title": "7 Summers",
+          "length": "3:33",
+          "genre": "Country"
+        },
+        {
+          "position": 25,
+          "artist": "Rebelution",
+          "title": "Safe and Sound",
+          "length": "3:43",
+          "genre": "Rock"
+        },
+        {
+          "position": 26,
+          "artist": "Tyler Childers",
+          "title": "Nose on the Grindstone",
+          "length": "3:36",
+          "genre": "Country"
+        },
+        {
+          "position": 27,
+          "artist": "Ben Harper",
+          "title": "Steal My Kisses",
+          "length": "4:04",
+          "genre": "Rock"
+        },
+        {
+          "position": 28,
+          "artist": "Eric Church",
+          "title": "Like Jesus Does",
+          "length": "3:53",
+          "genre": "Country"
+        },
+        {
+          "position": 29,
+          "artist": "Toad the Wet Sprocket",
+          "title": "Walk on the Ocean",
+          "length": "2:59",
+          "genre": "Rock"
+        },
+        {
+          "position": 30,
+          "artist": "Zac Brown Band",
+          "title": "Toes",
+          "length": "4:22",
+          "genre": "Country"
+        },
+        {
+          "position": 31,
+          "artist": "Michael Franti & Spearhead",
+          "title": "Say Hey (I Love You)",
+          "length": "3:55",
+          "genre": "Rock"
+        },
+        {
+          "position": 32,
+          "artist": "Colter Wall",
+          "title": "Sleeping on the Blacktop",
+          "length": "3:11",
+          "genre": "Country"
+        },
+        {
+          "position": 33,
+          "artist": "Iration",
+          "title": "Time Bomb",
+          "length": "3:37",
+          "genre": "Rock"
+        },
+        {
+          "position": 34,
+          "artist": "Turnpike Troubadours",
+          "title": "The Bird Hunters",
+          "length": "5:05",
+          "genre": "Country"
+        },
+        {
+          "position": 35,
+          "artist": "Dirty Heads",
+          "title": "Oxygen",
+          "length": "3:23",
+          "genre": "Rock"
+        },
+        {
+          "position": 36,
+          "artist": "Brooks & Dunn",
+          "title": "Red Dirt Road",
+          "length": "4:03",
+          "genre": "Country"
+        },
+        {
+          "position": 37,
+          "artist": "Slightly Stoopid",
+          "title": "Collie Man",
+          "length": "3:44",
+          "genre": "Rock"
+        },
+        {
+          "position": 38,
+          "artist": "Kip Moore",
+          "title": "Somethin' 'Bout a Truck",
+          "length": "3:24",
+          "genre": "Country"
+        },
+        {
+          "position": 39,
+          "artist": "Goo Goo Dolls",
+          "title": "Name",
+          "length": "4:30",
+          "genre": "Rock"
+        },
+        {
+          "position": 40,
+          "artist": "Stick Figure",
+          "title": "Way of Life",
+          "length": "4:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 41,
+          "artist": "Tim McGraw",
+          "title": "Where the Green Grass Grows",
+          "length": "3:22",
+          "genre": "Country"
+        },
+        {
+          "position": 42,
+          "artist": "Fleetwood Mac",
+          "title": "Never Going Back Again",
+          "length": "2:14",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 43,
+          "artist": "The Allman Brothers Band",
+          "title": "Melissa",
+          "length": "3:54",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 44,
+          "artist": "Mt. Joy",
+          "title": "Silver Lining",
+          "length": "3:37",
+          "genre": "Rock"
+        },
+        {
+          "position": 45,
+          "artist": "Xavier Rudd",
+          "title": "Follow the Sun",
+          "length": "4:10",
+          "genre": "Rock"
+        },
+        {
+          "position": 46,
+          "artist": "Kenny Chesney",
+          "title": "American Kids",
+          "length": "3:26",
+          "genre": "Country"
+        },
+        {
+          "position": 47,
+          "artist": "Eagles",
+          "title": "Seven Bridges Road",
+          "length": "3:01",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 48,
+          "artist": "Creedence Clearwater Revival",
+          "title": "Lookin' Out My Back Door",
+          "length": "2:33",
+          "genre": "Classic Rock"
+        }
+      ]
+    },
+    {
+      "name": "Airbnb Evening",
+      "theme": "Fire Pit & Cards",
+      "description": "The long night: dinner-and-drinks groove, a money-and-cards rap run for the gambling hours, a rowdy peak, then the fire pit sing-along run — the songs four guys yell at a fire at 1am.",
+      "target_runtime": "5h 00m",
+      "actual_runtime": "4h 58m",
+      "song_count": 77,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Kenny Chesney",
+          "title": "No Shoes, No Shirt, No Problems",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 2,
+          "artist": "Sublime",
+          "title": "Caress Me Down",
+          "length": "3:32",
+          "genre": "Rock"
+        },
+        {
+          "position": 3,
+          "artist": "Jay-Z",
+          "title": "Heart of the City (Ain't No Love)",
+          "length": "3:43",
+          "genre": "Rap"
+        },
+        {
+          "position": 4,
+          "artist": "Eric Church",
+          "title": "Guys Like Me",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 5,
+          "artist": "Stick Figure",
+          "title": "Paradise",
+          "length": "4:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 6,
+          "artist": "Santana feat. Rob Thomas",
+          "title": "Smooth",
+          "length": "4:56",
+          "genre": "Rock"
+        },
+        {
+          "position": 7,
+          "artist": "Morgan Wallen",
+          "title": "Wasted on You",
+          "length": "2:58",
+          "genre": "Country"
+        },
+        {
+          "position": 8,
+          "artist": "Q-Tip",
+          "title": "Vivrant Thing",
+          "length": "3:16",
+          "genre": "Rap"
+        },
+        {
+          "position": 9,
+          "artist": "Whiskey Myers",
+          "title": "Deep Down in the South",
+          "length": "3:31",
+          "genre": "Country"
+        },
+        {
+          "position": 10,
+          "artist": "Jimmy Buffett",
+          "title": "Cheeseburger in Paradise",
+          "length": "2:51",
+          "genre": "Country"
+        },
+        {
+          "position": 11,
+          "artist": "O.A.R.",
+          "title": "Night Shift",
+          "length": "4:58",
+          "genre": "Rock"
+        },
+        {
+          "position": 12,
+          "artist": "Nappy Roots",
+          "title": "Good Day",
+          "length": "3:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 13,
+          "artist": "Zac Brown Band feat. Jimmy Buffett",
+          "title": "Knee Deep",
+          "length": "3:12",
+          "genre": "Country"
+        },
+        {
+          "position": 14,
+          "artist": "The Doobie Brothers",
+          "title": "Listen to the Music",
+          "length": "3:48",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 15,
+          "artist": "J. Cole feat. Miguel",
+          "title": "Power Trip",
+          "length": "4:01",
+          "genre": "Rap"
+        },
+        {
+          "position": 16,
+          "artist": "Dierks Bentley",
+          "title": "Somewhere on a Beach",
+          "length": "3:34",
+          "genre": "Country"
+        },
+        {
+          "position": 17,
+          "artist": "311",
+          "title": "Down",
+          "length": "2:52",
+          "genre": "Rock"
+        },
+        {
+          "position": 18,
+          "artist": "Ludacris feat. Pharrell",
+          "title": "Money Maker",
+          "length": "3:52",
+          "genre": "Rap"
+        },
+        {
+          "position": 19,
+          "artist": "Toby Keith",
+          "title": "Red Solo Cup",
+          "length": "3:38",
+          "genre": "Country"
+        },
+        {
+          "position": 20,
+          "artist": "Jay-Z",
+          "title": "99 Problems",
+          "length": "3:54",
+          "genre": "Rap"
+        },
+        {
+          "position": 21,
+          "artist": "Kenny Rogers",
+          "title": "The Gambler",
+          "length": "3:32",
+          "genre": "Country"
+        },
+        {
+          "position": 22,
+          "artist": "Wu-Tang Clan",
+          "title": "C.R.E.A.M.",
+          "length": "4:12",
+          "genre": "Rap"
+        },
+        {
+          "position": 23,
+          "artist": "AC/DC",
+          "title": "Have a Drink on Me",
+          "length": "3:58",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 24,
+          "artist": "Puff Daddy feat. Ma$e & The Notorious B.I.G.",
+          "title": "It's All About the Benjamins",
+          "length": "4:37",
+          "genre": "Rap"
+        },
+        {
+          "position": 25,
+          "artist": "Chris Stapleton",
+          "title": "Might as Well Get Stoned",
+          "length": "3:22",
+          "genre": "Country"
+        },
+        {
+          "position": 26,
+          "artist": "Steve Miller Band",
+          "title": "Jungle Love",
+          "length": "3:07",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 27,
+          "artist": "Ol' Dirty Bastard feat. Kelis",
+          "title": "Got Your Money",
+          "length": "4:03",
+          "genre": "Rap"
+        },
+        {
+          "position": 28,
+          "artist": "Koe Wetzel & Jessie Murph",
+          "title": "High Road",
+          "length": "2:59",
+          "genre": "Country"
+        },
+        {
+          "position": 29,
+          "artist": "Beastie Boys",
+          "title": "Intergalactic",
+          "length": "3:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 30,
+          "artist": "ZZ Top",
+          "title": "La Grange",
+          "length": "3:52",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 31,
+          "artist": "50 Cent",
+          "title": "I Get Money",
+          "length": "3:53",
+          "genre": "Rap"
+        },
+        {
+          "position": 32,
+          "artist": "Luke Combs",
+          "title": "Ain't No Love in Oklahoma",
+          "length": "3:04",
+          "genre": "Country"
+        },
+        {
+          "position": 33,
+          "artist": "Cake",
+          "title": "The Distance",
+          "length": "3:01",
+          "genre": "Rock"
+        },
+        {
+          "position": 34,
+          "artist": "T.I.",
+          "title": "Whatever You Like",
+          "length": "4:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 35,
+          "artist": "Hank Williams Jr.",
+          "title": "All My Rowdy Friends Are Coming Over Tonight",
+          "length": "2:52",
+          "genre": "Country"
+        },
+        {
+          "position": 36,
+          "artist": "The Rolling Stones",
+          "title": "Tumbling Dice",
+          "length": "3:47",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 37,
+          "artist": "Nelly feat. Paul Wall, Ali & Gipp",
+          "title": "Grillz",
+          "length": "4:30",
+          "genre": "Rap"
+        },
+        {
+          "position": 38,
+          "artist": "Lil Wayne feat. Static Major",
+          "title": "Lollipop",
+          "length": "4:59",
+          "genre": "Rap"
+        },
+        {
+          "position": 39,
+          "artist": "Sublime",
+          "title": "40oz. to Freedom",
+          "length": "3:03",
+          "genre": "Rock"
+        },
+        {
+          "position": 40,
+          "artist": "Ice Cube",
+          "title": "You Can Do It",
+          "length": "4:14",
+          "genre": "Rap"
+        },
+        {
+          "position": 41,
+          "artist": "Garth Brooks",
+          "title": "Two Piña Coladas",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 42,
+          "artist": "Steve Earle",
+          "title": "Copperhead Road",
+          "length": "4:30",
+          "genre": "Country"
+        },
+        {
+          "position": 43,
+          "artist": "Afroman",
+          "title": "Because I Got High",
+          "length": "3:17",
+          "genre": "Rap"
+        },
+        {
+          "position": 44,
+          "artist": "Tom Petty",
+          "title": "You Got Lucky",
+          "length": "3:34",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 45,
+          "artist": "Eminem feat. Nate Dogg",
+          "title": "Shake That",
+          "length": "4:34",
+          "genre": "Rap"
+        },
+        {
+          "position": 46,
+          "artist": "Travis Tritt",
+          "title": "Here's a Quarter (Call Someone Who Cares)",
+          "length": "2:49",
+          "genre": "Country"
+        },
+        {
+          "position": 47,
+          "artist": "Lynyrd Skynyrd",
+          "title": "Call Me the Breeze",
+          "length": "5:09",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 48,
+          "artist": "Ma$e",
+          "title": "Welcome Back",
+          "length": "3:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 49,
+          "artist": "Zach Bryan feat. The War and Treaty",
+          "title": "Hey Driver",
+          "length": "3:44",
+          "genre": "Country"
+        },
+        {
+          "position": 50,
+          "artist": "The Killers",
+          "title": "All These Things That I've Done",
+          "length": "5:01",
+          "genre": "Rock"
+        },
+        {
+          "position": 51,
+          "artist": "Cam'ron feat. Juelz Santana",
+          "title": "Hey Ma",
+          "length": "3:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 52,
+          "artist": "Jason Aldean",
+          "title": "My Kinda Party",
+          "length": "4:11",
+          "genre": "Country"
+        },
+        {
+          "position": 53,
+          "artist": "Bob Seger",
+          "title": "Old Time Rock and Roll",
+          "length": "3:13",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 54,
+          "artist": "Outkast",
+          "title": "The Way You Move",
+          "length": "3:54",
+          "genre": "Rap"
+        },
+        {
+          "position": 55,
+          "artist": "Pearl Jam",
+          "title": "Last Kiss",
+          "length": "3:16",
+          "genre": "Rock"
+        },
+        {
+          "position": 56,
+          "artist": "Brooks & Dunn",
+          "title": "Neon Moon",
+          "length": "4:24",
+          "genre": "Country"
+        },
+        {
+          "position": 57,
+          "artist": "The Notorious B.I.G.",
+          "title": "One More Chance (Stay with Me Remix)",
+          "length": "4:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 58,
+          "artist": "Fleetwood Mac",
+          "title": "Go Your Own Way",
+          "length": "3:38",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 59,
+          "artist": "Uncle Kracker feat. Dobie Gray",
+          "title": "Drift Away",
+          "length": "4:19",
+          "genre": "Rock"
+        },
+        {
+          "position": 60,
+          "artist": "Post Malone feat. Morgan Wallen",
+          "title": "I Had Some Help",
+          "length": "2:58",
+          "genre": "Country"
+        },
+        {
+          "position": 61,
+          "artist": "Smash Mouth",
+          "title": "All Star",
+          "length": "3:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 62,
+          "artist": "Blues Traveler",
+          "title": "Run-Around",
+          "length": "4:39",
+          "genre": "Rock"
+        },
+        {
+          "position": 63,
+          "artist": "Toby Keith",
+          "title": "I Love This Bar",
+          "length": "5:00",
+          "genre": "Country"
+        },
+        {
+          "position": 64,
+          "artist": "Jim Croce",
+          "title": "Bad, Bad Leroy Brown",
+          "length": "3:02",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 65,
+          "artist": "Barenaked Ladies",
+          "title": "One Week",
+          "length": "2:50",
+          "genre": "Rock"
+        },
+        {
+          "position": 66,
+          "artist": "David Allan Coe",
+          "title": "You Never Even Called Me by My Name",
+          "length": "5:12",
+          "genre": "Country"
+        },
+        {
+          "position": 67,
+          "artist": "Biz Markie",
+          "title": "Just a Friend",
+          "length": "4:03",
+          "genre": "Rap"
+        },
+        {
+          "position": 68,
+          "artist": "Darius Rucker",
+          "title": "Wagon Wheel",
+          "length": "4:57",
+          "genre": "Country"
+        },
+        {
+          "position": 69,
+          "artist": "Zach Bryan feat. Kacey Musgraves",
+          "title": "I Remember Everything",
+          "length": "3:47",
+          "genre": "Country"
+        },
+        {
+          "position": 70,
+          "artist": "Oasis",
+          "title": "Don't Look Back in Anger",
+          "length": "4:48",
+          "genre": "Rock"
+        },
+        {
+          "position": 71,
+          "artist": "John Denver",
+          "title": "Take Me Home, Country Roads",
+          "length": "3:10",
+          "genre": "Country"
+        },
+        {
+          "position": 72,
+          "artist": "Nathaniel Rateliff & The Night Sweats",
+          "title": "S.O.B.",
+          "length": "4:07",
+          "genre": "Rock"
+        },
+        {
+          "position": 73,
+          "artist": "Billy Joel",
+          "title": "Piano Man",
+          "length": "5:38",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 74,
+          "artist": "Neil Diamond",
+          "title": "Sweet Caroline",
+          "length": "3:21",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 75,
+          "artist": "Lynyrd Skynyrd",
+          "title": "Sweet Home Alabama",
+          "length": "4:43",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 76,
+          "artist": "Bon Jovi",
+          "title": "Livin' on a Prayer",
+          "length": "4:09",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 77,
+          "artist": "Garth Brooks",
+          "title": "Friends in Low Places",
+          "length": "4:28",
+          "genre": "Country"
+        }
+      ]
+    },
+    {
+      "name": "Trip Anthem",
+      "theme": "The Crystal Springs Golf Trip Soundtrack",
+      "description": "The highlight reel. Opens like pulling out of the driveway, peaks like the trip in full swing, and closes like the drive home with the windows down. Every song passes the test: 'YES. This song was made for this trip.'",
+      "target_runtime": "1h 55m",
+      "actual_runtime": "1h 57m",
+      "song_count": 29,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "O.A.R.",
+          "title": "This Town",
+          "length": "3:57",
+          "genre": "Rock"
+        },
+        {
+          "position": 2,
+          "artist": "Stick Figure",
+          "title": "Smoke Signals",
+          "length": "5:04",
+          "genre": "Rock"
+        },
+        {
+          "position": 3,
+          "artist": "Zach Bryan",
+          "title": "Heading South",
+          "length": "3:31",
+          "genre": "Country"
+        },
+        {
+          "position": 4,
+          "artist": "Tom Petty and the Heartbreakers",
+          "title": "Runnin' Down a Dream",
+          "length": "4:23",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 5,
+          "artist": "Steve Miller Band",
+          "title": "Take the Money and Run",
+          "length": "2:50",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 6,
+          "artist": "AC/DC",
+          "title": "Thunderstruck",
+          "length": "4:52",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 7,
+          "artist": "Eminem",
+          "title": "Lose Yourself",
+          "length": "5:26",
+          "genre": "Rap"
+        },
+        {
+          "position": 8,
+          "artist": "Jay-Z",
+          "title": "Public Service Announcement (Interlude)",
+          "length": "2:53",
+          "genre": "Rap"
+        },
+        {
+          "position": 9,
+          "artist": "50 Cent",
+          "title": "In da Club",
+          "length": "3:13",
+          "genre": "Rap"
+        },
+        {
+          "position": 10,
+          "artist": "Dr. Dre feat. Snoop Dogg, Kurupt & Nate Dogg",
+          "title": "The Next Episode",
+          "length": "2:41",
+          "genre": "Rap"
+        },
+        {
+          "position": 11,
+          "artist": "Outkast",
+          "title": "So Fresh, So Clean",
+          "length": "4:00",
+          "genre": "Rap"
+        },
+        {
+          "position": 12,
+          "artist": "The Notorious B.I.G.",
+          "title": "Hypnotize",
+          "length": "3:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 13,
+          "artist": "Eminem feat. Nate Dogg",
+          "title": "'Till I Collapse",
+          "length": "4:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 14,
+          "artist": "Morgan Wallen",
+          "title": "Whiskey Glasses",
+          "length": "3:54",
+          "genre": "Country"
+        },
+        {
+          "position": 15,
+          "artist": "Luke Combs",
+          "title": "When It Rains It Pours",
+          "length": "3:38",
+          "genre": "Country"
+        },
+        {
+          "position": 16,
+          "artist": "Eric Church",
+          "title": "Drink in My Hand",
+          "length": "3:19",
+          "genre": "Country"
+        },
+        {
+          "position": 17,
+          "artist": "Whiskey Myers",
+          "title": "Gasoline",
+          "length": "3:18",
+          "genre": "Country"
+        },
+        {
+          "position": 18,
+          "artist": "Kid Rock",
+          "title": "All Summer Long",
+          "length": "4:56",
+          "genre": "Rock"
+        },
+        {
+          "position": 19,
+          "artist": "The Killers",
+          "title": "Mr. Brightside",
+          "length": "3:42",
+          "genre": "Rock"
+        },
+        {
+          "position": 20,
+          "artist": "Third Eye Blind",
+          "title": "Semi-Charmed Life",
+          "length": "4:28",
+          "genre": "Rock"
+        },
+        {
+          "position": 21,
+          "artist": "Sublime",
+          "title": "Santeria",
+          "length": "3:03",
+          "genre": "Rock"
+        },
+        {
+          "position": 22,
+          "artist": "Foo Fighters",
+          "title": "Everlong",
+          "length": "4:10",
+          "genre": "Rock"
+        },
+        {
+          "position": 23,
+          "artist": "Chris Stapleton",
+          "title": "Tennessee Whiskey",
+          "length": "4:53",
+          "genre": "Country"
+        },
+        {
+          "position": 24,
+          "artist": "Tyler Childers",
+          "title": "Feathered Indians",
+          "length": "3:35",
+          "genre": "Country"
+        },
+        {
+          "position": 25,
+          "artist": "Zach Bryan",
+          "title": "Revival",
+          "length": "4:03",
+          "genre": "Country"
+        },
+        {
+          "position": 26,
+          "artist": "O.A.R.",
+          "title": "That Was a Crazy Game of Poker",
+          "length": "7:05",
+          "genre": "Rock"
+        },
+        {
+          "position": 27,
+          "artist": "Eagles",
+          "title": "Take It Easy",
+          "length": "3:31",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 28,
+          "artist": "Journey",
+          "title": "Don't Stop Believin'",
+          "length": "4:10",
+          "genre": "Classic Rock"
+        },
+        {
+          "position": 29,
+          "artist": "Semisonic",
+          "title": "Closing Time",
+          "length": "4:34",
+          "genre": "Rock"
+        }
+      ]
+    }
+  ]
+}

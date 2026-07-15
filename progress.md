@@ -230,3 +230,23 @@ bottomLineProvider.js. Five real defects found, all fixed + regression-tested:
 Files: components/egt/{egtBridge,egtPoints,egtSideGames,egtStandings,egtPrintable}.js,
 components/{EgtTournament.jsx,bottomLineProvider.js}, tests/{egt,bottomLineProvider}.test.mjs,
 version bump 1.7.3 (package.json, index.html, bottomline.html, sw.js), CHANGELOG.
+
+---
+
+## 2026-07-14 — Crystal Springs Golf Trip Playlist Generator (side project)
+
+Self-contained in `crystal-springs-trip/` (no app code touched).
+
+- 9 curated playlists, 553 unique songs, 36h 01m total; all within ±5 min
+  of the brief's runtime targets.
+- `playlist_data.py` (source of truth) + `generate_playlists.py`
+  (validates zero duplicate songs across all playlists and ≤3 songs per
+  artist per playlist; exits non-zero on violation).
+- Deliverables in `crystal-springs-trip/output/`: master xlsx + csv,
+  per-playlist CSVs, Soundiiz-ready import CSVs, JSON backup, PLAYLISTS.md,
+  VALIDATION.md.
+- `automation/amazon_music_uploader.py`: Playwright uploader for Amazon
+  Music (manual login, resumable, per-track report + replacement
+  suggestions). Not yet run — waiting on user to run locally and log in.
+
+Next action if resuming: nothing pending in-repo; automation runs locally.
