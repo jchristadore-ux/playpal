@@ -272,11 +272,11 @@ const EgtTournament = ({ onScoreRound }) => {
     };
     return [
       race('Skins King', '2 pts', pid => live.skins?.[pid] || 0, false, 'skins'),
-      race('Birdie King (net)', '2 pts', pid => stats[pid]?.netBirdies || 0, false, 'net birdies'),
-      // Par King & Bogey God are honorary — bragging rights only, no Cup points,
-      // so the high-handicap tiers get their trophy without skewing the Cup.
-      race('Par King', 'bragging rights', pid => stats[pid]?.pars || 0, false, 'pars'),
-      race('Bogey God', 'bragging rights', pid => stats[pid]?.bogeys || 0, false, 'bogeys'),
+      race('Birdie King (gross)', '4 pts', pid => stats[pid]?.grossBirdies || 0, false, 'gross birdies'),
+      race('Par King', '2 pts', pid => stats[pid]?.pars || 0, false, 'pars'),
+      race('Bogey God', '1 pt', pid => stats[pid]?.bogeys || 0, false, 'bogeys'),
+      // Net Birdie King is honorary now — gross is the one that pays.
+      race('Birdie King (net)', 'bragging rights', pid => stats[pid]?.netBirdies || 0, false, 'net birdies'),
       // Fewest putts needs putts actually tracked — no recorded putt holes
       // means ineligible (Infinity), not a 0-putt leader.
       race('Flat Stick (fewest putts)', '1 pt', pid => ((stats[pid]?.puttHoles || 0) > 0 ? stats[pid].putts : Infinity), true, 'putts'),

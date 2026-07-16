@@ -1,8 +1,8 @@
 // egtPoints.js — the EGT Cup points engine. Turns finalized round results
 // (calculator outputs) into per-player points with a full breakdown, then adds
-// the four season awards. Verified against pointsConfig.maxPossible:
-//   per-round maxes 6+4+4+5+4+7 = 30, season awards 2+2+1+1 = 6 → 36
-//   (Brian 30: he misses R1, worth 6).
+// the season awards. Verified against pointsConfig.maxPossible:
+//   R2–R6 maxes 4+4+5+4+7 = 24, season awards 2+4+2+1+1+1 = 11 → 35
+//   (R1 Minerals is cash-only and excluded from the Cup).
 
 const EgtPoints = (function () {
 
@@ -111,7 +111,9 @@ const EgtPoints = (function () {
     };
     const grant = (winners, label, pts) => winners.forEach(pid => addPoints(acc, pid, label, pts / winners.length));
     grant(winnersOf(pid => skinsTotals?.[pid] || 0, false), 'Skins King', cfg.skinsKing || 2);
-    grant(winnersOf(pid => seasonStats?.[pid]?.netBirdies || 0, false), 'Birdie King (net)', cfg.birdieKingNet || 2);
+    grant(winnersOf(pid => seasonStats?.[pid]?.grossBirdies || 0, false), 'Birdie King (gross)', cfg.birdieKingGross || 4);
+    grant(winnersOf(pid => seasonStats?.[pid]?.pars || 0, false), 'Par King', cfg.parKing || 2);
+    grant(winnersOf(pid => seasonStats?.[pid]?.bogeys || 0, false), 'Bogey God', cfg.bogeyGod || 1);
     // Fewest putts requires putts to actually be tracked — a player with zero
     // recorded putt holes is ineligible, not a 0-putt winner.
     grant(winnersOf(pid => {
@@ -209,12 +211,14 @@ const EgtPoints = (function () {
     }
   }
 
-  // The four season awards — the remaining Cup points on top of the rounds.
+  // The season awards — the remaining Cup points on top of the rounds.
   function seasonAwardsBreakdown(model) {
     const cfg = (model.pointsConfig || {}).seasonAwards || {};
     const items = [
       { label: 'Skins King (most skins)', pts: cfg.skinsKing || 2 },
-      { label: 'Birdie King (most net birdies)', pts: cfg.birdieKingNet || 2 },
+      { label: 'Birdie King (most gross birdies)', pts: cfg.birdieKingGross || 4 },
+      { label: 'Par King (most pars)', pts: cfg.parKing || 2 },
+      { label: 'Bogey God (most bogeys)', pts: cfg.bogeyGod || 1 },
       { label: 'Flat Stick (fewest putts)', pts: cfg.flatStickFewestPutts || 1 },
       { label: 'Iron Man (most FIR + GIR)', pts: cfg.ironManFIRplusGIR || 1 },
     ];
@@ -229,7 +233,7 @@ const EgtPoints = (function () {
   // idempotent (safe to re-run on rehydrated persisted models): the sum of each
   // tourney round's ceiling for rounds the player plays, plus the season
   // awards. Excluded (flat/stakes-only) rounds contribute nothing — with R1
-  // out, every player caps at 24 + 6 = 30.
+  // out, every player caps at 24 + 11 = 35.
   function adjustedMaxPossible(model) {
     const awardsTotal = Object.values(model.pointsConfig.seasonAwards || {})
       .reduce((a, v) => a + (typeof v === 'number' ? v : 0), 0);
