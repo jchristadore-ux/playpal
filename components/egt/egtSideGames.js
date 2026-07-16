@@ -76,7 +76,7 @@ const EgtSideGames = (function () {
     const netGame = o.netGame || 'skinsNet';
     const out = {};
     round.players.forEach(pid => {
-      const st = { putts: 0, puttHoles: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, sandSaves: 0, holesEntered: 0 };
+      const st = { putts: 0, puttHoles: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, bogeys: 0, sandSaves: 0, holesEntered: 0 };
       for (let hole = 1; hole <= 18; hole++) {
         const s = scores?.[pid]?.[hole];
         if (!s || s.gross == null) continue;
@@ -92,6 +92,7 @@ const EgtSideGames = (function () {
           if (s.gross - par === -1) st.grossBirdies++;
           else if (s.gross - par <= -2) st.grossBirdies++; // eagles count as birdies-or-better here
           if (s.gross === par) st.pars++;
+          else if (s.gross - par === 1) st.bogeys++;
           const popsOn = H.popsOnHole(alloc[pid]?.games?.[netGame]?.holes || [], hole);
           if (s.gross - popsOn - par <= -1) st.netBirdies++;
         }
@@ -104,7 +105,7 @@ const EgtSideGames = (function () {
   // Season-wide stat rollup across every finalized round (for season awards).
   function seasonStats(model, allRoundScores, opts) {
     const totals = {};
-    model.players.forEach(p => { totals[p.id] = { putts: 0, puttHoles: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, sandSaves: 0, rounds: 0 }; });
+    model.players.forEach(p => { totals[p.id] = { putts: 0, puttHoles: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, bogeys: 0, sandSaves: 0, rounds: 0 }; });
     model.rounds.forEach(round => {
       const scores = allRoundScores?.[round.id];
       if (!scores) return;
@@ -112,7 +113,7 @@ const EgtSideGames = (function () {
       Object.entries(st).forEach(([pid, s]) => {
         if (!totals[pid]) return;
         if (s.holesEntered > 0) totals[pid].rounds++;
-        ['putts', 'puttHoles', 'fairwaysHit', 'greensInReg', 'grossBirdies', 'netBirdies', 'pars', 'sandSaves'].forEach(k => { totals[pid][k] += (s[k] || 0); });
+        ['putts', 'puttHoles', 'fairwaysHit', 'greensInReg', 'grossBirdies', 'netBirdies', 'pars', 'bogeys', 'sandSaves'].forEach(k => { totals[pid][k] += (s[k] || 0); });
       });
     });
     return totals;

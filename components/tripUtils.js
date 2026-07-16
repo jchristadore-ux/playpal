@@ -166,6 +166,26 @@
       });
     }
 
+    // We're all high handicaps — Birdie King rarely gets claimed, so honor the
+    // realist tiers too: most pars (Par King) and most bogeys (Bogey God).
+    var byPars = lb.slice().sort(function (a, b) { return b.pars - a.pars; });
+    if (byPars[0] && byPars[0].pars > 0) {
+      awards.push({
+        id: 'pars', emoji: '👑', title: 'Par King',
+        winner: byPars[0],
+        detail: byPars[0].pars + ' par' + (byPars[0].pars !== 1 ? 's' : ''),
+      });
+    }
+
+    var byBogeys = lb.slice().sort(function (a, b) { return b.bogeys - a.bogeys; });
+    if (byBogeys[0] && byBogeys[0].bogeys > 0) {
+      awards.push({
+        id: 'bogeys', emoji: '🙏', title: 'Bogey God',
+        winner: byBogeys[0],
+        detail: byBogeys[0].bogeys + ' bogey' + (byBogeys[0].bogeys !== 1 ? 's' : ''),
+      });
+    }
+
     var byEarnings = lb.slice().sort(function (a, b) { return b.totalEarnings - a.totalEarnings; });
     if (byEarnings[0] && byEarnings[0].totalEarnings > 0) {
       awards.push({
