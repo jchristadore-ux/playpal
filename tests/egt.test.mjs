@@ -446,7 +446,7 @@ test('R5 is now full-18 BBB + configurable match play (format override)', () => 
   const r5 = m.rounds.find(r => r.id === 'R5');
   assert.equal(r5.primaryGame, 'bingoBangoBongo+matchPlay');
   jeq(m.pointsConfig.R5, { bbbChampion: 2, matchPlayChampion: 2 }); // stays worth 4
-  jeq(m.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+  jeq(m.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
 });
 
 test('R5 match play honors the configured matches (1v1 + 2v2, records, no default)', () => {
@@ -545,26 +545,26 @@ test('R1 (Minerals) awards no Cup points and is excluded from the standings', ()
   assert.ok(EgtPoints.STANDINGS_EXCLUDED_ROUNDS.includes('R1'));
 });
 
-test('adjusted Max possible drops R1 (all four now cap at 30)', () => {
+test('adjusted Max possible drops R1 (all four now cap at 33)', () => {
   const m = freshModel();
-  jeq(m.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+  jeq(m.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
 });
 
-test('rehydrating a stale persisted model refreshes Max to 30 (idempotent)', () => {
+test('rehydrating a stale persisted model refreshes Max to 33 (idempotent)', () => {
   // Simulate a pre-adjustment install: persisted model still carries the seed's
   // original ceilings. Rehydrate must correct them — and re-running must not
   // subtract again.
   const state = EgtStore.importSeed(JSON.parse(JSON.stringify(SEED)));
   state.model.pointsConfig = { ...state.model.pointsConfig, maxPossible: { john: 36, tj: 36, mike: 36, brian: 30 } };
   EgtStore.rehydrate(state);
-  jeq(state.model.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+  jeq(state.model.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
   EgtStore.rehydrate(state); // second run: unchanged
-  jeq(state.model.pointsConfig.maxPossible, { john: 30, brian: 30, tj: 30, mike: 30 });
+  jeq(state.model.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
   EgtStore.reset(SEED.trip.id);
 });
 
 // ── points breakdown (display) stays in lockstep with the scoring engine ────
-test('roundPointsBreakdown: team/individual modes, per-round maxes, 30-pt ceiling', () => {
+test('roundPointsBreakdown: team/individual modes, per-round maxes, 33-pt ceiling', () => {
   const m = freshModel();
   const bd = {};
   m.rounds.forEach(r => { bd[r.id] = EgtPoints.roundPointsBreakdown(m, r.id); });
@@ -584,11 +584,11 @@ test('roundPointsBreakdown: team/individual modes, per-round maxes, 30-pt ceilin
   assert.equal(bd.R2.items.reduce((a, x) => a + x.pts, 0), 4, 'R2: front 1 + back 1 + overall 2');
   assert.equal(bd.R4.items.reduce((a, x) => a + x.pts, 0), 5, 'R4: 3 segments + 18-hole total');
   assert.equal(bd.R5.items.reduce((a, x) => a + x.pts, 0), 4, 'R5: BBB champ 2 + match-play champ 2');
-  // Round maxes + season awards reproduce the adjusted 30-point ceiling.
+  // Round maxes + season awards reproduce the adjusted 33-point ceiling.
   const awards = EgtPoints.seasonAwardsBreakdown(m);
-  assert.equal(awards.max, 6, 'season awards worth 6');
+  assert.equal(awards.max, 9, 'season awards worth 9');
   const ceiling = ['R2', 'R3', 'R4', 'R5', 'R6'].reduce((a, rid) => a + bd[rid].max, 0) + awards.max;
-  assert.equal(ceiling, 30, 'the advertised 30 points');
+  assert.equal(ceiling, 33, 'the advertised 33 points');
   const adj = EgtPoints.adjustedMaxPossible(m);
   m.players.forEach(p => assert.equal(adj[p.id], ceiling, `${p.id} ceiling matches breakdown`));
 });
