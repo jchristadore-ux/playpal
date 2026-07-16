@@ -717,9 +717,13 @@ const BottomLineProvider = (function () {
         .filter(x => x.st.rounds > 0);
       if (rows.length) {
         const byBird = rows.slice().sort((a, b) => b.st.grossBirdies - a.st.grossBirdies)[0];
+        const byPar  = rows.slice().sort((a, b) => (b.st.pars || 0) - (a.st.pars || 0))[0];
+        const byBogey = rows.slice().sort((a, b) => (b.st.bogeys || 0) - (a.st.bogeys || 0))[0];
         const byPutt = rows.filter(x => x.st.putts > 0).sort((a, b) => (a.st.putts / a.st.rounds) - (b.st.putts / b.st.rounds))[0];
         const parts = [];
         if (byBird && byBird.st.grossBirdies > 0) parts.push(P.dim('BIRDIE KING'), P.name(byBird.name), P.val(String(byBird.st.grossBirdies)));
+        if (byPar && byPar.st.pars > 0) { if (parts.length) parts.push(P.sep()); parts.push(P.dim('PAR KING'), P.name(byPar.name), P.val(String(byPar.st.pars))); }
+        if (byBogey && byBogey.st.bogeys > 0) { if (parts.length) parts.push(P.sep()); parts.push(P.dim('BOGEY GOD'), P.name(byBogey.name), P.val(String(byBogey.st.bogeys))); }
         if (byPutt) { if (parts.length) parts.push(P.sep()); parts.push(P.dim('FLAT STICK'), P.name(byPutt.name), P.val(`${(byPutt.st.putts / byPutt.st.rounds).toFixed(1)} putts/rd`)); }
         if (parts.length) segs.push({ id: 'egt:awards', category: 'stats', icon: '🏅', label: 'EGT CUP AWARD RACES', parts });
       }
@@ -1114,6 +1118,26 @@ const BottomLineProvider = (function () {
       if (rows.length) mods.push({
         id: 'stat-netbirdies', type: 'stat-leaderboard', title: 'BIRDIE KING RACE (NET)',
         rows: rows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
+      });
+    }
+    // Par King (most pars) and Bogey God (most bogeys) — the high-handicapper's
+    // races, so every scoring tier gets its own leaders page.
+    if (L && L.tourneyStats) {
+      const parRows = Object.entries(L.tourneyStats)
+        .map(([pid, st]) => Object.assign({}, playerInfo(pid), { value: (st && st.pars) || 0 }))
+        .filter(r => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+      if (parRows.length) mods.push({
+        id: 'stat-pars', type: 'stat-leaderboard', title: 'PAR KING RACE',
+        rows: parRows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
+      });
+      const bogeyRows = Object.entries(L.tourneyStats)
+        .map(([pid, st]) => Object.assign({}, playerInfo(pid), { value: (st && st.bogeys) || 0 }))
+        .filter(r => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+      if (bogeyRows.length) mods.push({
+        id: 'stat-bogeys', type: 'stat-leaderboard', title: 'BOGEY GOD RACE',
+        rows: bogeyRows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
       });
     }
     return mods;
