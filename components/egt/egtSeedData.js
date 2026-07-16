@@ -3273,7 +3273,7 @@ const EGT_SEED = {
     },
     "seasonAwards": {
       "skinsKing": 2,
-      "birdieKingNet": 2,
+      "birdieKingGross": 4,
       "parKing": 2,
       "bogeyGod": 1,
       "flatStickFewestPutts": 1,
@@ -3286,10 +3286,10 @@ const EGT_SEED = {
       "chip-off at Black Bear"
     ],
     "maxPossible": {
-      "john": 33,
-      "tj": 33,
-      "mike": 33,
-      "brian": 33
+      "john": 35,
+      "tj": 35,
+      "mike": 35,
+      "brian": 35
     }
   },
   "moneyDefaults": {
