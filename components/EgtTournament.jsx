@@ -280,10 +280,22 @@ const EgtTournament = ({ onScoreRound }) => {
     ];
   };
 
-  const Standings = () => (
+  // "Where the points come from" — per-round Cup values + season awards, all
+  // read from the same config the points engine scores with.
+  const pointsBreakdownRows = () => {
+    const rows = model.rounds
+      .map(r => ({ round: r, bd: window.EgtPoints.roundPointsBreakdown(model, r.id) }))
+      .filter(x => x.bd.mode !== 'none');
+    const awards = window.EgtPoints.seasonAwardsBreakdown(model);
+    return { rows, awards, total: rows.reduce((a, x) => a + x.bd.max, 0) + awards.max };
+  };
+
+  const Standings = () => {
+    const pb = pointsBreakdownRows();
+    return (
     <div>
       <div style={{ fontSize: 11, color: '#8a988f', marginBottom: 8 }}>
-        EGT Cup · 30 pts max · R2–R6 count (R1 Minerals is flat/stakes-only)
+        EGT Cup · {pb.total} pts max per player · R2–R6 + season awards (R1 Minerals is cash-only)
       </div>
       <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 16 }}>
         <thead><tr>{['Pos', 'Player', 'EGT Pts', 'Move', 'Max'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
@@ -299,6 +311,37 @@ const EgtTournament = ({ onScoreRound }) => {
           ))}
         </tbody>
       </table>
+      <div style={{ fontWeight: 800, color: GREEN, fontSize: 14, margin: '4px 0 6px' }}>WHERE THE {pb.total} POINTS COME FROM</div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 6 }}>
+          <thead><tr>{['Round', 'How the points are earned', 'Team / Ind.', 'Max'].map(h => <th key={h} style={{ ...th, textAlign: h === 'How the points are earned' ? 'left' : 'center' }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {pb.rows.map(({ round, bd }) => (
+              <tr key={round.id}>
+                <td style={{ ...td, fontWeight: 800, whiteSpace: 'nowrap' }}>{round.id} <span style={{ fontWeight: 400, color: '#8a988f', fontSize: 11 }}>{model.courses[round.courseId].name}</span></td>
+                <td style={{ ...td, textAlign: 'left', fontSize: 12 }}>{bd.summary}</td>
+                <td style={{ ...td, fontSize: 11, fontWeight: 700, color: bd.mode === 'team' ? '#2563EB' : '#137a3f', whiteSpace: 'nowrap' }}>{bd.mode === 'team' ? 'Team 2v2' : 'Individual'}</td>
+                <td style={{ ...td, fontWeight: 800 }}>{bd.max}</td>
+              </tr>
+            ))}
+            <tr>
+              <td style={{ ...td, fontWeight: 800, whiteSpace: 'nowrap' }}>Awards <span style={{ fontWeight: 400, color: '#8a988f', fontSize: 11 }}>after R6</span></td>
+              <td style={{ ...td, textAlign: 'left', fontSize: 12 }}>{pb.awards.summary}</td>
+              <td style={{ ...td, fontSize: 11, fontWeight: 700, color: '#137a3f' }}>Individual</td>
+              <td style={{ ...td, fontWeight: 800 }}>{pb.awards.max}</td>
+            </tr>
+            <tr style={{ background: '#eef6f0' }}>
+              <td style={{ ...td, fontWeight: 800 }} colSpan={3}>Max per player</td>
+              <td style={{ ...td, fontWeight: 800 }}>{pb.total}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize: 11, color: '#8a988f', lineHeight: 1.5, marginBottom: 16 }}>
+        "Max" is the most ONE player can take from each line. Team rounds pay both players on the winning side the
+        full value; ranked finishes (Wolf, R6 Stableford) pay every spot, with ties splitting the pooled points.
+        R1 (Minerals) pays cash only — no Cup points. Open a round on the Rounds tab for its full points table.
+      </div>
       <div style={{ fontWeight: 800, color: GREEN, fontSize: 14, margin: '4px 0 6px' }}>AWARD RACES · R2–R6 · settle after R6</div>
       <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 16 }}>
         <thead><tr>{['Award', 'Leader', 'Field'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
@@ -354,7 +397,8 @@ const EgtTournament = ({ onScoreRound }) => {
       </div>
       {!(state.finalized || []).length && <div style={{ marginTop: 12, fontSize: 12, color: '#8a988f' }}>Finalize a round (Rounds tab) to populate standings and money.</div>}
     </div>
-  );
+    );
+  };
 
   const cartText = carts => (carts || []).map(c => c.length > 1 ? c.map(nameOf).join(' + ') : `${nameOf(c[0])} (solo)`).join('  ·  ');
   const teamText = teams => (teams || []).map(t => `${t.name}: ${t.players.map(nameOf).join(' + ')}`).join('  ·  ');
@@ -377,6 +421,12 @@ const EgtTournament = ({ onScoreRound }) => {
       ? native.players.map(p => ({ ...p, handicap: der.courseHandicaps[p.id] ?? p.handicap }))
       : null;
     const matches = roundMatchesFor(round.id);
+    // How this round's Cup points are earned (team/individual, itemized values)
+    // — same config + fallbacks the points engine scores with.
+    const pts = window.EgtPoints.roundPointsBreakdown(model, round.id);
+    const ptsPill = pts.mode === 'none'
+      ? { text: '💵 CASH ONLY · NO CUP PTS', bg: '#fff3d6', fg: '#9a6a00' }
+      : { text: `🏆 ${pts.max} CUP PTS · ${pts.mode === 'team' ? 'TEAM 2v2' : 'INDIVIDUAL'}`, bg: 'rgba(200,161,90,0.16)', fg: '#7a5c1e' };
     return (
       <div style={{ border: `1px solid ${LINE}`, borderRadius: 14, marginBottom: 14, overflow: 'hidden', boxShadow: isOpen ? '0 2px 10px rgba(14,43,32,0.06)' : 'none' }}>
         <div onClick={() => setOpenRound(isOpen ? null : round.id)} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 14px', cursor: 'pointer', background: finalized ? '#eef6f0' : '#fff' }}>
@@ -388,6 +438,7 @@ const EgtTournament = ({ onScoreRound }) => {
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0 2px' }}>
               {teeChips.map((t, i) => <span key={i} style={EGT_UI.teePill}>🕐 {egtTeeLabel(t)}</span>)}
+              <span style={{ ...EGT_UI.teePill, background: ptsPill.bg, color: ptsPill.fg }}>{ptsPill.text}</span>
             </div>
             {pairings.carts && (
               <div style={{ fontSize: 11.5, color: '#3F5F4A', fontWeight: 700, marginTop: 4 }}>
@@ -408,12 +459,39 @@ const EgtTournament = ({ onScoreRound }) => {
             <EgtSectionHead>Pairings &amp; Logistics</EgtSectionHead>
             <div style={{ marginBottom: 6 }}>
               <EgtField label="Tee time">{teeChips.map(egtTeeLabel).join('  ·  ') || '—'}</EgtField>
-              {round.teams && round.teams.length > 0 && <EgtField label="Teams">{teamText(round.teams)}</EgtField>}
+              {pts.mode === 'team' && round.teams && round.teams.length > 0 && <EgtField label="Teams">{teamText(round.teams)}</EgtField>}
               {pairings.carts && <EgtField label="Cart pairs">{cartText(pairings.carts)}</EgtField>}
             </div>
             {pairings.rationale && (
               <div style={{ fontSize: 12, color: '#5b6b63', fontStyle: 'italic', lineHeight: 1.5, background: 'rgba(200,161,90,0.06)', borderLeft: `3px solid ${GOLD}`, borderRadius: 6, padding: '8px 11px', marginBottom: 16 }}>
                 {pairings.rationale}
+              </div>
+            )}
+
+            {/* Cup points — what this round is worth and how it's earned. */}
+            <EgtSectionHead>Cup Points</EgtSectionHead>
+            {pts.mode === 'none' ? (
+              <div style={{ fontSize: 12, color: '#9a6a00', background: '#fff9ec', border: '1px solid #f0e2bd', borderRadius: 8, padding: '8px 11px', marginBottom: 16, lineHeight: 1.5 }}>
+                {pts.note}
+              </div>
+            ) : (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: INK, marginBottom: 6 }}>
+                  <strong>{pts.mode === 'team' ? 'Team event (2v2)' : 'Individual event'}</strong>
+                  <span style={{ color: '#8a988f' }}> — up to <strong style={{ color: INK }}>{pts.max} Cup points</strong> per player</span>
+                </div>
+                <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: 460 }}>
+                  <thead><tr>{['How to earn them', 'Pts'].map(h => <th key={h} style={{ ...th, textAlign: h === 'Pts' ? 'center' : 'left' }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {pts.items.map(item => (
+                      <tr key={item.label}>
+                        <td style={{ ...td, textAlign: 'left' }}>{item.label}</td>
+                        <td style={{ ...td, fontWeight: 800, width: 52 }}>{item.pts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ fontSize: 11, color: '#8a988f', marginTop: 5, lineHeight: 1.5 }}>{pts.note}</div>
               </div>
             )}
 
@@ -495,12 +573,6 @@ const EgtTournament = ({ onScoreRound }) => {
                 </div>
               ))}
             </div>
-            {round.id === 'R1' && (
-              <div style={{ fontSize: 11, color: '#9a6a00', marginBottom: 4 }}>
-                R1 is a flat / stakes-only round — it pays out cash but awards no EGT Cup points.
-              </div>
-            )}
-
             {/* Individual Nassau matches — available on every round (R1–R6),
                 layered on top of the round's primary format. 1v1 or 2v2, any
                 players; strokes auto-fill from course handicaps (off the low in

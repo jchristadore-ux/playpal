@@ -563,6 +563,36 @@ test('rehydrating a stale persisted model refreshes Max to 30 (idempotent)', () 
   EgtStore.reset(SEED.trip.id);
 });
 
+// ── points breakdown (display) stays in lockstep with the scoring engine ────
+test('roundPointsBreakdown: team/individual modes, per-round maxes, 30-pt ceiling', () => {
+  const m = freshModel();
+  const bd = {};
+  m.rounds.forEach(r => { bd[r.id] = EgtPoints.roundPointsBreakdown(m, r.id); });
+  // R1 is cash-only.
+  assert.equal(bd.R1.mode, 'none');
+  assert.equal(bd.R1.max, 0);
+  // Team vs individual per round.
+  assert.equal(bd.R2.mode, 'team');
+  assert.equal(bd.R4.mode, 'team');
+  ['R3', 'R5', 'R6'].forEach(rid => assert.equal(bd[rid].mode, 'individual', `${rid} is individual`));
+  // Every tourney round's displayed max matches the engine's ceiling, and the
+  // itemized values are internally consistent.
+  ['R2', 'R3', 'R4', 'R5', 'R6'].forEach(rid => {
+    assert.equal(bd[rid].max, EgtPoints.ROUND_MAX_POINTS[rid], `${rid} max matches engine`);
+    assert.ok(bd[rid].items.length >= 2 && bd[rid].summary, `${rid} itemized + summarized`);
+  });
+  assert.equal(bd.R2.items.reduce((a, x) => a + x.pts, 0), 4, 'R2: front 1 + back 1 + overall 2');
+  assert.equal(bd.R4.items.reduce((a, x) => a + x.pts, 0), 5, 'R4: 3 segments + 18-hole total');
+  assert.equal(bd.R5.items.reduce((a, x) => a + x.pts, 0), 4, 'R5: BBB champ 2 + match-play champ 2');
+  // Round maxes + season awards reproduce the adjusted 30-point ceiling.
+  const awards = EgtPoints.seasonAwardsBreakdown(m);
+  assert.equal(awards.max, 6, 'season awards worth 6');
+  const ceiling = ['R2', 'R3', 'R4', 'R5', 'R6'].reduce((a, rid) => a + bd[rid].max, 0) + awards.max;
+  assert.equal(ceiling, 30, 'the advertised 30 points');
+  const adj = EgtPoints.adjustedMaxPossible(m);
+  m.players.forEach(p => assert.equal(adj[p.id], ceiling, `${p.id} ceiling matches breakdown`));
+});
+
 test('R1 skins and stats stay out of the tourney (tiebreaker + season awards)', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
