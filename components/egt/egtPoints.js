@@ -137,6 +137,94 @@ const EgtPoints = (function () {
     return acc;
   }
 
+  // Plain-English breakdown of how a round's Cup points are earned — drives
+  // the Rounds-tab cards and the Standings-tab "where the 30 points come from"
+  // table. Reads pointsConfig with the SAME fallbacks pointsForRound uses, so
+  // the display can never drift from what the engine actually awards.
+  //   mode: 'team'  — every player on the winning side earns the full value
+  //         'individual' — points go to single players (ties split)
+  //         'none' — flat/stakes-only round, cash but no Cup points
+  //   max: most Cup points ONE player can take from the round
+  //   items: [{ label, pts }] itemized values; summary: compact one-liner.
+  function roundPointsBreakdown(model, roundId) {
+    const cfg = (model.pointsConfig || {})[roundId] || {};
+    const nth = i => ['1st', '2nd', '3rd', '4th'][i] || `${i + 1}th`;
+    switch (roundId) {
+      case 'R1':
+        return { roundId, mode: 'none', max: 0, items: [], summary: 'Cash only',
+          note: 'Flat / stakes-only round — BBB, The Nines and skins all pay cash, but no EGT Cup points are awarded.' };
+      case 'R2': {
+        const f = cfg.nassauFront || 1, b = cfg.nassauBack || 1, o = cfg.nassauOverall || 2;
+        return { roundId, mode: 'team', max: f + b + o,
+          items: [
+            { label: 'Win the front-9 match', pts: f },
+            { label: 'Win the back-9 match', pts: b },
+            { label: 'Win the 18-hole match', pts: o },
+          ],
+          summary: `Front ${f} · Back ${b} · Overall ${o}`,
+          note: 'Four-ball is a 2v2 team event: both players on the winning team earn the full value of each match won. A halved match awards no points.' };
+      }
+      case 'R3': {
+        const slots = cfg.wolfFinish || [4, 3, 2, 1];
+        return { roundId, mode: 'individual', max: slots[0] || 0,
+          items: slots.map((pts, i) => ({ label: `Finish ${nth(i)} in Wolf units`, pts })),
+          summary: `Wolf-units finish ${slots.join(' / ')}`,
+          note: 'Everyone scores: finish order by Wolf units pays every spot. Tied places pool and split their points.' };
+      }
+      case 'R4': {
+        const seg = cfg.segmentWin || 1, o18 = cfg.overall18 || 2;
+        return { roundId, mode: 'team', max: seg * 3 + o18,
+          items: [
+            { label: 'Win holes 1–6', pts: seg },
+            { label: 'Win holes 7–12', pts: seg },
+            { label: 'Win holes 13–18', pts: seg },
+            { label: 'Win the 18-hole total', pts: o18 },
+          ],
+          summary: `Segments ${seg}+${seg}+${seg} · 18-hole total ${o18}`,
+          note: 'Aggregate Stableford is a 2v2 team event: both players on the winning team earn the full value of each segment won. Halved segments award no points.' };
+      }
+      case 'R5': {
+        const bbb = cfg.bbbChampion || 2, mp = cfg.matchPlayChampion || 2;
+        return { roundId, mode: 'individual', max: bbb + mp,
+          items: [
+            { label: 'Bingo-Bango-Bongo champion', pts: bbb },
+            { label: 'Match-play champion (best record)', pts: mp },
+          ],
+          summary: `BBB champ ${bbb} · Match-play champ ${mp}`,
+          note: 'Individual round — the round-robin matches settle head-to-head. Ties for either title split the points.' };
+      }
+      case 'R6': {
+        const win = cfg.singlesWin || 3, halve = cfg.singlesHalve || 1.5;
+        const slots = cfg.stablefordFinish || [4, 3, 2, 1];
+        return { roundId, mode: 'individual', max: win + (slots[0] || 0),
+          items: [
+            { label: `Win your singles match (halve = ${halve} each)`, pts: win },
+            ...slots.map((pts, i) => ({ label: `Finish ${nth(i)} in Stableford`, pts })),
+          ],
+          summary: `Singles win ${win} (halve ${halve}) · Stableford finish ${slots.join(' / ')}`,
+          note: 'Championship night: singles seeded off the standings (1v2 for the title, 3v4 for bronze), plus an all-play individual Stableford that pays every finish spot. Ties split.' };
+      }
+      default:
+        return { roundId, mode: 'individual', max: 0, items: [], summary: '', note: '' };
+    }
+  }
+
+  // The four season awards — the remaining Cup points on top of the rounds.
+  function seasonAwardsBreakdown(model) {
+    const cfg = (model.pointsConfig || {}).seasonAwards || {};
+    const items = [
+      { label: 'Skins King (most skins)', pts: cfg.skinsKing || 2 },
+      { label: 'Birdie King (most net birdies)', pts: cfg.birdieKingNet || 2 },
+      { label: 'Flat Stick (fewest putts)', pts: cfg.flatStickFewestPutts || 1 },
+      { label: 'Iron Man (most FIR + GIR)', pts: cfg.ironManFIRplusGIR || 1 },
+    ];
+    return {
+      items, max: items.reduce((a, x) => a + x.pts, 0),
+      summary: items.map(x => `${x.label.split(' (')[0]} ${x.pts}`).join(' · '),
+      note: 'Settled after R6 from R2–R6 play only. Ties split the award.',
+    };
+  }
+
   // "Max possible" per player, computed from first principles so it is
   // idempotent (safe to re-run on rehydrated persisted models): the sum of each
   // tourney round's ceiling for rounds the player plays, plus the season
@@ -157,7 +245,7 @@ const EgtPoints = (function () {
     return out;
   }
 
-  return { STANDINGS_EXCLUDED_ROUNDS, ROUND_MAX_POINTS, rankedFinishPoints, pointsForRound, seasonAwards, compute, adjustedMaxPossible };
+  return { STANDINGS_EXCLUDED_ROUNDS, ROUND_MAX_POINTS, rankedFinishPoints, pointsForRound, seasonAwards, compute, adjustedMaxPossible, roundPointsBreakdown, seasonAwardsBreakdown };
 })();
 
 if (typeof window !== 'undefined') {

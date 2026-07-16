@@ -1,5 +1,30 @@
 # Project Progress
 
+## Cup-points explanations per round (branch claude/r1-stakes-money-tracker-d6otdm, restarted post-merge) — v1.7.6
+
+Status: **complete — 163 tests green, browser smoke verified (phone viewport:
+standings breakdown table, round pills, R2 team section, R5 individual with no
+stale Teams row, R1 cash-only note; no page errors).**
+
+The user wanted the app to explain how many Cup points each round is worth,
+what earns them, and whether the round is a team or individual event.
+
+- `EgtPoints.roundPointsBreakdown(model, rid)` + `seasonAwardsBreakdown(model)`
+  (engine, testable): mode 'team'/'individual'/'none', per-player max,
+  itemized `{label, pts}` rows, compact `summary`, plain-English `note`. Reads
+  `pointsConfig` with the SAME fallbacks `pointsForRound` uses (R5's stale
+  scramble keys in the seed are ignored by both), so display can't drift from
+  scoring — a test asserts maxes match `ROUND_MAX_POINTS` and rebuild the
+  30-point ceiling (24 round pts + 6 awards) = `adjustedMaxPossible`.
+- Rounds tab: header pill per card (`🏆 4 CUP PTS · TEAM 2v2` / `INDIVIDUAL` /
+  `💵 CASH ONLY · NO CUP PTS`), expanded **Cup Points** section with the
+  how-to-earn-them table + note. Stale R5 "Teams" row fixed: Teams renders
+  only when mode === 'team' (R2/R4).
+- Standings tab: **"Where the 30 points come from"** table (R2 4 team, R3 4
+  ind, R4 5 team, R5 4 ind, R6 7 ind, awards 6 → 30 max/player) + header line
+  now derives the total from the breakdown.
+- Version 1.7.6 everywhere; package-lock stamp synced. CHANGELOG entry added.
+
 ## Remove EGT Pairings tab (branch claude/r1-stakes-money-tracker-d6otdm, restarted post-merge) — v1.7.5
 
 Status: **complete — 162 tests green.**

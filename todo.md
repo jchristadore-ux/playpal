@@ -50,6 +50,14 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - [x] R1 (Minerals) excluded from EGT Cup standings (flat/stakes-only): awards
       no points; adjusted "Max" caps all four at 30.
 
+## Done — Cup-points explanations per round (v1.7.6)
+- [x] `EgtPoints.roundPointsBreakdown` / `seasonAwardsBreakdown` — display data
+      derived from the same config + fallbacks the engine scores with.
+- [x] Rounds tab: per-card points pill (team/individual/cash-only) + expanded
+      Cup Points table; stale R5 Teams row no longer shown.
+- [x] Standings tab: "Where the 30 points come from" table (24 + 6 = 30).
+- [x] Test: breakdown maxes = ROUND_MAX_POINTS, ceiling = 30 = adjustedMax.
+
 ## Done — remove EGT Pairings tab (v1.7.5)
 - [x] Dropped the Pairings tab + fairness analysis from the EGT Cup screen;
       cart callouts stay on the Rounds tab, doc stays in docs/EGT_PAIRINGS.md.

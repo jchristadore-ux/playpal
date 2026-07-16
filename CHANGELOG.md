@@ -2,6 +2,30 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.7.6] — 2026-07-16
+
+### Added
+- **Cup-points explanations on the EGT screen** — every round now says exactly
+  what it's worth and how. Each round card gets a chip in its header
+  (`🏆 4 CUP PTS · TEAM 2v2`, `INDIVIDUAL`, or `💵 CASH ONLY` for R1) and an
+  expanded **Cup Points** section with an itemized how-to-earn-them table
+  (e.g. R2: front-9 match 1 · back-9 match 1 · 18-hole match 2). The Standings
+  tab adds a **"Where the 30 points come from"** table: R2 Ballyowen 4 (team),
+  R3 Wild Turkey 4 (individual), R4 Crystal Springs 5 (team), R5 Cascades 4
+  (individual), R6 Black Bear 7 (individual) = 24, plus the four season awards
+  (Skins King 2 · Birdie King 2 · Flat Stick 1 · Iron Man 1) = 30 max per
+  player. All values come from `EgtPoints.roundPointsBreakdown` /
+  `seasonAwardsBreakdown`, which read the seed's `pointsConfig` with the same
+  fallbacks the scoring engine uses — a test asserts the displayed maxes match
+  the engine's `ROUND_MAX_POINTS` and reproduce the 30-point ceiling, so the
+  explanation can never drift from what actually gets scored.
+
+### Fixed
+- **R5 no longer shows stale "Teams"** — the Rounds-tab card displayed the
+  seed's leftover R5 team entries even though R5 is an individual round
+  (full-18 BBB + round-robin match play); the Teams row now only renders on
+  rounds where teams actually compete for points (R2, R4).
+
 ## [1.7.5] — 2026-07-14
 
 ### Removed
