@@ -1,5 +1,42 @@
 # Project Progress
 
+## Full audit pass #4 — pre-trip go/no-go (branch claude/session-t9l8vn) — v1.8.0
+
+Status: **complete — 164 tests green, browser smoke verified (EGT standings
+"35 pts max" + breakdown table + all 7 award races on phone viewport, Rounds
+pills, SportsCenter pre-round card + Bottom Line ticker, packlist add-item;
+zero console/page errors).**
+
+Audited everything PlayPal / EGT Cup / EGT SportsCenter after the award
+restructuring merged in PRs #93–#95 (Par King 2 pts, Bogey God 1 pt, Birdie
+King now GROSS for 4 pts with net honorary, ceiling 30 → 35, packlist page).
+Engine, seed, importer boot-refresh, standings, printable and app Award Races
+were all found consistent. Defects found + fixed:
+
+- **SportsCenter had no race page for the paying Birdie King** — the honorary
+  net race had a full-screen leaders page but the 4-pt gross award had none.
+  Added `stat-grossbirdies` ("BIRDIE KING RACE", gross values) ahead of the
+  net page, which is retitled "BIRDIE KING RACE (NET · HONORARY)". The ticker
+  segment already ranked gross — only the page rotation was missing it.
+- **PRs #93–95 shipped with no version bump or CHANGELOG entry** (user-visible
+  scoring change under an unchanged 1.7.6). Released as **1.8.0** everywhere
+  (package.json + lock, sw.js CACHE_VERSION + all ?v= strings, index.html,
+  bottomline.html, Home.jsx) with a CHANGELOG entry documenting the award
+  restructuring + this audit.
+- **packlist.html wasn't in the sw.js precache** despite advertising offline
+  use — added (bottomline.html precedent).
+- Stale comments still describing the 30-point/4-award structure fixed in
+  egtPoints.js (×2) and bottomLineProvider.js (×2).
+- New regression tests: season settlement pays Par King 2 / Bogey God 1 /
+  Birdie King (gross) 4 to the right stat leaders reading the seed config;
+  broadcast test asserts the gross race page (Mike 18 birdies) + honorary
+  net labeling. 163 → 164 tests.
+
+Verified sound with no changes needed: R1 stays out of stats/awards/points
+(engine + tests), seed embed in sync with fixture (gen-seed diff clean),
+maxPossible recomputes on every boot so stale persisted models pick up 35,
+printable reads the refreshed model, dist matched a fresh build pre-audit.
+
 ## Cup-points explanations per round (branch claude/r1-stakes-money-tracker-d6otdm, restarted post-merge) — v1.7.6
 
 Status: **complete — 163 tests green, browser smoke verified (phone viewport:
