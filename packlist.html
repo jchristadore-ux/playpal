@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="PlayPal Packlist — a running trip packing checklist. Add items, check them off, and sort by what's done and what's left. Works offline, saves to your phone."/>
+<meta name="theme-color" content="#0E2B20"/>
+<title>Packlist — PlayPal</title>
+
+<!-- PWA / iOS install -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Packlist"/>
+
+<!-- Same vendored font as the app, so this page is fully self-contained and
+     works offline once saved to the phone (no CDN requests). -->
+<link href="vendor/fonts.css" rel="stylesheet"/>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --pp-cream:   #F6F4EE;
+    --pp-green:   #0E2B20;
+    --pp-green-2: #14392B;
+    --pp-gold:    #C8A15A;
+    --pp-sage:    #8A9E8A;
+    --pp-sage-2:  #C8D5C0;
+    --pp-line:    #E3DFD3;
+    --pp-card:    #FFFFFF;
+  }
+  html, body {
+    min-height: 100%;
+    background: var(--pp-cream);
+    color: var(--pp-green);
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  * { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--pp-gold); outline-offset: 2px; border-radius: 6px; }
+  button { font-family: inherit; cursor: pointer; }
+  input { font-family: inherit; }
+  input::placeholder { color: var(--pp-sage); }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--pp-sage-2); border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+  @keyframes ppFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 16px 96px; }
+
+  /* ── Header ─────────────────────────────────────────── */
+  header {
+    background: var(--pp-green);
+    color: var(--pp-cream);
+    padding: 22px 16px 20px;
+    border-bottom: 3px solid var(--pp-gold);
+  }
+  .head-inner { max-width: 620px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .brand-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--pp-gold);
+    box-shadow: 0 0 0 3px rgba(200,161,90,.25);
+    flex: none;
+  }
+  .brand-name { font-size: 14px; font-weight: 800; letter-spacing: 2px; }
+  .brand-sub  { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--pp-sage-2); }
+  h1 { font-size: 26px; font-weight: 800; letter-spacing: .3px; }
+
+  /* Progress */
+  .progress-row { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
+  .progress-count { font-size: 15px; font-weight: 800; color: var(--pp-gold); }
+  .progress-label { font-size: 12px; font-weight: 600; letter-spacing: .5px; color: var(--pp-sage-2); }
+  .bar {
+    margin-top: 8px; height: 8px; border-radius: 99px;
+    background: rgba(255,255,255,.14); overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; width: 0%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--pp-gold), #E0C285);
+    transition: width .35s ease;
+  }
+
+  /* ── Add bar ────────────────────────────────────────── */
+  .add-row { display: flex; gap: 8px; margin-top: 18px; }
+  .add-row input {
+    flex: 1; min-width: 0;
+    background: var(--pp-card);
+    border: 1.5px solid var(--pp-line);
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-size: 16px; font-weight: 600;
+    color: var(--pp-green);
+  }
+  .add-row input:focus { border-color: var(--pp-gold); outline: none; }
+  .add-btn {
+    flex: none;
+    background: var(--pp-green);
+    color: var(--pp-cream);
+    border: none; border-radius: 12px;
+    padding: 0 20px;
+    font-size: 15px; font-weight: 800; letter-spacing: .5px;
+  }
+  .add-btn:active { transform: scale(.97); }
+
+  /* ── Toolbar (sort / filter) ────────────────────────── */
+  .toolbar { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; flex-wrap: wrap; }
+  .seg { display: inline-flex; background: #ECE8DD; border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button {
+    border: none; background: transparent;
+    padding: 7px 13px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: .3px;
+    color: var(--pp-sage);
+  }
+  .seg button.on { background: var(--pp-card); color: var(--pp-green); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .spacer { flex: 1; }
+  .clear-btn {
+    border: none; background: transparent;
+    color: var(--pp-sage); font-size: 12px; font-weight: 700; letter-spacing: .3px;
+    padding: 7px 4px;
+  }
+  .clear-btn:active { color: var(--pp-green); }
+
+  /* ── List ───────────────────────────────────────────── */
+  ul { list-style: none; }
+  .item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--pp-card);
+    border: 1.5px solid var(--pp-line);
+    border-radius: 14px;
+    padding: 13px 14px;
+    margin-bottom: 8px;
+    animation: ppFadeIn .18s ease both;
+  }
+  .item.done { background: #F3F5F0; border-color: #E1E7DA; }
+  .check {
+    flex: none;
+    width: 26px; height: 26px; border-radius: 8px;
+    border: 2px solid var(--pp-sage-2);
+    background: var(--pp-card);
+    display: grid; place-items: center;
+    transition: background .15s, border-color .15s;
+  }
+  .item.done .check { background: var(--pp-gold); border-color: var(--pp-gold); }
+  .check svg { width: 15px; height: 15px; opacity: 0; transform: scale(.6); transition: opacity .15s, transform .15s; }
+  .item.done .check svg { opacity: 1; transform: scale(1); }
+  .label {
+    flex: 1; min-width: 0;
+    font-size: 16px; font-weight: 600; line-height: 1.3;
+    word-break: break-word;
+  }
+  .item.done .label { color: var(--pp-sage); text-decoration: line-through; text-decoration-color: rgba(138,158,138,.6); }
+  .del {
+    flex: none;
+    border: none; background: transparent;
+    color: var(--pp-sage-2);
+    width: 30px; height: 30px; border-radius: 8px;
+    font-size: 18px; line-height: 1;
+    display: grid; place-items: center;
+  }
+  .del:active { background: #FBECEC; color: #C4544E; }
+
+  .empty {
+    text-align: center; color: var(--pp-sage);
+    font-size: 14px; font-weight: 600;
+    padding: 40px 20px;
+  }
+  .empty .big { font-size: 28px; margin-bottom: 8px; }
+
+  .footnote {
+    margin-top: 24px; text-align: center;
+    font-size: 11.5px; font-weight: 600; letter-spacing: .3px;
+    color: var(--pp-sage); line-height: 1.6;
+  }
+  .footnote a { color: var(--pp-gold); font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">PLAYPAL</div>
+        <div class="brand-sub">TRIP PACKLIST</div>
+      </div>
+    </div>
+    <h1>Packing Checklist</h1>
+    <div class="progress-row">
+      <span class="progress-count" id="progressCount">0 / 0</span>
+      <span class="progress-label" id="progressLabel">packed</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <form class="add-row" id="addForm" autocomplete="off">
+    <input id="addInput" type="text" placeholder="Add an item…" aria-label="Add an item"/>
+    <button class="add-btn" type="submit">Add</button>
+  </form>
+
+  <div class="toolbar">
+    <div class="seg" id="filterSeg" role="tablist" aria-label="Filter items">
+      <button data-filter="all" class="on">All</button>
+      <button data-filter="left">Left</button>
+      <button data-filter="done">Done</button>
+    </div>
+    <div class="seg" id="sortSeg" aria-label="Sort items">
+      <button data-sort="manual" class="on">Order</button>
+      <button data-sort="status">By Status</button>
+      <button data-sort="az">A–Z</button>
+    </div>
+    <span class="spacer"></span>
+    <button class="clear-btn" id="clearDone" type="button">Clear done</button>
+  </div>
+
+  <ul id="list"></ul>
+
+  <div class="footnote">
+    Saved on this device automatically. Add to Home Screen for one-tap access.<br/>
+    Part of the <a href="index.html">PlayPal</a> trip kit.
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   TRIP PACKLIST — self-contained, offline, localStorage-backed
+   ============================================================ */
+(function () {
+  var STORE_KEY = 'pp_packlist_v1';
+  var PREF_KEY  = 'pp_packlist_prefs_v1';
+
+  var SEED = [
+    'Cold Plunge', 'Extension Cord', 'Power Strip', 'Projector Speaker',
+    'Ice Molds', 'Firestick w/ Remote', '2 HDMI Cables', 'Misting Fan',
+    'Charging Station', 'Extra Balls', 'Extra Tees', 'Mounting for Flag',
+    'Shirts', 'Food Prep', 'Day Sheets', 'Theragun',
+    'Both Knee Ice Jawns', 'Triple A Batteries', 'Cart Cooler', 'Diet Cokes',
+    'Water Bottles', 'Electrolyte Packets', 'Vape Pods'
+  ];
+
+  var items = load();
+  var prefs = loadPrefs();
+
+  var listEl     = document.getElementById('list');
+  var addForm    = document.getElementById('addForm');
+  var addInput   = document.getElementById('addInput');
+  var filterSeg  = document.getElementById('filterSeg');
+  var sortSeg    = document.getElementById('sortSeg');
+  var clearBtn   = document.getElementById('clearDone');
+  var countEl    = document.getElementById('progressCount');
+  var labelEl    = document.getElementById('progressLabel');
+  var barEl      = document.getElementById('barFill');
+
+  /* ── Persistence ──────────────────────────────────── */
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    // First run: seed from the starting list.
+    return SEED.map(function (text, i) {
+      return { id: uid(), text: text, done: false, order: i };
+    });
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(items)); } catch (e) {}
+  }
+  function loadPrefs() {
+    try {
+      var raw = localStorage.getItem(PREF_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { filter: 'all', sort: 'manual' };
+  }
+  function savePrefs() {
+    try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
+  function uid() {
+    return 'i_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+  }
+
+  /* ── Mutations ────────────────────────────────────── */
+  function addItem(text) {
+    text = (text || '').trim();
+    if (!text) return;
+    var maxOrder = items.reduce(function (m, it) { return Math.max(m, it.order || 0); }, -1);
+    items.push({ id: uid(), text: text, done: false, order: maxOrder + 1 });
+    save();
+    render();
+  }
+  function toggle(id) {
+    var it = items.find(function (x) { return x.id === id; });
+    if (it) { it.done = !it.done; save(); render(); }
+  }
+  function remove(id) {
+    items = items.filter(function (x) { return x.id !== id; });
+    save();
+    render();
+  }
+  function clearDone() {
+    if (!items.some(function (x) { return x.done; })) return;
+    if (!confirm('Remove all checked-off items?')) return;
+    items = items.filter(function (x) { return !x.done; });
+    save();
+    render();
+  }
+
+  /* ── View helpers ─────────────────────────────────── */
+  function visibleItems() {
+    var out = items.slice();
+
+    if (prefs.filter === 'left') out = out.filter(function (x) { return !x.done; });
+    else if (prefs.filter === 'done') out = out.filter(function (x) { return x.done; });
+
+    if (prefs.sort === 'az') {
+      out.sort(function (a, b) { return a.text.toLowerCase().localeCompare(b.text.toLowerCase()); });
+    } else if (prefs.sort === 'status') {
+      // Left first, then done; stable within each group by manual order.
+      out.sort(function (a, b) {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return (a.order || 0) - (b.order || 0);
+      });
+    } else {
+      out.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    }
+    return out;
+  }
+
+  function svgCheck() {
+    return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+         + '<path d="M5 13l4 4L19 7" stroke="#0E2B20" stroke-width="3.2" '
+         + 'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function render() {
+    // Progress reflects ALL items, not the filtered view.
+    var total = items.length;
+    var done  = items.filter(function (x) { return x.done; }).length;
+    countEl.textContent = done + ' / ' + total;
+    labelEl.textContent = (total && done === total) ? 'all packed — you’re set' : 'packed';
+    barEl.style.width = (total ? Math.round((done / total) * 100) : 0) + '%';
+
+    // Segmented control states.
+    Array.prototype.forEach.call(filterSeg.children, function (b) {
+      b.classList.toggle('on', b.dataset.filter === prefs.filter);
+    });
+    Array.prototype.forEach.call(sortSeg.children, function (b) {
+      b.classList.toggle('on', b.dataset.sort === prefs.sort);
+    });
+
+    var view = visibleItems();
+    listEl.innerHTML = '';
+
+    if (!view.length) {
+      var msg = prefs.filter === 'done' ? 'Nothing checked off yet.'
+              : prefs.filter === 'left' ? 'Everything’s packed. Nice.'
+              : 'List is empty — add your first item above.';
+      var big = prefs.filter === 'left' ? '✅' : '🧳';
+      listEl.innerHTML = '<div class="empty"><div class="big">' + big + '</div>' + msg + '</div>';
+      return;
+    }
+
+    view.forEach(function (it) {
+      var li = document.createElement('li');
+      li.className = 'item' + (it.done ? ' done' : '');
+
+      var check = document.createElement('button');
+      check.className = 'check';
+      check.type = 'button';
+      check.setAttribute('role', 'checkbox');
+      check.setAttribute('aria-checked', it.done ? 'true' : 'false');
+      check.setAttribute('aria-label', (it.done ? 'Uncheck ' : 'Check off ') + it.text);
+      check.innerHTML = svgCheck();
+      check.addEventListener('click', function () { toggle(it.id); });
+
+      var label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = it.text;
+      label.addEventListener('click', function () { toggle(it.id); });
+
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.setAttribute('aria-label', 'Delete ' + it.text);
+      del.innerHTML = '×';
+      del.addEventListener('click', function () { remove(it.id); });
+
+      li.appendChild(check);
+      li.appendChild(label);
+      li.appendChild(del);
+      listEl.appendChild(li);
+    });
+  }
+
+  /* ── Events ───────────────────────────────────────── */
+  addForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    addItem(addInput.value);
+    addInput.value = '';
+    addInput.focus();
+  });
+
+  filterSeg.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    prefs.filter = b.dataset.filter;
+    savePrefs();
+    render();
+  });
+
+  sortSeg.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    prefs.sort = b.dataset.sort;
+    savePrefs();
+    render();
+  });
+
+  clearBtn.addEventListener('click', clearDone);
+
+  render();
+})();
+</script>
+</body>
+</html>
