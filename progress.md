@@ -1,5 +1,44 @@
 # Project Progress
 
+## Full audit pass #5 — all things PlayPal, EGT Cup + SportsCenter focus (branch claude/playpal-egt-audit-t6p8ce) — v1.8.1
+
+Status: **complete — 166 tests green (2 new regressions), browser smoke
+verified (EGT standings "35 pts max" + breakdown + award races, corrected R4
+rationale on the Rounds tab, friendly printable heading, SportsCenter
+pre-round content + formatted lead-change alert; zero page errors).**
+
+Read every EGT engine module, EgtTournament.jsx, bottomLineProvider.js,
+BottomLine.jsx, the seed fixture, store/bridge/importer/printable, and the
+app-shell wiring end to end. Baseline was healthy (164 tests, seed embed in
+sync, dist fresh, 1.8.0 stamped everywhere). Defects found + fixed:
+
+- 🟡 **SportsCenter NEW TRIP LEADER alert showed raw float points**
+  (`bottomLineProvider.js` diffAlerts) — the one points display that bypassed
+  the v1.7.3 fmtPoints sweep. A Cup lead change on a split award (3-way tie =
+  ⅓ pt) would scroll `0.6666666666666666 pts` across the TV at the exact
+  moment everyone watches. Fixed with fmtPts + a diffAlerts regression test
+  that drives a real lead change (John 2 pts → Brian ⅔ pt leader).
+- 🟡 **R4 seed pairings rationale was stale prose** — claimed "new teams"
+  (they're the same John+TJ vs Brian+Mike as R2, kept by request) and "every
+  pair has now shared a cart exactly once" after R4 (false: John+Mike and
+  Brian+TJ first ride together in R5). Rewrote the fixture text to match the
+  actual schedule; gen-seed re-run so the embed matches.
+- ⚪ Printable packet scorecard headings printed machine keys
+  (`bingoBangoBongo+matchPlay`) — mapped all six rounds to friendly labels
+  (+ test asserting no camelCase key ever prints).
+- ⚪ Removed the dead `GAME_ALLOWANCE` map from egtImporter.js (duplicated
+  GAME_RULES and was referenced nowhere).
+
+Verified sound with no changes needed: points/money/standings/scoring/side
+games engines (R1 exclusion, zero-sum money, 35-pt ceiling recompute,
+Flat Stick putt-tracking gate, gross Birdie King), importer R5 migration
+(scramble→BBB+matchPlay applied in every recomputeAll), bridge (R2 team
+Nassau kept out of the overlay so money can't double-count), SportsCenter
+stake/overlay recovery, every broadcast module type has a renderer, sw.js
+precache + ?v= strings, packlist offline. Released as **1.8.1** everywhere
+(package.json + lock, sw.js CACHE_VERSION + ?v=, index.html, bottomline.html,
+Home.jsx) with a CHANGELOG entry.
+
 ## Full audit pass #4 — pre-trip go/no-go (branch claude/session-t9l8vn) — v1.8.0
 
 Status: **complete — 164 tests green, browser smoke verified (EGT standings

@@ -920,7 +920,7 @@ const BottomLineProvider = (function () {
     const ne = facts.egt && facts.egt.live && first(facts.egt.live.standings || []);
     if (pe && ne && pe.player !== ne.player) {
       alerts.push({ icon: '👑', tone: 'hot', label: 'NEW TRIP LEADER',
-        parts: [P.name(String(ne.name).toUpperCase()), P.up('NOW LEADS THE TRIP'), P.val(`${ne.points} pts`)] });
+        parts: [P.name(String(ne.name).toUpperCase()), P.up('NOW LEADS THE TRIP'), P.val(`${fmtPts(ne.points)} pts`)] });
     }
 
     // Money leader change.

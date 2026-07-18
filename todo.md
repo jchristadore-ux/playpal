@@ -95,6 +95,16 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - Web/PWA + Capacitor bundle must keep working (build-www copies dist/egt/).
 - Seed is the single source of truth; engine derives pops from courseLibrary SI.
 
+## Done — full audit pass #5 (v1.8.1, EGT Cup + SportsCenter focus)
+- [x] Read every engine module + UI + provider end to end; baseline healthy.
+- [x] Fixed NEW TRIP LEADER alert raw-float points (fmtPts + diffAlerts test).
+- [x] Corrected the stale R4 pairings rationale in the seed (teams repeat by
+      request; cart rotation completes in R5) + regenerated the embed.
+- [x] Printable scorecard headings mapped to friendly format names (+ test).
+- [x] Dropped dead GAME_ALLOWANCE map in egtImporter.js.
+- [x] 166 tests green; browser smoke (app + SportsCenter) zero page errors;
+      released 1.8.1 everywhere + CHANGELOG.
+
 ## Done — full audit pass #4 (v1.8.0, pre-trip go/no-go)
 - [x] Award restructuring (PRs #93–95) audited end-to-end: engine, seed,
       boot refresh, app tables, printable, broadcast all agree on 35-pt

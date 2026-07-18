@@ -2,6 +2,27 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.8.1] — 2026-07-18
+
+### Fixed
+- **SportsCenter's NEW TRIP LEADER breaking-news card no longer shows raw
+  float points.** When the EGT Cup lead changed hands on a split award (e.g. a
+  3-way champion tie worth ⅓ pt each), the alert printed the unformatted value
+  (`0.6666666666666666 pts`) — the one points display that bypassed the v1.7.3
+  `fmtPoints` sweep, and it fires exactly when everyone is watching the TV.
+  Regression test drives a real Cup lead change through `diffAlerts`.
+- **Printable packet scorecard headings now use friendly format names** —
+  "R5 · Cascades — Bingo-Bango-Bongo + Match Play" instead of the machine key
+  `bingoBangoBongo+matchPlay`. All six rounds mapped; test asserts no raw
+  camelCase keys print.
+- **R4 cart/pairings rationale corrected in the seed** — the Rounds-tab text
+  still claimed R4 used "new teams" and completed the cart rotation, which
+  stopped being true when John+TJ became the fixed R2/R4 partnership. It now
+  says the R2 teams repeat by request and that the rotation completes in R5
+  (which matches the actual cart schedule).
+- Removed a dead, duplicated allowance table from `egtImporter.js`
+  (`GAME_RULES` is the single source of truth).
+
 ## [1.8.0] — 2026-07-17
 
 ### Changed

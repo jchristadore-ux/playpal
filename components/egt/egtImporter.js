@@ -12,16 +12,6 @@
 const EgtImporter = (function () {
   const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
 
-  // Allowance fraction per game (seed handicapAllowances).
-  const GAME_ALLOWANCE = {
-    skinsNet: 1.0,
-    fourBallMatch: 0.9,
-    wolf: 1.0,
-    teamStableford: 0.85,
-    stableford: 1.0,
-    nines: 1.0,
-  };
-
   // basis: 'offLow' subtracts the group's lowest playing handicap (match/skins/
   //         wolf); 'full' gives every player their whole playing handicap
   //         (Stableford). scope: '18' = all 18; 'loop2' = the second 9 only,
