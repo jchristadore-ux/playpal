@@ -1076,7 +1076,7 @@
           ["john", "tj"],
           ["brian", "mike"]
         ],
-        "rationale": "New teams to keep partnerships balanced: John (17) + TJ (28) vs Brian (22) + Mike (28). Pairing the lowest with a highest on each side (45 vs 50 combined) is deliberately balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike) — the only cart pairing not yet used, so every pair has now shared a cart exactly once."
+        "rationale": "Same teams as R2 — John (17) + TJ (28) vs Brian (22) + Mike (28) — keeping John and TJ partnered by request. Pairing the lowest with a highest on each side (45 vs 50 combined) stays balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike); the two pairs that haven't shared a cart yet (John + Mike, Brian + TJ) ride together in R5, completing the rotation by the end of Thursday."
       },
       "courseHandicaps": {
         "john": 17,

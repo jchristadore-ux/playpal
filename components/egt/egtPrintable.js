@@ -7,6 +7,18 @@ const EgtPrintable = (function () {
   const money = n => (n < 0 ? `-$${Math.abs(n).toFixed(2)}` : `$${(n || 0).toFixed(2)}`);
   const arrow = d => (d === 'up' ? '▲' : d === 'down' ? '▼' : d === 'new' ? '•' : '–');
 
+  // Friendly headings for the scorecard pages — the model's primaryGame values
+  // are machine keys (e.g. "bingoBangoBongo+matchPlay") and read badly printed.
+  const GAME_LABELS = {
+    'bingoBangoBongo+nines': 'Bingo-Bango-Bongo + The Nines',
+    'fourBallMatchPlay': 'Four-Ball Match Play + Nassau',
+    'wolf': 'Wolf',
+    'fourBallAggregateStableford': 'Team Stableford (2v2)',
+    'bingoBangoBongo+matchPlay': 'Bingo-Bango-Bongo + Match Play',
+    'championshipSingles+stableford': 'Championship Singles + Stableford',
+  };
+  const gameLabel = key => GAME_LABELS[key] || String(key || '');
+
   const STYLE = `
     .egt-print{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#12241c;max-width:900px;margin:0 auto;padding:16px}
     .egt-print h1{font-size:22px;margin:0 0 2px} .egt-print h2{font-size:16px;margin:18px 0 6px;color:#0E2B20}
@@ -68,7 +80,7 @@ const EgtPrintable = (function () {
       return `<tr><td class="name">${esc(name)}</td>${cells.map(c => `<td>${c}</td>`).join('')}<td>${tot || ''}</td></tr>`;
     }).join('');
     const pendNote = course.strokeIndexVerified ? '' : `<div class="pend">Stroke index pending for ${esc(course.name)} — pops shown once SI is entered.</div>`;
-    return `<h2>${esc(round.id)} · ${esc(course.name)} — ${esc(round.primaryGame)}</h2>
+    return `<h2>${esc(round.id)} · ${esc(course.name)} — ${esc(gameLabel(round.primaryGame))}</h2>
       <div class="sub">${esc(round.date)} · ${esc(round.playedTee)} tees</div>${pendNote}
       <table><thead>
         <tr>${['Player', ...holes.map(h => h.hole), 'Tot'].map(x => `<th>${x}</th>`).join('')}</tr>

@@ -753,6 +753,24 @@ test('repairMatchPops clears legacy HI-based auto-fill so CH pops derive live', 
   assert.equal(EgtBridge.repairMatchPops(state), false);
 });
 
+// ── v1.8.1 audit regressions ────────────────────────────────────────────────
+test('printable scorecard headings use friendly format labels, not machine keys', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  const { EgtPrintable } = W;
+  const r5 = EgtPrintable.roundScorecard(m, state, 'R5');
+  assert.ok(/Bingo-Bango-Bongo \+ Match Play/.test(r5), `R5 heading is friendly: ${r5.slice(0, 120)}`);
+  assert.ok(!/bingoBangoBongo\+matchPlay/.test(r5), 'no raw primaryGame key in the R5 heading');
+  const r2 = EgtPrintable.roundScorecard(m, state, 'R2');
+  assert.ok(/Four-Ball Match Play/.test(r2), 'R2 heading is friendly');
+  // Every scheduled round resolves to a mapped label (no camelCase fallback).
+  m.rounds.forEach(r => {
+    const html = EgtPrintable.roundScorecard(m, state, r.id);
+    assert.ok(!/— [a-z]+[A-Z]/.test(html), `${r.id} heading "${r.primaryGame}" is mapped`);
+  });
+});
+
 test('engine derives match pops from the COURSE handicap difference off the low', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
