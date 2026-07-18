@@ -2,6 +2,35 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [1.8.0] — 2026-07-17
+
+### Changed
+- **The EGT Cup season awards grew from 4 to 6 and the per-player ceiling is
+  now 35** (24 round points + 11 award points). This entry documents the award
+  restructuring that shipped without a release: **Par King** (most pars, 2 pts)
+  and **Bogey God** (most bogeys, 1 pt) are real point-bearing season awards
+  for the high-handicap crew, and **Birdie King now settles on GROSS birdies
+  for 4 pts** — the net version is demoted to an honorary bragging-rights
+  race. Skins King (2), Flat Stick (1) and Iron Man (1) are unchanged. The
+  engine, the app's "Where the points come from" table, Award Races,
+  printable packet and the SportsCenter broadcast all read the same seed
+  `pointsConfig`, and the Max column recomputes on every boot, so installs
+  that already have a persisted model pick up the new ceiling automatically.
+
+### Added
+- **BIRDIE KING RACE page on the SportsCenter rotation ranks gross birdies**
+  — the paying award (4 pts) had no full-screen leaders page while the
+  honorary net race did. The net page stays, retitled
+  `BIRDIE KING RACE (NET · HONORARY)`.
+- **Trip packing checklist** (`packlist.html`) — a standalone, offline-first
+  checklist page (add items, check them off, saved to the phone). Now also in
+  the service-worker precache so it genuinely works offline on first launch.
+
+### Fixed
+- Season-award settlement regression test: Par King, Bogey God and Birdie
+  King (gross) are asserted to pay 2/1/4 to the right stat leaders at final
+  settlement, so the award values can't silently drift from the seed config.
+
 ## [1.7.6] — 2026-07-16
 
 ### Added

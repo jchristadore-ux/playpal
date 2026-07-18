@@ -696,6 +696,29 @@ test('Flat Stick requires tracked putts — zero putt holes is ineligible, not a
   assert.ok(m.players.every(p => !acc2[p.id].breakdown.some(b => /Flat Stick/.test(b.category))), 'no winner when untracked');
 });
 
+// ── v1.8.0 audit regressions ────────────────────────────────────────────────
+test('season settlement pays Par King 2, Bogey God 1 and Birdie King (gross) 4 to the stat leaders', () => {
+  const m = freshModel();
+  const stats = {
+    john:  { grossBirdies: 5, pars: 10, bogeys: 20, putts: 100, puttHoles: 90 },
+    brian: { grossBirdies: 1, pars: 30, bogeys: 25, putts: 110, puttHoles: 90 },
+    tj:    { grossBirdies: 0, pars: 20, bogeys: 40, putts: 120, puttHoles: 90 },
+    mike:  { grossBirdies: 0, pars: 15, bogeys: 35, putts: 130, puttHoles: 90 },
+  };
+  const acc = {}; m.players.forEach(p => { acc[p.id] = { total: 0, breakdown: [] }; });
+  EgtPoints.seasonAwards(m, stats, {}, acc);
+  const award = (pid, re) => (acc[pid].breakdown.find(b => re.test(b.category)) || {}).points;
+  // Gross birdies pay the seed's 4 — most gross birdies wins, net never scores.
+  assert.equal(award('john', /Birdie King \(gross\)/), 4, 'john (5 gross birdies) takes the 4');
+  assert.ok(m.players.filter(p => p.id !== 'john').every(p => award(p.id, /Birdie King/) == null), 'nobody else gets Birdie King points');
+  assert.equal(award('brian', /Par King/), 2, 'brian (30 pars) is Par King for 2');
+  assert.equal(award('tj', /Bogey God/), 1, 'tj (40 bogeys) is Bogey God for 1');
+  // The awards read the SEED config, not hard-coded values.
+  assert.equal(m.pointsConfig.seasonAwards.birdieKingGross, 4);
+  assert.equal(m.pointsConfig.seasonAwards.parKing, 2);
+  assert.equal(m.pointsConfig.seasonAwards.bogeyGod, 1);
+});
+
 test('seasonStats counts puttHoles per player', () => {
   const m = freshModel();
   const scores = { R2: { john: { 1: { gross: 4, putts: 2 }, 2: { gross: 4 } } } };

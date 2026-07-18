@@ -75,7 +75,7 @@ const EgtPoints = (function () {
       if (ts.overallWinner !== 'halve') teamPlayers(ts.overallWinner).forEach(pid => addPoints(acc, pid, 'Stableford 18 total', cfg.overall18 || 2));
     } else if (roundId === 'R5') {
       // Full-18 BBB champion + best round-robin match-play record, 2 pts each
-      // (ties split the pool) — R5 stays worth 4 toward the 30-point ceiling.
+      // (ties split the pool) — R5 stays worth 4 toward the 35-point ceiling.
       if (results.bbb) results.bbb.champions.forEach(pid => {
         addPoints(acc, pid, 'BBB champion', (cfg.bbbChampion || 2) / results.bbb.champions.length);
       });
@@ -140,7 +140,7 @@ const EgtPoints = (function () {
   }
 
   // Plain-English breakdown of how a round's Cup points are earned — drives
-  // the Rounds-tab cards and the Standings-tab "where the 30 points come from"
+  // the Rounds-tab cards and the Standings-tab "where the points come from"
   // table. Reads pointsConfig with the SAME fallbacks pointsForRound uses, so
   // the display can never drift from what the engine actually awards.
   //   mode: 'team'  — every player on the winning side earns the full value

@@ -450,15 +450,23 @@ test('broadcastModules post: Skins King and Birdie King leader pages surface', (
   const w = loadWithSeed();
   const P = w.BottomLineProvider;
   const now = Date.now();
-  // Mike outright low on every hole → he sweeps the gross skins pot.
-  const doc = egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 1, mike: 0 }, 18), { ts: now - 8 * 3600 * 1000 }).doc;
+  // Mike birdies every hole (outright low) → he sweeps the gross skins pot
+  // and leads both Birdie King races.
+  const doc = egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 1, mike: -1 }, 18), { ts: now - 8 * 3600 * 1000 }).doc;
   const facts = P.computeFacts({ docs: [doc], trips: [], players: [], now });
   const mods = P.broadcastModules(facts, 'post');
   const skins = mods.find(m => m.id === 'stat-skins');
   assert.ok(skins, 'Skins King race page present');
   assert.equal(skins.rows[0].name, 'Mike');
+  // The paying race ranks GROSS birdies (4 pts); net is honorary but still shown.
+  const gross = mods.find(m => m.id === 'stat-grossbirdies');
+  assert.ok(gross, 'Birdie King (gross) race page present');
+  assert.equal(gross.title, 'BIRDIE KING RACE');
+  assert.equal(gross.rows[0].name, 'Mike');
+  assert.equal(gross.rows[0].display, '18');
   const birdies = mods.find(m => m.id === 'stat-netbirdies');
   assert.ok(birdies, 'Birdie King (net) race page present');
+  assert.ok(/HONORARY/.test(birdies.title), 'net race labeled honorary');
 });
 
 test('aggregateEgtStats sums per player across EGT rounds', () => {

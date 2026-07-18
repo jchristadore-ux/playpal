@@ -95,6 +95,17 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - Web/PWA + Capacitor bundle must keep working (build-www copies dist/egt/).
 - Seed is the single source of truth; engine derives pops from courseLibrary SI.
 
+## Done — full audit pass #4 (v1.8.0, pre-trip go/no-go)
+- [x] Award restructuring (PRs #93–95) audited end-to-end: engine, seed,
+      boot refresh, app tables, printable, broadcast all agree on 35-pt
+      ceiling + 6 awards.
+- [x] SportsCenter: added the missing BIRDIE KING RACE (gross, the 4-pt payer)
+      page; net race retitled honorary.
+- [x] Released 1.8.0 (version + CHANGELOG had been skipped by #93–95).
+- [x] packlist.html added to the sw precache so it truly works offline.
+- [x] Stale 30-point comments fixed; +1 settlement regression test (164 green).
+- [x] Browser smoke: EGT standings/rounds, SportsCenter, packlist — no errors.
+
 ## Done — full audit pass #3 (v1.7.3, EGT Cup + SportsCenter focus)
 - [x] Match editor auto-pops now off COURSE handicap; repairMatchPops migration.
 - [x] SportsCenter season settlement (awards + PTM) once R6 is final.

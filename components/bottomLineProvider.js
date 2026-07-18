@@ -329,10 +329,10 @@ const BottomLineProvider = (function () {
     }
 
     // season:true once R6 is in — exactly like the app — so the broadcast's
-    // final standings carry the four season awards (Skins King, Birdie King,
-    // Flat Stick, Iron Man) and the money folds in the Pass-the-Money
-    // settlement. Without it the TV would show a different champion than the
-    // app on the final night.
+    // final standings carry the six season awards (Skins King, Birdie King
+    // gross, Par King, Bogey God, Flat Stick, Iron Man) and the money folds in
+    // the Pass-the-Money settlement. Without it the TV would show a different
+    // champion than the app on the final night.
     let live = null;
     try { live = EgtEngine.liveUpdate(state, { noPersist: true, season: state.finalized.includes('R6') }); } catch (e) {}
 
@@ -1097,8 +1097,9 @@ const BottomLineProvider = (function () {
         display: (r.value < 0 ? '-$' : '+$') + Math.abs(Math.round(r.value)), tone: r.value >= 0 ? 'up' : 'down' })),
     });
     // Season-award races from the tournament engine, so every Cup category has
-    // a leaders page: Skins King and Birdie King (net). (Flat Stick and Iron
-    // Man are covered by the putts / FIR / GIR pages above.)
+    // a leaders page: Skins King, Birdie King (gross pays 4, net is honorary),
+    // Par King and Bogey God. (Flat Stick and Iron Man are covered by the
+    // putts / FIR / GIR pages above.)
     const L = facts.egt && facts.egt.live;
     if (L && L.skins) {
       const rows = Object.entries(L.skins)
@@ -1111,12 +1112,21 @@ const BottomLineProvider = (function () {
       });
     }
     if (L && L.tourneyStats) {
+      // The paying race first: Birdie King settles on GROSS birdies (4 pts).
+      const grossRows = Object.entries(L.tourneyStats)
+        .map(([pid, st]) => Object.assign({}, playerInfo(pid), { value: (st && st.grossBirdies) || 0 }))
+        .filter(r => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+      if (grossRows.length) mods.push({
+        id: 'stat-grossbirdies', type: 'stat-leaderboard', title: 'BIRDIE KING RACE',
+        rows: grossRows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
+      });
       const rows = Object.entries(L.tourneyStats)
         .map(([pid, st]) => Object.assign({}, playerInfo(pid), { value: (st && st.netBirdies) || 0 }))
         .filter(r => r.value > 0)
         .sort((a, b) => b.value - a.value);
       if (rows.length) mods.push({
-        id: 'stat-netbirdies', type: 'stat-leaderboard', title: 'BIRDIE KING RACE (NET)',
+        id: 'stat-netbirdies', type: 'stat-leaderboard', title: 'BIRDIE KING RACE (NET · HONORARY)',
         rows: rows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
       });
     }
