@@ -61,7 +61,14 @@ const BottomLineProvider = (function () {
     (egtModel.rounds || []).forEach(r => {
       try {
         const nr = EgtBridge.toNativeRound(egtModel, r.id);
+        // Key each seed round by BOTH stable identifiers the app stamps onto a
+        // synced round: the deterministic sync code (doc id) and the native
+        // round id (`egt-<tripId>-<Rn>`, echoed in liveScores.roundId). Keying
+        // by the native id too means a round still links even if its doc landed
+        // under a different/re-shared sync code — the ids never collide (native
+        // ids start with "egt-"), so this only ever recognizes real EGT rounds.
         out[nr.syncCode] = nr;
+        out[nr.id] = nr;
       } catch (e) { /* seed round not buildable — skip */ }
     });
     return out;
@@ -71,6 +78,10 @@ const BottomLineProvider = (function () {
     const live = doc.liveScores || null;
     let round = doc.round || null;
     if (!round && egtRoundBySync[doc.syncCode]) round = egtRoundBySync[doc.syncCode];
+    // Fallback link: a live-only doc whose sync code we don't recognize still
+    // carries the native round id in its liveScores payload — resolve the seed
+    // round from that so scoring surfaces even if the doc id diverged.
+    if (!round && live && live.roundId && egtRoundBySync[live.roundId]) round = egtRoundBySync[live.roundId];
     if (!round || !round.players || !round.course || !round.course.holes) return null;
 
     const holes = round.course.holes;
