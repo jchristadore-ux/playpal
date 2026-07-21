@@ -2,6 +2,22 @@
 
 All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepachangelog.com); versioning follows [SemVer](https://semver.org).
 
+## [Unreleased]
+
+### Changed
+- **R1 (Minerals) money model corrected to match how the round is actually
+  played.** Bingo-Bango-Bongo and The Nines each now pay a **flat prize to that
+  game's winner** (default `$5`, funded equally by the field; a tie for first
+  splits the prize) instead of settling `$1` per point of difference — a
+  per-point BBB/Nines settlement produced wildly inflated swings (81 Nines
+  points in play could move `$50+`). **Skins are no longer played for money on
+  R1**; the round is BBB + Nines plus any side Nassau only. The two overlay
+  `$2` Nassau side matches (front · back · overall) settle as before. New
+  `bbbNinesWinner` money default (Rounds-tab editable); R5's full-18 BBB is
+  untouched and still pays per point. Regression tests cover the winner prize,
+  the tie split, the absence of skins money, and that each side Nassau settles
+  only between its own pair.
+
 ## [1.8.1] — 2026-07-18
 
 ### Fixed

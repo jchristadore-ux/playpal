@@ -277,19 +277,36 @@ test('overlay side Nassau matches settle money on a non-match round (R3), zero-s
   assert.ok(Math.abs(sum) < 1e-6, `R3 money (Wolf + side match) nets zero, got ${sum}`);
 });
 
-test('R1 flat/stakes-only: BBB + Nines + skins money is tracked while Cup points stay zero', () => {
+test('R1 flat/stakes-only: BBB + Nines pay a flat prize to the winner, skins are NOT played for money, side Nassaus settle, Cup points stay zero', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
   fillPlausibleScores(m, state);
-  // Unbalanced BBB (john 2, mike 1, tj 0) so BBB money is nonzero.
+  // Unbalanced BBB (john 2, mike 1, tj 0) so john is the sole BBB winner.
   state.events.bbb.R1 = [{ hole: 1, bingo: 'john', bango: 'john', bongo: 'mike' }];
+  // Two $2 side Nassaus, exactly the R1 table setup: John–TJ and Mike–John.
+  state.events.roundMatches = { R1: [
+    { id: 'jt', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: {}, stakes: 2 },
+    { id: 'mj', matchType: '1v1', playersInMatch: ['mike', 'john'], teams: null, popHoles: {}, stakes: 2 },
+  ] };
   state.finalized = ['R1'];
   const live = EgtEngine.liveUpdate(state, { noPersist: true });
   const rm = live.money.rounds.R1;
   const labels = Object.values(rm.breakdown).flat().map(x => x.label);
-  ['BBB', 'Nines'].forEach(l => assert.ok(labels.includes(l), `R1 ${l} stakes settle for money`));
-  assert.ok(labels.some(l => /^Skins/.test(l)), 'R1 skins settle for money');
+  // BBB / Nines settle as a fixed prize to the winner, NOT per point.
+  assert.ok(labels.includes('BBB (winner)'), 'R1 BBB pays a flat prize to the winner');
+  assert.ok(labels.includes('Nines (winner)'), 'R1 Nines pays a flat prize to the winner');
+  // The BBB winner (john) nets exactly the flat prize ($5), the field splits the cost.
+  const bbbJohn = rm.breakdown.john.find(x => x.label === 'BBB (winner)');
+  assert.equal(bbbJohn.amount, m.moneyDefaults.bbbNinesWinner, 'BBB winner collects the flat prize');
+  assert.equal(rm.breakdown.tj.find(x => x.label === 'BBB (winner)').amount, -m.moneyDefaults.bbbNinesWinner / 2, 'BBB losers split the cost');
+  // Skins are NOT played for money on R1.
+  assert.ok(!labels.some(l => /^Skins/.test(l)), 'R1 has no skins money');
+  // The two side Nassaus settle (front · back · overall), each between only its pair.
+  assert.ok(labels.some(l => /^Match jo v tj/.test(l)), 'John–TJ Nassau settles');
+  assert.ok(labels.some(l => /^Match mi v jo/.test(l)), 'Mike–John Nassau settles');
+  assert.equal(rm.breakdown.mike.filter(x => /^Match jo v tj/.test(x.label)).length, 0, 'Mike is untouched by the John–TJ Nassau');
+  assert.equal(rm.breakdown.tj.filter(x => /^Match mi v jo/.test(x.label)).length, 0, 'TJ is untouched by the Mike–John Nassau');
   const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, `R1 money nets zero, got ${sum}`);
   // The R1 stakes land in the OVERALL money tracker (only round finalized here).
@@ -299,6 +316,20 @@ test('R1 flat/stakes-only: BBB + Nines + skins money is tracked while Cup points
   // …while the Cup side ignores R1 entirely.
   m.players.forEach(p => assert.equal((live.points[p.id] || { total: 0 }).total, 0, `${p.id} gets no Cup points from R1`));
   live.standings.forEach(s => assert.equal(s.points, 0, 'standings unaffected by the flat round'));
+});
+
+test('R1 BBB/Nines tie splits the flat prize between co-winners; all tied = no money', () => {
+  const m = freshModel();
+  const ids = ['john', 'tj', 'mike'];
+  // Two-way tie for the win: john & tj share the $5 prize, mike pays it.
+  const twoWay = EgtMoney.prizeToWinners(ids, ['john', 'tj'], 5);
+  assert.equal(twoWay.john, 2.5);
+  assert.equal(twoWay.tj, 2.5);
+  assert.equal(twoWay.mike, -5);
+  assert.ok(Math.abs(twoWay.john + twoWay.tj + twoWay.mike) < 1e-9, 'tie split is zero-sum');
+  // Everyone tied for first → no contest, no money.
+  const allTied = EgtMoney.prizeToWinners(ids, ids, 5);
+  ids.forEach(id => assert.equal(allTied[id], 0, 'a three-way tie moves no money'));
 });
 
 // ── standings + reseed ──────────────────────────────────────────────────────

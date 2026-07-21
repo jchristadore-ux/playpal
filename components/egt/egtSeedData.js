@@ -3296,6 +3296,7 @@ const EGT_SEED = {
     "nassauPerPoint": 5,
     "wolfPerUnit": 2,
     "bbbNinesPerPointDiff": 1,
+    "bbbNinesWinner": 5,
     "skinsAnte": 5,
     "ctpLd": 5,
     "ptmBill": 20
