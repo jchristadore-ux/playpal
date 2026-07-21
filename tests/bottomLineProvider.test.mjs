@@ -221,6 +221,20 @@ test('EGT liveScores-only doc (no round object) still feeds the Cup', () => {
   assert.ok(facts.egt.state.scores.R3, 'scores bridged into the Cup state');
 });
 
+test('EGT round links by native round id even under a diverged sync code', () => {
+  // A live-only doc whose sync code we don't recognize (re-shared / legacy),
+  // but whose liveScores.roundId still carries the EGT native id — it must
+  // still link so the round surfaces on the broadcast.
+  const w = loadWithSeed();
+  const now = Date.now();
+  const egt = egtDoc(w, 'R1', throughFill({ john: 0, tj: 1, mike: 2 }, 18), { now, liveOnly: true });
+  egt.doc.syncCode = 'ZZ9999'; // not the seed's deterministic code
+  const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
+  assert.equal(facts.rounds.length, 1, 'round linked via liveScores.roundId');
+  assert.equal(facts.rounds[0].egtRoundId, 'R1');
+  assert.equal(facts.rounds[0].isEgt, true);
+});
+
 test('EGT Cup segments appear on the feed; no duplicate money card', () => {
   const w = loadWithSeed();
   const now = Date.now();
