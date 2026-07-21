@@ -146,6 +146,10 @@ const EgtTournament = ({ onScoreRound }) => {
   const [siEditCourse, setSiEditCourse] = React.useState(null);
   const [toast, setToast] = React.useState('');
   const [tab, setTab] = React.useState('standings');
+  // Always points at the live store object so the cloud subscription merges
+  // into the latest state (and never a stale boot-time copy).
+  const stateRef = React.useRef(null);
+  React.useEffect(() => { stateRef.current = state; }, [state]);
 
   // Boot: always re-import the embedded seed so schedule metadata (tee times,
   // cart pairings, teams, formats) refreshes even on installs that already have
@@ -153,6 +157,7 @@ const EgtTournament = ({ onScoreRound }) => {
   // any existing entered data (scores, events, finalized, stakes) and only swaps
   // in the freshly-derived model, so nothing the user entered is lost.
   React.useEffect(() => {
+    let unsub = () => {};
     try {
       const seed = typeof seedText === 'string' ? JSON.parse(seedText) : seedText;
       const st = window.EgtStore.importSeed(seed);
@@ -160,8 +165,26 @@ const EgtTournament = ({ onScoreRound }) => {
       // from the handicap-index difference; clear any untouched auto-fill so the
       // engine live-derives the correct course-handicap pops (manual edits stay).
       if (window.EgtBridge.repairMatchPops(st)) window.EgtStore.save(st);
+      stateRef.current = st;
       setState({ ...st });
+
+      // Cross-device sync: pull rounds scored/finalized on other devices out of
+      // Firestore (the native scorer streams their hole scores there and the
+      // "submitted" flag rides along) so this device shows the same submitted
+      // status, scores, and standings — then stay live while both are open.
+      if (window.EgtSync) {
+        const apply = () => {
+          const cur = stateRef.current;
+          if (!cur) return;
+          try { window.EgtEngine.liveUpdate(cur, { season: (cur.finalized || []).includes('R6') }); }
+          catch (e) { window.EgtStore.save(cur); }
+          setState({ ...cur });
+        };
+        window.EgtSync.pull(st, changed => { if (changed) apply(); });
+        unsub = window.EgtSync.subscribe(() => stateRef.current, () => apply());
+      }
     } catch (e) { setToast('Could not load seed: ' + e.message); }
+    return () => { try { unsub(); } catch (e) {} };
   }, []);
 
   // Live computation for display (don't persist a snapshot on every render).
@@ -207,7 +230,11 @@ const EgtTournament = ({ onScoreRound }) => {
     // A finalize triggers a full live update + snapshot.
     try { window.EgtEngine.liveUpdate(state, { season: (state.finalized || []).includes('R6') }); } catch (e) {}
     persist(state);
-    flash(state.finalized.includes(rid) ? `${rid} finalized — standings updated` : `${rid} reopened`);
+    const nowFinal = state.finalized.includes(rid);
+    // Broadcast the submit/reopen so every other device (and the SportsCenter)
+    // reflects it immediately — even before all 18 holes are entered.
+    try { if (window.EgtSync) window.EgtSync.pushFinalized(model, rid, nowFinal); } catch (e) {}
+    flash(nowFinal ? `${rid} finalized — standings updated` : `${rid} reopened`);
   };
 
   // Individual Nassau overlay matches, per round. Generalizes the old R5-only

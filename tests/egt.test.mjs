@@ -814,3 +814,125 @@ test('engine derives match pops from the COURSE handicap difference off the low'
   assert.equal((flags.tj || []).filter(Boolean).length, 11, 'CH 28 − 17 = 11 strokes for TJ');
   assert.ok(!flags.john, 'low ball receives nothing');
 });
+
+// ── cross-device sync (EgtSync) ─────────────────────────────────────────────
+// Rounds scored + finalized on one device (phone) must show as submitted, with
+// their scores + standings, when the Cup is opened on another (web). EgtSync
+// merges the Firestore round docs the native scorer already streams.
+const EgtSync = W.EgtSync;
+
+// A liveScores-only Firestore doc for an EGT round (what the app actually
+// writes — the full round object is never saved for EGT rounds). `thru` caps
+// how many holes are carded (default: all 18 → complete).
+function egtLiveDoc(m, rid, opts = {}) {
+  const nr = EgtBridge.toNativeRound(m, rid);
+  const holes = nr.course.holes;
+  const thru = opts.thru == null ? holes.length : opts.thru;
+  const scores = {}, putts = {};
+  nr.players.forEach(p => {
+    scores[p.id] = holes.map((h, i) => (i < thru ? h.par : null));
+    putts[p.id] = holes.map(() => 2);
+  });
+  const doc = { syncCode: nr.syncCode, liveScores: { scores, putts, roundId: nr.id, _ts: Date.now() } };
+  if (opts.egtFinalized != null) doc.egtFinalized = opts.egtFinalized;
+  return doc;
+}
+
+function freshSyncState() {
+  const m = freshModel();
+  const st = EgtStore.emptyState(m.trip.id);
+  st.model = m;
+  return st;
+}
+
+test('EgtSync.syncCodes yields one deterministic code per round', () => {
+  const m = freshModel();
+  const codes = EgtSync.syncCodes(m);
+  assert.equal(codes.length, m.rounds.length);
+  jeq(codes, m.rounds.map(r => EgtBridge.syncCodeFor(m, r.id)));
+});
+
+test('EgtSync.hydrate merges synced scores and finalizes a complete round', () => {
+  const st = freshSyncState();
+  const changed = EgtSync.hydrate(st, [egtLiveDoc(st.model, 'R2')]);
+  assert.equal(changed, true);
+  assert.ok(st.finalized.includes('R2'), 'complete round reads as submitted');
+  const par1 = EgtBridge.toNativeRound(st.model, 'R2').course.holes[0].par;
+  assert.equal(st.scores.R2.john[1].gross, par1, 'synced scores land hole-keyed (1-indexed)');
+  // standings now count R2's money
+  const live = EgtEngine.liveUpdate(st, { noPersist: true });
+  assert.ok(live.money.rounds.R2, 'finalized R2 settles money after the pull');
+});
+
+test('EgtSync.hydrate honors an explicit egtFinalized flag on a partial round', () => {
+  const st = freshSyncState();
+  // Only 9 holes carded → not complete, but the phone hit "Finalize round".
+  const changed = EgtSync.hydrate(st, [egtLiveDoc(st.model, 'R3', { thru: 9, egtFinalized: true })]);
+  assert.equal(changed, true);
+  assert.ok(st.finalized.includes('R3'), 'explicit submit wins over incompleteness');
+});
+
+test('EgtSync.hydrate honors an explicit reopen (egtFinalized:false) over completeness', () => {
+  const st = freshSyncState();
+  st.finalized = ['R4'];
+  EgtSync.hydrate(st, [egtLiveDoc(st.model, 'R4', { egtFinalized: false })]);
+  assert.ok(!st.finalized.includes('R4'), 'a reopen on another device un-submits here');
+});
+
+test('EgtSync.hydrate never deletes a locally-entered hole the cloud lacks', () => {
+  const st = freshSyncState();
+  EgtStore.setHoleScore(st, 'R6', 'john', 18, { gross: 5 }); // local-only hole 18
+  EgtSync.hydrate(st, [egtLiveDoc(st.model, 'R6', { thru: 9 })]); // cloud has holes 1..9
+  const par1 = EgtBridge.toNativeRound(st.model, 'R6').course.holes[0].par;
+  assert.equal(st.scores.R6.john[1].gross, par1, 'cloud hole merged');
+  assert.equal(st.scores.R6.john[18].gross, 5, 'local-only hole preserved (non-destructive)');
+});
+
+test('EgtSync.hydrate resolves a live-only doc by native round id when the doc id diverges', () => {
+  const st = freshSyncState();
+  const doc = egtLiveDoc(st.model, 'R1', { thru: 9 });
+  doc.syncCode = 'ZZZZZZ'; // doc landed under a different code; roundId still egt-…-R1
+  const changed = EgtSync.hydrate(st, [doc]);
+  assert.equal(changed, true);
+  assert.ok(st.scores.R1 && st.scores.R1.john && st.scores.R1.john[1], 'still linked via roundId');
+});
+
+test('EgtSync.hydrate is idempotent (no phantom change on a repeat)', () => {
+  const st = freshSyncState();
+  const docs = [egtLiveDoc(st.model, 'R2')];
+  assert.equal(EgtSync.hydrate(st, docs), true);
+  assert.equal(EgtSync.hydrate(st, docs), false, 'a second identical hydrate is a no-op');
+});
+
+test('EgtSync.pushFinalized writes egtFinalized on the round doc via its sync code', () => {
+  const m = freshModel();
+  const calls = [];
+  W.RoundSyncService = { writeMeta: (code, meta, cb) => { calls.push({ code, meta }); cb && cb(true); } };
+  try {
+    EgtSync.pushFinalized(m, 'R2', true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].code, EgtBridge.syncCodeFor(m, 'R2'));
+    jeq(calls[0].meta, { egtFinalized: true });
+  } finally { delete W.RoundSyncService; }
+});
+
+test('EgtSync.pull fetches this trip\'s docs and hydrates them', () => {
+  const st = freshSyncState();
+  const codes = EgtSync.syncCodes(st.model);
+  const doc = egtLiveDoc(st.model, 'R2');
+  W.RoundSyncService = { fetchDocs: (wanted, cb) => { assert.deepEqual(wanted, codes); cb([doc]); } };
+  try {
+    let result = null;
+    EgtSync.pull(st, changed => { result = changed; });
+    assert.equal(result, true);
+    assert.ok(st.finalized.includes('R2'));
+  } finally { delete W.RoundSyncService; }
+});
+
+test('EgtSync gracefully no-ops when the sync service is unavailable', () => {
+  const st = freshSyncState();
+  let pulled = 'unset';
+  EgtSync.pull(st, changed => { pulled = changed; }); // no RoundSyncService in scope
+  assert.equal(pulled, false);
+  assert.equal(typeof EgtSync.subscribe(st, () => {}), 'function', 'returns a safe unsubscribe');
+});

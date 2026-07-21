@@ -95,6 +95,26 @@ Branch `claude/playpal-egt-tournament-25w5g0`.
 - Web/PWA + Capacitor bundle must keep working (build-www copies dist/egt/).
 - Seed is the single source of truth; engine derives pops from courseLibrary SI.
 
+## Done — EGT Cup cross-device submitted-status sync (v1.8.2, branch claude/egt-cup-mobile-sync-twd320)
+- [x] Bug: a round scored + finalized on the phone did not show as submitted
+      (and its scores were missing) when the Cup was opened on the web — the
+      EGT store (scores, events, `finalized`) was localStorage-only.
+- [x] New `components/egt/egtSync.js`: pulls the Firestore round docs the native
+      scorer already streams into the local store — non-destructive score merge
+      + BBB/Wolf events + overlay matches + stake overrides — and reconciles the
+      `finalized` list (explicit flag wins; falls back to score completeness).
+      Boot pull + live subscription wired into EgtTournament; targets only this
+      trip's rounds by deterministic sync code (no full-collection scan).
+- [x] Finalize/reopen (EgtTournament + App `_finishEgtRound`) broadcasts an
+      explicit `egtFinalized` flag so "submitted" propagates before all 18 holes
+      are in, and a reopen propagates too.
+- [x] SportsCenter (`computeEgtFacts`) honors the same explicit flag — TV, app,
+      and every device agree on submitted rounds / standings / money / champion.
+- [x] `EgtBridge` split into `mergeNativeScores` (non-destructive) + `bridgeEvents`;
+      `RoundSyncService` gained `writeMeta` / `fetchDocs` / `subscribeDocs`.
+- [x] 178 tests green (10 new EgtSync tests); browser smoke zero page errors;
+      released 1.8.2 everywhere + CHANGELOG.
+
 ## Done — full audit pass #5 (v1.8.1, EGT Cup + SportsCenter focus)
 - [x] Read every engine module + UI + provider end to end; baseline healthy.
 - [x] Fixed NEW TRIP LEADER alert raw-float points (fmtPts + diffAlerts test).

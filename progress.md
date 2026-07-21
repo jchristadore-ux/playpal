@@ -1,5 +1,53 @@
 # Project Progress
 
+## EGT Cup cross-device submitted-status sync (branch claude/egt-cup-mobile-sync-twd320) — v1.8.2
+
+Reported bug: a round scored and finalized ("submitted") in the EGT Cup →
+Rounds tab on the phone did not show as submitted — and its scores were absent
+— when the Cup was opened on the web, throwing off standings and money.
+
+Root cause: cross-device sync in PlayPal is per-round through Firestore
+`playpal_rounds/<syncCode>`. The **native scorer** streams every EGT round's
+raw hole scores there, and the **SportsCenter** reads the whole collection. But
+the **EGT tournament store** — entered scores, side-game events, and the
+`finalized` list that the engine uses to include a round in standings/money —
+had only ever lived in each device's `localStorage`. Nothing pulled the synced
+scores into the Cup screen, and the finalize gesture never left the device.
+
+Fix (all read the same Firestore data the SportsCenter uses):
+- **`components/egt/egtSync.js`** (new, self-contained: EgtBridge +
+  RoundSyncService only). `hydrate(state, docs)` merges the synced round docs
+  into the local store — non-destructive score merge, BBB/Wolf events, overlay
+  match play, and per-round stake overrides (the last two only from a real
+  saved round, not a synthesized live-only doc) — and reconciles `finalized`
+  (explicit `egtFinalized` flag wins; else falls back to score completeness).
+  `pull` (boot) + `subscribe` (live) target only this trip's rounds by their
+  deterministic sync codes. `pushFinalized` broadcasts the submit/reopen.
+- **EgtTournament.jsx**: boot pull + live subscription (via a `stateRef` so
+  snapshots merge into the latest store, never a stale boot-time copy);
+  `toggleFinalize` pushes the flag. **App.jsx** `_finishEgtRound` pushes on
+  native-scorer finish.
+- **EgtBridge**: `bridge` split into `mergeNativeScores` (non-destructive, for
+  the pull) + `bridgeEvents`; `bridge` itself unchanged for the finalize path.
+- **index.html `RoundSyncService`**: `writeMeta`, `fetchDocs`, `subscribeDocs`.
+- **bottomLineProvider.js**: `normalizeRound` carries `egtFinalized`;
+  `computeEgtFacts` honors it (explicit wins, else completeness) so the
+  broadcast agrees with the app.
+
+Files modified: components/egt/egtBridge.js, components/egt/egtSync.js (new),
+components/bottomLineProvider.js, components/EgtTournament.jsx, components/App.jsx,
+index.html, scripts/build.mjs, tests/helpers/load.mjs, tests/egt.test.mjs, sw.js,
+bottomline.html, package.json, package-lock.json + rebuilt dist/.
+
+Status: **complete — 178 tests green (10 new EgtSync tests), build clean,
+browser smoke (app boot + EGT Cup + Rounds tab) zero console errors.** Released
+1.8.2 everywhere (package(-lock).json, index.html/bottomline.html `?v=`, sw.js
+CACHE_VERSION + precache incl. dist/egt/egtSync.js) + CHANGELOG.
+
+Caveat: scores typed directly into the Cup's Rounds-tab grid (not via the
+native scorer) still don't sync — the native scorer remains the cross-device
+score path; the finalize flag itself always propagates.
+
 ## Full audit pass #5 — all things PlayPal, EGT Cup + SportsCenter focus (branch claude/playpal-egt-audit-t6p8ce) — v1.8.1
 
 Status: **complete — 166 tests green (2 new regressions), browser smoke

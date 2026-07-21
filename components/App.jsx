@@ -336,6 +336,9 @@ const App = () => {
             window.EgtStore.finalizeRound(st, r.egtRoundId);
             try { window.EgtEngine.liveUpdate(st, { season: (st.finalized || []).includes('R6') }); }
             catch (e) { window.EgtStore.save(st); }
+            // Broadcast the submit so the Cup shows as finalized on every device
+            // (the raw scores already streamed to Firestore during play).
+            try { if (window.EgtSync) window.EgtSync.pushFinalized(st.model, r.egtRoundId, true); } catch (e) {}
           } else {
             window.EgtStore.save(st);
           }
