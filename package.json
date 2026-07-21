@@ -19,6 +19,6 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1"
+    "@capacitor/ios": "^8.4.2"
   }
 }
