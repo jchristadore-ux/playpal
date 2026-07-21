@@ -338,10 +338,11 @@ test('R1 flat round: stakes reach the broadcast money tracker (Nines included), 
   assert.ok(facts.egt.state.finalized.includes('R1'), 'R1 finalized on the broadcast');
 
   // The engine settles ALL of R1's stakes — including The Nines, which has no
-  // native format engine and would be lost on a native-payout fallback.
+  // native format engine and would be lost on a native-payout fallback. R1's
+  // BBB and Nines each pay a flat prize to that game's winner (not per point).
   const rm = facts.egt.live.money.rounds.R1;
   const labels = Object.values(rm.breakdown).flat().map(x => x.label);
-  ['BBB', 'Nines'].forEach(l => assert.ok(labels.includes(l), `R1 ${l} money on the broadcast`));
+  ['BBB (winner)', 'Nines (winner)'].forEach(l => assert.ok(labels.includes(l), `R1 ${l} money on the broadcast`));
   assert.ok(Object.values(rm.total).some(v => Math.abs(v) > 0.005), 'R1 money is nonzero');
 
   // The running bankroll carries exactly the engine's R1 money and nets to $0.

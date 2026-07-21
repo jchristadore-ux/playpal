@@ -50,6 +50,24 @@ const EgtMoney = (function () {
     return zeroBalance(vec);
   }
 
+  // Fixed prize to a game's WINNER(S) — the round's champion(s) collect `value`,
+  // funded equally by everyone who didn't win. A tie for first splits the prize
+  // between the co-winners; the losers split the cost. Zero-sum. If there is no
+  // contest (no winner, or everyone tied for first), no money changes hands.
+  // Used for R1's BBB and Nines, which pay a flat prize to the winner rather
+  // than settling per point.
+  function prizeToWinners(ids, winners, value) {
+    const vec = {}; ids.forEach(id => { vec[id] = 0; });
+    const w = (winners || []).filter(id => ids.includes(id));
+    const losers = ids.filter(id => !w.includes(id));
+    if (!w.length || !losers.length || !value) return zeroBalance(vec);
+    const prizeEach = value / w.length;
+    const costEach = value / losers.length;
+    w.forEach(id => { vec[id] = prizeEach; });
+    losers.forEach(id => { vec[id] = -costEach; });
+    return zeroBalance(vec);
+  }
+
   function addVec(target, vec, label, breakdown) {
     Object.entries(vec).forEach(([pid, amt]) => {
       target[pid] = (target[pid] || 0) + amt;
@@ -94,8 +112,12 @@ const EgtMoney = (function () {
 
     // Primary cash game per round.
     if (roundId === 'R1') {
-      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
-      if (results.nines) addVec(total, pairwise(ids, id => results.nines.totals[id] || 0, val('bbbNinesPerPointDiff')), 'Nines', breakdown);
+      // R1 is flat/stakes-only: BBB and Nines each pay a fixed prize to that
+      // game's winner (funded equally by the field), NOT a per-point settlement.
+      // A tie for first splits the prize. Skins are not played for money on R1
+      // (see the skins block below) — the money is BBB + Nines + any side Nassau.
+      if (results.bbb) addVec(total, prizeToWinners(ids, results.bbb.champions, val('bbbNinesWinner')), 'BBB (winner)', breakdown);
+      if (results.nines) addVec(total, prizeToWinners(ids, results.nines.champions, val('bbbNinesWinner')), 'Nines (winner)', breakdown);
     } else if (roundId === 'R2' && results.fourBall) {
       // Nassau: settle each segment team-to-team at nassauPerPoint.
       const segs = results.fourBall.segments;
@@ -149,8 +171,10 @@ const EgtMoney = (function () {
     // primary round-robin; elsewhere these are side bets layered on the format.
     settleMatchPlay(total, results.overlayMatchPlay, val, breakdown);
 
-    // Skins (both pots) every round, valued per skin won at the ante.
-    if (results.skins) {
+    // Skins (both pots) settle every round EXCEPT R1, valued per skin won at the
+    // ante. R1 is BBB + Nines only (each a flat prize to the winner) plus any
+    // side Nassau, so no skins pot is played there.
+    if (results.skins && roundId !== 'R1') {
       addVec(total, pairwise(ids, id => results.skins.gross.won[id] || 0, val('skinsAnte')), 'Skins (gross)', breakdown);
       addVec(total, pairwise(ids, id => results.skins.net.won[id] || 0, val('skinsAnte')), 'Skins (net)', breakdown);
     }
@@ -196,7 +220,7 @@ const EgtMoney = (function () {
     return { rounds, total, netsToZero: Math.abs(Object.values(total).reduce((a, b) => a + b, 0)) < 1e-6 };
   }
 
-  return { cents, zeroBalance, pairwise, teamMatch, prizePot, moneyForRound, passTheMoneySettlement, compute };
+  return { cents, zeroBalance, pairwise, teamMatch, prizePot, prizeToWinners, moneyForRound, passTheMoneySettlement, compute };
 })();
 
 if (typeof window !== 'undefined') {
