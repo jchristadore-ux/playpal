@@ -51,6 +51,36 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
   (it rides on the synthetic team match inside the Nassau format, not the
   top-level stake).
 
+## [1.8.2] — 2026-07-21
+
+### Fixed
+- **EGT Cup rounds finalized on one device now show as submitted on every
+  device.** The tournament store (entered scores, side-game events, and the
+  `finalized` list that drives standings + money) had only ever lived in each
+  device's `localStorage`, so a round scored and finalized ("submitted") on a
+  phone did not appear as submitted — and its scores were missing — when the
+  Cup was opened on the web. The native scorer already streams each EGT round's
+  hole scores to Firestore; the new **`EgtSync`** module pulls those synced
+  rounds into the local store (merging scores non-destructively, plus BBB/Wolf
+  events, overlay match play, and per-round stake overrides) and reconciles the
+  finalized list, then stays live while both devices are open. Finalizing or
+  reopening a round now also broadcasts an explicit `egtFinalized` flag on the
+  round's doc, so the "submitted" state propagates immediately — even before
+  all 18 holes are entered — and a reopen propagates too.
+- **EGT SportsCenter honors the same explicit finalize flag.** The broadcast
+  already derived "submitted" from score completeness; it now also respects an
+  explicit finalize/reopen from the Cup screen, so the TV, the app, and every
+  device agree on which rounds have been submitted (and therefore on the
+  standings, money, and champion).
+
+### Changed
+- `EgtBridge` split its native→EGT translation into `mergeNativeScores`
+  (non-destructive) and `bridgeEvents`, so the cross-device pull can replay a
+  synced round without wiping holes entered elsewhere; the finalize path keeps
+  the original authoritative-overwrite `bridge`. `RoundSyncService` gained
+  `writeMeta`, `fetchDocs`, and `subscribeDocs` for targeted per-round doc I/O
+  by deterministic sync code (no full-collection scan).
+
 ## [1.8.1] — 2026-07-18
 
 ### Fixed

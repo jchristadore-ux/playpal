@@ -177,6 +177,46 @@ const EgtBridge = (function () {
       }
     });
 
+    bridgeEvents(state, roundId, p);
+    return state;
+  }
+
+  // Non-destructive score merge: writes only the holes the payload actually
+  // carries (gross != null) and never deletes a hole that's already stored
+  // locally. Used by the cross-device pull (EgtSync) so pulling in a phone's
+  // scores can't wipe holes typed elsewhere; `bridge` above stays destructive
+  // for the finalize path where the payload is the authoritative full card.
+  function mergeNativeScores(model, state, roundId, payload) {
+    const round = model.rounds.find(r => r.id === roundId);
+    if (!round) return state;
+    const p = payload || {};
+    state.scores[roundId] = state.scores[roundId] || {};
+    round.players.forEach(pid => {
+      const dst = (state.scores[roundId][pid] = state.scores[roundId][pid] || {});
+      for (let i = 0; i < 18; i++) {
+        const gross = p.scores?.[pid]?.[i];
+        if (gross == null) continue;
+        dst[i + 1] = {
+          gross,
+          putts: p.putts?.[pid]?.[i] ?? null,
+          fir: p.firData?.[pid]?.[i] === true,
+          gir: p.girData?.[pid]?.[i] === true,
+          sand: !!(p.extraStats?.[pid]?.[i]?.sand === true),
+        };
+      }
+    });
+    return state;
+  }
+
+  // Translate the native side-game data (Bingo-Bango-Bongo, Wolf) into EGT
+  // events. Split out of `bridge` so the cross-device pull can replay events
+  // without touching the score merge.
+  function bridgeEvents(state, roundId, payload) {
+    const p = payload || {};
+    state.events = state.events || {};
+    state.events.bbb = state.events.bbb || {};
+    state.events.wolf = state.events.wolf || {};
+
     // Bingo-Bango-Bongo events. R1 plays BBB on loop 1 only (holes 1-9; loop 2
     // is The Nines); R5 plays it over the full 18.
     if ((roundId === 'R1' || roundId === 'R5') && p.bbbData) {
@@ -294,7 +334,7 @@ const EgtBridge = (function () {
     };
   }
 
-  return { PALETTE, initialsFor, nativeRoundId, syncCodeFor, formatsFor, playerOrder, toNativeRound, bridge, repairMatchPops, readNativePayload };
+  return { PALETTE, initialsFor, nativeRoundId, syncCodeFor, formatsFor, playerOrder, toNativeRound, bridge, mergeNativeScores, bridgeEvents, repairMatchPops, readNativePayload };
 })();
 
 if (typeof window !== 'undefined') {

@@ -117,6 +117,10 @@ const BottomLineProvider = (function () {
       teeBallData: src.teeBallData || {}, popFlags: src.popFlags || {},
       currentHoleIdx: live && live.currentHoleIdx != null ? live.currentHoleIdx : null,
       payouts: round.payouts || null,
+      // Explicit EGT finalize/reopen flag set from the Cup screen (cross-device
+      // "submitted" signal). null when the doc carries no opinion — callers
+      // then fall back to score completeness.
+      egtFinalized: (typeof doc.egtFinalized === 'boolean') ? doc.egtFinalized : null,
     };
 
     // Per-player thru counts + completion.
@@ -336,7 +340,10 @@ const BottomLineProvider = (function () {
           }
         });
         if (Object.keys(recovered).length) state.stakes[r.egtRoundId] = recovered;
-        if (r.complete) state.finalized.push(r.egtRoundId);
+        // Finalized: an explicit flag from the Cup screen wins; otherwise fall
+        // back to score completeness so the broadcast and the app agree on
+        // which rounds have been submitted.
+        if (r.egtFinalized === true || (r.egtFinalized == null && r.complete)) state.finalized.push(r.egtRoundId);
       } catch (e) {}
     });
 
