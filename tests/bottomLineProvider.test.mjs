@@ -246,10 +246,10 @@ test('EGT Cup segments appear on the feed; no duplicate money card', () => {
   assert.ok(!feed.some(s => s.id === 'egt:money'), 'no separate EGT money card');
 });
 
-test('format boards: skins and stableford standings surface for EGT rounds', () => {
+test('format boards: stableford standings surface for EGT rounds', () => {
   const w = loadWithSeed();
   const now = Date.now();
-  // R6 native formats include stableford + skins; make John run away with it.
+  // R6 native format is stableford; make John run away with it.
   const egt = egtDoc(w, 'R6', throughFill({ john: -1, brian: 1, tj: 1, mike: 2 }, 18), { now });
   const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
   const boards = facts.rounds[0].formatBoards;
@@ -264,7 +264,7 @@ test('SportsCenter reconstructs configured match play from the synced round form
   const model = w.EgtImporter.importSeed(w.EGT_SEED);
   // The app syncs the native round WITH its overlay match config baked into the
   // Nassau format. The provider must recover it so R5 match play + its money
-  // show on the broadcast, not just BBB + skins.
+  // show on the broadcast, not just BBB.
   const matchConfigs = [
     { id: 'm1', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 5 },
   ];
@@ -299,7 +299,7 @@ test('SportsCenter recovers Rounds-tab stake overrides from the synced formats',
   // The organizer bumped R3 stakes on the Rounds tab; the app bakes them into
   // the synced round's format objects. The broadcast must run its money engine
   // at those rates, not the tournament defaults.
-  const stakes = { R3: { wolfPerUnit: 7, skinsAnte: 9 } };
+  const stakes = { R3: { wolfWinner: 7 } };
   const mkDoc = stk => {
     const native = w.EgtBridge.toNativeRound(model, 'R3', stk);
     const holes = native.course.holes;
@@ -317,10 +317,9 @@ test('SportsCenter recovers Rounds-tab stake overrides from the synced formats',
     };
   };
   const withOverride = w.BottomLineProvider.computeFacts({ docs: [mkDoc(stakes)], trips: [], players: [], now });
-  assert.equal(withOverride.egt.state.stakes.R3.wolfPerUnit, 7, 'wolf stake recovered');
-  assert.equal(withOverride.egt.state.stakes.R3.skinsAnte, 9, 'skins ante recovered');
+  assert.equal(withOverride.egt.state.stakes.R3.wolfWinner, 7, 'wolf stake recovered');
   const withDefaults = w.BottomLineProvider.computeFacts({ docs: [mkDoc(null)], trips: [], players: [], now });
-  // Same Wolf result, higher per-unit stake → the winner's engine money must grow.
+  // Same Wolf result, higher flat stake → the winner's engine money must grow.
   const top = f => Math.max(...Object.values(f.egt.live.money.rounds.R3.total));
   assert.ok(top(withOverride) > top(withDefaults),
     `override money ${top(withOverride)} should beat default ${top(withDefaults)}`);
@@ -461,18 +460,16 @@ test('broadcastModules post: SportsCenter recap, player cards, stat pages', () =
   assert.ok(card.player.alias && card.player.logo);
 });
 
-test('broadcastModules post: Skins King and Birdie King leader pages surface', () => {
+test('broadcastModules post: Birdie King leader pages surface (no Skins King)', () => {
   const w = loadWithSeed();
   const P = w.BottomLineProvider;
   const now = Date.now();
-  // Mike birdies every hole (outright low) → he sweeps the gross skins pot
-  // and leads both Birdie King races.
+  // Mike birdies every hole (outright low) → he leads both Birdie King races.
   const doc = egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 1, mike: -1 }, 18), { ts: now - 8 * 3600 * 1000 }).doc;
   const facts = P.computeFacts({ docs: [doc], trips: [], players: [], now });
   const mods = P.broadcastModules(facts, 'post');
-  const skins = mods.find(m => m.id === 'stat-skins');
-  assert.ok(skins, 'Skins King race page present');
-  assert.equal(skins.rows[0].name, 'Mike');
+  // Skins are not played — there is no Skins King page.
+  assert.ok(!mods.find(m => m.id === 'stat-skins'), 'no Skins King race page');
   // The paying race ranks GROSS birdies (4 pts); net is honorary but still shown.
   const gross = mods.find(m => m.id === 'stat-grossbirdies');
   assert.ok(gross, 'Birdie King (gross) race page present');
@@ -529,10 +526,11 @@ test('SportsCenter runs season settlement once R6 is final (awards + PTM money)'
   });
   const facts = w.BottomLineProvider.computeFacts({ docs, trips: [], players: [], now });
   assert.ok(facts.egt.state.finalized.includes('R6'), 'R6 finalized on the broadcast');
-  // Season awards present in the points breakdown (they are 6 of the 36 max).
+  // Season awards present in the points breakdown (they are 5 of the 33 max).
   const cats = new Set();
   Object.values(facts.egt.live.points).forEach(p => p.breakdown.forEach(b => cats.add(b.category)));
-  assert.ok([...cats].some(c => /Skins King/.test(c)), 'Skins King awarded on the broadcast');
+  assert.ok(![...cats].some(c => /Skins King/.test(c)), 'no Skins King award (skins removed)');
+  assert.ok([...cats].some(c => /Par King/.test(c)), 'Par King awarded on the broadcast');
   assert.ok([...cats].some(c => /Birdie King/.test(c)), 'Birdie King awarded on the broadcast');
   // Pass-the-Money settles into the broadcast money and stays zero-sum.
   assert.ok(facts.egt.live.money.rounds.passTheMoney, 'PTM settlement folded in');

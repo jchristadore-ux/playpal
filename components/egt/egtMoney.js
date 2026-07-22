@@ -19,52 +19,51 @@ const EgtMoney = (function () {
     return vec;
   }
 
-  // Pairwise per-quantity settlement: money_i = rate*(n*q_i - Σq). Zero-sum.
-  // Used for BBB, Nines, skins (quantity = points or skins won).
-  function pairwise(ids, quantityOf, rate) {
-    const n = ids.length;
-    const total = ids.reduce((a, id) => a + quantityOf(id), 0);
-    const vec = {};
-    ids.forEach(id => { vec[id] = rate * (n * quantityOf(id) - total); });
+  // Flat prize to a game's WINNER(S): everyone who did NOT win pays the winner
+  // `perPlayer`, and the winners split the collected pot equally. So in a
+  // foursome a $5 game pays the winner $15 (each of the other three pays $5); a
+  // tie for first splits that pot. Zero-sum. No contest (no winner, or everyone
+  // tied for first) → no money. Used for BBB, The Nines, Wolf, and the
+  // individual Stableford — every "$X to the winner from each player" game.
+  function flatFromEach(ids, winners, perPlayer) {
+    const vec = {}; ids.forEach(id => { vec[id] = 0; });
+    const w = (winners || []).filter(id => ids.includes(id));
+    const losers = ids.filter(id => !w.includes(id));
+    if (!w.length || !losers.length || !perPlayer) return zeroBalance(vec);
+    const pot = perPlayer * losers.length;
+    losers.forEach(id => { vec[id] = -perPlayer; });
+    w.forEach(id => { vec[id] = pot / w.length; });
     return zeroBalance(vec);
   }
 
-  // Team match: winners split what losers pay. netPoints = winner − loser.
-  function teamMatch(teamPlayers, winnerTeam, loserTeam, netPoints, rate) {
+  // Flat team result: each player on the winning team collects `perPlayer` from
+  // each player on the losing team (partners never pay each other). A 2v2 at $5
+  // pays each winner $10 and costs each loser $10. Zero-sum. Used for the
+  // four-ball (R2) and the 2v2 aggregate Stableford (R4): the winning team takes
+  // a flat stake off each opponent, with no Nassau segments.
+  function teamFlat(teamPlayers, winnerTeam, loserTeam, perPlayer) {
     const vec = {};
-    const stake = netPoints * rate;
-    const winners = teamPlayers[winnerTeam], losers = teamPlayers[loserTeam];
-    (winners || []).forEach(pid => { vec[pid] = stake / winners.length; });
-    (losers || []).forEach(pid => { vec[pid] = -stake / losers.length; });
+    const winners = teamPlayers[winnerTeam] || [];
+    const losers = teamPlayers[loserTeam] || [];
+    winners.forEach(pid => { vec[pid] = perPlayer * losers.length; });
+    losers.forEach(pid => { vec[pid] = -perPlayer * winners.length; });
     return zeroBalance(vec);
   }
 
-  // Fixed prize (CTP, Long Drive): winner collects `value`, the other players
-  // split the cost equally.
+  // Players tied for the most of some quantity (Wolf units, Stableford points).
+  function topOf(ids, valueOf) {
+    const best = Math.max(...ids.map(id => valueOf(id) || 0));
+    return ids.filter(id => (valueOf(id) || 0) === best);
+  }
+
+  // Fixed prize (Pass-the-Money bill + pot): the holder collects `value`, the
+  // other players split the cost equally.
   function prizePot(ids, winner, value) {
     const vec = {}; ids.forEach(id => { vec[id] = 0; });
     if (!winner || !ids.includes(winner)) return vec;
     const others = ids.filter(id => id !== winner);
     vec[winner] = value;
     others.forEach(id => { vec[id] = -value / others.length; });
-    return zeroBalance(vec);
-  }
-
-  // Fixed prize to a game's WINNER(S) — the round's champion(s) collect `value`,
-  // funded equally by everyone who didn't win. A tie for first splits the prize
-  // between the co-winners; the losers split the cost. Zero-sum. If there is no
-  // contest (no winner, or everyone tied for first), no money changes hands.
-  // Used for R1's BBB and Nines, which pay a flat prize to the winner rather
-  // than settling per point.
-  function prizeToWinners(ids, winners, value) {
-    const vec = {}; ids.forEach(id => { vec[id] = 0; });
-    const w = (winners || []).filter(id => ids.includes(id));
-    const losers = ids.filter(id => !w.includes(id));
-    if (!w.length || !losers.length || !value) return zeroBalance(vec);
-    const prizeEach = value / w.length;
-    const costEach = value / losers.length;
-    w.forEach(id => { vec[id] = prizeEach; });
-    losers.forEach(id => { vec[id] = -costEach; });
     return zeroBalance(vec);
   }
 
@@ -98,7 +97,9 @@ const EgtMoney = (function () {
   }
 
   // Money for one finalized round. `results` bundles that round's calculator
-  // outputs; `events` supplies CTP/LD winners.
+  // outputs. Every game is a flat stake — no per-point / per-unit settlement,
+  // no skins, no CTP / Long Drive. (`events` is accepted for signature
+  // compatibility but no longer drives any money.)
   function moneyForRound(model, roundId, results, events, stakes) {
     const md = model.moneyDefaults;
     // Per-round stake overrides (set on the Rounds tab); fall back to defaults.
@@ -109,81 +110,51 @@ const EgtMoney = (function () {
     const total = {}; ids.forEach(id => { total[id] = 0; });
     const breakdown = {};
     const teamPlayers = {}; (round.teams || []).forEach(t => { teamPlayers[t.name] = t.players; });
+    const otherTeam = name => (round.teams.find(t => t.name !== name) || {}).name;
 
-    // Primary cash game per round.
+    // Primary cash game per round — a flat stake to the winner(s) off each other
+    // player (individual games) or off each opponent (team games).
     if (roundId === 'R1') {
-      // R1 is flat/stakes-only: BBB and Nines each pay a fixed prize to that
-      // game's winner (funded equally by the field), NOT a per-point settlement.
-      // A tie for first splits the prize. Skins are not played for money on R1
-      // (see the skins block below) — the money is BBB + Nines + any side Nassau.
-      if (results.bbb) addVec(total, prizeToWinners(ids, results.bbb.champions, val('bbbNinesWinner')), 'BBB (winner)', breakdown);
-      if (results.nines) addVec(total, prizeToWinners(ids, results.nines.champions, val('bbbNinesWinner')), 'Nines (winner)', breakdown);
+      // Flat/stakes-only: BBB and The Nines each pay the winner a flat stake,
+      // collected from every other player (a tie for first splits the pot).
+      if (results.bbb) addVec(total, flatFromEach(ids, results.bbb.champions, val('bbbNinesWinner')), 'BBB (winner)', breakdown);
+      if (results.nines) addVec(total, flatFromEach(ids, results.nines.champions, val('bbbNinesWinner')), 'Nines (winner)', breakdown);
     } else if (roundId === 'R2' && results.fourBall) {
-      // Nassau: settle each segment team-to-team at nassauPerPoint.
-      const segs = results.fourBall.segments;
-      [['front', segs.front, model.pointsConfig.R2.nassauFront], ['back', segs.back, model.pointsConfig.R2.nassauBack], ['overall', segs.overall, model.pointsConfig.R2.nassauOverall]]
-        .forEach(([name, m, pts]) => {
-          if (m.winnerTeam === 'halve') return;
-          const winner = m.winnerTeam;
-          const loser = round.teams.find(t => t.name !== winner).name;
-          addVec(total, teamMatch(teamPlayers, winner, loser, pts, val('nassauPerPoint')), `Nassau ${name}`, breakdown);
-        });
+      // Four-ball: the winning team takes a flat stake off each opponent — no
+      // Nassau segments. A halved overall match pays nothing.
+      const ov = results.fourBall.segments.overall;
+      if (ov.winnerTeam !== 'halve') {
+        addVec(total, teamFlat(teamPlayers, ov.winnerTeam, otherTeam(ov.winnerTeam), val('fourballWinner')), 'Four-ball (team)', breakdown);
+      }
     } else if (roundId === 'R3' && results.wolf) {
-      // Wolf units are already zero-sum; value each unit.
-      const vec = {}; ids.forEach(id => { vec[id] = (results.wolf.units[id] || 0) * val('wolfPerUnit'); });
-      addVec(total, zeroBalance(vec), 'Wolf', breakdown);
+      // Wolf: the player with the most Wolf units wins a flat stake off each
+      // other player (ties split). Not per unit.
+      addVec(total, flatFromEach(ids, topOf(ids, id => results.wolf.units[id] || 0), val('wolfWinner')), 'Wolf (winner)', breakdown);
     } else if (roundId === 'R4' && results.teamStableford) {
-      // 2v2 aggregate net Stableford: the three segment matches (1-6 / 7-12 /
-      // 13-18) and the 18-hole total settle team-to-team at nassauPerPoint,
-      // valued by the same point weights as the Cup (segment 1 / overall 2).
+      // 2v2 aggregate Stableford: the winning team takes a flat stake off each
+      // opponent — no segments.
       const ts = results.teamStableford;
-      const rate = val('nassauPerPoint');
-      const other = name => (round.teams.find(t => t.name !== name) || {}).name;
-      const pc = model.pointsConfig.R4 || {};
-      ts.segments.forEach((s, i) => {
-        if (s.winner === 'halve') return;
-        addVec(total, teamMatch(teamPlayers, s.winner, other(s.winner), pc.segmentWin || 1, rate), `Stableford seg ${i + 1}`, breakdown);
-      });
       if (ts.overallWinner !== 'halve') {
-        addVec(total, teamMatch(teamPlayers, ts.overallWinner, other(ts.overallWinner), pc.overall18 || 2, rate), 'Stableford 18 total', breakdown);
+        addVec(total, teamFlat(teamPlayers, ts.overallWinner, otherTeam(ts.overallWinner), val('teamStablefordWinner')), 'Stableford (team)', breakdown);
       }
     } else if (roundId === 'R5') {
-      // Full-18 BBB pays a flat prize to the winner (same convention as R1);
-      // the round-robin match play settles via the general overlay pass below
-      // (R5's matches ARE its overlay). Ties for the BBB win split the prize.
-      if (results.bbb) addVec(total, prizeToWinners(ids, results.bbb.champions, val('bbbNinesWinner')), 'BBB (winner)', breakdown);
-    } else if (roundId === 'R6' && results.singles) {
-      // Championship / Bronze singles: each seeded 1v1 settles Nassau-style
-      // (front 1 / back 1 / overall 2 units) at nassauPerPoint. Zero-sum per pair.
-      const rate = val('nassauPerPoint');
-      results.singles.results.forEach(pr => {
-        [['front', pr.front, 1], ['back', pr.back, 1], ['overall', pr.match, 2]].forEach(([name, seg, units]) => {
-          if (!seg || seg.winner === 'halve') return;
-          const w = seg.winner === 'A' ? pr.a : pr.b;
-          const l = seg.winner === 'A' ? pr.b : pr.a;
-          const vec = {}; vec[w] = units * rate; vec[l] = -units * rate;
-          addVec(total, zeroBalance(vec), `Singles ${pr.a.slice(0, 2)}v${pr.b.slice(0, 2)} ${name}`, breakdown);
-        });
-      });
+      // Full-18 BBB pays the winner a flat stake off each player (same as R1);
+      // the round-robin match play settles via the overlay pass below.
+      if (results.bbb) addVec(total, flatFromEach(ids, results.bbb.champions, val('bbbNinesWinner')), 'BBB (winner)', breakdown);
+    } else if (roundId === 'R6' && results.stableford) {
+      // Championship night: the individual Stableford winner takes a flat stake
+      // off each other player (ties split). The seeded singles decide Cup
+      // placement but carry no separate cash.
+      addVec(total, flatFromEach(ids, topOf(ids, id => results.stableford.totals[id] || 0), val('stablefordWinner')), 'Stableford (winner)', breakdown);
     }
 
-    // Overlay individual-Nassau side matches settle on every round (any money
-    // wagered through the Nassau engine is tallied). For R5 this is the round's
-    // primary round-robin; elsewhere these are side bets layered on the format.
+    // Overlay individual-Nassau side matches settle on every round — their
+    // stakes are set per match before play (front · back · overall). For R5 this
+    // is the round's primary round-robin; elsewhere they are side bets.
     settleMatchPlay(total, results.overlayMatchPlay, val, breakdown);
 
-    // Skins are NOT played for money on any round. They are still derived from
-    // the entered scores by the skins calculator so the Cup's Skins King award
-    // and the total-skins tiebreaker keep working — they just don't settle cash.
-    // (Each round's money is its primary format + any side Nassau.)
-
-    // CTP / Long Drive prizes for this round.
-    (events?.ctp || []).filter(e => e.round === roundId).forEach(e => {
-      addVec(total, prizePot(ids, e.player, val('ctpLd')), `CTP h${e.hole}`, breakdown);
-    });
-    (events?.longDrive || []).filter(e => e.round === roundId).forEach(e => {
-      addVec(total, prizePot(ids, e.player, val('ctpLd')), `Long Drive h${e.hole}`, breakdown);
-    });
+    // No skins, CTP, or Long Drive money on any round — every cash game is the
+    // flat primary format plus any side Nassau.
 
     zeroBalance(total);
     return { roundId, total, breakdown, netsToZero: Math.abs(Object.values(total).reduce((a, b) => a + b, 0)) < 1e-6 };
@@ -218,7 +189,7 @@ const EgtMoney = (function () {
     return { rounds, total, netsToZero: Math.abs(Object.values(total).reduce((a, b) => a + b, 0)) < 1e-6 };
   }
 
-  return { cents, zeroBalance, pairwise, teamMatch, prizePot, prizeToWinners, moneyForRound, passTheMoneySettlement, compute };
+  return { cents, zeroBalance, flatFromEach, teamFlat, topOf, prizePot, moneyForRound, passTheMoneySettlement, compute };
 })();
 
 if (typeof window !== 'undefined') {

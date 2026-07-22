@@ -13,7 +13,7 @@
 // Brief plain-English format notes shown on each round in the list.
 const EGT_ROUND_FORMATS = {
   R1: 'Loop 1 — Bingo-Bango-Bongo: 3 pts/hole (first on green, closest once all are on, first in the hole), gross. Loop 2 — The Nines: 9 pts/hole split 5/3/1 by net score, ties split; scored on 9-hole handicaps off the low.',
-  R2: 'Four-ball best-ball match play at 90%, plus a Nassau (front 9 · back 9 · overall). Each hole the team’s better net ball counts.',
+  R2: 'Four-ball best-ball match play at 90% — each hole the team’s better net ball counts. The winning team takes a flat stake off each opponent.',
   R3: 'Wolf: the rotating Wolf partners the next player or goes lone/blind; ±units per opponent, ties push. Best net ball, 100% off the low ball.',
   R4: '2-v-2 aggregate net Stableford at 85% — both partners’ points count. Segment matches on holes 1–6, 7–12, 13–18 plus the 18-hole total; pick up at net double bogey.',
   R5: 'Full-round Bingo-Bango-Bongo: 3 pts/hole (first on green, closest once all are on, first in the hole), gross. Plus match play — set the matches before the round (1v1 or 2v2, any players); the higher handicap gets the difference in strokes; each match settles Nassau-style (front · back · overall).',
@@ -22,26 +22,25 @@ const EGT_ROUND_FORMATS = {
 
 // Game labels + a one-line note on how each game's pops are taken.
 const EGT_GAME_LABELS = {
-  skinsNet: 'Skins (net)', nines: 'The Nines', fourBallMatch: 'Four-ball match',
+  skinsNet: 'Net (off low)', nines: 'The Nines', fourBallMatch: 'Four-ball match',
   wolf: 'Wolf', teamStableford: 'Team Stableford', stableford: 'Stableford',
 };
 
-// Editable money stakes per round (Rounds tab). key maps to moneyDefaults;
-// `per` labels the unit. Skins are not played for money on any round (they still
-// feed the Cup's Skins King award), so no skins ante appears here. BBB pays a
-// flat prize to the winner on R1 and R5; the head-to-head cash game (BBB/Nines,
-// Nassau, Wolf) is listed on the round that plays it.
+// Editable money stakes per round (Rounds tab). key maps to moneyDefaults.
+// Every game is a flat stake to the winner — no per-point / per-unit settlement,
+// and no skins on any round. Each round's primary game is listed here; the side
+// Nassau matches carry their own stakes, set per match. `per` labels the unit.
 const EGT_STAKE_ITEMS = {
   R1: [{ key: 'bbbNinesWinner', label: 'BBB / Nines', per: 'to winner' }],
-  R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }],
-  R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }],
-  R4: [{ key: 'nassauPerPoint', label: 'Stableford match', per: 'per point' }],
-  R5: [{ key: 'bbbNinesWinner', label: 'BBB', per: 'to winner' }, { key: 'nassauPerPoint', label: 'Match play', per: 'per point' }],
-  R6: [{ key: 'nassauPerPoint', label: 'Singles', per: 'per point' }],
+  R2: [{ key: 'fourballWinner', label: 'Four-ball', per: 'to winner' }],
+  R3: [{ key: 'wolfWinner', label: 'Wolf', per: 'to winner' }],
+  R4: [{ key: 'teamStablefordWinner', label: 'Stableford', per: 'to winner' }],
+  R5: [{ key: 'bbbNinesWinner', label: 'BBB', per: 'to winner' }],
+  R6: [{ key: 'stablefordWinner', label: 'Stableford', per: 'to winner' }],
 };
 
 const EGT_MATCH_HINT = {
-  R2: 'These individual matches run alongside the four-ball team Nassau — same scores, no re-entry.',
+  R2: 'These individual matches run alongside the four-ball team match — same scores, no re-entry.',
   R5: 'These matches ARE the R5 match play — add the round-robin 1v1s (or any 2v2 mix) layered on Bingo-Bango-Bongo.',
 };
 
@@ -256,9 +255,9 @@ const EgtTournament = ({ onScoreRound }) => {
   };
 
   // ── standings tab ─────────────────────────────────────────────────────────
-  // The four season award races, live from the same engine pass that drives the
-  // standings — so every Cup category (points, money, skins, birdies, putts,
-  // FIR+GIR) has a visible leader before final settlement.
+  // The season award races, live from the same engine pass that drives the
+  // standings — so every Cup category (points, money, birdies, putts, FIR+GIR)
+  // has a visible leader before final settlement.
   const awardRaces = () => {
     const stats = live.tourneyStats || {};
     const played = model.players.filter(p => (stats[p.id]?.rounds || 0) > 0);
@@ -273,7 +272,6 @@ const EgtTournament = ({ onScoreRound }) => {
       return { label, pts, rows, leaders, unit };
     };
     return [
-      race('Skins King', '2 pts', pid => live.skins?.[pid] || 0, false, 'skins'),
       race('Birdie King (gross)', '4 pts', pid => stats[pid]?.grossBirdies || 0, false, 'gross birdies'),
       race('Par King', '2 pts', pid => stats[pid]?.pars || 0, false, 'pars'),
       race('Bogey God', '1 pt', pid => stats[pid]?.bogeys || 0, false, 'bogeys'),
@@ -502,7 +500,7 @@ const EgtTournament = ({ onScoreRound }) => {
             )}
 
             {/* Handicaps + pops — course handicap once, then EVERY game's pops.
-                Different games take strokes on different bases (skins = full
+                Different games take strokes on different bases (net scoring = full
                 18-hole off the low; The Nines = 9-hole off the low over loop 2),
                 so showing them per game avoids the "why only 4 pops?" confusion. */}
             <EgtSectionHead>Handicaps &amp; Pops</EgtSectionHead>
@@ -604,7 +602,7 @@ const EgtTournament = ({ onScoreRound }) => {
               {!matches.length && (
                 <div style={{ fontSize: 11, color: '#9a6a00', marginTop: 6 }}>
                   {round.id === 'R5'
-                    ? 'No matches yet — the round will launch with BBB + Skins only until you add matches.'
+                    ? 'No matches yet — the round will launch with BBB only until you add matches.'
                     : 'No individual matches yet — optional. Tap + ADD MATCH to layer a Nassau on this round.'}
                 </div>
               )}

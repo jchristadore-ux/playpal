@@ -5,25 +5,34 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 ## [Unreleased]
 
 ### Changed
-- **Bingo-Bango-Bongo money corrected to a flat prize to the winner (R1 and
-  R5).** BBB — and The Nines on R1 — each now pay a **flat prize to that game's
-  winner** (default `$5`, funded equally by the field; a tie for first splits
-  the prize) instead of settling `$1` per point of difference. A per-point
-  settlement produced wildly inflated swings (81 Nines points in play, or a
-  full 18 holes of gross BBB, could move `$50+`). New `bbbNinesWinner` money
-  default (Rounds-tab editable).
-- **Skins are no longer played for money on any round.** Previously every round
-  except R1 settled skins at the ante, collected pairwise from each other
-  player (a `$5` skin was worth `$15` to the winner in a foursome, across both
-  the gross and net pots). Skins are still derived from the entered scores so
-  the Cup's **Skins King** award and the total-skins tiebreaker keep working —
-  they just no longer move cash. The skins ante was removed from the Rounds-tab
-  stake editor.
-- Each round's money is now its **primary format plus any side Nassau** only.
-  The overlay `$2`-style Nassau side matches (front · back · overall) settle as
-  before, each only between its own pair. Regression tests cover the R1/R5
-  winner prize, the tie split, the absence of skins money on every finalized
-  round, and that skins stay tracked for the Cup.
+- **The whole EGT money model is now flat stakes — no per-point or per-unit
+  settlement anywhere, across the app and the SportsCenter broadcast.** Every
+  cash game pays a flat `$5` (Rounds-tab editable per game):
+  - **BBB, The Nines, Wolf and the individual Stableford (R6)** each pay the
+    **winner `$5` from every other player** — so the winner nets `$15` in a
+    foursome; a tie for first splits the pot. (Was: BBB/Nines `$1`/point, Wolf
+    `$2`/unit.)
+  - **Four-ball (R2) and 2v2 aggregate Stableford (R4)** — the **winning team
+    takes `$5` off each opponent** (each winner `+$10`, each loser `−$10` in a
+    2v2), a single flat result with no Nassau segments. (Was: team Nassau at
+    `$5`/point across front/back/overall.)
+  - **Individual Nassau side matches** keep their own stakes, set per match
+    (front · back · overall), unchanged.
+  - New money defaults `wolfWinner`, `fourballWinner`, `teamStablefordWinner`,
+    `stablefordWinner` (all `$5`); `bbbNinesWinner` reused for R1/R5 BBB and R1
+    Nines. Removed `bbbNinesPerPointDiff`, `wolfPerUnit`, `skinsAnte`, `ctpLd`.
+- **Skins are removed everywhere** — no skins money on any round, no skins
+  tracker in scoring, no Skins King race on the broadcast, and the **Skins King
+  season award and the total-skins tiebreaker are gone** (per-player Cup ceiling
+  drops from 35 to 33; five season awards remain). The internal net-stroke
+  allocation that Pass-the-Money and net-birdie stats rely on is unchanged.
+- **No CTP or Long Drive** — both are removed from the money engine, the seed
+  side games, and the SportsCenter feed.
+- **Pass-the-Money is now a `$5` bill** (was `$20`); the `$1`-per-3-putt pot and
+  net-birdie steal are unchanged.
+- Tests updated across the board (flat winner/team settlements, tie splits,
+  no skins/CTP/LD money, the 33-point ceiling, the recovered flat stakes on the
+  broadcast) and `dist/` rebuilt.
 
 ## [1.8.1] — 2026-07-18
 

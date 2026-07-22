@@ -56,11 +56,11 @@ const EgtEngine = (function () {
     return ctx;
   }
 
-  // Run every calculator relevant to a round; skins runs every round.
+  // Run every calculator relevant to a round.
   function runRound(state, roundId) {
     const ctx = buildRoundCtx(state, roundId);
     const sc = S();
-    const out = { skins: sc.skins(ctx) };
+    const out = {};
     // Overlay individual-Nassau matches settle on every round (side bets that
     // fold into the zero-sum tournament money). For R5 these matches ARE the
     // round's primary match play, so it also drives Cup points (below).
@@ -93,24 +93,10 @@ const EgtEngine = (function () {
   }
 
   // Round ids that count toward the tournament (standings, awards, tiebreakers).
-  // R1 is flat/stakes-only — its skins and stats stay out of everything but money.
+  // R1 is flat/stakes-only — its stats stay out of everything but money.
   function tourneyRoundIds() {
     const excluded = (P().STANDINGS_EXCLUDED_ROUNDS) || [];
     return rid => !excluded.includes(rid);
-  }
-
-  // Cumulative skins won (gross + net) across finalized TOURNEY rounds (R2-R6)
-  // — the Skins King award and the total-skins tiebreaker.
-  function skinsTotals(resultsByRound) {
-    const counts = tourneyRoundIds();
-    const totals = {};
-    Object.entries(resultsByRound).forEach(([rid, r]) => {
-      if (!counts(rid) || !r.skins) return;
-      ['gross', 'net'].forEach(pot => {
-        Object.entries(r.skins[pot].won).forEach(([pid, n]) => { totals[pid] = (totals[pid] || 0) + n; });
-      });
-    });
-    return totals;
   }
 
   // Head-to-head match wins (four-ball overall, alt-shot, singles) — tiebreaker.
@@ -149,13 +135,12 @@ const EgtEngine = (function () {
       const preFinalized = (state.finalized || []).filter(rid => rid !== 'R6');
       const preResults = resultsForFinalized(Object.assign({}, state, { finalized: preFinalized }));
       const preBoard = standingsMod.leaderboard(model, P().compute(model, preResults, null), {
-        r6Stableford: {}, headToHead: headToHead(model, preResults), skins: skinsTotals(preResults),
+        r6Stableford: {}, headToHead: headToHead(model, preResults),
       });
       store.setEvent(state, 'singlesPairings', standingsMod.reseedR6(preBoard));
     }
 
     const resultsByRound = resultsForFinalized(state);
-    const skins = skinsTotals(resultsByRound);
     const h2h = headToHead(model, resultsByRound);
     const r6Stab = resultsByRound.R6?.stableford?.totals || {};
 
@@ -171,14 +156,14 @@ const EgtEngine = (function () {
     // only (R2-R6) — R1 stats never feed Birdie King / Flat Stick / Iron Man.
     let seasonInputs = null, ptm = null;
     if (o.season) {
-      seasonInputs = { final: true, seasonStats: tourneyStats, skinsTotals: skins };
+      seasonInputs = { final: true, seasonStats: tourneyStats };
       ptm = SG().passTheMoney(model, state.scores); // The Rock runs R2-R6 already
     }
 
     const points = P().compute(model, resultsByRound, seasonInputs);
     const money = M().compute(model, resultsByRound, state.events, ptm, state.stakes);
 
-    const tie = { r6Stableford: r6Stab, headToHead: h2h, skins };
+    const tie = { r6Stableford: r6Stab, headToHead: h2h };
     let board = standingsMod.leaderboard(model, points, tie);
 
     // Determine current night from the latest finalized round.
@@ -202,10 +187,10 @@ const EgtEngine = (function () {
     });
     if (!o.noPersist) store.addSnapshot(state, snapshot);
 
-    return { resultsByRound, points, money, standings: board, night, snapshot, r6Pairings, skins, headToHead: h2h, ptm, tourneyStats };
+    return { resultsByRound, points, money, standings: board, night, snapshot, r6Pairings, headToHead: h2h, ptm, tourneyStats };
   }
 
-  return { buildRoundCtx, runRound, resultsForFinalized, skinsTotals, headToHead, liveUpdate };
+  return { buildRoundCtx, runRound, resultsForFinalized, headToHead, liveUpdate };
 })();
 
 if (typeof window !== 'undefined') {

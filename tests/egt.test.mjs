@@ -230,7 +230,7 @@ test('§8 money: every finalized round nets to $0', () => {
   assert.ok(Math.abs(grand) < 1e-6, `total money must net zero, got ${grand}`);
 });
 
-test('R4 aggregate Stableford carries direct money (segments + 18 total), zero-sum', () => {
+test('R4 aggregate Stableford: the winning team takes a flat stake off each opponent, zero-sum', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
@@ -238,13 +238,17 @@ test('R4 aggregate Stableford carries direct money (segments + 18 total), zero-s
   state.finalized = ['R4'];
   const rm = EgtEngine.liveUpdate(state, { noPersist: true }).money.rounds.R4;
   const labels = Object.values(rm.breakdown).flat().map(x => x.label);
-  assert.ok(labels.some(l => /Stableford seg/.test(l)), 'R4 settles segment matches for money');
-  assert.ok(labels.some(l => /Stableford 18 total/.test(l)), 'R4 settles the 18-hole total');
+  assert.ok(labels.includes('Stableford (team)'), 'R4 settles one flat team stake');
+  assert.ok(!labels.some(l => /seg|18 total|point/i.test(l)), 'no per-segment / per-point money');
+  // A 2v2 at $5: each winner collects $5 off each of the two opponents (+$10);
+  // each loser pays $5 to each of the two winners (−$10).
+  assert.deepEqual([rm.total.brian, rm.total.mike].sort((a, b) => a - b), [10, 10], 'winning team +$10 each');
+  assert.deepEqual([rm.total.john, rm.total.tj].sort((a, b) => a - b), [-10, -10], 'losing team −$10 each');
   const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, `R4 money nets zero, got ${sum}`);
 });
 
-test('R6 championship singles carry direct money (Nassau per seeded match), zero-sum', () => {
+test('R6 championship night: the individual Stableford winner takes a flat stake off each player, zero-sum', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
@@ -252,10 +256,11 @@ test('R6 championship singles carry direct money (Nassau per seeded match), zero
   // R5 must be finalized so the singles are seeded; both computed in one pass.
   state.finalized = ['R5', 'R6'];
   const live = EgtEngine.liveUpdate(state, { noPersist: true });
-  assert.ok((state.events.singlesPairings || []).length === 2, 'R6 singles seeded off R5 standings');
+  assert.ok((state.events.singlesPairings || []).length === 2, 'R6 singles still seeded off R5 standings (Cup placement)');
   const rm = live.money.rounds.R6;
   const labels = Object.values(rm.breakdown).flat().map(x => x.label);
-  assert.ok(labels.some(l => /^Singles /.test(l)), 'R6 singles settle for money');
+  assert.ok(labels.includes('Stableford (winner)'), 'R6 money is the flat Stableford prize');
+  assert.ok(!labels.some(l => /^Singles/.test(l)), 'the seeded singles carry no separate cash');
   const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, `R6 money nets zero, got ${sum}`);
 });
@@ -296,10 +301,10 @@ test('R1 flat/stakes-only: BBB + Nines pay a flat prize to the winner, skins are
   // BBB / Nines settle as a fixed prize to the winner, NOT per point.
   assert.ok(labels.includes('BBB (winner)'), 'R1 BBB pays a flat prize to the winner');
   assert.ok(labels.includes('Nines (winner)'), 'R1 Nines pays a flat prize to the winner');
-  // The BBB winner (john) nets exactly the flat prize ($5), the field splits the cost.
+  // The BBB winner (john) collects the flat stake from EACH other player.
   const bbbJohn = rm.breakdown.john.find(x => x.label === 'BBB (winner)');
-  assert.equal(bbbJohn.amount, m.moneyDefaults.bbbNinesWinner, 'BBB winner collects the flat prize');
-  assert.equal(rm.breakdown.tj.find(x => x.label === 'BBB (winner)').amount, -m.moneyDefaults.bbbNinesWinner / 2, 'BBB losers split the cost');
+  assert.equal(bbbJohn.amount, m.moneyDefaults.bbbNinesWinner * 2, 'BBB winner collects $5 from each of the two others');
+  assert.equal(rm.breakdown.tj.find(x => x.label === 'BBB (winner)').amount, -m.moneyDefaults.bbbNinesWinner, 'each loser pays the BBB winner $5');
   // Skins are NOT played for money on R1.
   assert.ok(!labels.some(l => /^Skins/.test(l)), 'R1 has no skins money');
   // The two side Nassaus settle (front · back · overall), each between only its pair.
@@ -318,18 +323,22 @@ test('R1 flat/stakes-only: BBB + Nines pay a flat prize to the winner, skins are
   live.standings.forEach(s => assert.equal(s.points, 0, 'standings unaffected by the flat round'));
 });
 
-test('R1 BBB/Nines tie splits the flat prize between co-winners; all tied = no money', () => {
-  const m = freshModel();
+test('flatFromEach: winner collects the stake from each other player; ties split the pot; all tied = no money', () => {
   const ids = ['john', 'tj', 'mike'];
-  // Two-way tie for the win: john & tj share the $5 prize, mike pays it.
-  const twoWay = EgtMoney.prizeToWinners(ids, ['john', 'tj'], 5);
+  // Sole winner: john collects $5 from each of the two others (+$10).
+  const solo = EgtMoney.flatFromEach(ids, ['john'], 5);
+  assert.equal(solo.john, 10);
+  assert.equal(solo.tj, -5);
+  assert.equal(solo.mike, -5);
+  // Two-way tie: john & tj split the pot the single loser (mike) pays.
+  const twoWay = EgtMoney.flatFromEach(ids, ['john', 'tj'], 5);
   assert.equal(twoWay.john, 2.5);
   assert.equal(twoWay.tj, 2.5);
   assert.equal(twoWay.mike, -5);
   assert.ok(Math.abs(twoWay.john + twoWay.tj + twoWay.mike) < 1e-9, 'tie split is zero-sum');
   // Everyone tied for first → no contest, no money.
-  const allTied = EgtMoney.prizeToWinners(ids, ids, 5);
-  ids.forEach(id => assert.equal(allTied[id], 0, 'a three-way tie moves no money'));
+  const allTied = EgtMoney.flatFromEach(ids, ids, 5);
+  ids.forEach(id => assert.equal(allTied[id], 0, 'a full tie moves no money'));
 });
 
 // ── standings + reseed ──────────────────────────────────────────────────────
@@ -386,7 +395,7 @@ test('toNativeRound builds a scoreable app round from a seed round', () => {
   assert.equal(nr.course.slope, 114);
   // formats are OBJECTS {type,...} (ScoreEntry reads f.type), not bare strings.
   assert.ok(nr.formats.every(f => typeof f === 'object' && f.type));
-  assert.ok(nr.formats.some(f => f.type === 'skins'));
+  assert.ok(!nr.formats.some(f => f.type === 'skins'), 'skins are not played — no skins format');
   // R2 four-ball → Nassau 2v2 with the seed teams (John+TJ vs Brian+Mike —
   // John & TJ are paired at Ballyowen by request).
   const nassau = nr.formats.find(f => f.type === 'nassau');
@@ -397,18 +406,18 @@ test('toNativeRound builds a scoreable app round from a seed round', () => {
 test('toNativeRound wires each round to its native format engine', () => {
   const m = freshModel();
   const typesFor = rid => EgtBridge.toNativeRound(m, rid).formats.map(f => f.type).sort();
-  jeq(typesFor('R1'), ['bingobangobongo', 'skins']);   // BBB tracker fires on R1
-  jeq(typesFor('R3'), ['skins', 'wolf']);
-  jeq(typesFor('R4'), ['skins', 'stableford']);
-  jeq(typesFor('R5'), ['bingobangobongo', 'skins']); // no matches configured -> no Nassau tracker
-  jeq(typesFor('R6'), ['skins', 'stableford']);
+  jeq(typesFor('R1'), ['bingobangobongo']);   // BBB tracker fires on R1 (no skins)
+  jeq(typesFor('R3'), ['wolf']);
+  jeq(typesFor('R4'), ['stableford']);
+  jeq(typesFor('R5'), ['bingobangobongo']); // no matches configured -> no Nassau tracker
+  jeq(typesFor('R6'), ['stableford']);
   // R3 Wolf uses the seed's rotation order so the native Wolf-of-the-hole matches.
   jeq(EgtBridge.toNativeRound(m, 'R3').players.map(p => p.id), ['tj', 'mike', 'brian', 'john']);
 });
 
 test('R5 native Nassau carries exactly the configured matches (no default)', () => {
   const m = freshModel();
-  // No matches configured: BBB + skins only.
+  // No matches configured: BBB only.
   assert.equal(EgtBridge.toNativeRound(m, 'R5').formats.find(f => f.type === 'nassau'), undefined);
   // Configure one 1v1 (auto pops from CH) and one 2v2.
   const matchConfigs = [
@@ -477,7 +486,7 @@ test('R5 is now full-18 BBB + configurable match play (format override)', () => 
   const r5 = m.rounds.find(r => r.id === 'R5');
   assert.equal(r5.primaryGame, 'bingoBangoBongo+matchPlay');
   jeq(m.pointsConfig.R5, { bbbChampion: 2, matchPlayChampion: 2 }); // stays worth 4
-  jeq(m.pointsConfig.maxPossible, { john: 35, brian: 35, tj: 35, mike: 35 });
+  jeq(m.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
 });
 
 test('R5 match play honors the configured matches (1v1 + 2v2, records, no default)', () => {
@@ -576,26 +585,26 @@ test('R1 (Minerals) awards no Cup points and is excluded from the standings', ()
   assert.ok(EgtPoints.STANDINGS_EXCLUDED_ROUNDS.includes('R1'));
 });
 
-test('adjusted Max possible drops R1 (all four now cap at 35)', () => {
+test('adjusted Max possible drops R1 (all four now cap at 33)', () => {
   const m = freshModel();
-  jeq(m.pointsConfig.maxPossible, { john: 35, brian: 35, tj: 35, mike: 35 });
+  jeq(m.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
 });
 
-test('rehydrating a stale persisted model refreshes Max to 35 (idempotent)', () => {
+test('rehydrating a stale persisted model refreshes Max to 33 (idempotent)', () => {
   // Simulate a pre-adjustment install: persisted model still carries the seed's
   // original ceilings. Rehydrate must correct them — and re-running must not
   // subtract again.
   const state = EgtStore.importSeed(JSON.parse(JSON.stringify(SEED)));
   state.model.pointsConfig = { ...state.model.pointsConfig, maxPossible: { john: 36, tj: 36, mike: 36, brian: 30 } };
   EgtStore.rehydrate(state);
-  jeq(state.model.pointsConfig.maxPossible, { john: 35, brian: 35, tj: 35, mike: 35 });
+  jeq(state.model.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
   EgtStore.rehydrate(state); // second run: unchanged
-  jeq(state.model.pointsConfig.maxPossible, { john: 35, brian: 35, tj: 35, mike: 35 });
+  jeq(state.model.pointsConfig.maxPossible, { john: 33, brian: 33, tj: 33, mike: 33 });
   EgtStore.reset(SEED.trip.id);
 });
 
 // ── points breakdown (display) stays in lockstep with the scoring engine ────
-test('roundPointsBreakdown: team/individual modes, per-round maxes, 35-pt ceiling', () => {
+test('roundPointsBreakdown: team/individual modes, per-round maxes, 33-pt ceiling', () => {
   const m = freshModel();
   const bd = {};
   m.rounds.forEach(r => { bd[r.id] = EgtPoints.roundPointsBreakdown(m, r.id); });
@@ -615,33 +624,28 @@ test('roundPointsBreakdown: team/individual modes, per-round maxes, 35-pt ceilin
   assert.equal(bd.R2.items.reduce((a, x) => a + x.pts, 0), 4, 'R2: front 1 + back 1 + overall 2');
   assert.equal(bd.R4.items.reduce((a, x) => a + x.pts, 0), 5, 'R4: 3 segments + 18-hole total');
   assert.equal(bd.R5.items.reduce((a, x) => a + x.pts, 0), 4, 'R5: BBB champ 2 + match-play champ 2');
-  // Round maxes + season awards reproduce the adjusted 35-point ceiling.
+  // Round maxes + season awards reproduce the adjusted 33-point ceiling.
   const awards = EgtPoints.seasonAwardsBreakdown(m);
-  assert.equal(awards.max, 11, 'season awards worth 11');
+  assert.equal(awards.max, 9, 'season awards worth 9 (no Skins King)');
   const ceiling = ['R2', 'R3', 'R4', 'R5', 'R6'].reduce((a, rid) => a + bd[rid].max, 0) + awards.max;
-  assert.equal(ceiling, 35, 'the advertised 35 points');
+  assert.equal(ceiling, 33, 'the advertised 33 points');
   const adj = EgtPoints.adjustedMaxPossible(m);
   m.players.forEach(p => assert.equal(adj[p.id], ceiling, `${p.id} ceiling matches breakdown`));
 });
 
-test('R1 skins and stats stay out of the tourney (tiebreaker + season awards)', () => {
+test('R1 stats stay out of the tourney (season awards + Cup points)', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
-  // Give john monster R1 numbers and brian modest R2 numbers.
   fillPlausibleScores(m, state);
   state.finalized = ['R1', 'R2'];
   const live = EgtEngine.liveUpdate(state, { noPersist: true, season: true });
-  // Total-skins tiebreaker: R1 skins must not be counted.
-  const r1 = EgtEngine.runRound(state, 'R1');
-  const r1SkinsJohn = (r1.skins.gross.won.john || 0) + (r1.skins.net.won.john || 0);
-  const r2 = EgtEngine.runRound(state, 'R2');
-  const r2SkinsJohn = (r2.skins.gross.won.john || 0) + (r2.skins.net.won.john || 0);
-  assert.equal(live.skins.john || 0, r2SkinsJohn, 'tiebreaker counts R2 only');
-  assert.ok(r1SkinsJohn >= 0); // sanity
-  // Season awards (Birdie King etc.) must ignore R1 scores: putts totals in the
-  // awards path come from R2 only. Verify via points breakdown labels — no
-  // R1-derived award anomalies; simply assert compute ran and R1 gave 0 points.
+  // Season awards (Birdie King etc.) must ignore R1 scores: the tourney stats
+  // that feed them come from R2-R6 only, never R1.
+  const nonR1 = {};
+  Object.keys(state.scores).forEach(rid => { if (rid !== 'R1') nonR1[rid] = state.scores[rid]; });
+  assert.deepEqual(live.tourneyStats.john, EgtSideGames.seasonStats(m, nonR1).john, 'award stats exclude R1');
+  // R1 also awards no Cup points.
   const r1Points = live.points.john.breakdown.filter(b => /BBB|Nines/.test(b.category));
   assert.equal(r1Points.length, 0, 'no R1 point awards in breakdown');
 });
@@ -666,14 +670,14 @@ test('liveUpdate exposes cumulative putts/FIR/GIR over R2-R6 only', () => {
 test('stakes override scales a round\'s money (still nets to $0)', () => {
   const m = freshModel();
   const results = { wolf: { units: { john: 3, brian: -1, tj: -1, mike: -1 } } };
-  const base = EgtMoney.moneyForRound(m, 'R3', results, {});                       // default $2/unit
-  const bumped = EgtMoney.moneyForRound(m, 'R3', results, {}, { R3: { wolfPerUnit: 50 } });
+  const base = EgtMoney.moneyForRound(m, 'R3', results, {});                       // default $5 to winner
+  const bumped = EgtMoney.moneyForRound(m, 'R3', results, {}, { R3: { wolfWinner: 50 } });
   assert.ok(Math.abs(bumped.total.john) > Math.abs(base.total.john), 'bigger stake → bigger swing');
   const sum = Object.values(bumped.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, 'still nets to zero');
 });
 
-test('skins are never settled for money (any round), but stay tracked for the Cup', () => {
+test('skins are removed everywhere — no money, no calculator output, no Skins King award', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
@@ -685,13 +689,13 @@ test('skins are never settled for money (any round), but stay tracked for the Cu
     const labels = Object.values(rm.breakdown).flat().map(x => x.label);
     assert.ok(!labels.some(l => /^Skins/.test(l)), 'no round settles skins for money');
   });
-  // …yet skins are still derived from the scores (Skins King award / tiebreaker).
-  const r2 = EgtEngine.runRound(state, 'R2');
-  assert.ok(r2.skins && r2.skins.gross && r2.skins.net, 'skins still computed from scores');
-  assert.ok(Object.keys(live.skins).length > 0, 'total-skins tiebreaker still populated');
+  // The round engine no longer computes skins at all.
+  assert.equal(EgtEngine.runRound(state, 'R2').skins, undefined, 'skins calculator is not run');
+  // …and there is no Skins King season award.
+  assert.ok(!EgtPoints.seasonAwardsBreakdown(m).items.some(i => /skins/i.test(i.label)), 'no Skins King award');
 });
 
-test('R5 full-18 BBB pays a flat prize to the winner (not per point), zero-sum', () => {
+test('R5 full-18 BBB pays a flat stake to the winner from each player (not per point), zero-sum', () => {
   const m = freshModel();
   const state = EgtStore.emptyState(m.trip.id);
   state.model = m;
@@ -701,11 +705,10 @@ test('R5 full-18 BBB pays a flat prize to the winner (not per point), zero-sum',
   state.finalized = ['R5'];
   const rm = EgtEngine.liveUpdate(state, { noPersist: true }).money.rounds.R5;
   const labels = Object.values(rm.breakdown).flat().map(x => x.label);
-  assert.ok(labels.includes('BBB (winner)'), 'R5 BBB pays a flat prize to the winner');
+  assert.ok(labels.includes('BBB (winner)'), 'R5 BBB pays a flat stake to the winner');
   assert.ok(!labels.some(l => /point/i.test(l)), 'R5 BBB is not a per-point label');
-  // Winner collects the flat prize (within a cent — a $5 prize split across 3
-  // losers leaves a rounding penny that zeroBalance parks on the winner).
-  assert.ok(Math.abs(rm.breakdown.john.find(x => x.label === 'BBB (winner)').amount - m.moneyDefaults.bbbNinesWinner) <= 0.011, 'winner collects the flat prize');
+  // Sole winner (john) collects the stake from each of the three other players.
+  assert.equal(rm.breakdown.john.find(x => x.label === 'BBB (winner)').amount, m.moneyDefaults.bbbNinesWinner * 3, 'winner collects $5 from each of the three others');
   const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, `R5 money nets zero, got ${sum}`);
 });
@@ -753,14 +756,14 @@ test('Flat Stick requires tracked putts — zero putt holes is ineligible, not a
     mike:  { putts: 140, puttHoles: 90, netBirdies: 0 },
   };
   const acc = {}; m.players.forEach(p => { acc[p.id] = { total: 0, breakdown: [] }; });
-  EgtPoints.seasonAwards(m, stats, {}, acc);
+  EgtPoints.seasonAwards(m, stats, acc);
   const flatStick = pid => acc[pid].breakdown.some(b => /Flat Stick/.test(b.category));
   assert.ok(flatStick('brian'), 'brian (fewest tracked putts) wins');
   assert.ok(!flatStick('john'), 'untracked john must not win');
   // Nobody tracked putts → no Flat Stick winner at all.
   const none = { john: { putts: 0, puttHoles: 0 }, brian: { putts: 0, puttHoles: 0 }, tj: { putts: 0, puttHoles: 0 }, mike: { putts: 0, puttHoles: 0 } };
   const acc2 = {}; m.players.forEach(p => { acc2[p.id] = { total: 0, breakdown: [] }; });
-  EgtPoints.seasonAwards(m, none, {}, acc2);
+  EgtPoints.seasonAwards(m, none, acc2);
   assert.ok(m.players.every(p => !acc2[p.id].breakdown.some(b => /Flat Stick/.test(b.category))), 'no winner when untracked');
 });
 
@@ -774,7 +777,7 @@ test('season settlement pays Par King 2, Bogey God 1 and Birdie King (gross) 4 t
     mike:  { grossBirdies: 0, pars: 15, bogeys: 35, putts: 130, puttHoles: 90 },
   };
   const acc = {}; m.players.forEach(p => { acc[p.id] = { total: 0, breakdown: [] }; });
-  EgtPoints.seasonAwards(m, stats, {}, acc);
+  EgtPoints.seasonAwards(m, stats, acc);
   const award = (pid, re) => (acc[pid].breakdown.find(b => re.test(b.category)) || {}).points;
   // Gross birdies pay the seed's 4 — most gross birdies wins, net never scores.
   assert.equal(award('john', /Birdie King \(gross\)/), 4, 'john (5 gross birdies) takes the 4');
