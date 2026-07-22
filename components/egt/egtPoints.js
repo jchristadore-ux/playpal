@@ -100,9 +100,10 @@ const EgtPoints = (function () {
     return acc;
   }
 
-  // Season awards from cumulative skins, net birdies, putts, FIR+GIR.
-  //   seasonStats: EgtSideGames.seasonStats output. skinsTotals: { pid: n }.
-  function seasonAwards(model, seasonStats, skinsTotals, acc) {
+  // Season awards from cumulative net birdies, pars, bogeys, putts, FIR+GIR.
+  // (Skins are not played, so there is no Skins King award.)
+  //   seasonStats: EgtSideGames.seasonStats output.
+  function seasonAwards(model, seasonStats, acc) {
     const cfg = model.pointsConfig.seasonAwards || {};
     const winnersOf = (valueOf, lowest) => {
       const entries = model.players.map(p => ({ pid: p.id, v: valueOf(p.id) }));
@@ -110,7 +111,6 @@ const EgtPoints = (function () {
       return entries.filter(e => e.v === best && isFinite(e.v)).map(e => e.pid);
     };
     const grant = (winners, label, pts) => winners.forEach(pid => addPoints(acc, pid, label, pts / winners.length));
-    grant(winnersOf(pid => skinsTotals?.[pid] || 0, false), 'Skins King', cfg.skinsKing || 2);
     grant(winnersOf(pid => seasonStats?.[pid]?.grossBirdies || 0, false), 'Birdie King (gross)', cfg.birdieKingGross || 4);
     grant(winnersOf(pid => seasonStats?.[pid]?.pars || 0, false), 'Par King', cfg.parKing || 2);
     grant(winnersOf(pid => seasonStats?.[pid]?.bogeys || 0, false), 'Bogey God', cfg.bogeyGod || 1);
@@ -134,7 +134,7 @@ const EgtPoints = (function () {
       if (resultsByRound[round.id]) pointsForRound(model, round.id, resultsByRound[round.id], acc);
     });
     if (seasonInputs && seasonInputs.final) {
-      seasonAwards(model, seasonInputs.seasonStats, seasonInputs.skinsTotals, acc);
+      seasonAwards(model, seasonInputs.seasonStats, acc);
     }
     return acc;
   }
@@ -154,7 +154,7 @@ const EgtPoints = (function () {
     switch (roundId) {
       case 'R1':
         return { roundId, mode: 'none', max: 0, items: [], summary: 'Cash only',
-          note: 'Flat / stakes-only round — BBB, The Nines and skins all pay cash, but no EGT Cup points are awarded.' };
+          note: 'Flat / stakes-only round — BBB and The Nines each pay a flat $5 to the winner from every other player, but no EGT Cup points are awarded.' };
       case 'R2': {
         const f = cfg.nassauFront || 1, b = cfg.nassauBack || 1, o = cfg.nassauOverall || 2;
         return { roundId, mode: 'team', max: f + b + o,
@@ -215,7 +215,6 @@ const EgtPoints = (function () {
   function seasonAwardsBreakdown(model) {
     const cfg = (model.pointsConfig || {}).seasonAwards || {};
     const items = [
-      { label: 'Skins King (most skins)', pts: cfg.skinsKing || 2 },
       { label: 'Birdie King (most gross birdies)', pts: cfg.birdieKingGross || 4 },
       { label: 'Par King (most pars)', pts: cfg.parKing || 2 },
       { label: 'Bogey God (most bogeys)', pts: cfg.bogeyGod || 1 },

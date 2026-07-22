@@ -320,17 +320,23 @@ const BottomLineProvider = (function () {
         // from the synced native formats, so the broadcast's money engine runs
         // at the same rates as the app instead of the tournament defaults.
         // EgtBridge.formatsFor bakes each stake into its format object:
-        //   skins→skinsAnte, bingobangobongo→bbbNinesPerPointDiff,
-        //   wolf→wolfPerUnit, nassau→nassauPerPoint.
+        //   bingobangobongo→bbbNinesWinner, wolf→wolfWinner,
+        //   nassau→nassauPerPoint, stableford→teamStablefordWinner (R4) /
+        //   stablefordWinner (R6). Every game is a flat $5-to-winner stake.
         const stakeKeyByFormat = {
-          skins: 'skinsAnte', bingobangobongo: 'bbbNinesPerPointDiff',
-          wolf: 'wolfPerUnit', nassau: 'nassauPerPoint',
+          bingobangobongo: 'bbbNinesWinner', wolf: 'wolfWinner', nassau: 'nassauPerPoint',
         };
         const recovered = {};
+        const num = v => (v != null && v !== '' && isFinite(Number(v)) ? Number(v) : null);
         (r.formats || []).forEach(f => {
-          const key = f && stakeKeyByFormat[f.type];
-          if (key && f.stakes != null && f.stakes !== '' && isFinite(Number(f.stakes))) {
-            recovered[key] = Number(f.stakes);
+          let key = f && stakeKeyByFormat[f.type];
+          if (f && f.type === 'stableford') key = r.egtRoundId === 'R6' ? 'stablefordWinner' : 'teamStablefordWinner';
+          if (key && num(f.stakes) != null) recovered[key] = num(f.stakes);
+          // R2's four-ball stake rides on the synthetic egt- match inside the
+          // Nassau format (not the top-level stake), so read it off there.
+          if (f && f.type === 'nassau' && r.egtRoundId === 'R2') {
+            const team = (f.nassauMatches || []).find(mm => String(mm.id || '').startsWith('egt-'));
+            if (team && num(team.stakes) != null) recovered.fourballWinner = num(team.stakes);
           }
         });
         if (Object.keys(recovered).length) state.stakes[r.egtRoundId] = recovered;
@@ -347,10 +353,10 @@ const BottomLineProvider = (function () {
     }
 
     // season:true once R6 is in — exactly like the app — so the broadcast's
-    // final standings carry the six season awards (Skins King, Birdie King
-    // gross, Par King, Bogey God, Flat Stick, Iron Man) and the money folds in
-    // the Pass-the-Money settlement. Without it the TV would show a different
-    // champion than the app on the final night.
+    // final standings carry the five season awards (Birdie King gross, Par King,
+    // Bogey God, Flat Stick, Iron Man) and the money folds in the Pass-the-Money
+    // settlement. Without it the TV would show a different champion than the app
+    // on the final night.
     let live = null;
     try { live = EgtEngine.liveUpdate(state, { noPersist: true, season: state.finalized.includes('R6') }); } catch (e) {}
 
@@ -383,7 +389,7 @@ const BottomLineProvider = (function () {
   function computeRecords(rounds) {
     // Every EGT round scored so far feeds the record book.
     const rec = { bestRound: null, worstRound: null, mostBirdies: null, lowNine: null,
-                  biggestPayday: null, mostSkinsRound: null };
+                  biggestPayday: null };
     const career = {}; // by lowercased name
     rounds.forEach(r => {
       if (!r.hasScores) return;
@@ -687,7 +693,7 @@ const BottomLineProvider = (function () {
     return segs;
   }});
 
-  // EGT CUP — points standings, money, climbers, skins, next round, awards.
+  // EGT CUP — points standings, money, climbers, next round, awards.
   register({ id: 'egtCup', category: 'egt', build(f) {
     const e = f.egt;
     if (!e || !e.live) return [];
@@ -719,16 +725,6 @@ const BottomLineProvider = (function () {
       parts: [P.name(e.climber.name), P.up(`▲${e.climber.moved} spots`)] });
     if (e.dropper) segs.push({ id: 'egt:dropper', category: 'fun', icon: '📉', label: 'BIGGEST DROP',
       parts: [P.name(e.dropper.name), P.down(`▼${Math.abs(e.dropper.moved)} spots`)] });
-    if (L.skins) {
-      const ranked = Object.entries(L.skins)
-        .map(([pid, n]) => ({ name: (e.model.playersById[pid] || {}).name || pid, n }))
-        .filter(x => x.n > 0).sort((a, b) => b.n - a.n);
-      if (ranked.length) {
-        const parts = [];
-        ranked.forEach((x, i) => { if (i) parts.push(P.sep()); parts.push(P.name(x.name), P.val(`${x.n} skins`)); });
-        segs.push({ id: 'egt:skins', category: 'format', icon: '💵', label: 'SKINS KING RACE', parts });
-      }
-    }
     if (L.tourneyStats) {
       const rows = Object.entries(L.tourneyStats)
         .map(([pid, st]) => ({ name: (e.model.playersById[pid] || {}).name || pid, st }))
@@ -921,7 +917,7 @@ const BottomLineProvider = (function () {
           parts: [P.name(String(nl.name).toUpperCase()), P.up(`TAKES THE LEAD AT ${r.course.name.toUpperCase()}`), P.val(fmtToPar(nl.toPar))] });
       }
 
-      // Format leader changes (wolf, skins, BBB, stableford, PTM holder…).
+      // Format leader changes (wolf, BBB, stableford, PTM holder…).
       const prevBoards = {}; ((prev && prev.formatBoards) || []).forEach(b => { prevBoards[b.type] = b; });
       r.formatBoards.forEach(b => {
         const pb = prevBoards[b.type];
@@ -1115,20 +1111,10 @@ const BottomLineProvider = (function () {
         display: (r.value < 0 ? '-$' : '+$') + Math.abs(Math.round(r.value)), tone: r.value >= 0 ? 'up' : 'down' })),
     });
     // Season-award races from the tournament engine, so every Cup category has
-    // a leaders page: Skins King, Birdie King (gross pays 4, net is honorary),
-    // Par King and Bogey God. (Flat Stick and Iron Man are covered by the
-    // putts / FIR / GIR pages above.)
+    // a leaders page: Birdie King (gross pays 4, net is honorary), Par King and
+    // Bogey God. (Flat Stick and Iron Man are covered by the putts / FIR / GIR
+    // pages above.)
     const L = facts.egt && facts.egt.live;
-    if (L && L.skins) {
-      const rows = Object.entries(L.skins)
-        .map(([pid, n]) => Object.assign({}, playerInfo(pid), { value: n }))
-        .filter(r => r.value > 0)
-        .sort((a, b) => b.value - a.value);
-      if (rows.length) mods.push({
-        id: 'stat-skins', type: 'stat-leaderboard', title: 'SKINS KING RACE',
-        rows: rows.map(r => ({ id: r.id, name: r.name, alias: r.alias, logo: r.logo, color: r.color, display: String(r.value) })),
-      });
-    }
     if (L && L.tourneyStats) {
       // The paying race first: Birdie King settles on GROSS birdies (4 pts).
       const grossRows = Object.entries(L.tourneyStats)
@@ -1246,7 +1232,6 @@ const BottomLineProvider = (function () {
       }
       const agg = aggregateEgtStats(facts.rounds);
       const standings = (egt && egt.live && egt.live.standings) || [];
-      const skinsOf = (egt && egt.live && egt.live.skins) || {};
       agg.forEach(a => {
         const info = playerInfo(a.id);
         const st = standings.find(s => s.player === a.id) || {};
@@ -1254,7 +1239,7 @@ const BottomLineProvider = (function () {
         mods.push({ id: `post-player-${a.id}`, type: 'player-card', player: info,
           rank: st.rank || null, points: st.points != null ? fmtPts(st.points) : null, rounds: a.rounds,
           scoringAvg: a.scoringAvg, avgToPar: a.avgToPar, money: bank ? bank.total : null,
-          skins: skinsOf[a.id] || 0, firPct: a.firPct, girPct: a.girPct,
+          firPct: a.firPct, girPct: a.girPct,
           puttsPerRound: a.puttsPerRound, birdies: a.birdies });
       });
       mods.push(..._statsModules(facts, agg));

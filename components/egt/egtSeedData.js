@@ -3100,11 +3100,6 @@ const EGT_SEED = {
           1
         ],
         "tieRule": "split evenly"
-      },
-      "skins": {
-        "net": true,
-        "gross": true,
-        "over": "all 18"
       }
     },
     "R2": {
@@ -3186,31 +3181,8 @@ const EGT_SEED = {
     }
   },
   "sideGames": {
-    "skins": {
-      "pots": [
-        "gross",
-        "net"
-      ],
-      "carryovers": true,
-      "antePerRoundPerPot": 5
-    },
-    "closestToPin": {
-      "rounds": [
-        "R2",
-        "R3",
-        "R4",
-        "R5",
-        "R6"
-      ],
-      "rule": "all par 3s; on green",
-      "value": 5
-    },
-    "longDrive": {
-      "rule": "one hole/round \u2014 longest par 5 on card; must finish in fairway",
-      "value": 5
-    },
     "passTheMoney": {
-      "token": "The Rock \u2014 $20 bill",
+      "token": "The Rock \u2014 $5 bill",
       "startHolder": "john",
       "startsAt": "R2 hole 1",
       "steal": "make a net birdie",
@@ -3272,7 +3244,6 @@ const EGT_SEED = {
       ]
     },
     "seasonAwards": {
-      "skinsKing": 2,
       "birdieKingGross": 4,
       "parKing": 2,
       "bogeyGod": 1,
@@ -3282,24 +3253,23 @@ const EGT_SEED = {
     "tiebreakers": [
       "R6 stableford points",
       "head-to-head matches",
-      "total skins",
       "chip-off at Black Bear"
     ],
     "maxPossible": {
-      "john": 35,
-      "tj": 35,
-      "mike": 35,
-      "brian": 35
+      "john": 33,
+      "tj": 33,
+      "mike": 33,
+      "brian": 33
     }
   },
   "moneyDefaults": {
     "nassauPerPoint": 5,
-    "wolfPerUnit": 2,
-    "bbbNinesPerPointDiff": 1,
     "bbbNinesWinner": 5,
-    "skinsAnte": 5,
-    "ctpLd": 5,
-    "ptmBill": 20
+    "fourballWinner": 5,
+    "wolfWinner": 5,
+    "teamStablefordWinner": 5,
+    "stablefordWinner": 5,
+    "ptmBill": 5
   }
 };
 if (typeof window !== "undefined") { window.EGT_SEED = EGT_SEED; }

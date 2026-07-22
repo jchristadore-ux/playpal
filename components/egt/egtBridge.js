@@ -62,7 +62,7 @@ const EgtBridge = (function () {
   // trackers fire exactly as they do for a normal round. `formats` is an array
   // of { type, ... } objects (matching Setup's shape) — NOT bare strings, or
   // ScoreEntry's `formats.some(f => f.type === …)` checks all read false and no
-  // tracker appears. Skins runs every round.
+  // tracker appears. Skins are not played, so no skins format is emitted.
   //
   // Individual Nassau overlay: every round accepts optional 1v1/2v2 matches
   // (`matchConfigs`) layered on top of its primary format. They share the same
@@ -73,16 +73,17 @@ const EgtBridge = (function () {
     const md = model.moneyDefaults;
     const S = (stakes && stakes[round.id]) || {};
     const val = (k, d) => (S[k] != null && S[k] !== '' ? Number(S[k]) : (md[k] != null ? md[k] : d));
-    const skins = { type: 'skins', stakes: val('skinsAnte', 5) };
     const overlay = overlayNassauMatches(model, round, matchConfigs, val);
 
-    // Base (non-skins) formats + any Nassau matches that belong to the primary
-    // format (R2's four-ball team match). The overlay is merged in below.
+    // Primary format per round + any Nassau matches that belong to it (R2's
+    // four-ball team match). The overlay is merged in below. Every game is a
+    // flat stake to the winner — BBB/Stableford native payouts collect the
+    // stake from each other player, matching the tournament money engine.
     const base = [];
     const baseNassau = [];
     switch (round.id) {
       case 'R1': // loop 1 Bingo-Bango-Bongo (loop 2 Nines has no native engine)
-        base.push({ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) });
+        base.push({ type: 'bingobangobongo', stakes: val('bbbNinesWinner', 5) });
         break;
       case 'R2': { // four-ball best-ball match play as a 2v2 Nassau, John+TJ vs Brian+Mike
         const t = round.teams;
@@ -90,21 +91,20 @@ const EgtBridge = (function () {
           id: 'egt-R2', matchType: '2v2',
           playersInMatch: [...t[0].players, ...t[1].players],
           teams: { team1: t[0].players.slice(), team2: t[1].players.slice() },
-          popHoles: {}, stakes: val('nassauPerPoint', 5),
+          popHoles: {}, stakes: val('fourballWinner', 5),
         });
         break;
       }
-      case 'R3': base.push({ type: 'wolf', stakes: val('wolfPerUnit', 2) }); break;
-      case 'R4': base.push({ type: 'stableford', stakes: 1 }); break;
-      case 'R5': base.push({ type: 'bingobangobongo', stakes: val('bbbNinesPerPointDiff', 1) }); break;
-      case 'R6': base.push({ type: 'stableford', stakes: 1 }); break;
+      case 'R3': base.push({ type: 'wolf', stakes: val('wolfWinner', 5) }); break;
+      case 'R4': base.push({ type: 'stableford', stakes: val('teamStablefordWinner', 5) }); break;
+      case 'R5': base.push({ type: 'bingobangobongo', stakes: val('bbbNinesWinner', 5) }); break;
+      case 'R6': base.push({ type: 'stableford', stakes: val('stablefordWinner', 5) }); break;
       default: break;
     }
 
     const formats = base.slice();
     const nassauMatches = baseNassau.concat(overlay);
     if (nassauMatches.length) formats.push({ type: 'nassau', stakes: val('nassauPerPoint', 5), nassauMatches });
-    formats.push(skins);
     return formats;
   }
 

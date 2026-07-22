@@ -19,8 +19,8 @@ const EgtStandings = (function () {
   }
 
   // Build the ranked leaderboard from points, breaking ties by the seed's order:
-  //   R6 Stableford points → head-to-head → total skins → chip-off.
-  //   tie: { r6Stableford:{pid:pts}, headToHead:{pid:wins}, skins:{pid:n}, chipOff:{pid:rank} }
+  //   R6 Stableford points → head-to-head → chip-off.
+  //   tie: { r6Stableford:{pid:pts}, headToHead:{pid:wins}, chipOff:{pid:rank} }
   function leaderboard(model, points, tie) {
     const t = tie || {};
     const rows = model.players.map(p => ({
@@ -30,7 +30,6 @@ const EgtStandings = (function () {
       breakdown: points?.[p.id]?.breakdown || [],
       r6Stableford: t.r6Stableford?.[p.id] || 0,
       headToHead: t.headToHead?.[p.id] || 0,
-      skins: t.skins?.[p.id] || 0,
       chipOff: t.chipOff?.[p.id] ?? null,
       maxPossible: model.pointsConfig.maxPossible?.[p.id] ?? null,
     }));
@@ -38,14 +37,13 @@ const EgtStandings = (function () {
       b.points - a.points ||
       b.r6Stableford - a.r6Stableford ||
       b.headToHead - a.headToHead ||
-      b.skins - a.skins ||
       ((a.chipOff ?? 99) - (b.chipOff ?? 99)) ||
       a.name.localeCompare(b.name)
     );
     // Dense ranks; a genuine full tie (nothing broke it) shares a rank.
     let rank = 0, prev = null;
     rows.forEach((r, i) => {
-      const key = [r.points, r.r6Stableford, r.headToHead, r.skins, r.chipOff].join('|');
+      const key = [r.points, r.r6Stableford, r.headToHead, r.chipOff].join('|');
       if (key !== prev) { rank = i + 1; prev = key; }
       r.rank = rank;
     });

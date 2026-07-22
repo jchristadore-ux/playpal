@@ -1,6 +1,6 @@
-// egtSideGames.js — Pass the Money ("The Rock") ledger, CTP, Long Drive, and the
-// per-round tracked-stat rollups that feed the season awards. Everything is
-// derived from stored hole scores + a few event inputs, so it re-runs cleanly.
+// egtSideGames.js — Pass the Money ("The Rock") ledger and the per-round
+// tracked-stat rollups that feed the season awards. Everything is derived from
+// stored hole scores + a few event inputs, so it re-runs cleanly.
 
 const EgtSideGames = (function () {
   const H = (typeof window !== 'undefined' && window.EgtHandicap) || EgtHandicap;
@@ -51,17 +51,6 @@ const EgtSideGames = (function () {
       }
     });
     return { startHolder: cfg.startHolder, finalHolder: holder, potTotal: pot, bill: model.moneyDefaults.ptmBill, ledger };
-  }
-
-  // ── CTP / Long Drive — event-driven records ──────────────────────────────
-  //   ctpEvents: [{ round, hole, player }]  longDriveEvents: [{ round, hole, player }]
-  function closestToPin(model, ctpEvents) {
-    const value = model.sideGames.closestToPin.value;
-    return (ctpEvents || []).map(e => ({ ...e, value }));
-  }
-  function longDrive(model, ldEvents) {
-    const value = model.sideGames.longDrive.value;
-    return (ldEvents || []).map(e => ({ ...e, value }));
   }
 
   // ── Tracked stats per player per round ───────────────────────────────────
@@ -119,7 +108,7 @@ const EgtSideGames = (function () {
     return totals;
   }
 
-  return { passTheMoney, closestToPin, longDrive, trackedStats, seasonStats };
+  return { passTheMoney, trackedStats, seasonStats };
 })();
 
 if (typeof window !== 'undefined') {
