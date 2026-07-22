@@ -74,25 +74,30 @@ const EgtMoney = (function () {
     });
   }
 
+  // The whole Nassau bundle — front 1 + back 1 + overall 2 — as a single flat
+  // stake to whoever WINS the match. So a "$2 Nassau" pays the winner 4 × $2 =
+  // $8, flat (no per-segment split); win the 18-hole match, take it all.
+  const NASSAU_UNITS = 4;
+
   // Settle a bundle of configured match-play matches (the individual-Nassau
-  // overlay available on every round, plus R5's primary round-robin) Nassau-
-  // style: front 1 / back 1 / overall 2 units at each match's own stake
-  // (falling back to the round's nassauPerPoint). 2v2 sides split evenly.
-  // Zero-sum per segment. Used on every round so any wagered side match is
-  // tallied into the tournament money.
+  // overlay available on every round, plus R5's primary round-robin). Each match
+  // is flat: the overall (18-hole) winner takes the whole Nassau bundle at the
+  // match's own stake (falling back to the round's nassauPerPoint). A halved
+  // match pays nothing. 2v2 sides split evenly. Zero-sum. Used on every round so
+  // any wagered side match is tallied into the tournament money.
   function settleMatchPlay(total, matchPlay, val, breakdown) {
     ((matchPlay && matchPlay.matches) || []).forEach(m => {
       const stake = (m.stakes != null && m.stakes !== '') ? Number(m.stakes) : val('nassauPerPoint');
       const label = m.sides.map(s => s.map(pid => pid.slice(0, 2)).join('+')).join(' v ');
-      [['front', m.front, 1], ['back', m.back, 1], ['overall', m.overall, 2]].forEach(([name, seg, units]) => {
-        if (!seg || seg.winner === 'halve') return;
-        const winners = seg.winner === 'A' ? m.sides[0] : m.sides[1];
-        const losers = seg.winner === 'A' ? m.sides[1] : m.sides[0];
-        const vec = {};
-        winners.forEach(pid => { vec[pid] = (units * stake) / winners.length; });
-        losers.forEach(pid => { vec[pid] = -(units * stake) / losers.length; });
-        addVec(total, zeroBalance(vec), `Match ${label} ${name}`, breakdown);
-      });
+      const seg = m.overall;
+      if (!seg || seg.winner === 'halve') return;
+      const winners = seg.winner === 'A' ? m.sides[0] : m.sides[1];
+      const losers = seg.winner === 'A' ? m.sides[1] : m.sides[0];
+      const pot = NASSAU_UNITS * stake;
+      const vec = {};
+      winners.forEach(pid => { vec[pid] = pot / winners.length; });
+      losers.forEach(pid => { vec[pid] = -pot / losers.length; });
+      addVec(total, zeroBalance(vec), `Match ${label}`, breakdown);
     });
   }
 
