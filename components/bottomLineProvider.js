@@ -323,11 +323,16 @@ const BottomLineProvider = (function () {
           bingobangobongo: 'bbbNinesWinner', wolf: 'wolfWinner', nassau: 'nassauPerPoint',
         };
         const recovered = {};
+        const num = v => (v != null && v !== '' && isFinite(Number(v)) ? Number(v) : null);
         (r.formats || []).forEach(f => {
           let key = f && stakeKeyByFormat[f.type];
           if (f && f.type === 'stableford') key = r.egtRoundId === 'R6' ? 'stablefordWinner' : 'teamStablefordWinner';
-          if (key && f.stakes != null && f.stakes !== '' && isFinite(Number(f.stakes))) {
-            recovered[key] = Number(f.stakes);
+          if (key && num(f.stakes) != null) recovered[key] = num(f.stakes);
+          // R2's four-ball stake rides on the synthetic egt- match inside the
+          // Nassau format (not the top-level stake), so read it off there.
+          if (f && f.type === 'nassau' && r.egtRoundId === 'R2') {
+            const team = (f.nassauMatches || []).find(mm => String(mm.id || '').startsWith('egt-'));
+            if (team && num(team.stakes) != null) recovered.fourballWinner = num(team.stakes);
           }
         });
         if (Object.keys(recovered).length) state.stakes[r.egtRoundId] = recovered;

@@ -396,6 +396,15 @@ const EgtTournament = ({ onScoreRound }) => {
           })}
         </tbody>
       </table>
+      {(live.money?.settlements || []).length > 0 && <>
+        <div style={{ fontWeight: 800, color: GREEN, fontSize: 14, margin: '14px 0 6px' }}>SETTLE UP · head-to-head</div>
+        <div style={{ fontSize: 13, color: INK, lineHeight: 1.7 }}>
+          {live.money.settlements.map((x, i) => {
+            const nm = id => (model.playersById[id] || {}).name || id;
+            return <div key={i}><strong>{nm(x.from)}</strong> owes <strong>{nm(x.to)}</strong> <span style={{ color: '#137a3f', fontWeight: 700 }}>${x.amount.toFixed(2)}</span></div>;
+          })}
+        </div>
+      </>}
       <div style={{ marginTop: 14 }}>
         <Btn onClick={openPrintable}>🖨 Printable packet</Btn>
       </div>

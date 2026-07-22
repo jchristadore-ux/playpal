@@ -341,6 +341,42 @@ test('flatFromEach: winner collects the stake from each other player; ties split
   ids.forEach(id => assert.equal(allTied[id], 0, 'a full tie moves no money'));
 });
 
+test('R1 head-to-head settlement matches the scorecard (TJ→John $8, Mike→John $11, Mike→TJ $5)', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  // The real Tuesday card (John 90 / TJ 111 / Mike 104).
+  const G = {
+    john: [5, 4, 5, 3, 4, 4, 7, 4, 5, 5, 3, 7, 6, 5, 5, 9, 5, 4],
+    tj:   [8, 4, 8, 4, 7, 7, 8, 3, 3, 6, 5, 7, 8, 7, 5, 7, 9, 5],
+    mike: [8, 5, 5, 5, 6, 3, 7, 5, 5, 5, 8, 9, 4, 8, 4, 8, 5, 4],
+  };
+  state.scores.R1 = {};
+  Object.entries(G).forEach(([p, a]) => { state.scores.R1[p] = {}; a.forEach((g, i) => { state.scores.R1[p][i + 1] = { gross: g }; }); });
+  state.events.bbb.R1 = [1, 2, 3, 4, 5].map(h => ({ hole: h, bingo: 'tj', bango: 'tj', bongo: 'tj' })); // TJ wins BBB
+  state.events.roundMatches = { R1: [
+    { id: 'jt', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: {}, stakes: 2 },
+    { id: 'mj', matchType: '1v1', playersInMatch: ['mike', 'john'], teams: null, popHoles: {}, stakes: 2 },
+  ] };
+  state.finalized = ['R1'];
+  const money = EgtEngine.liveUpdate(state, { noPersist: true }).money;
+  // Net: John +19, TJ −3, Mike −16.
+  assert.equal(money.total.john, 19);
+  assert.equal(money.total.tj, -3);
+  assert.equal(money.total.mike, -16);
+  // Settled head-to-head (each matchup on its own), NOT globally minimized.
+  const owed = {};
+  money.settlements.forEach(s => { owed[`${s.from}->${s.to}`] = s.amount; });
+  assert.equal(owed['tj->john'], 8, 'TJ owes John $8');
+  assert.equal(owed['mike->john'], 11, 'Mike owes John $11');
+  assert.equal(owed['mike->tj'], 5, 'Mike owes TJ $5');
+  assert.equal(money.settlements.length, 3, 'exactly the three matchups');
+  // The settlement reconciles to each player's net.
+  const net = { john: 0, tj: 0, mike: 0 };
+  money.settlements.forEach(s => { net[s.to] += s.amount; net[s.from] -= s.amount; });
+  ['john', 'tj', 'mike'].forEach(id => assert.equal(net[id], money.total[id], `${id} net reconciles`));
+});
+
 // ── standings + reseed ──────────────────────────────────────────────────────
 test('leaderboard ranks by points then tiebreakers; R6 reseeds 1v2 / 3v4', () => {
   const m = freshModel();

@@ -4,6 +4,14 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+### Added
+- **Head-to-head "Settle up" on the Money tab.** Alongside the per-player net,
+  the EGT app now shows the **pairwise settlement** — who owes whom, each
+  matchup netted on its own (e.g. after R1: *TJ owes John $8, Mike owes John
+  $11, Mike owes TJ $5*) rather than a globally-minimized transfer list, so it
+  matches how the group settles at the bar. The money engine tracks the
+  head-to-head flows and exposes `money.settlements` per round and for the trip.
+
 ### Changed
 - **The whole EGT money model is now flat stakes — no per-point or per-unit
   settlement anywhere, across the app and the SportsCenter broadcast.** Every
@@ -34,6 +42,14 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 - Tests updated across the board (flat winner/team settlements, tie splits,
   no skins/CTP/LD money, the 33-point ceiling, the recovered flat stakes on the
   broadcast) and `dist/` rebuilt.
+
+### Fixed
+- The money engine falls back to the baseline flat stakes when a persisted model
+  predates a defaults key, so a stale/rehydrated install can never compute
+  `NaN` (team rounds) or `$0` (winner games) money.
+- The SportsCenter broadcast now recovers an overridden **R2 four-ball** stake
+  (it rides on the synthetic team match inside the Nassau format, not the
+  top-level stake).
 
 ## [1.8.1] — 2026-07-18
 
