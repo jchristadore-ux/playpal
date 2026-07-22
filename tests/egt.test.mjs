@@ -665,12 +665,49 @@ test('liveUpdate exposes cumulative putts/FIR/GIR over R2-R6 only', () => {
 // ── per-round stakes override the money engine ──────────────────────────────
 test('stakes override scales a round\'s money (still nets to $0)', () => {
   const m = freshModel();
-  const results = { skins: { gross: { won: { john: 2, brian: 0, tj: 0, mike: 0 } }, net: { won: {} } } };
-  const base = EgtMoney.moneyForRound(m, 'R2', results, {});                       // default $5 ante
-  const bumped = EgtMoney.moneyForRound(m, 'R2', results, {}, { R2: { skinsAnte: 50 } });
+  const results = { wolf: { units: { john: 3, brian: -1, tj: -1, mike: -1 } } };
+  const base = EgtMoney.moneyForRound(m, 'R3', results, {});                       // default $2/unit
+  const bumped = EgtMoney.moneyForRound(m, 'R3', results, {}, { R3: { wolfPerUnit: 50 } });
   assert.ok(Math.abs(bumped.total.john) > Math.abs(base.total.john), 'bigger stake → bigger swing');
   const sum = Object.values(bumped.total).reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum) < 1e-6, 'still nets to zero');
+});
+
+test('skins are never settled for money (any round), but stay tracked for the Cup', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  m.rounds.forEach(r => state.finalized.push(r.id));
+  const live = EgtEngine.liveUpdate(state, { noPersist: true });
+  Object.values(live.money.rounds).forEach(rm => {
+    if (!rm.breakdown) return;
+    const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+    assert.ok(!labels.some(l => /^Skins/.test(l)), 'no round settles skins for money');
+  });
+  // …yet skins are still derived from the scores (Skins King award / tiebreaker).
+  const r2 = EgtEngine.runRound(state, 'R2');
+  assert.ok(r2.skins && r2.skins.gross && r2.skins.net, 'skins still computed from scores');
+  assert.ok(Object.keys(live.skins).length > 0, 'total-skins tiebreaker still populated');
+});
+
+test('R5 full-18 BBB pays a flat prize to the winner (not per point), zero-sum', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id);
+  state.model = m;
+  fillPlausibleScores(m, state);
+  // Give john a clear BBB lead so he is the sole winner.
+  state.events.bbb.R5 = [{ hole: 1, bingo: 'john', bango: 'john', bongo: 'john' }, { hole: 12, bingo: 'brian' }];
+  state.finalized = ['R5'];
+  const rm = EgtEngine.liveUpdate(state, { noPersist: true }).money.rounds.R5;
+  const labels = Object.values(rm.breakdown).flat().map(x => x.label);
+  assert.ok(labels.includes('BBB (winner)'), 'R5 BBB pays a flat prize to the winner');
+  assert.ok(!labels.some(l => /point/i.test(l)), 'R5 BBB is not a per-point label');
+  // Winner collects the flat prize (within a cent — a $5 prize split across 3
+  // losers leaves a rounding penny that zeroBalance parks on the winner).
+  assert.ok(Math.abs(rm.breakdown.john.find(x => x.label === 'BBB (winner)').amount - m.moneyDefaults.bbbNinesWinner) <= 0.011, 'winner collects the flat prize');
+  const sum = Object.values(rm.total).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `R5 money nets zero, got ${sum}`);
 });
 
 test('re-importing a seed refreshes schedule metadata but preserves entered data', () => {

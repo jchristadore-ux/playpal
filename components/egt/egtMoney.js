@@ -148,9 +148,10 @@ const EgtMoney = (function () {
         addVec(total, teamMatch(teamPlayers, ts.overallWinner, other(ts.overallWinner), pc.overall18 || 2, rate), 'Stableford 18 total', breakdown);
       }
     } else if (roundId === 'R5') {
-      // Full-18 BBB pays per point difference; the round-robin match play is
-      // settled by the general overlay pass below (R5's matches ARE its overlay).
-      if (results.bbb) addVec(total, pairwise(ids, id => results.bbb.totals[id] || 0, val('bbbNinesPerPointDiff')), 'BBB', breakdown);
+      // Full-18 BBB pays a flat prize to the winner (same convention as R1);
+      // the round-robin match play settles via the general overlay pass below
+      // (R5's matches ARE its overlay). Ties for the BBB win split the prize.
+      if (results.bbb) addVec(total, prizeToWinners(ids, results.bbb.champions, val('bbbNinesWinner')), 'BBB (winner)', breakdown);
     } else if (roundId === 'R6' && results.singles) {
       // Championship / Bronze singles: each seeded 1v1 settles Nassau-style
       // (front 1 / back 1 / overall 2 units) at nassauPerPoint. Zero-sum per pair.
@@ -171,13 +172,10 @@ const EgtMoney = (function () {
     // primary round-robin; elsewhere these are side bets layered on the format.
     settleMatchPlay(total, results.overlayMatchPlay, val, breakdown);
 
-    // Skins (both pots) settle every round EXCEPT R1, valued per skin won at the
-    // ante. R1 is BBB + Nines only (each a flat prize to the winner) plus any
-    // side Nassau, so no skins pot is played there.
-    if (results.skins && roundId !== 'R1') {
-      addVec(total, pairwise(ids, id => results.skins.gross.won[id] || 0, val('skinsAnte')), 'Skins (gross)', breakdown);
-      addVec(total, pairwise(ids, id => results.skins.net.won[id] || 0, val('skinsAnte')), 'Skins (net)', breakdown);
-    }
+    // Skins are NOT played for money on any round. They are still derived from
+    // the entered scores by the skins calculator so the Cup's Skins King award
+    // and the total-skins tiebreaker keep working — they just don't settle cash.
+    // (Each round's money is its primary format + any side Nassau.)
 
     // CTP / Long Drive prizes for this round.
     (events?.ctp || []).filter(e => e.round === roundId).forEach(e => {

@@ -27,16 +27,17 @@ const EGT_GAME_LABELS = {
 };
 
 // Editable money stakes per round (Rounds tab). key maps to moneyDefaults;
-// `per` labels the unit. Skins runs every round except R1 (which is BBB + Nines,
-// each a flat prize to the winner, plus any side Nassau); the head-to-head cash
-// game (BBB/Nines, Nassau, Wolf) is listed on the round that plays it.
+// `per` labels the unit. Skins are not played for money on any round (they still
+// feed the Cup's Skins King award), so no skins ante appears here. BBB pays a
+// flat prize to the winner on R1 and R5; the head-to-head cash game (BBB/Nines,
+// Nassau, Wolf) is listed on the round that plays it.
 const EGT_STAKE_ITEMS = {
   R1: [{ key: 'bbbNinesWinner', label: 'BBB / Nines', per: 'to winner' }],
-  R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R4: [{ key: 'nassauPerPoint', label: 'Stableford match', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R5: [{ key: 'bbbNinesPerPointDiff', label: 'BBB', per: 'per point' }, { key: 'nassauPerPoint', label: 'Match play', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
-  R6: [{ key: 'nassauPerPoint', label: 'Singles', per: 'per point' }, { key: 'skinsAnte', label: 'Skins', per: 'per skin' }],
+  R2: [{ key: 'nassauPerPoint', label: 'Nassau', per: 'per point' }],
+  R3: [{ key: 'wolfPerUnit', label: 'Wolf', per: 'per unit' }],
+  R4: [{ key: 'nassauPerPoint', label: 'Stableford match', per: 'per point' }],
+  R5: [{ key: 'bbbNinesWinner', label: 'BBB', per: 'to winner' }, { key: 'nassauPerPoint', label: 'Match play', per: 'per point' }],
+  R6: [{ key: 'nassauPerPoint', label: 'Singles', per: 'per point' }],
 };
 
 const EGT_MATCH_HINT = {

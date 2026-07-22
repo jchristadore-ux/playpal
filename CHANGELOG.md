@@ -5,18 +5,25 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 ## [Unreleased]
 
 ### Changed
-- **R1 (Minerals) money model corrected to match how the round is actually
-  played.** Bingo-Bango-Bongo and The Nines each now pay a **flat prize to that
-  game's winner** (default `$5`, funded equally by the field; a tie for first
-  splits the prize) instead of settling `$1` per point of difference — a
-  per-point BBB/Nines settlement produced wildly inflated swings (81 Nines
-  points in play could move `$50+`). **Skins are no longer played for money on
-  R1**; the round is BBB + Nines plus any side Nassau only. The two overlay
-  `$2` Nassau side matches (front · back · overall) settle as before. New
-  `bbbNinesWinner` money default (Rounds-tab editable); R5's full-18 BBB is
-  untouched and still pays per point. Regression tests cover the winner prize,
-  the tie split, the absence of skins money, and that each side Nassau settles
-  only between its own pair.
+- **Bingo-Bango-Bongo money corrected to a flat prize to the winner (R1 and
+  R5).** BBB — and The Nines on R1 — each now pay a **flat prize to that game's
+  winner** (default `$5`, funded equally by the field; a tie for first splits
+  the prize) instead of settling `$1` per point of difference. A per-point
+  settlement produced wildly inflated swings (81 Nines points in play, or a
+  full 18 holes of gross BBB, could move `$50+`). New `bbbNinesWinner` money
+  default (Rounds-tab editable).
+- **Skins are no longer played for money on any round.** Previously every round
+  except R1 settled skins at the ante, collected pairwise from each other
+  player (a `$5` skin was worth `$15` to the winner in a foursome, across both
+  the gross and net pots). Skins are still derived from the entered scores so
+  the Cup's **Skins King** award and the total-skins tiebreaker keep working —
+  they just no longer move cash. The skins ante was removed from the Rounds-tab
+  stake editor.
+- Each round's money is now its **primary format plus any side Nassau** only.
+  The overlay `$2`-style Nassau side matches (front · back · overall) settle as
+  before, each only between its own pair. Regression tests cover the R1/R5
+  winner prize, the tie split, the absence of skins money on every finalized
+  round, and that skins stay tracked for the Cup.
 
 ## [1.8.1] — 2026-07-18
 

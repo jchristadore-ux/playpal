@@ -312,7 +312,7 @@ test('SportsCenter recovers Rounds-tab stake overrides from the synced formats',
       syncCode: native.syncCode, savedAt: now - 8 * 3600 * 1000,
       round: native,
       liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
-        wolfData: {}, bbbData: {}, teeBallData: {}, popFlags: {},
+        wolfData: { 0: { wolfId: 'tj', lone: true, confirmed: true } }, bbbData: {}, teeBallData: {}, popFlags: {},
         currentHoleIdx: 17, roundId: native.id, _writtenBy: 'phone', _ts: now - 8 * 3600 * 1000 },
     };
   };
@@ -320,7 +320,7 @@ test('SportsCenter recovers Rounds-tab stake overrides from the synced formats',
   assert.equal(withOverride.egt.state.stakes.R3.wolfPerUnit, 7, 'wolf stake recovered');
   assert.equal(withOverride.egt.state.stakes.R3.skinsAnte, 9, 'skins ante recovered');
   const withDefaults = w.BottomLineProvider.computeFacts({ docs: [mkDoc(null)], trips: [], players: [], now });
-  // Same scores, higher ante → the skins winner's engine money must grow.
+  // Same Wolf result, higher per-unit stake → the winner's engine money must grow.
   const top = f => Math.max(...Object.values(f.egt.live.money.rounds.R3.total));
   assert.ok(top(withOverride) > top(withDefaults),
     `override money ${top(withOverride)} should beat default ${top(withDefaults)}`);
