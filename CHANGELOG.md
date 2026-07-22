@@ -16,10 +16,9 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
     takes `$5` off each opponent** (each winner `+$10`, each loser `−$10` in a
     2v2), a single flat result with no Nassau segments. (Was: team Nassau at
     `$5`/point across front/back/overall.)
-  - **Individual Nassau side matches** now pay the whole bundle **flat to the
-    match winner** — win the 18-hole match, take all 4 units (a `$2` Nassau =
-    `$8`); a halved match pays nothing, and there is no per-segment split.
-    Stakes are still set per match.
+  - **Individual Nassau side matches** are unchanged — settled per segment
+    (front 1 · back 1 · overall 2 units), so a `$2` Nassau is `$2` front / `$2`
+    back / `$4` overall; a halved segment pays nothing. Stakes set per match.
   - New money defaults `wolfWinner`, `fourballWinner`, `teamStablefordWinner`,
     `stablefordWinner` (all `$5`); `bbbNinesWinner` reused for R1/R5 BBB and R1
     Nines. Removed `bbbNinesPerPointDiff`, `wolfPerUnit`, `skinsAnte`, `ctpLd`.

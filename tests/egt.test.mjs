@@ -307,7 +307,7 @@ test('R1 flat/stakes-only: BBB + Nines pay a flat prize to the winner, skins are
   assert.equal(rm.breakdown.tj.find(x => x.label === 'BBB (winner)').amount, -m.moneyDefaults.bbbNinesWinner, 'each loser pays the BBB winner $5');
   // Skins are NOT played for money on R1.
   assert.ok(!labels.some(l => /^Skins/.test(l)), 'R1 has no skins money');
-  // The two side Nassaus settle flat to the match winner, each between only its pair.
+  // The two side Nassaus settle per segment (front · back · overall), each between only its pair.
   assert.ok(labels.some(l => /^Match jo v tj/.test(l)), 'John–TJ Nassau settles');
   assert.ok(labels.some(l => /^Match mi v jo/.test(l)), 'Mike–John Nassau settles');
   assert.equal(rm.breakdown.mike.filter(x => /^Match jo v tj/.test(x.label)).length, 0, 'Mike is untouched by the John–TJ Nassau');
