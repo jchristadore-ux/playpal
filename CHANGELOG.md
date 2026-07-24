@@ -4,6 +4,35 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.10.0] — 2026-07-24
+
+The post-tournament results show for the EGT SportsCenter.
+
+### Added
+- **THE REVEAL — a systematic, built-up results ceremony on the SportsCenter.**
+  A new broadcast mode (press **R**, or the **REVEAL** button) plays a paced,
+  post-tournament reveal that deliberately **saves the Final EGT Standings for
+  the very end**. The arc: a cold-open title (*THE FINAL WORD*) → **By the
+  Numbers** (scoring average, greens, money leaders) → **The Hardware** (season
+  award winners — Birdie King, Par King, Bogey God, Flat Stick) → **Round by
+  Round** (every round recapped in the order it was played) → **The Final
+  Standings**, counted down **in reverse** — last place first, one dramatic
+  full-screen position at a time, up to the **Champion** hero card, closing on
+  the full Cup standings board. Reveal is manual-only; the auto rotation never
+  jumps to it, so it's there when you want to run the reveal and never before.
+- **Presenter controls for driving the reveal by hand.** A **HOLD** toggle
+  (**H** key / HOLD button) freezes the stage on the current card so you can
+  reveal each place on your cue; **←/→** step between cards; reveal cards dwell
+  a little longer than the live rotation for gravitas. (The Bottom Line ticker's
+  own pause moved to the **TICKER** button / **Space**.)
+
+### Notes
+- New broadcast module renderers (`reveal-title`, `reveal-standing`,
+  `champion`, `award-winners`) and the `reveal` mode are pure additions to
+  `bottomLineProvider.js` / `BottomLine.jsx`; the existing PRE / LIVE /
+  SPORTSCENTER modes are unchanged. All data is the same cached facts the rest
+  of the broadcast reads — the reveal is entirely an ordering of them.
+
 ## [1.9.1] — 2026-07-24
 
 ### Removed

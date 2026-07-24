@@ -584,6 +584,126 @@ test('ticker and broadcast standings show formatted points, never raw thirds', (
   sm.rows.forEach(r => assert.equal(r.points, Math.round(r.points * 100) / 100, 'module points formatted'));
 });
 
+// ── Reveal ceremony (post-tournament) ───────────────────────────────────────
+
+// A fully-scored six-round trip, finalized long enough ago to be "post", built
+// the same way the app syncs each round.
+function fullTripFacts(w, now) {
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  const docs = model.rounds.map(r => {
+    const nat = w.EgtBridge.toNativeRound(model, r.id);
+    const holes = nat.course.holes;
+    const scores = {}, putts = {};
+    nat.players.forEach((p, k) => {
+      // John runs the table (a birdie a hole) so there's a clear champion and a
+      // real Birdie King; the rest spread out behind him.
+      scores[p.id] = holes.map(h => h.par + ({ john: -1, brian: 1, tj: 1, mike: 2 }[p.id] ?? k));
+      putts[p.id] = holes.map((_, i) => (p.id === 'mike' && i < 3 ? 3 : 2));
+    });
+    const ts = now - 8 * 3600 * 1000;
+    return { syncCode: nat.syncCode, savedAt: ts, round: nat,
+      liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
+        wolfData: {}, bbbData: {}, teeBallData: {}, popFlags: {},
+        currentHoleIdx: 17, roundId: nat.id, _writtenBy: 'x', _ts: ts } };
+  });
+  return w.BottomLineProvider.computeFacts({ docs, trips: [], players: [], now });
+}
+
+test('broadcastMode: reveal is manual-only (forced), auto never selects it', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const facts = fullTripFacts(w, now);
+  // The trip is over → auto picks post, never reveal.
+  assert.equal(P.broadcastMode(facts), 'post');
+  assert.equal(P.broadcastMode(facts, { force: 'reveal' }), 'reveal');
+});
+
+test('broadcastModules reveal: builds up and saves the Final EGT Standings for the end', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const facts = fullTripFacts(w, now);
+  const mods = P.broadcastModules(facts, 'reveal');
+  const types = mods.map(m => m.type);
+
+  // Opens with a title card (the cold open), not the standings.
+  assert.equal(mods[0].type, 'reveal-title');
+  assert.equal(mods[0].title, 'THE FINAL WORD');
+  assert.notEqual(mods[0].type, 'standings');
+
+  // The buildup is present: by-the-numbers, the hardware, round-by-round.
+  assert.ok(mods.some(m => m.type === 'award-winners'), 'season awards (the hardware)');
+  assert.ok(mods.some(m => m.type === 'round-recap'), 'round-by-round recaps');
+  assert.ok(mods.some(m => m.type === 'reveal-title' && m.title === 'THE FINAL STANDINGS'),
+    'a divider announces the standings reveal');
+
+  // The climax lives at the very end: countdown → champion → full board.
+  assert.equal(types[types.length - 1], 'standings', 'Final EGT Standings is the closing image');
+  assert.equal(types[types.length - 2], 'champion', 'the champion is crowned right before the board');
+  const board = mods[mods.length - 1];
+  assert.equal(board.id, 'reveal-finalboard');
+
+  // Every reveal-standing precedes the champion and the board (nothing spoils it).
+  const firstStanding = types.indexOf('reveal-standing');
+  assert.ok(firstStanding > -1, 'positions are revealed one at a time');
+  assert.ok(firstStanding < types.lastIndexOf('champion'));
+});
+
+test('broadcastModules reveal: standings counted down last → 2nd, champion is #1', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const facts = fullTripFacts(w, now);
+  const mods = P.broadcastModules(facts, 'reveal');
+  const standings = facts.egt.live.standings;
+
+  const countdown = mods.filter(m => m.type === 'reveal-standing');
+  // No champion in the countdown; ranks strictly descend (reverse order).
+  assert.ok(countdown.every(m => m.rank !== 1), 'rank 1 is never in the countdown');
+  for (let i = 1; i < countdown.length; i++) {
+    assert.ok(countdown[i].rank < countdown[i - 1].rank, 'revealed last place first');
+  }
+  // Last place is revealed first, 2nd place last of the countdown.
+  assert.equal(countdown[0].rank, standings[standings.length - 1].rank);
+  assert.equal(countdown[countdown.length - 1].rank, 2);
+
+  // The champion card is standings[0], carries the trophy fields.
+  const champ = mods.find(m => m.type === 'champion');
+  assert.ok(champ, 'champion module present');
+  assert.equal(champ.player.id, standings[0].player);
+  assert.equal(champ.points, w.EgtStandings.fmtPoints(standings[0].points));
+  assert.ok(champ.player.logo && champ.player.alias, 'champion carries identity');
+});
+
+test('broadcastModules reveal: award winners read the tournament stats', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const now = Date.now();
+  const facts = fullTripFacts(w, now);
+  const mods = P.broadcastModules(facts, 'reveal');
+  const aw = mods.find(m => m.type === 'award-winners');
+  assert.ok(aw, 'award-winners module present after R6');
+  const labels = aw.winners.map(x => x.label);
+  assert.ok(labels.includes('BIRDIE KING'), 'Birdie King crowned');
+  aw.winners.forEach(x => {
+    assert.ok(x.winner && x.winner.logo, 'each award winner carries identity');
+    assert.ok(typeof x.value === 'string', 'each award shows a value');
+  });
+});
+
+test('broadcastModules reveal: graceful with no scores (cold open + schedule only)', () => {
+  const w = loadWithSeed();
+  const P = w.BottomLineProvider;
+  const facts = P.computeFacts({ docs: [], trips: [], players: [], now: Date.now() });
+  const mods = P.broadcastModules(facts, 'reveal');
+  assert.ok(mods.length >= 1);
+  assert.equal(mods[0].type, 'reveal-title');           // never blank
+  assert.ok(mods.some(m => m.type === 'schedule'), 'shows the schedule when nothing is scored');
+  assert.ok(!mods.some(m => m.type === 'champion'), 'no champion before any results');
+  assert.ok(!mods.some(m => m.type === 'reveal-standing'), 'no standings countdown before results');
+});
+
 test('NEW TRIP LEADER alert shows formatted points, never raw thirds', () => {
   const w = loadWithSeed();
   const now = Date.now();

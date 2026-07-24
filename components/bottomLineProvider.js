@@ -1157,6 +1157,86 @@ const BottomLineProvider = (function () {
     return mods;
   }
 
+  // ── REVEAL CEREMONY (post-tournament) ─────────────────────────────────────
+  // A deliberately paced results show for the end of the trip: a buildup
+  // (by-the-numbers → the hardware → round-by-round) that climaxes on the Final
+  // EGT Standings, revealed in reverse order — last place first, counting up to
+  // the champion, then the full board as the closing image. Same cached facts;
+  // the ORDER is the whole trick, so the Cup standings are always saved for the
+  // end. Reveal is a manual mode (the presenter triggers it); auto never picks
+  // it.
+
+  function _titleCard(id, eyebrow, title, subtitle, accent) {
+    return { id, type: 'reveal-title', eyebrow: eyebrow || null, title,
+             subtitle: subtitle || null, accent: accent || null };
+  }
+
+  // Season-award "hardware" decided over the scored rounds, read from the same
+  // tournament stats the award races use (Birdie King is gross birdies, etc.).
+  function _awardWinnersModule(facts) {
+    const L = facts.egt && facts.egt.live;
+    if (!L || !L.tourneyStats) return null;
+    const rows = Object.entries(L.tourneyStats)
+      .map(([pid, st]) => ({ pid, st }))
+      .filter(x => x.st && x.st.rounds > 0);
+    if (!rows.length) return null;
+    const pick = (label, icon, valOf, dir, unit) => {
+      const ranked = rows.map(x => ({ pid: x.pid, v: valOf(x.st) }))
+        .filter(x => x.v != null && x.v > 0)
+        .sort((a, b) => dir === 'low' ? a.v - b.v : b.v - a.v);
+      const top = ranked[0];
+      if (!top) return null;
+      return { icon, label, winner: playerInfo(top.pid), value: `${top.v}${unit || ''}` };
+    };
+    const winners = [
+      pick('BIRDIE KING', '🐦', st => st.grossBirdies, 'high', ''),
+      pick('PAR KING', '🧊', st => st.pars, 'high', ''),
+      pick('BOGEY GOD', '💀', st => st.bogeys, 'high', ''),
+      // Flat Stick only counts once putts were actually tracked (puttHoles gate).
+      pick('FLAT STICK', '🎩', st => (st.putts > 0 ? Math.round((st.putts / st.rounds) * 10) / 10 : null), 'low', ' /rd'),
+    ].filter(Boolean);
+    return winners.length ? { id: 'reveal-awards', type: 'award-winners', winners } : null;
+  }
+
+  // The Cup champion — standings[0] — as a full-screen hero card.
+  function _championModule(facts) {
+    const egt = facts.egt;
+    const standings = (egt && egt.live && egt.live.standings) || [];
+    if (!standings.length) return null;
+    const champ = standings[0];
+    const info = playerInfo(champ.player);
+    const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === info.name.toLowerCase());
+    return {
+      id: 'reveal-champion', type: 'champion',
+      tripName: (egt.model && egt.model.trip.name) || 'EGT CUP',
+      player: info, points: fmtPts(champ.points), maxPossible: champ.maxPossible,
+      money: bank ? bank.total : null,
+    };
+  }
+
+  // Standings in reverse: last place down to 2nd, one dramatic position per
+  // module. The champion (rank 1) is revealed separately, last of all.
+  function _revealCountdown(facts) {
+    const egt = facts.egt;
+    const standings = (egt && egt.live && egt.live.standings) || [];
+    if (standings.length < 2) return [];
+    const tripName = (egt.model && egt.model.trip.name) || 'EGT CUP';
+    const total = standings.length;
+    const out = [];
+    standings.slice().reverse().forEach(s => {
+      if (s.rank === 1) return; // champion card handles the winner
+      const info = playerInfo(s.player);
+      const bank = facts.moneyBoard.find(m => m.name.toLowerCase() === info.name.toLowerCase());
+      out.push({
+        id: `reveal-standing-${s.player}`, type: 'reveal-standing', tripName,
+        rank: s.rank, total, player: info,
+        points: fmtPts(s.points), maxPossible: s.maxPossible,
+        money: bank ? bank.total : null,
+      });
+    });
+    return out;
+  }
+
   // The ordered module rotation for a mode. Each entry drives one full-screen
   // stage card; the page cross-fades between them.
   function broadcastModules(facts, mode) {
@@ -1243,6 +1323,71 @@ const BottomLineProvider = (function () {
           puttsPerRound: a.puttsPerRound, birdies: a.birdies });
       });
       mods.push(..._statsModules(facts, agg));
+    }
+
+    if (mode === 'reveal' && model) {
+      const tripName = model.trip.name || 'EGT CUP';
+      const standings = (egt && egt.live && egt.live.standings) || [];
+      const scored = (facts.rounds || []).filter(r => r.hasScores);
+      const nRounds = new Set(scored.map(r => r.egtRoundId).filter(Boolean)).size;
+
+      // Cold open — set the stage.
+      mods.push(_titleCard('reveal-open', tripName, 'THE FINAL WORD',
+        nRounds ? `${nRounds} round${nRounds === 1 ? '' : 's'} in the books · the Cup is decided`
+                : 'The Cup awaits'));
+
+      // Nothing scored yet → graceful preview (open + schedule), then stop.
+      if (!standings.length) {
+        mods.push({ id: 'reveal-sched', type: 'schedule', tripName,
+          rounds: model.rounds.map(r => ({ id: r.id, course: (model.courses[r.courseId] || {}).name,
+            date: r.date, tee: r.teeTimeTarget, done: false })) });
+        return mods.filter(Boolean);
+      }
+
+      // Act I — By the numbers (trip-wide performance + the wallet).
+      const agg = aggregateEgtStats(facts.rounds);
+      const statMods = _statsModules(facts, agg);
+      const marquee = ['stat-scoringAvg', 'stat-girPct', 'stat-money']
+        .map(id => statMods.find(m => m.id === id)).filter(Boolean);
+      if (marquee.length) {
+        mods.push(_titleCard('reveal-numbers', tripName, 'BY THE NUMBERS', 'How the trip was played'));
+        mods.push(...marquee);
+      }
+
+      // Act II — The hardware (season award winners).
+      const awards = _awardWinnersModule(facts);
+      if (awards) {
+        mods.push(_titleCard('reveal-hardware', tripName, 'THE HARDWARE', 'Season award winners'));
+        mods.push(awards);
+      }
+
+      // Act III — Round by round, in the order they were played.
+      const seqOf = rid => (model.rounds.find(x => x.id === rid) || {}).seq || 0;
+      const recaps = [];
+      scored.slice().sort((a, b) => seqOf(a.egtRoundId) - seqOf(b.egtRoundId)).forEach(r => {
+        const rec = roundRecap(r);
+        if (!rec) return;
+        recaps.push({ id: `reveal-recap-${r.syncCode}`, type: 'round-recap', course: rec.course,
+          winner: Object.assign({}, playerInfo(rec.winnerGross.id), rec.winnerGross),
+          net:   rec.bestNet  ? Object.assign({}, playerInfo(rec.bestNet.id), rec.bestNet)   : null,
+          front: rec.lowFront ? Object.assign({}, playerInfo(rec.lowFront.id), rec.lowFront) : null,
+          back:  rec.lowBack  ? Object.assign({}, playerInfo(rec.lowBack.id), rec.lowBack)   : null });
+      });
+      if (recaps.length) {
+        mods.push(_titleCard('reveal-rounds', tripName, 'ROUND BY ROUND', 'Every round of the trip'));
+        mods.push(...recaps);
+      }
+
+      // Act IV — THE REVEAL: the Final EGT Standings, saved for the very end.
+      // Counted down in reverse (last → 2nd), the champion crowned, then the
+      // full board as the closing image.
+      mods.push(_titleCard('reveal-standings-title', tripName, 'THE FINAL STANDINGS',
+        'Revealed in reverse order', '#C8A15A'));
+      mods.push(..._revealCountdown(facts));
+      const champ = _championModule(facts);
+      if (champ) mods.push(champ);
+      const board = _standingsModule(facts);
+      if (board) mods.push(Object.assign({}, board, { id: 'reveal-finalboard' }));
     }
 
     return mods.filter(Boolean);
