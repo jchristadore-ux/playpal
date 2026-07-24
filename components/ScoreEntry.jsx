@@ -91,195 +91,178 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
   );
 };
 
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, sz = 1, narrow = false, showPopToggle = true }) => {
+// ── PlayerScoreCard — full-width vertical card (one player per section) ────────
+// Redesigned for the EGT Cup: big touch targets, large type, comfortable
+// spacing, high-contrast for bright sunlight, and one-handed operation. Every
+// per-hole interaction lives here; read-only match/bet status is tucked into a
+// collapsible footer so it never competes with score entry.
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, showPopToggle = true }) => {
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
   const diff     = score ? score - hole.par : null;
-  const relColor = diff===null?'#E7E3D9':diff<=-2?'#C8A15A':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
-  const relLabel = diff===null?'—':diff<=-3?'ALB':diff===-2?'EGL':diff===-1?'BRD':diff===0?'PAR':diff===1?'BOG':diff===2?'DBL':`+${diff}`;
+  const relColor = diff===null?'#C8D5C0':diff<=-2?'#B45309':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
+  const relLabel = diff===null?'':diff<=-3?'ALBATROSS':diff===-2?'EAGLE':diff===-1?'BIRDIE':diff===0?'PAR':diff===1?'BOGEY':diff===2?'DOUBLE':diff===3?'TRIPLE':`+${diff}`;
   const puttVal  = putts[p.id]?.[holeIdx] || 0;
 
-  // One-screen scaling: every dimension multiplies the base (sz=1) size, with a
-  // readability/touch floor so dense layouts stay usable.
-  const s = (v, min = 0) => Math.max(min, Math.round(v * sz));
-  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
-  const statBtn = s(36, narrow ? 26 : 30);
-
-  const cardBorder = isWolf ? '1.5px solid rgba(220,38,38,0.35)' : isPartner ? `1.5px solid ${p.color}55` : '1px solid #E7E3D9';
-  const cardBg     = isWolf ? 'rgba(220,38,38,0.03)' : '#FFFFFF';
+  const [matchesOpen, setMatchesOpen] = React.useState(false);
 
   // Which per-hole stats this round records (FIR hidden on par 3s).
   const showPutts = !!stats.putts;
   const showFIR   = !!stats.fir && hole.par !== 3;
   const showGIR   = !!stats.gir;
+  const showSand  = !!stats.sand;
   const puttRequired = isPTMHolder && puttVal === 0;
-  const anyStatRow = showPutts || showFIR || showGIR || stats.pen || stats.ud;
 
   const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
   const pen = ex.pen || 0;
 
-  // Compact ✓/✗ toggle shared by FIR and GIR on the single stat row.
-  const HitMiss = (label, data, onSet) => {
-    const cur = data?.[p.id]?.[holeIdx];
-    return (
-      <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-        <Label style={{flexShrink:0, fontSize:s(10,9)}}>{label}</Label>
-        <div style={{display:'flex', gap:s(5,3)}}>
-          {[true, false].map(val => {
-            const selected = cur === val;
-            return (
-              <button key={String(val)} onClick={() => onSet(p.id, selected ? null : val)}
-                aria-label={`${p.name} ${label} ${val ? 'hit' : 'miss'}`} aria-pressed={selected}
-                style={{
-                  width:statBtn + 2, height:statBtn, borderRadius:s(9,7),
-                  border: selected ? 'none' : '1px solid #E7E3D9',
-                  background: selected ? (val ? '#15803D' : '#DC2626') : '#F0EDE4',
-                  color: selected ? '#FFFFFF' : '#3F5F4A',
-                  fontFamily:F, fontWeight:800, fontSize:s(16,13),
-                  cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                }}>
-                {val ? '✓' : '✗'}
-              </button>
-            );
-          })}
-        </div>
+  const cardBorder = isWolf ? '2px solid rgba(220,38,38,0.45)' : isPartner ? `2px solid ${p.color}66` : '1px solid #E7E3D9';
+  const cardBg     = isWolf ? 'rgba(220,38,38,0.04)' : '#FFFFFF';
+
+  // Shared row scaffold: a fixed-width label, then controls that flex to fill the
+  // full card width — so every button is as large as the screen allows.
+  const rowStyle   = { display:'flex', alignItems:'center', gap:12 };
+  const labelStyle = { fontFamily:F, fontWeight:800, fontSize:12, letterSpacing:1.5, color:'#3F5F4A', width:46, flexShrink:0 };
+
+  // Big split ✓/✗ toggle shared by FIR / GIR / Sand save.
+  const HitMissRow = (label, cur, onSet, yesTxt, noTxt, ariaKey) => (
+    <div style={rowStyle}>
+      <span style={labelStyle}>{label}</span>
+      <div style={{display:'flex', gap:10, flex:1}}>
+        {[true, false].map(val => {
+          const selected = cur === val;
+          const onColor  = val ? '#15803D' : '#DC2626';
+          return (
+            <button key={String(val)} onClick={() => onSet(p.id, selected ? null : val)}
+              aria-label={`${p.name} ${ariaKey} ${val ? 'hit' : 'miss'}`} aria-pressed={selected}
+              style={{ flex:1, height:52, borderRadius:14,
+                border: selected ? 'none' : '1.5px solid #E4E0D5',
+                background: selected ? onColor : '#F0EDE4',
+                color: selected ? '#FFFFFF' : '#9AA79A',
+                fontFamily:F, fontWeight:900, fontSize:22,
+                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none' }}>
+              <span style={{lineHeight:1}}>{val ? '✓' : '✗'}</span>
+              <span style={{fontFamily:F, fontWeight:800, fontSize:12, letterSpacing:1}}>{val ? yesTxt : noTxt}</span>
+            </button>
+          );
+        })}
       </div>
-    );
-  };
+    </div>
+  );
 
-  const triBtn = (field, val, lbl, color) => {
-    const on = ex[field] === val;
-    return (
-      <button key={field + String(val)}
-        onClick={() => onExtraStat(p.id, field, on ? null : val)}
-        aria-label={`${field} ${val ? 'yes' : 'no'}`} aria-pressed={on}
-        style={{
-          width:statBtn - 2, height:statBtn - 2, borderRadius:s(8,6),
-          border: on ? 'none' : '1px solid #E7E3D9',
-          background: on ? color : '#F0EDE4',
-          color: on ? '#FFFFFF' : '#3F5F4A',
-          fontFamily:F, fontWeight:800, fontSize:s(13,11),
-          cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-          display:'flex', alignItems:'center', justifyContent:'center',
-        }}>
-        {lbl}
-      </button>
-    );
-  };
+  // Read-only status pill used inside the collapsible "Matches & bets" footer.
+  const metaPill = (st, i) => (
+    <div key={i} style={{
+      display:'flex', alignItems:'center', gap:5,
+      background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:999,
+      padding:'6px 12px',
+    }}>
+      {st.icon && <span style={{fontSize:13, lineHeight:1}}>{st.icon}</span>}
+      {st.value !== '' && st.value != null && (
+        <span style={{fontFamily:F, fontWeight:800, fontSize:15, color:st.color, lineHeight:1}}>{st.value}</span>
+      )}
+      <span style={{fontFamily:F, fontSize:11, color:'#8A9E8A', letterSpacing:0.3}}>{st.label}</span>
+    </div>
+  );
 
+  // Pop indicator — auto for Nassau/Markey; manual toggle only when a game that
+  // consumes pops is active (pure stat rounds hide it).
   const goldPill = (icon, text) => (
     <div style={{
-      borderRadius:999, padding:`${s(4,3)}px ${s(10,7)}px`,
-      border:'1px solid rgba(200,161,90,0.45)', background:'rgba(200,161,90,0.12)', color:'#C8A15A',
-      fontFamily:F, fontWeight:800, fontSize:s(11,10), letterSpacing:0.5,
-      display:'flex', alignItems:'center', gap:4,
+      borderRadius:999, padding:'8px 14px', minHeight:40,
+      border:'1px solid rgba(200,161,90,0.45)', background:'rgba(200,161,90,0.12)', color:'#B8903A',
+      fontFamily:F, fontWeight:800, fontSize:13, letterSpacing:0.5,
+      display:'flex', alignItems:'center', gap:6,
     }}>
       <span>{icon}</span> {text}
     </div>
   );
-
-  // Pop indicator — auto for Nassau/Markey; manual toggle only when a game
-  // format that consumes pops is active (pure stat rounds hide it).
   const popNode = isNassauPlayer
-    ? (nassauPopActive ? goldPill('💰', 'POP ON') : null)
+    ? (nassauPopActive ? goldPill('💰', 'GETTING A POP') : null)
     : markeyPopCount !== undefined
-    ? (markeyPopCount > 0 ? goldPill('⚔️', markeyPopCount > 1 ? `${markeyPopCount} POPS` : 'POP ON') : null)
+    ? (markeyPopCount > 0 ? goldPill('⚔️', markeyPopCount > 1 ? `${markeyPopCount} POPS` : 'GETTING A POP') : null)
     : showPopToggle
     ? (
       <button
         onClick={()=>onPopToggle(p.id)}
         aria-pressed={gettingPop} aria-label={`Pop stroke for ${p.name}`}
         style={{
-          borderRadius:999, padding:`${s(4,3)}px ${s(10,7)}px`, minHeight:s(28,24),
-          border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1px solid #E7E3D9',
+          borderRadius:999, padding:'8px 16px', minHeight:40,
+          border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1.5px solid #E4E0D5',
           background:gettingPop ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
-          color:gettingPop ? '#C8A15A' : '#3F5F4A',
-          fontFamily:F, fontWeight:800, fontSize:s(11,10), letterSpacing:0.5,
+          color:gettingPop ? '#B8903A' : '#3F5F4A',
+          fontFamily:F, fontWeight:800, fontSize:13, letterSpacing:0.5,
           cursor:'pointer', WebkitTapHighlightColor:'transparent'
         }}>
-        {gettingPop ? 'POP ON' : 'POP'}
+        {gettingPop ? '💰 POP ON' : 'POP?'}
       </button>
     )
     : null;
 
-  const hasMeta = (formatStats && formatStats.length > 0) || hasBBB || !!popNode;
-  const padX = s(12, 8);
+  const hasBetsRow = hasBBB || !!popNode;
+  const stats2     = formatStats || [];
+  const strokesPill = stats2.find(s => s.label === 'STROKES');
 
   return (
-    <div style={{background:cardBg, border:cardBorder, borderRadius:s(18,12), overflow:'hidden',
-      display:'flex', flexDirection:'column', minHeight:0, minWidth:0, justifyContent:'center'}}>
+    <article style={{background:cardBg, border:cardBorder, borderRadius:22,
+      padding:'16px 16px 14px', boxShadow:'0 1px 3px rgba(14,43,32,0.05)'}}>
 
-      {/* Player header — name + HCP on one line */}
-      <div style={{display:'flex', alignItems:'center', padding:`${s(8,5)}px ${padX}px 0`, gap:s(10,6), flexShrink:0}}>
-        <Avatar player={p} size={s(30,22)}/>
-        <div style={{flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:6, overflow:'hidden'}}>
-          <span style={{fontFamily:F, fontWeight:800, fontSize:narrow?s(16,13):s(19,14), color:'#0E2B20', letterSpacing:0.2, lineHeight:1.1,
-            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{narrow ? p.name.split(' ')[0] : p.name}</span>
-          {!(narrow && hasWolf && isWolf) && (
-            <span style={{fontFamily:F, fontSize:s(11,9), color:'#8A9E8A', flexShrink:0}}>HCP {p.handicap}</span>
-          )}
+      {/* Identity row */}
+      <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:14}}>
+        <Avatar player={p} size={46}/>
+        <div style={{flex:1, minWidth:0}}>
+          <div style={{fontFamily:F, fontWeight:800, fontSize:23, color:'#0E2B20', letterSpacing:0.2, lineHeight:1.1,
+            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{p.name}</div>
+          <div style={{fontFamily:F, fontSize:12, fontWeight:600, color:'#8A9E8A', letterSpacing:0.5, marginTop:2}}>HCP {p.handicap}</div>
         </div>
-        {isWolf && !hasWolf && <span style={{fontSize:s(18,14)}}>🐺</span>}
-        {isPartner && !isWolf && <span style={{fontSize:s(16,13), opacity:0.8}}>⚑</span>}
+        {isPTMHolder && !isWolf && goldPill('💰', 'HOLDS')}
+        {isPartner && !isWolf && (
+          <div style={{display:'flex', alignItems:'center', gap:6, background:`${p.color}14`, border:`1px solid ${p.color}55`,
+            borderRadius:999, padding:'6px 12px', fontFamily:F, fontWeight:800, fontSize:12, color:p.color, letterSpacing:0.5}}>
+            ⚑ PARTNER
+          </div>
+        )}
         {hasWolf && isWolf && (
           <button onClick={onWolfTap} style={{
             background: !wolfData?.[holeIdx]?.confirmed ? '#DC2626' : 'rgba(14,43,32,0.08)',
             border: !wolfData?.[holeIdx]?.confirmed ? 'none' : '1px solid rgba(14,43,32,0.25)',
             color: !wolfData?.[holeIdx]?.confirmed ? '#FFFFFF' : '#0E2B20',
-            borderRadius:20, padding:`${s(5,4)}px ${s(12,8)}px ${s(5,4)}px ${s(8,6)}px`, cursor:'pointer',
-            fontFamily:F, fontWeight:800, fontSize:s(12,11), letterSpacing:0.5,
-            display:'flex', alignItems:'center', gap:5,
+            borderRadius:999, padding:'8px 16px', minHeight:40, cursor:'pointer',
+            fontFamily:F, fontWeight:800, fontSize:14, letterSpacing:0.5,
+            display:'flex', alignItems:'center', gap:6,
             WebkitTapHighlightColor:'transparent', flexShrink:0,
           }}>
-            <span style={{fontSize:s(14,12)}}>🐺</span>
-            {!wolfData?.[holeIdx]?.confirmed ? 'PICK →' : wolfData[holeIdx]?.lone ? 'LONE 🐺' : '✓ SET'}
+            <span style={{fontSize:16}}>🐺</span>
+            {!wolfData?.[holeIdx]?.confirmed ? 'PICK →' : wolfData[holeIdx]?.lone ? 'LONE WOLF' : '✓ SET'}
           </button>
         )}
       </div>
 
       {/* Wolf pick required warning */}
       {isWolf && hasWolf && !wolfData?.[holeIdx]?.confirmed && (
-        <div style={{display:'flex', alignItems:'center', gap:6, padding:`${s(4,3)}px ${padX}px 0`, flexShrink:0}}>
-          <span style={{fontSize:s(11,10)}}>⚠️</span>
-          <span style={{fontFamily:F, fontWeight:700, fontSize:s(11,10), color:'#DC2626', letterSpacing:0.5}}>{narrow ? 'PICK PARTNER OR LONE WOLF' : 'PICK PARTNER OR GO LONE WOLF TO ADVANCE'}</span>
+        <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:12,
+          background:'rgba(220,38,38,0.06)', border:'1px solid rgba(220,38,38,0.25)', borderRadius:12, padding:'10px 12px'}}>
+          <span style={{fontSize:14}}>⚠️</span>
+          <span style={{fontFamily:F, fontWeight:700, fontSize:13, color:'#DC2626', letterSpacing:0.3}}>Pick a partner or go lone wolf to advance</span>
         </div>
       )}
 
-      {/* PTM putt required warning */}
-      {puttRequired && (
-        <div style={{display:'flex', alignItems:'center', gap:6, padding:`${s(4,3)}px ${padX}px 0`, flexShrink:0}}>
-          <span style={{fontSize:s(11,10)}}>⚠️</span>
-          <span style={{fontFamily:F, fontWeight:700, fontSize:s(11,10), color:'#C8A15A', letterSpacing:0.5}}>ENTER PUTTS TO ADVANCE</span>
-        </div>
-      )}
-
-      {/* Meta row — format pills · BBB · pop, one wrapping line */}
-      {hasMeta && (
-        <div style={{display:'flex', gap:s(6,4), padding:`${s(6,4)}px ${padX}px 0`, flexWrap:'wrap', alignItems:'center', flexShrink:0}}>
-          {formatStats && formatStats.map((st,i) => (
-            <div key={i} style={{
-              display:'flex', alignItems:'center', gap:4,
-              background:'#F6F4EE', border:'1px solid #E7E3D9',
-              borderRadius:20, padding:`${s(3,2)}px ${s(10,7)}px ${s(3,2)}px ${s(8,6)}px`,
-            }}>
-              {st.icon && <span style={{fontSize:s(11,10), lineHeight:1}}>{st.icon}</span>}
-              <span style={{fontFamily:F, fontWeight:800, fontSize:s(13,11), color:st.color, lineHeight:1}}>{st.value}</span>
-              <span style={{fontFamily:F, fontSize:s(9,8), color:'#8A9E8A', letterSpacing:0.3, marginLeft:2}}>{st.label}</span>
-            </div>
-          ))}
+      {/* Bets row — interactive per-hole game controls (BBB award · pop) */}
+      {hasBetsRow && (
+        <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:14}}>
           {hasBBB && <BBBPill playerId={p.id} holeIdx={holeIdx} bbbData={bbbData} players={players} onSetBBB={onSetBBB}/>}
           {popNode && <div style={{marginLeft:'auto'}}>{popNode}</div>}
         </div>
       )}
 
-      {/* Score stepper — flexes to absorb spare height, so 2-player layouts get
-          a big, premium score area while 4-player grids stay compact. */}
-      <div style={{display:'flex', alignItems:'stretch', padding:`${s(8,5)}px ${padX}px`, gap:s(8,6), flex:'1 1 auto', minHeight:s(64, narrow ? 44 : 52)}}>
+      {/* Score hero — the primary interaction, big and unmissable */}
+      <div style={{display:'flex', alignItems:'stretch', gap:12, height:112, marginBottom:16}}>
         <button
           onClick={()=>onScore(p.id, (score||hole.par)-1)}
           disabled={score !== null && score <= 1}
           aria-label={`Subtract stroke for ${p.name}`}
-          style={{width:s(52, narrow ? 36 : 42), alignSelf:'stretch', borderRadius:s(12,10), border:'none', background:'#EAE7DE',
-            color:'#0E2B20', fontSize:s(28,22), fontFamily:F, fontWeight:900,
+          style={{width:80, borderRadius:18, border:'none', background:'#EAE7DE',
+            color:'#0E2B20', fontSize:40, fontFamily:F, fontWeight:900,
             cursor:'pointer', flexShrink:0, opacity:(score === null || score > 1)?1:0.3,
             WebkitTapHighlightColor:'transparent', userSelect:'none',
             display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -291,27 +274,27 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
           role="button" tabIndex={0}
           aria-label={`Enter score for ${p.name}${score ? `, currently ${score}` : ''}`}
           onKeyDown={e=>{ if (e.key==='Enter'||e.key===' ') { e.preventDefault(); onScoreTap(); } }}
-          style={{flex:1, cursor:'pointer', borderRadius:s(12,10),
+          style={{flex:1, cursor:'pointer', borderRadius:18,
             background:'#F6F4EE', border:'1px solid #E7E3D9',
             display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
             WebkitTapHighlightColor:'transparent', userSelect:'none', gap:2, minWidth:0, overflow:'hidden'}}>
           <div key={score ?? 'none'} style={{fontFamily:F, fontWeight:900, lineHeight:1,
-            fontSize:s(56, narrow ? 30 : 36), color:score?relColor:'#C8D5C0', transition:'color 0.15s',
+            fontSize:64, color:score?relColor:'#C8D5C0', transition:'color 0.15s',
             animation: score ? 'ppScorePop 0.22s ease-out' : 'none'}}>
             {score||'—'}
           </div>
           {score
-            ? <div style={{fontFamily:F, fontSize:s(11,9), fontWeight:700, letterSpacing:1, color:relColor, whiteSpace:'nowrap'}}>{relLabel}</div>
-            : !narrow && <div style={{fontFamily:F, fontSize:s(10,8), color:'#8A9E8A', letterSpacing:0.5, whiteSpace:'nowrap'}}>TAP TO ENTER</div>
+            ? <div style={{fontFamily:F, fontSize:13, fontWeight:800, letterSpacing:1.5, color:relColor, whiteSpace:'nowrap'}}>{relLabel}</div>
+            : <div style={{fontFamily:F, fontSize:12, fontWeight:700, color:'#8A9E8A', letterSpacing:1, whiteSpace:'nowrap'}}>TAP TO ENTER</div>
           }
         </div>
 
         <button
           onClick={()=>onScore(p.id, (score||hole.par)+1)}
           aria-label={`Add stroke for ${p.name}`}
-          style={{width:s(52, narrow ? 36 : 42), alignSelf:'stretch', borderRadius:s(12,10), border:'none',
-            background:'#C8A15A', boxShadow:'0 2px 10px rgba(200,161,90,0.3)',
-            color:'#0E2B20', fontSize:s(28,22), fontFamily:F, fontWeight:900,
+          style={{width:80, borderRadius:18, border:'none',
+            background:'#C8A15A', boxShadow:'0 3px 14px rgba(200,161,90,0.35)',
+            color:'#0E2B20', fontSize:40, fontFamily:F, fontWeight:900,
             cursor:'pointer', flexShrink:0,
             WebkitTapHighlightColor:'transparent', userSelect:'none',
             display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -319,61 +302,71 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         </button>
       </div>
 
-      {/* Stat row — putts · FIR · GIR · PEN · SAND · U&D on one wrapping line */}
-      {anyStatRow && (
-        <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', columnGap:s(14, narrow ? 8 : 10), rowGap:s(6,4),
-          padding:`${s(6,4)}px ${padX}px ${s(9,6)}px`, flexShrink:0,
-          borderTop: puttRequired ? '1px solid rgba(200,161,90,0.4)' : '1px solid #E7E3D9',
-          background: puttRequired ? 'rgba(200,161,90,0.04)' : 'transparent'}}>
-          {showPutts && (
-            <div style={{display:'flex', alignItems:'center', gap:s(8,5)}}>
-              <div style={{display:'flex', flexDirection:'column', gap:1, flexShrink:0}}>
-                <Label style={{flexShrink:0, fontSize:s(10,9)}}>PUTTS</Label>
-                {puttRequired && (
-                  <span style={{fontFamily:F, fontWeight:700, fontSize:s(9,8), color:'#C8A15A', letterSpacing:0.5}}>💰 REQ</span>
-                )}
-              </div>
-              <div style={{display:'flex', gap:s(5,3)}}>
-                {[1,2,3,4].map(n=>(
-                  <button key={n}
-                    onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
-                    aria-label={`${p.name}: ${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
-                    style={{width:statBtn, height:statBtn, borderRadius:s(9,7),
-                      border: puttVal===n ? 'none' : '1px solid #E7E3D9',
-                      background: puttVal===n ? p.color : '#F0EDE4',
-                      color: puttVal===n ? '#0E2B20' : '#3F5F4A',
-                      fontFamily:F, fontWeight:800, fontSize:s(16,13),
-                      cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                      display:'flex', alignItems:'center', justifyContent:'center'}}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-              {puttVal >= 3 && <span style={{fontFamily:F, fontWeight:700, fontSize:s(11,9), color:'#DC2626', letterSpacing:0.5}}>3-PUTT</span>}
+      {/* Stat block — one full-width labeled row per stat, all large targets */}
+      <div style={{display:'flex', flexDirection:'column', gap:10,
+        ...(puttRequired ? { padding:'10px', margin:'-2px', borderRadius:14, border:'1px solid rgba(200,161,90,0.4)', background:'rgba(200,161,90,0.05)' } : {})}}>
+        {showPutts && (
+          <div style={rowStyle}>
+            <span style={labelStyle}>{puttRequired ? '💰' : ''}PUTTS</span>
+            <div style={{display:'flex', gap:10, flex:1}}>
+              {[1,2,3,4].map(n=>(
+                <button key={n}
+                  onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
+                  aria-label={`${p.name}: ${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
+                  style={{flex:1, height:52, borderRadius:14,
+                    border: puttVal===n ? 'none' : '1.5px solid #E4E0D5',
+                    background: puttVal===n ? p.color : '#F0EDE4',
+                    color: puttVal===n ? '#FFFFFF' : '#3F5F4A',
+                    fontFamily:F, fontWeight:800, fontSize:22,
+                    cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                    display:'flex', alignItems:'center', justifyContent:'center'}}>
+                  {n}
+                </button>
+              ))}
             </div>
-          )}
-          {showFIR && HitMiss('FIR', firData, onFIR)}
-          {showGIR && HitMiss('GIR', girData, onGIR)}
-          {stats.pen && (
-            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-              <Label style={{flexShrink:0, fontSize:s(10,9)}}>PEN</Label>
+            {puttVal >= 3 && <span style={{fontFamily:F, fontWeight:800, fontSize:12, color:'#DC2626', letterSpacing:0.5, flexShrink:0}}>3-PUTT</span>}
+          </div>
+        )}
+        {showFIR && HitMissRow('FIR', firData?.[p.id]?.[holeIdx], onFIR, 'HIT', 'MISS', 'fairway')}
+        {showGIR && HitMissRow('GIR', girData?.[p.id]?.[holeIdx], onGIR, 'HIT', 'MISS', 'green')}
+        {showSand && HitMissRow('SAND', ex.sand, (pid, v) => onExtraStat(pid, 'sand', v), 'SAVE', 'MISS', 'sand save')}
+        {stats.pen && (
+          <div style={rowStyle}>
+            <span style={labelStyle}>PEN</span>
+            <div style={{display:'flex', alignItems:'center', gap:12}}>
               <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0} aria-label="One fewer penalty"
-                style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
-              <span style={{fontFamily:F, fontWeight:800, fontSize:s(15,12), color:pen>0?'#DC2626':'#8A9E8A', minWidth:14, textAlign:'center'}}>{pen}</span>
+                style={{width:52, height:52, borderRadius:14, border:'1.5px solid #E4E0D5', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:24, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
+              <span style={{fontFamily:F, fontWeight:900, fontSize:24, color:pen>0?'#DC2626':'#8A9E8A', minWidth:28, textAlign:'center'}}>{pen}</span>
               <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
-                style={{width:statBtn - 4, height:statBtn - 2, borderRadius:s(8,6), border:'1px solid #E7E3D9', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:s(16,13), cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
+                style={{width:52, height:52, borderRadius:14, border:'1.5px solid #E4E0D5', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:24, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
             </div>
-          )}
-          {stats.ud && (
-            <div style={{display:'flex', alignItems:'center', gap:s(6,4)}}>
-              <Label style={{flexShrink:0, fontSize:s(10,9)}}>U&D</Label>
-              {triBtn('ud', true, '✓', '#15803D')}
-              {triBtn('ud', false, '✗', '#DC2626')}
+          </div>
+        )}
+        {stats.ud && HitMissRow('U&D', ex.ud, (pid, v) => onExtraStat(pid, 'ud', v), 'GOT', 'NO', 'up and down')}
+      </div>
+
+      {/* Matches & bets — read-only status, collapsed so scoring stays primary */}
+      {stats2.length > 0 && (
+        <div style={{marginTop:14, borderTop:'1px solid #EEEAE1', paddingTop:10}}>
+          <button onClick={()=>setMatchesOpen(o=>!o)} aria-expanded={matchesOpen}
+            aria-label={`${matchesOpen ? 'Hide' : 'Show'} ${p.name} match and bet status`}
+            style={{width:'100%', display:'flex', alignItems:'center', gap:8, background:'transparent',
+              border:'none', padding:'4px 0', cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+            <span style={{fontFamily:F, fontWeight:800, fontSize:12, letterSpacing:1.5, color:'#8A9E8A'}}>MATCHES &amp; BETS</span>
+            {strokesPill && <span style={{fontFamily:F, fontWeight:800, fontSize:12, color:'#3F5F4A'}}>· ⛳ {strokesPill.value}</span>}
+            <span style={{marginLeft:'auto', fontFamily:F, fontWeight:700, fontSize:11, color:'#FFFFFF',
+              background:'#C8A15A', borderRadius:999, minWidth:20, height:20, padding:'0 6px',
+              display:'flex', alignItems:'center', justifyContent:'center'}}>{stats2.length}</span>
+            <span style={{fontSize:12, color:'#8A9E8A', transform:matchesOpen?'rotate(180deg)':'none', transition:'transform 0.15s'}}>▾</span>
+          </button>
+          {matchesOpen && (
+            <div style={{display:'flex', flexWrap:'wrap', gap:8, marginTop:10}}>
+              {stats2.map(metaPill)}
             </div>
           )}
         </div>
       )}
-    </div>
+    </article>
   );
 };
 
@@ -639,6 +632,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     putts: statsCfg.putts || hasPTM,
     fir:   statsCfg.fir,
     gir:   statsCfg.gir,
+    sand:  statsCfg.sand,
     pen:   statsCfg.pen,
     ud:    statsCfg.ud,
   }), [statsCfg, hasPTM]);
@@ -978,65 +972,12 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const hasGames = games.length > 0;
   const hasAnyTracker = hasGames || hasWolf || hasPTM || hasNassau || hasStable || hasSkins || hasBBB || hasTeeBall || hasMarkey;
 
-  // ── One-screen adaptive layout ────────────────────────────────────────────
-  // The player grid is measured with a ResizeObserver; the measured cell size
-  // drives a scale factor so the interface resizes itself to always fit —
-  // large and generous for 2 players, efficient for 4+ — with no scrolling.
-  const gridRef = React.useRef(null);
-  const [gridBox, setGridBox] = React.useState(() => ({
-    w: Math.max(280, window.innerWidth - 20),
-    h: Math.max(320, window.innerHeight - 300),
-  }));
-  React.useEffect(() => {
-    const el = gridRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(entries => {
-      const r = entries[0].contentRect;
-      setGridBox(prev => (Math.abs(prev.w - r.width) < 1 && Math.abs(prev.h - r.height) < 1)
-        ? prev : { w: r.width, h: r.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const nPlayers    = players.length;
-  const isLandscape = gridBox.w > gridBox.h * 1.5;
-  const gridCols    = isLandscape ? Math.min(nPlayers, 4) : (nPlayers <= 3 ? 1 : 2);
-  const gridRows    = Math.ceil(nPlayers / gridCols) || 1;
-  const GAP         = isLandscape ? 8 : 10;
-  const cardW       = (gridBox.w - GAP * (gridCols - 1)) / gridCols;
-  const cardH       = (gridBox.h - GAP * (gridRows - 1)) / gridRows;
+  // ── Vertical layout ───────────────────────────────────────────────────────
+  // One full-width player section per golfer, stacked and scrolled top→bottom.
+  // Optimized for speed, visibility and touch accuracy over information density
+  // — no pinching, zooming, or horizontal scrolling, ever.
   const showPopToggle = hasAnyTracker; // pops only affect game math — hide in casual rounds
-  const narrowCard = cardW < 260;
-  const compactHeader = gridBox.h < 400; // short viewports (landscape phones)
-
-  // Height budget (at sz=1): header 40 + stepper 86 + meta 36 = 162, plus the
-  // wolf/PTM warning strip and however many rows the stat groups wrap into at
-  // the current card width. Wrap count depends on the scale, so iterate.
-  const statGroupWidths = [
-    cardStats.putts && 210, cardStats.fir && 128, cardStats.gir && 128,
-    cardStats.pen && 132, cardStats.ud && 122,
-  ].filter(Boolean);
-  const statRowsAt = (scale) => {
-    if (!statGroupWidths.length) return 0;
-    const innerW = cardW - 24 * scale;
-    let rows = 1, cur = 0;
-    statGroupWidths.forEach(g => {
-      const w = g * scale;
-      if (cur > 0 && cur + w > innerW) { rows++; cur = w; }
-      else cur += w + 14 * scale;
-    });
-    return rows;
-  };
-  const baseFixedH = 162 + (hasWolf ? 28 : 0) + (hasPTM ? 24 : 0);
-  const widthCap   = (cardW / 340) * 1.15;
-  let szCalc = Math.min(cardH / (baseFixedH + (statGroupWidths.length ? 52 : 0)), widthCap);
-  for (let i = 0; i < 3; i++) {
-    const next = Math.min(cardH / (baseFixedH + statRowsAt(szCalc) * 52), widthCap);
-    if (Math.abs(next - szCalc) < 0.01) { szCalc = next; break; }
-    szCalc = next;
-  }
-  const sz = Math.max(0.60, Math.min(1.5, szCalc));
+  const shortHeader   = window.innerHeight < 620; // trim the hole header on tiny screens
 
   // Always-visible primary action — tells the golfer exactly what's next.
   const primary = !currentHoleScored
@@ -1064,13 +1005,13 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
       <SyncPulse syncing={syncing}/>
 
-      {/* Hole header */}
+      {/* Hole header — fixed above the scrolling player list */}
       <div style={{flexShrink:0, background:'#0E2B20', borderBottom:'1px solid rgba(255,255,255,0.08)',
-        padding:`${compactHeader?4:5}px calc(12px + env(safe-area-inset-right, 0px)) ${compactHeader?4:5}px calc(12px + env(safe-area-inset-left, 0px))`}}>
+        padding:`${shortHeader?5:7}px calc(12px + env(safe-area-inset-right, 0px)) ${shortHeader?5:7}px calc(12px + env(safe-area-inset-left, 0px))`}}>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
           <button onClick={prevHole} disabled={seqPos===0} aria-label="Previous hole"
-            style={{width:40, height:compactHeader?30:34, borderRadius:10, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
-              color:seqPos===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:20, cursor:seqPos===0?'default':'pointer',
+            style={{width:44, height:shortHeader?34:38, borderRadius:11, border:'none', background:seqPos===0?'transparent':'rgba(255,255,255,0.12)',
+              color:seqPos===0?'rgba(255,255,255,0.2)':'#F6F4EE', fontSize:22, cursor:seqPos===0?'default':'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ‹
@@ -1078,25 +1019,17 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
           <div style={{flex:1, textAlign:'center', minWidth:0}}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'center', gap:8}}>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:compactHeader?16:18, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
-              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:compactHeader?12:13, color:parColor}}>PAR {hole.par}</span>
-              {compactHeader && (
-                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds · HCP {hole.hdcp}</span>
-              )}
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:900, fontSize:shortHeader?18:20, color:'#F6F4EE', lineHeight:1}}>HOLE {hole.num}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:shortHeader?13:14, color:parColor}}>PAR {hole.par}</span>
+              <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds · HCP {hole.hdcp}</span>
             </div>
-            {!compactHeader && (
-              <div style={{display:'flex', justifyContent:'center', gap:14, marginTop:2}}>
-                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>{hole.yds} yds</span>
-                <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'rgba(246,244,238,0.6)'}}>HCP {hole.hdcp}</span>
-              </div>
-            )}
           </div>
 
           <button onClick={nextHole} disabled={seqPos===lastSeq || (currentHoleScored && !canAdvance)} aria-label="Next hole"
-            style={{width:40, height:compactHeader?30:34, borderRadius:10, border:'none',
+            style={{width:44, height:shortHeader?34:38, borderRadius:11, border:'none',
               background: seqPos===lastSeq ? 'transparent' : 'rgba(255,255,255,0.12)',
               color: seqPos===lastSeq ? 'rgba(255,255,255,0.2)' : currentHoleScored && !canAdvance ? 'rgba(220,38,38,0.5)' : '#F6F4EE',
-              fontSize:20, cursor: seqPos===lastSeq || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
+              fontSize:22, cursor: seqPos===lastSeq || (currentHoleScored && !canAdvance) ? 'not-allowed' : 'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
               WebkitTapHighlightColor:'transparent'}}>
             ›
@@ -1104,7 +1037,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         </div>
 
         {/* Hole dots */}
-        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:compactHeader?5:8, flexWrap:'wrap'}}>
+        <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:shortHeader?6:8, flexWrap:'wrap'}}>
           {playOrder.map((i) => {
             const allIn = players.every(p => scores[p.id]?.[i]);
             const some  = players.some(p => scores[p.id]?.[i]);
@@ -1120,11 +1053,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         </div>
       </div>
 
-      {/* Player grid — sized to always fit the viewport, no scrolling */}
-      <div style={{flex:1, minHeight:0,
-        padding:`${GAP}px calc(${GAP}px + env(safe-area-inset-right, 0px)) ${GAP}px calc(${GAP}px + env(safe-area-inset-left, 0px))`}}>
-        <div ref={gridRef} style={{width:'100%', height:'100%', display:'grid',
-          gridTemplateColumns:`repeat(${gridCols}, 1fr)`, gridAutoRows:'1fr', gap:GAP}}>
+      {/* Player list — full-width sections stacked vertically, scrolls top→bottom */}
+      <div style={{flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch',
+        overflowX:'hidden', overscrollBehaviorY:'contain',
+        padding:`12px calc(12px + env(safe-area-inset-right, 0px)) 16px calc(12px + env(safe-area-inset-left, 0px))`}}>
+        <div style={{display:'flex', flexDirection:'column', gap:14, maxWidth:640, margin:'0 auto'}}>
           {players.map(p => {
             const isWolf       = hasWolf && wolfPlayer?.id === p.id;
             const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
@@ -1151,7 +1084,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 hasBBB={hasBBB} bbbData={hasBBB ? bbbData : null} players={players} onSetBBB={handleSetBBB}
                 stats={cardStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
                 extraStats={extraStats} onExtraStat={setExtraStat}
-                sz={sz} narrow={narrowCard} showPopToggle={showPopToggle}
+                showPopToggle={showPopToggle}
               />
             );
           })}

@@ -1,5 +1,32 @@
 # Project Progress
 
+## In-round scoring redesign — vertical player cards (branch claude/egt-scoring-redesign-ku27i6) — v1.9.0
+
+Problem: the in-round scorer crammed four players into a non-scrolling grid,
+auto-scaling every control down to fit one screen. For an EGT foursome with
+several concurrent betting formats the touch targets were tiny and stats were
+nearly impossible to enter during live play.
+
+Redesign (`components/ScoreEntry.jsx`): replaced the ResizeObserver auto-scaling
+grid with a **vertical stack of full-width player cards** (one golfer per
+section, scrolls top→bottom, never horizontally). Each card carries every
+per-hole interaction at a large size — score stepper, `1·2·3·4` putts,
+full-width `HIT/MISS` toggles for FIR / GIR / **Sand** / U&D, penalty stepper,
+BBB awards, pop strokes, Wolf picks. Read-only match/bet status moved to a
+per-card collapsible "Matches & bets" disclosure plus the existing Games sheet,
+so match visualization never competes with score entry.
+
+Sand-save entry restored: re-added `sand` to `STAT_TRACK_DEFS` (opt-in),
+`cardStats`, and enabled it for EGT rounds (`components/egt/egtBridge.js`
+`statsConfig`). It feeds `extraStats.sand`, which the EGT side-games engine
+already counts. `tests/statsConfig.test.mjs` updated; full suite 181/181 green.
+Verified with a Playwright harness (4 players × 6 formats) across 320/390/430px:
+zero horizontal page overflow, stat entry persists, keypad/wolf/games all work.
+
+Files: `components/ScoreEntry.jsx`, `components/statsService.js`,
+`components/egt/egtBridge.js`, `tests/statsConfig.test.mjs`, version bump to
+1.9.0 (`package.json`, `index.html`, `sw.js`), `CHANGELOG.md`, rebuilt `dist/`.
+
 ## EGT Cup cross-device submitted-status sync (branch claude/egt-cup-mobile-sync-twd320) — v1.8.2
 
 Reported bug: a round scored and finalized ("submitted") in the EGT Cup →

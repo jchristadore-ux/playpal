@@ -280,6 +280,7 @@ const STAT_TRACK_DEFS = [
   { key: 'putts', label: 'Putts',      hint: 'Putts per hole',           icon: '🎯', default: true,  primary: true },
   { key: 'fir',   label: 'FIR',        hint: 'Fairways in regulation',   icon: '🟢', default: true,  primary: true },
   { key: 'gir',   label: 'GIR',        hint: 'Greens in regulation',     icon: '⛳', default: true,  primary: true },
+  { key: 'sand',  label: 'Sand saves', hint: 'Up & down from a bunker',  icon: '🏖️', default: false },
   { key: 'pen',   label: 'Penalties',  hint: 'Penalty strokes',          icon: '⚠️', default: false },
   { key: 'ud',    label: 'Up & downs', hint: 'Scramble par saves',       icon: '🎽', default: false },
 ];
@@ -299,7 +300,7 @@ function normalizeStatsConfig(cfg) {
 // saved before per-stat selection existed (legacy `trackStats`/`tripId`).
 function resolveRoundStatsConfig(round) {
   if (round && round.statsConfig) return normalizeStatsConfig(round.statsConfig);
-  if (round && round.trackStats)  return { putts: true, fir: true, gir: true, pen: true, ud: true };
+  if (round && round.trackStats)  return { putts: true, fir: true, gir: true, sand: true, pen: true, ud: true };
   if (round && round.tripId)      return { putts: true, fir: true, gir: true, pen: false, ud: false };
   return { putts: true, fir: false, gir: false, pen: false, ud: false };
 }

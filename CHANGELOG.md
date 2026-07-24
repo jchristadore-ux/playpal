@@ -4,7 +4,16 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-07-24
+
+Vertical, touch-first in-round scoring — rebuilt for the EGT Cup final round.
+
 ### Added
+- **Sand-save tracking is back** as an opt-in per-hole stat (a big `SAVE / MISS`
+  toggle on each player card) and is on by default for EGT Cup rounds, so the
+  bunker up-and-downs the tournament's stats engine already counts can finally
+  be entered while you play. (Removed in 1.5.1 for density; density is no longer
+  the constraint.)
 - **Head-to-head "Settle up" on the Money tab.** Alongside the per-player net,
   the EGT app now shows the **pairwise settlement** — who owes whom, each
   matchup netted on its own (e.g. after R1: *TJ owes John $8, Mike owes John
@@ -13,6 +22,21 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
   head-to-head flows and exposes `money.settlements` per round and for the trip.
 
 ### Changed
+- **Redesigned the in-round scoring screen as a vertical stack of full-width
+  player cards — one golfer per section, scrolled top to bottom.** Replaces the
+  compressed multi-player grid that scaled everything down to cram four players
+  onto one non-scrolling screen. Now every card spans the full width with large
+  score steppers, big `1·2·3·4` putt buttons, and full-width `HIT / MISS`
+  toggles for FIR, GIR, Sand and Up-&-down — built for speed, visibility and
+  touch accuracy in bright sunlight and one-handed play, never for information
+  density. There is **no horizontal scrolling** and nothing to pinch, zoom or
+  hunt for. Every per-hole interaction (score, putts, FIR, GIR, sand, penalties,
+  up-&-downs, BBB awards, pop strokes, Wolf picks) lives on the card; read-only
+  match/bet status is tucked into a per-card **"Matches & bets"** disclosure
+  (collapsed by default, with a strokes-total glance) plus the full **Games**
+  sheet, so match visualization never competes with score entry. The old
+  ResizeObserver auto-scaling engine and its `sz`/`narrow` scaling props are
+  gone.
 - **The whole EGT money model is now flat stakes — no per-point or per-unit
   settlement anywhere, across the app and the SportsCenter broadcast.** Every
   cash game pays a flat `$5` (Rounds-tab editable per game):
