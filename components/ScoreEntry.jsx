@@ -109,7 +109,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const showPutts = !!stats.putts;
   const showFIR   = !!stats.fir && hole.par !== 3;
   const showGIR   = !!stats.gir;
-  const showSand  = !!stats.sand;
   const puttRequired = isPTMHolder && puttVal === 0;
 
   const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
@@ -123,7 +122,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const rowStyle   = { display:'flex', alignItems:'center', gap:12 };
   const labelStyle = { fontFamily:F, fontWeight:800, fontSize:12, letterSpacing:1.5, color:'#3F5F4A', width:46, flexShrink:0 };
 
-  // Big split ✓/✗ toggle shared by FIR / GIR / Sand save.
+  // Big split ✓/✗ toggle shared by FIR / GIR / Up-&-down.
   const HitMissRow = (label, cur, onSet, yesTxt, noTxt, ariaKey) => (
     <div style={rowStyle}>
       <span style={labelStyle}>{label}</span>
@@ -329,7 +328,6 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         )}
         {showFIR && HitMissRow('FIR', firData?.[p.id]?.[holeIdx], onFIR, 'HIT', 'MISS', 'fairway')}
         {showGIR && HitMissRow('GIR', girData?.[p.id]?.[holeIdx], onGIR, 'HIT', 'MISS', 'green')}
-        {showSand && HitMissRow('SAND', ex.sand, (pid, v) => onExtraStat(pid, 'sand', v), 'SAVE', 'MISS', 'sand save')}
         {stats.pen && (
           <div style={rowStyle}>
             <span style={labelStyle}>PEN</span>
@@ -632,7 +630,6 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     putts: statsCfg.putts || hasPTM,
     fir:   statsCfg.fir,
     gir:   statsCfg.gir,
-    sand:  statsCfg.sand,
     pen:   statsCfg.pen,
     ud:    statsCfg.ud,
   }), [statsCfg, hasPTM]);

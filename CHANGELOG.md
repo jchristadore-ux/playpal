@@ -4,6 +4,14 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.9.1] — 2026-07-24
+
+### Removed
+- **Sand-save input from the scorer.** The group isn't tracking sand saves, so
+  the `SAVE / MISS` toggle added to each player card in 1.9.0 is gone, along
+  with the `sand` stat definition and its EGT-round default. The rest of the
+  1.9.0 vertical scoring redesign is unchanged.
+
 ## [1.9.0] — 2026-07-24
 
 Vertical, touch-first in-round scoring — rebuilt for the EGT Cup final round.
