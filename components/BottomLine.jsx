@@ -511,6 +511,79 @@ function StageModule({ m }) {
       </Stage>
     );
 
+    // ── REVEAL CEREMONY ─────────────────────────────────────────────────────
+    case 'reveal-title': return (
+      <Stage>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '2.4vh' }}>
+          {m.eyebrow && <div style={{ fontSize: 'clamp(13px,1.6vw,36px)', fontWeight: 800, letterSpacing: '0.36em', color: m.accent || C.gold }}>{m.eyebrow.toUpperCase()}</div>}
+          <div style={{ fontSize: 'clamp(44px,8.5vw,210px)', fontWeight: 800, letterSpacing: '0.005em', lineHeight: 0.92 }}>{m.title}</div>
+          {m.subtitle && <div style={{ fontSize: 'clamp(16px,2.2vw,52px)', fontWeight: 600, color: C.dim, maxWidth: '82vw' }}>{m.subtitle}</div>}
+          <div style={{ width: 'clamp(60px,8vw,180px)', height: 4, borderRadius: 4, background: m.accent || C.gold, marginTop: '1vh' }} />
+        </div>
+      </Stage>
+    );
+
+    case 'reveal-standing': return (
+      <Stage eyebrow={`${(m.tripName || '').toUpperCase()} · FINAL STANDINGS`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4vw', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 0.8 }}>
+            <div style={{ fontSize: 'clamp(90px,19vw,440px)', fontWeight: 800, color: C.gold }}>{ordinal(m.rank)}</div>
+            {m.total ? <div style={{ fontSize: 'clamp(12px,1.4vw,30px)', fontWeight: 700, letterSpacing: '0.2em', color: C.dim }}>OF {m.total}</div> : null}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1.6vh', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2vw', minWidth: 0 }}>
+              <Logo p={m.player} size="clamp(90px,11vw,240px)" />
+              <NameAlias p={m.player} size="clamp(30px,4.2vw,104px)" />
+            </div>
+            <div style={{ display: 'flex', gap: '3vw', alignItems: 'flex-end' }}>
+              <div style={{ fontSize: 'clamp(32px,4.6vw,110px)', fontWeight: 800, color: C.text }}>{m.points}<span style={{ fontSize: '0.36em', color: C.dim, fontWeight: 700 }}> PTS</span></div>
+              {m.money != null && m.money !== 0 && <div style={{ fontSize: 'clamp(24px,3.4vw,84px)', fontWeight: 800, color: moneyColor(m.money) }}>{money(m.money)}</div>}
+            </div>
+          </div>
+        </div>
+      </Stage>
+    );
+
+    case 'champion': return (
+      <Stage>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '1.6vh' }}>
+          <div style={{ fontSize: 'clamp(40px,7vw,150px)', lineHeight: 1 }}>👑</div>
+          <div style={{ fontSize: 'clamp(14px,1.7vw,38px)', fontWeight: 800, letterSpacing: '0.32em', color: C.gold }}>{(m.tripName || '').toUpperCase()} CHAMPION</div>
+          <Logo p={m.player} size="clamp(120px,15vw,320px)" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ fontSize: 'clamp(40px,6.5vw,150px)', fontWeight: 800, lineHeight: 1 }}>{m.player.name}</div>
+            {m.player.alias && <div style={{ fontSize: 'clamp(18px,2.4vw,56px)', fontWeight: 800, letterSpacing: '0.14em', color: m.player.color || C.gold, textTransform: 'uppercase', marginTop: '0.4vh' }}>{m.player.alias}</div>}
+          </div>
+          <div style={{ display: 'flex', gap: '3.5vw', alignItems: 'flex-end', marginTop: '0.8vh' }}>
+            <div>
+              <div style={{ fontSize: 'clamp(44px,7vw,168px)', fontWeight: 800, color: C.gold, lineHeight: 1 }}>{m.points}<span style={{ fontSize: '0.3em', color: C.dim, fontWeight: 700 }}> PTS</span></div>
+              {m.maxPossible != null && <div style={{ fontSize: 'clamp(12px,1.3vw,28px)', color: C.dim, fontWeight: 700 }}>of {m.maxPossible} possible</div>}
+            </div>
+            {m.money != null && m.money !== 0 && <div>
+              <div style={{ fontSize: 'clamp(28px,4vw,96px)', fontWeight: 800, color: moneyColor(m.money), lineHeight: 1 }}>{money(m.money)}</div>
+              <div style={{ fontSize: 'clamp(12px,1.3vw,28px)', color: C.dim, fontWeight: 700 }}>on the trip</div>
+            </div>}
+          </div>
+        </div>
+      </Stage>
+    );
+
+    case 'award-winners': return (
+      <Stage eyebrow="SEASON AWARDS" title="THE HARDWARE" accent={C.gold}>
+        <div style={{ display: 'flex', gap: '2vw', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {m.winners.map((w, i) => (
+            <Panel key={i} style={{ flex: '1 1 22%', minWidth: '20vw', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.1vh',
+              borderColor: 'rgba(200,161,90,0.4)', background: 'rgba(200,161,90,0.06)' }}>
+              <div style={{ fontSize: 'clamp(12px,1.3vw,28px)', fontWeight: 800, letterSpacing: '0.13em', color: C.gold }}>{w.icon} {w.label}</div>
+              <Logo p={w.winner} size="clamp(64px,6.5vw,150px)" />
+              <NameAlias p={w.winner} size="clamp(18px,2vw,48px)" />
+              {w.value != null && <div style={{ fontSize: 'clamp(16px,1.8vw,42px)', fontWeight: 800, color: C.text }}>{w.value}</div>}
+            </Panel>
+          ))}
+        </div>
+      </Stage>
+    );
+
     default: return null;
   }
 }
@@ -605,8 +678,9 @@ function subscribeWorld(onWorld) {
 // ═══════════════════════════════════════════════════════════════════════════
 // PAGE
 // ═══════════════════════════════════════════════════════════════════════════
-const MODE_LABEL = { pre: 'PRE-ROUND', live: 'LIVE', post: 'SPORTSCENTER' };
+const MODE_LABEL = { pre: 'PRE-ROUND', live: 'LIVE', post: 'SPORTSCENTER', reveal: 'THE REVEAL' };
 const DWELL_MS = 10000;
+const REVEAL_DWELL_MS = 14000;   // slower cadence so each reveal lands with gravitas
 
 const BroadcastPage = () => {
   const C = BL.COLORS;
@@ -623,6 +697,7 @@ const BroadcastPage = () => {
   const [speed, setSpeed] = React.useState(() => Number(localStorage.getItem('bl_speed')) || 140);
   const [showControls, setShowControls] = React.useState(false);
   const [tickerPaused, setTickerPaused] = React.useState(false);
+  const [stageHold, setStageHold] = React.useState(false);   // freeze the stage on the current card (drive the reveal by hand)
   const hoverPausedRef = React.useRef(false);
   const tickerPausedRef = React.useRef(false);
   const bannerTimer = React.useRef(null);
@@ -641,10 +716,10 @@ const BroadcastPage = () => {
   // Module rotation.
   React.useEffect(() => { setTick(0); }, [mode]);
   React.useEffect(() => {
-    if (modules.length <= 1) return;
-    const iv = setInterval(() => setTick(t => t + 1), DWELL_MS);
+    if (modules.length <= 1 || stageHold) return;   // held → presenter advances by hand (→ / NEXT)
+    const iv = setInterval(() => setTick(t => t + 1), mode === 'reveal' ? REVEAL_DWELL_MS : DWELL_MS);
     return () => clearInterval(iv);
-  }, [modules.length, mode]);
+  }, [modules.length, mode, stageHold]);
 
   // Ticker engine.
   React.useEffect(() => {
@@ -718,12 +793,15 @@ const BroadcastPage = () => {
       if (k === 'f' || k === 'F') { toggleFullscreen(); }
       else if (k === ' ') { e.preventDefault(); setTickerPaused(p => !p); }
       else if (k === 'ArrowRight' || k === 'n' || k === 'N') { setTick(t => t + 1); }
+      else if (k === 'ArrowLeft') { setTick(t => Math.max(0, t - 1)); }
+      else if (k === 'h' || k === 'H') { setStageHold(v => !v); }
       else if (k === '+' || k === '=') { setSpeed(s => Math.min(420, s + 30)); }
       else if (k === '-' || k === '_') { setSpeed(s => Math.max(60, s - 30)); }
       else if (k === 'a' || k === 'A') { setForce(null); }
       else if (k === 'p' || k === 'P') { setForce('pre'); }
       else if (k === 'l' || k === 'L') { setForce('live'); }
       else if (k === 's' || k === 'S') { setForce('post'); }
+      else if (k === 'r' || k === 'R') { setForce('reveal'); }
       else return;
       pokeControls();
     };
@@ -791,17 +869,18 @@ const BroadcastPage = () => {
       {/* Controls */}
       <div style={{ position: 'fixed', top: 12, right: 12, display: 'flex', gap: 6, zIndex: 20, flexWrap: 'wrap', justifyContent: 'flex-end',
         maxWidth: '60vw', opacity: showControls ? 1 : 0, pointerEvents: showControls ? 'auto' : 'none', transition: 'opacity 0.3s' }}>
-        {[['AUTO', null], ['PRE', 'pre'], ['LIVE', 'live'], ['POST', 'post']].map(([label, val]) => (
+        {[['AUTO', null], ['PRE', 'pre'], ['LIVE', 'live'], ['POST', 'post'], ['REVEAL', 'reveal']].map(([label, val]) => (
           <Ctrl key={label} active={force === val || (label === 'AUTO' && !force)} onClick={() => setForce(val)}>{label}</Ctrl>
         ))}
         <Ctrl onClick={() => setTick(t => t + 1)}>NEXT ▸</Ctrl>
-        <Ctrl active={tickerPaused} onClick={() => setTickerPaused(p => !p)}>{tickerPaused ? '▶ RESUME' : '⏸ PAUSE'}</Ctrl>
+        <Ctrl active={stageHold} onClick={() => setStageHold(v => !v)}>{stageHold ? '▶ PLAY' : '⏸ HOLD'}</Ctrl>
+        <Ctrl active={tickerPaused} onClick={() => setTickerPaused(p => !p)}>{tickerPaused ? '▶ RESUME' : '⏸ TICKER'}</Ctrl>
         <Ctrl onClick={() => setSpeed(s => Math.max(60, s - 30))}>TICKER −</Ctrl>
         <Ctrl onClick={() => setSpeed(s => Math.min(420, s + 30))}>TICKER +</Ctrl>
         <Ctrl onClick={toggleFullscreen}>⛶ FULL</Ctrl>
         <div style={{ flexBasis: '100%', textAlign: 'right', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
           color: 'rgba(246,244,238,0.55)', fontFamily: BL.FONT }}>
-          KEYS · F FULLSCREEN · SPACE PAUSE · → NEXT · +/− SPEED · A/P/L/S MODE
+          KEYS · F FULLSCREEN · SPACE TICKER · H HOLD · ←/→ STEP · +/− SPEED · A/P/L/S/R MODE
         </div>
       </div>
     </div>

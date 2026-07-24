@@ -1,5 +1,41 @@
 # Project Progress
 
+## EGT SportsCenter — post-tournament REVEAL ceremony (branch claude/egt-sportscenter-reveal-sequence-dicwe5) — v1.10.0
+
+The user wanted to reveal the trip results on the EGT SportsCenter as a
+systematic, built-up "post-tourney reveal" that saves the Final EGT Standings
+for the end.
+
+Built a new **`reveal` broadcast mode** — a deliberately paced ceremony that is
+pure ordering of the same cached facts the rest of the broadcast reads, so the
+standings are always last:
+- `components/bottomLineProvider.js`: new helpers `_titleCard`,
+  `_awardWinnersModule` (season awards from `egt.live.tourneyStats`),
+  `_championModule` (standings[0] hero), `_revealCountdown` (standings reversed,
+  last→2nd, champion excluded). New `if (mode === 'reveal' && model)` branch in
+  `broadcastModules` assembles the arc: cold open → BY THE NUMBERS (marquee stat
+  pages) → THE HARDWARE (award winners) → ROUND BY ROUND (recaps in seed order)
+  → THE FINAL STANDINGS title → reverse countdown → champion → full board
+  (reuses the existing `standings` module as the closing image). Graceful with
+  no scores (cold open + schedule only). `broadcastMode` already honored a
+  forced mode, so reveal is manual-only; auto never selects it.
+- `components/BottomLine.jsx`: four new `StageModule` renderers (`reveal-title`,
+  `reveal-standing` giant ordinal + player hero, `champion` crown hero,
+  `award-winners` grid). Page: `reveal` in `MODE_LABEL`, REVEAL mode button + `R`
+  key, a **stage HOLD** toggle (`H` key / HOLD button) that freezes auto-rotation
+  so the presenter reveals each place by hand, `←/→` step, longer reveal dwell
+  (`REVEAL_DWELL_MS` 14s). Renamed the ticker-pause button to TICKER.
+- Tests: +5 in `tests/bottomLineProvider.test.mjs` (reveal is forced-only; the
+  ceremony saves standings for the end; countdown is last→2nd with the champion
+  as #1; award winners read tourney stats; graceful with no scores). 186 green.
+- Verified in headless Chromium (Playwright): built real full-trip facts and
+  rendered every reveal frame — cold open, stat pages, THE HARDWARE, the reverse
+  countdown, the CHAMPION hero, and the CUP STANDINGS closing board — all render
+  cleanly with player logos/aliases, zero page errors.
+- Version 1.10.0 everywhere (package.json, sw.js CACHE_VERSION + `?v=`,
+  index.html `?v=`, bottomline.html `?v=` — the last was stale at 1.8.2, now
+  synced), CHANGELOG entry, dist rebuilt.
+
 ## In-round scoring redesign — vertical player cards (branch claude/egt-scoring-redesign-ku27i6) — v1.9.0
 
 Problem: the in-round scorer crammed four players into a non-scrolling grid,
