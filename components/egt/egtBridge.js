@@ -146,7 +146,7 @@ const EgtBridge = (function () {
       teeId: course.playedTee,
       startingTee: 1,
       trackStats: true,
-      statsConfig: { putts: true, fir: true, gir: true },
+      statsConfig: { putts: true, fir: true, gir: true, sand: true },
       syncCode: syncCodeFor(model, roundId),
     };
   }
