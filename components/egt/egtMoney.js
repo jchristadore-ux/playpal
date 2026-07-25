@@ -218,8 +218,11 @@ const EgtMoney = (function () {
   // bankroll is what someone actually owes at the end of the week rather than
   // just the on-course wagers. Two item shapes:
   //
-  //   collect — one player fronted a cost: { paidBy, perPlayer, from: [ids] }.
-  //             Each listed player owes `perPlayer`; the payer collects the sum.
+  //   collect — one player fronted a cost: { paidBy, from: [ids] } plus either
+  //             `perPlayer` (what each listed player owes) or `total` (the whole
+  //             bill, split equally across everyone who shared it — the payer
+  //             included, so he carries his own share and collects the rest).
+  //             A $85 dinner for four is `total: 85` → $21.25 each.
   //   pot     — a pool: { buyIns: {id: $}, payouts: {id: $} }. Net is payout
   //             minus buy-in, so it is zero-sum whenever the payouts add up to
   //             the buy-ins (the poker pot does: $120 in, $84 + $36 out).
@@ -237,7 +240,11 @@ const EgtMoney = (function () {
       const vec = {}; ids.forEach(id => { vec[id] = 0; });
       if (item.type === 'collect') {
         const payers = (item.from || []).filter(id => ids.includes(id));
-        const per = Number(item.perPlayer) || 0;
+        // `total` states the real bill and splits it evenly over everyone who
+        // shared it (payers + the one who fronted it); `perPlayer` states the
+        // share directly. Whichever the item carries.
+        const per = Number(item.perPlayer)
+          || (payers.length ? (Number(item.total) || 0) / (payers.length + 1) : 0);
         if (!ids.includes(item.paidBy) || !payers.length || !per) return;
         payers.forEach(id => { vec[id] -= per; vec[item.paidBy] += per; });
         payers.forEach(id => owe(pairs, id, item.paidBy, per));

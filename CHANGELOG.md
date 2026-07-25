@@ -4,6 +4,41 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.13.0] — 2026-07-25
+
+Three more shared costs, split evenly across the four of them.
+
+### Added
+- **Costs can be stated as the whole bill instead of the per-man share.** A
+  `collect` item in `tripExtras` now accepts `total` alongside `perPlayer`; given
+  a total it splits evenly across everyone who shared it — **the man who fronted
+  it included**, so he carries his own quarter and collects the other three. The
+  seed records the real receipt ($85) rather than a hand-computed share ($21.25),
+  which is the number anyone checking the ledger actually has.
+- Three costs on the 2026 ledger, each split four ways:
+  **custom jerseys** $30 a piece / $120 all in (Brian fronted),
+  **the steak night** $85 (TJ), and **three trays of food** $40 (Mike).
+
+### Changed
+- **The settle-up now spends prepaid cash against every bill, not just the
+  pot's own winners.** Brian's $40 poker buy-in clears what he owes TJ ($6.25)
+  and Mike ($17) outright; the $16.75 left over goes against what he owes John,
+  because cash already handed over settles whatever its payer owes — the pot
+  holder simply passes it on. Previously the remainder bounced back as a refund,
+  which was correct but made for an extra round trip. A payer whose float
+  outruns every bill still gets the true remainder back.
+- **Money renders to the cent where a split lands on one.** Shares of an odd
+  total ($85 over four is $21.25) no longer round to whole dollars on the
+  settlement board or the SportsCenter cards. The ticker's own bankroll figures
+  still round, as before.
+- A bill the pot has already covered reads **"paid from the pot"** rather than
+  "$0" on both the board and the broadcast.
+
+### The 2026 bottom line, restated
+John **+$48.75** · TJ **+$17.75** · Mike **−$18.25** · Brian **−$48.25**.
+Settle: Brian → John $8.25 · TJ → John $8.75 · Mike → John $15 · Mike → TJ $20.25
+(Brian's obligations to TJ and Mike are covered by his buy-in already in the pot).
+
 ## [1.12.0] — 2026-07-25
 
 The tournament money summary, on every screen that shows the Cup.

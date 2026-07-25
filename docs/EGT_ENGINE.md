@@ -113,12 +113,19 @@ money. Three surfaces render it, so none of them can drift:
 The summary degrades: call it with two rounds finalized and you get two round
 rows, no off-course ledger, and a golf-only bottom line.
 
+**Shared costs.** A `tripExtras` `collect` item takes either `perPlayer` (the
+share each other player owes) or `total` (the whole bill, split evenly across
+everyone who shared it — the payer included, so he carries his own share and
+collects the rest). Prefer `total`: the seed then records the real receipt
+rather than a pre-divided figure.
+
 **Settle-up and prepaid cash.** `EgtMoney` nets each pairing, which is who owes
 whom. But a buy-in already sitting in a pot has physically been paid, so the
-summary credits it against that pot's winners in proportion to their winnings —
-otherwise the payer is charged twice. The credit only ever applies to the item
-holding the cash, and clamps at the amount owed; any excess is reported as
-`refund` rather than becoming a backwards transfer.
+summary spends it: first against that pot's own winners, in proportion to their
+winnings, then against whatever else its payer owes — the pot holder just passes
+the cash on. Without this the payer is charged twice, once into the pot and again
+at the bar. A credit only ever reduces a bill, never reverses it; a float that
+outruns every bill leaves a `refund`.
 
 ## The settlement board
 

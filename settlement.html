@@ -33,8 +33,8 @@
   body {
     background: var(--ground); color: var(--bone); font-family: var(--ui);
     -webkit-font-smoothing: antialiased;
-    min-height: 100vh; padding: clamp(10px, 1.4vw, 22px);
-    display: flex; flex-direction: column; gap: clamp(8px, 0.9vw, 14px);
+    min-height: 100vh; padding: clamp(9px, 1.1vw, 20px);
+    display: flex; flex-direction: column; gap: clamp(6px, 0.7vw, 12px);
   }
 
   /* masthead */
@@ -50,13 +50,13 @@
   /* the answer, first */
   .standings { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 0.7vw, 12px); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-          padding: clamp(8px, 0.9vw, 16px); display: flex; flex-direction: column; gap: 2px;
+          padding: clamp(7px, 0.75vw, 13px); display: flex; flex-direction: column; gap: 1px;
           border-top: 3px solid var(--faint); }
   .card.up { border-top-color: var(--up); }
   .card.down { border-top-color: var(--down); }
   .card .who { font-size: clamp(12px, 1.05vw, 19px); font-weight: 800; letter-spacing: 0.04em; }
   .card .amt { font-family: var(--num); font-variant-numeric: tabular-nums;
-               font-size: clamp(22px, 2.7vw, 50px); font-weight: 700; line-height: 1.02; }
+               font-size: clamp(20px, 2.4vw, 44px); font-weight: 700; line-height: 1.02; }
   .card .verdict { font-size: clamp(9px, 0.74vw, 13px); color: var(--dim); }
   .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
 
@@ -66,23 +66,25 @@
          grid-template-columns: minmax(230px, 0.74fr) minmax(340px, 1.1fr) minmax(260px, 0.98fr);
          gap: clamp(8px, 0.9vw, 14px); align-items: stretch; flex: 1; }
   .block { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-           padding: clamp(9px, 1vw, 16px); display: flex; flex-direction: column;
-           gap: clamp(6px, 0.6vw, 10px); }
+           padding: clamp(8px, 0.85vw, 14px); display: flex; flex-direction: column;
+           gap: clamp(5px, 0.5vw, 9px); }
 
   .pay { list-style: none; display: flex; flex-direction: column; gap: clamp(3px, 0.35vw, 6px); }
   .pay li { display: grid; grid-template-columns: 1fr auto; align-items: baseline;
-            gap: 8px; padding: clamp(4px, 0.42vw, 8px) 0; border-bottom: 1px solid rgba(246,244,238,0.07); }
+            gap: 8px; padding: clamp(3px, 0.34vw, 7px) 0; border-bottom: 1px solid rgba(246,244,238,0.07); }
   .pay li:last-child { border-bottom: 0; }
   .pay .flow { font-size: clamp(11px, 0.95vw, 17px); font-weight: 600; }
   .pay .arrow { color: var(--brass); padding: 0 0.35em; }
   .pay .due { font-family: var(--num); font-variant-numeric: tabular-nums;
               font-size: clamp(13px, 1.15vw, 21px); font-weight: 700; }
   .pay .was { display: block; font-size: clamp(9px, 0.7vw, 12px); color: var(--dim); font-weight: 500; }
+  .pay .settled { font-size: 0.62em; font-weight: 800; letter-spacing: 0.1em;
+                  text-transform: uppercase; color: var(--faint); }
 
   /* ledger */
   .scroll { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: clamp(10px, 0.85vw, 15px); }
-  th, td { text-align: right; padding: clamp(3px, 0.4vw, 7px) clamp(4px, 0.5vw, 10px); white-space: nowrap; }
+  th, td { text-align: right; padding: clamp(2px, 0.3vw, 6px) clamp(4px, 0.5vw, 10px); white-space: nowrap; }
   thead th { font-size: clamp(9px, 0.7vw, 12px); font-weight: 800; letter-spacing: 0.14em;
              color: var(--brass); text-transform: uppercase; border-bottom: 1px solid var(--line); }
   th.rnd, td.rnd { text-align: left; white-space: normal; }
@@ -92,7 +94,7 @@
   .rnd .where { font-weight: 800; }
   .rnd .when { color: var(--faint); font-weight: 600; font-size: 0.85em; padding-left: 0.5em; }
   .rnd .fmt { display: block; color: var(--dim); font-weight: 500; font-size: 0.85em; }
-  tr.sum td { border-top: 1px solid var(--line); padding-top: clamp(5px, 0.5vw, 9px); }
+  tr.sum td { border-top: 1px solid var(--line); padding-top: clamp(4px, 0.42vw, 8px); }
   tr.sum td.rnd { font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
                   font-size: clamp(9px, 0.72vw, 13px); color: var(--brass); }
   tr.total td { background: var(--panel-2); }
@@ -100,8 +102,8 @@
   tr.total td:not(.rnd) { font-size: clamp(12px, 1.05vw, 19px); }
 
   /* the work behind each round */
-  .work { display: flex; flex-direction: column; gap: clamp(5px, 0.5vw, 9px);
-          font-size: clamp(9.5px, 0.74vw, 13px); line-height: 1.42; }
+  .work { display: flex; flex-direction: column; gap: clamp(4px, 0.42vw, 8px);
+          font-size: clamp(9px, 0.7vw, 12.5px); line-height: 1.38; }
   .work .r { display: flex; flex-direction: column; gap: 1px; }
   .work .r b { color: var(--brass); font-weight: 800; letter-spacing: 0.06em;
                font-size: 0.92em; text-transform: uppercase; }
@@ -110,7 +112,7 @@
 
   .note { font-size: clamp(9px, 0.75vw, 13px); color: var(--dim); line-height: 1.5; }
   .note b { color: var(--bone); font-weight: 700; }
-  footer { border-top: 1px solid var(--line); padding-top: clamp(5px, 0.6vw, 10px);
+  footer { border-top: 1px solid var(--line); padding-top: clamp(4px, 0.5vw, 9px);
            display: flex; gap: clamp(10px, 1.4vw, 26px); flex-wrap: wrap; }
   footer p { font-size: clamp(9px, 0.72vw, 12px); color: var(--faint); line-height: 1.5;
              flex: 1 1 240px; }
@@ -134,29 +136,29 @@
   <span class="mark">EGT SPORTSCENTER</span>
   <span class="title">Final Settlement</span>
   <span class="sub">EGT 2026 Cup · 108 holes · Jul 21–24 · Crystal Springs Resort, NJ<br/>
-    six rounds, all stakes and off-course costs · v1.12.0</span>
+    six rounds, all stakes and off-course costs · v1.13.0</span>
 </header>
 
 <section class="standings">
     <div class="card up">
       <span class="who">John</span>
-      <span class="amt up">+$110</span>
-      <span class="verdict">collects · golf +$0 · off-course +$110</span>
+      <span class="amt up">+$48.75</span>
+      <span class="verdict">collects · golf +$0 · off-course +$48.75</span>
     </div>
     <div class="card up">
-      <span class="who">Mike</span>
-      <span class="amt up">+$3</span>
-      <span class="verdict">collects · golf −$11 · off-course +$14</span>
+      <span class="who">TJ</span>
+      <span class="amt up">+$17.75</span>
+      <span class="verdict">collects · golf +$28 · off-course −$10.25</span>
     </div>
     <div class="card down">
-      <span class="who">TJ</span>
-      <span class="amt down">−$6</span>
-      <span class="verdict">pays out · golf +$28 · off-course −$34</span>
+      <span class="who">Mike</span>
+      <span class="amt down">−$18.25</span>
+      <span class="verdict">pays out · golf −$11 · off-course −$7.25</span>
     </div>
     <div class="card down">
       <span class="who">Brian</span>
-      <span class="amt down">−$107</span>
-      <span class="verdict">pays out · golf −$17 · off-course −$90</span>
+      <span class="amt down">−$48.25</span>
+      <span class="verdict">pays out · golf −$17 · off-course −$31.25</span>
     </div>
 </section>
 
@@ -166,34 +168,34 @@
     <ul class="pay">
       <li>
         <span class="flow">TJ<span class="arrow">→</span>John</span>
-        <span class="due">$30</span>
+        <span class="due">$8.75</span>
       </li>
       <li>
         <span class="flow">Mike<span class="arrow">→</span>TJ</span>
-        <span class="due">$9</span>
+        <span class="due">$20.25</span>
       </li>
       <li>
         <span class="flow">Mike<span class="arrow">→</span>John</span>
-        <span class="due">$25</span>
+        <span class="due">$15</span>
       </li>
       <li>
-        <span class="flow">Brian<span class="arrow">→</span>John</span>
-        <span class="due">$55</span>
+        <span class="flow">Brian<span class="arrow">→</span>John<span class="was">$25 owed, less $16.75 already in the poker pot</span></span>
+        <span class="due">$8.25</span>
       </li>
       <li>
-        <span class="flow">Brian<span class="arrow">→</span>TJ<span class="was">$15 owed, less $8 already in the poker pot</span></span>
-        <span class="due">$7</span>
+        <span class="flow">Brian<span class="arrow">→</span>TJ<span class="was">$6.25 owed, less $6.25 already in the poker pot</span></span>
+        <span class="due"><span class="settled">paid from the pot</span></span>
       </li>
       <li>
-        <span class="flow">Brian<span class="arrow">→</span>Mike<span class="was">$37 owed, less $32 already in the poker pot</span></span>
-        <span class="due">$5</span>
+        <span class="flow">Brian<span class="arrow">→</span>Mike<span class="was">$17 owed, less $17 already in the poker pot</span></span>
+        <span class="due"><span class="settled">paid from the pot</span></span>
       </li>
     </ul>
     <p class="note"><b>Read it as:</b> each pairing is netted, so nobody hands money
       both ways. The poker pot already holds Brian's $40 buy-in — that cash goes
       straight to the winners, which is why his bill lands at
-      $67
-      rather than $107.</p>
+      $8.25
+      rather than $48.25.</p>
   </section>
 
   <section class="block">
@@ -274,6 +276,27 @@
         <td class="down">−$20</td>
       </tr>
       <tr>
+        <td class="rnd"><span class="where">Custom jerseys</span></td>
+        <td class="down">−$30</td>
+        <td class="up">+$90</td>
+        <td class="down">−$30</td>
+        <td class="down">−$30</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">Steak dinner</span></td>
+        <td class="down">−$21.25</td>
+        <td class="down">−$21.25</td>
+        <td class="up">+$63.75</td>
+        <td class="down">−$21.25</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">Food trays</span></td>
+        <td class="down">−$10</td>
+        <td class="down">−$10</td>
+        <td class="down">−$10</td>
+        <td class="up">+$30</td>
+      </tr>
+      <tr>
         <td class="rnd"><span class="where">Poker</span></td>
         <td class="down">−$40</td>
         <td class="down">−$40</td>
@@ -282,10 +305,10 @@
       </tr>
       <tr class="total">
         <td class="rnd">Final</td>
-        <td class="up">+$110</td>
-        <td class="down">−$107</td>
-        <td class="down">−$6</td>
-        <td class="up">+$3</td>
+        <td class="up">+$48.75</td>
+        <td class="down">−$48.25</td>
+        <td class="up">+$17.75</td>
+        <td class="down">−$18.25</td>
       </tr>
         </tbody>
       </table>
@@ -336,10 +359,14 @@
     Crystal Springs 17/22/28/28, Cascades 17/22/28/28, Black Bear 16/22/27/27.
     The four-ball at Ballyowen uses the standard 90% allowance; at 100% the
     result is the same match.</p>
-  <p><b>Poker.</b> $120 pot paid 70/30 — Mike $84, TJ $36. Buy-ins were John $40,
-    Brian $40, TJ $20, Mike $20; Brian's is already in the pot. <b>The Rock</b>
-    (Pass the Money) is <em>not</em> settled here — nobody called it, so it stays
-    off the ledger. Turning it on would move $129 to John.</p>
+  <p><b>Shared costs.</b> Anything one man fronted is split evenly four ways —
+    the banner and the gas (John), the custom jerseys at $30 a piece, $120 all in
+    (Brian), the steak night at $85 (TJ), and the three trays at $40 (Mike). The
+    man who paid carries his own quarter and collects the other three.
+    <b>Poker</b> was a $120 pot paid 70/30 — Mike $84, TJ $36 — on buy-ins of
+    John $40, Brian $40, TJ $20, Mike $20, and Brian's is already in the pot.
+    <b>The Rock</b> (Pass the Money) is <em>not</em> settled here: nobody called
+    it, so it stays off the ledger. Turning it on would move $129 to John.</p>
   <p><b>Provenance.</b> Every figure is recomputed by the tournament engine from
     the scores the app synced during the trip, not typed in by hand. The ledger
     nets to $0 to the cent. Regenerate with
