@@ -22,6 +22,10 @@ const BL = (() => {
 const toPar = n => (n === 0 ? 'E' : (n > 0 ? '+' : '') + n);
 const money = n => (n < 0 ? '-$' : '+$') + Math.abs(Math.round(n || 0));
 const moneyColor = n => (n > 0 ? BL.COLORS.green : n < 0 ? BL.COLORS.red : BL.COLORS.dim);
+// The ticker rounds to whole dollars, but a share of a split bill can land on
+// cents — the settlement cards show them so the figure is the one to hand over.
+const cents2 = n => Math.abs(Math.round((n || 0) * 100) / 100).toFixed(2).replace(/\.00$/, '');
+const moneyExact = n => (n < 0 ? '−$' : '+$') + cents2(n);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TICKER ENGINE  (Part 1 fix)
@@ -548,7 +552,7 @@ function StageModule({ m }) {
                     <span key={c.id} style={{ minWidth: '7.5vw', textAlign: 'right', fontWeight: isTotal ? 800 : 700,
                       fontVariantNumeric: 'tabular-nums', fontSize: isTotal ? '1.2em' : '1em',
                       color: c.value ? moneyColor(c.value) : C.dim }}>
-                      {c.value ? money(c.value) : '—'}
+                      {c.value ? moneyExact(c.value) : '—'}
                     </span>
                   ))}
                 </div>
@@ -570,9 +574,14 @@ function StageModule({ m }) {
               <span style={{ fontSize: 'clamp(18px,2.2vw,52px)', color: C.gold, fontWeight: 800 }}>→</span>
               <Logo p={l.to} size="clamp(38px,4vw,88px)" />
               <span style={{ flex: 1, fontSize: 'clamp(18px,2.2vw,52px)', fontWeight: 800 }}>{l.to.name}</span>
-              <span style={{ fontSize: 'clamp(24px,3.2vw,78px)', fontWeight: 800, color: C.green, fontVariantNumeric: 'tabular-nums' }}>
-                ${Math.round(l.due)}
-              </span>
+              {/* A bill the pot already covered is settled, not a $0 payment. */}
+              {l.due > 0
+                ? <span style={{ fontSize: 'clamp(24px,3.2vw,78px)', fontWeight: 800, color: C.green, fontVariantNumeric: 'tabular-nums' }}>
+                    {'$' + cents2(l.due)}
+                  </span>
+                : <span style={{ fontSize: 'clamp(14px,1.7vw,40px)', fontWeight: 800, letterSpacing: '0.14em', color: C.dim }}>
+                    {l.credit > 0 ? 'PAID FROM THE POT' : 'SQUARE'}
+                  </span>}
             </div>
           ))}
           {m.note && <div style={{ fontSize: 'clamp(12px,1.4vw,30px)', color: C.dim, fontWeight: 600, paddingTop: '0.6vh' }}>{m.note}</div>}

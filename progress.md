@@ -1,5 +1,40 @@
 # Project Progress
 
+## 2026-07-25 — Three more shared costs, split four ways (branch claude/golf-money-audit-hom5rs) — v1.13.0
+
+Status: **complete — 209 tests green, dist rebuilt, board + both surfaces re-verified.**
+
+Follow-on to the money work. PR #106 was already merged, so this restarted the
+branch from main as a fresh change.
+
+### Added to the ledger
+| Cost | Fronted by | Total | Each |
+|---|---|---|---|
+| Custom jerseys | Brian | $120 ($30 a jersey) | $30 |
+| Steak night | TJ | $85 | $21.25 |
+| Three trays of food | Mike | $40 | $10 |
+
+`tripExtras` `collect` items now take **`total`** as well as `perPlayer`. Given a
+total the engine splits it evenly across everyone who shared it — the payer
+included, so he carries his own quarter and collects the other three. The seed
+records the real receipt rather than a pre-divided share.
+
+### Settle-up change — prepaid cash now settles any bill
+Brian's $40 buy-in only covers $23.25 of what he owes the poker winners now, so
+under the old rule $16.75 bounced back to him as a refund. It now spends against
+his remaining bills (John) too: the pot holder just passes the cash on. Same net
+money, one less round trip. A float that outruns every bill still refunds.
+
+### Formatting
+Shares can land on cents ($21.25), so the settlement board and the SportsCenter
+money cards render to the cent; the ticker's bankroll figures still round. A bill
+the pot already covered reads "paid from the pot", not "$0".
+
+### The answer
+Golf only unchanged: John $0 · Brian −$17 · TJ +$28 · Mike −$11.
+With costs: **John +$48.75 · TJ +$17.75 · Mike −$18.25 · Brian −$48.25**.
+Settle: Brian → John $8.25 · TJ → John $8.75 · Mike → John $15 · Mike → TJ $20.25.
+
 ## 2026-07-25 — Tournament money summary on every surface (branch claude/golf-money-audit-hom5rs) — v1.12.0
 
 Status: **complete — 208 tests green (8 new), dist rebuilt, both surfaces browser-verified.**

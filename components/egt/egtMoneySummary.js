@@ -117,18 +117,33 @@ const EgtMoneySummary = (function () {
         winners.forEach(w => flows.push({ from: payer, to: w, amount: (amt * t[w]) / pot }));
       });
     });
-    // A credit can only reduce a bill, never reverse it: if the pot holds more
-    // of someone's cash than that pairing ends up owing, the excess is money
-    // owed back to them, not a negative transfer. Clamp here and report the
-    // leftover as `unapplied` so the caller can say so out loud.
+    const rows = settlements.map(s => ({
+      from: s.from, to: s.to, amount: cents(s.amount), credit: 0, due: cents(s.amount),
+    }));
+
+    // Spend each payer's prepaid cash against their bills. The pot's own
+    // winners come first, so the story reads the way it happened; anything left
+    // over goes against that payer's other bills, because cash already handed
+    // over settles whatever they owe — the pot holder simply passes it on. A
+    // credit can only ever reduce a bill, never reverse it, so a payer whose
+    // float outruns everything they owe gets the remainder back.
     const unapplied = {};
-    const rows = settlements.map(s => {
-      const raw = cents(flows.filter(f => f.from === s.from && f.to === s.to)
-        .reduce((a, f) => a + f.amount, 0));
-      const amount = cents(s.amount);
-      const credit = Math.min(raw, amount);
-      if (raw > credit) unapplied[s.from] = cents((unapplied[s.from] || 0) + (raw - credit));
-      return { from: s.from, to: s.to, amount, credit: cents(credit), due: cents(amount - credit) };
+    const byPayer = {};
+    flows.forEach(f => { byPayer[f.from] = cents((byPayer[f.from] || 0) + f.amount); });
+    Object.entries(byPayer).forEach(([payer, pool]) => {
+      let left = pool;
+      const mine = rows.filter(r => r.from === payer);
+      // Preferred order: the winners this payer's cash was earmarked for.
+      const earmarked = new Set(flows.filter(f => f.from === payer).map(f => f.to));
+      const ordered = mine.filter(r => earmarked.has(r.to)).concat(mine.filter(r => !earmarked.has(r.to)));
+      ordered.forEach(r => {
+        if (left <= 0) return;
+        const applied = Math.min(left, r.due);
+        r.credit = cents(r.credit + applied);
+        r.due = cents(r.due - applied);
+        left = cents(left - applied);
+      });
+      if (left > 0) unapplied[payer] = left;
     });
     rows.unapplied = unapplied;
     return rows;

@@ -56,7 +56,10 @@ const ROUNDS = summary.rounds.map(r => ({
 
 // ── render ──────────────────────────────────────────────────────────────────
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const cash = n => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(0)}`;
+// Whole dollars read cleaner on a board, but a share of a split bill can land
+// on cents — show them when they exist rather than rounding real money away.
+const plainAmt = n => Math.abs(Math.round((n || 0) * 100) / 100).toFixed(2).replace(/\.00$/, '');
+const cash = n => `${n < 0 ? '−' : '+'}$${plainAmt(n)}`;
 const tone = n => (n > 0 ? 'up' : n < 0 ? 'down' : 'flat');
 const cell = n => (n === 0 ? '<td class="flat">—</td>' : `<td class="${tone(n)}">${cash(n)}</td>`);
 
@@ -124,8 +127,8 @@ function styles() {
   body {
     background: var(--ground); color: var(--bone); font-family: var(--ui);
     -webkit-font-smoothing: antialiased;
-    min-height: 100vh; padding: clamp(10px, 1.4vw, 22px);
-    display: flex; flex-direction: column; gap: clamp(8px, 0.9vw, 14px);
+    min-height: 100vh; padding: clamp(9px, 1.1vw, 20px);
+    display: flex; flex-direction: column; gap: clamp(6px, 0.7vw, 12px);
   }
 
   /* masthead */
@@ -141,13 +144,13 @@ function styles() {
   /* the answer, first */
   .standings { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 0.7vw, 12px); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-          padding: clamp(8px, 0.9vw, 16px); display: flex; flex-direction: column; gap: 2px;
+          padding: clamp(7px, 0.75vw, 13px); display: flex; flex-direction: column; gap: 1px;
           border-top: 3px solid var(--faint); }
   .card.up { border-top-color: var(--up); }
   .card.down { border-top-color: var(--down); }
   .card .who { font-size: clamp(12px, 1.05vw, 19px); font-weight: 800; letter-spacing: 0.04em; }
   .card .amt { font-family: var(--num); font-variant-numeric: tabular-nums;
-               font-size: clamp(22px, 2.7vw, 50px); font-weight: 700; line-height: 1.02; }
+               font-size: clamp(20px, 2.4vw, 44px); font-weight: 700; line-height: 1.02; }
   .card .verdict { font-size: clamp(9px, 0.74vw, 13px); color: var(--dim); }
   .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
 
@@ -157,23 +160,25 @@ function styles() {
          grid-template-columns: minmax(230px, 0.74fr) minmax(340px, 1.1fr) minmax(260px, 0.98fr);
          gap: clamp(8px, 0.9vw, 14px); align-items: stretch; flex: 1; }
   .block { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-           padding: clamp(9px, 1vw, 16px); display: flex; flex-direction: column;
-           gap: clamp(6px, 0.6vw, 10px); }
+           padding: clamp(8px, 0.85vw, 14px); display: flex; flex-direction: column;
+           gap: clamp(5px, 0.5vw, 9px); }
 
   .pay { list-style: none; display: flex; flex-direction: column; gap: clamp(3px, 0.35vw, 6px); }
   .pay li { display: grid; grid-template-columns: 1fr auto; align-items: baseline;
-            gap: 8px; padding: clamp(4px, 0.42vw, 8px) 0; border-bottom: 1px solid rgba(246,244,238,0.07); }
+            gap: 8px; padding: clamp(3px, 0.34vw, 7px) 0; border-bottom: 1px solid rgba(246,244,238,0.07); }
   .pay li:last-child { border-bottom: 0; }
   .pay .flow { font-size: clamp(11px, 0.95vw, 17px); font-weight: 600; }
   .pay .arrow { color: var(--brass); padding: 0 0.35em; }
   .pay .due { font-family: var(--num); font-variant-numeric: tabular-nums;
               font-size: clamp(13px, 1.15vw, 21px); font-weight: 700; }
   .pay .was { display: block; font-size: clamp(9px, 0.7vw, 12px); color: var(--dim); font-weight: 500; }
+  .pay .settled { font-size: 0.62em; font-weight: 800; letter-spacing: 0.1em;
+                  text-transform: uppercase; color: var(--faint); }
 
   /* ledger */
   .scroll { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: clamp(10px, 0.85vw, 15px); }
-  th, td { text-align: right; padding: clamp(3px, 0.4vw, 7px) clamp(4px, 0.5vw, 10px); white-space: nowrap; }
+  th, td { text-align: right; padding: clamp(2px, 0.3vw, 6px) clamp(4px, 0.5vw, 10px); white-space: nowrap; }
   thead th { font-size: clamp(9px, 0.7vw, 12px); font-weight: 800; letter-spacing: 0.14em;
              color: var(--brass); text-transform: uppercase; border-bottom: 1px solid var(--line); }
   th.rnd, td.rnd { text-align: left; white-space: normal; }
@@ -183,7 +188,7 @@ function styles() {
   .rnd .where { font-weight: 800; }
   .rnd .when { color: var(--faint); font-weight: 600; font-size: 0.85em; padding-left: 0.5em; }
   .rnd .fmt { display: block; color: var(--dim); font-weight: 500; font-size: 0.85em; }
-  tr.sum td { border-top: 1px solid var(--line); padding-top: clamp(5px, 0.5vw, 9px); }
+  tr.sum td { border-top: 1px solid var(--line); padding-top: clamp(4px, 0.42vw, 8px); }
   tr.sum td.rnd { font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
                   font-size: clamp(9px, 0.72vw, 13px); color: var(--brass); }
   tr.total td { background: var(--panel-2); }
@@ -191,8 +196,8 @@ function styles() {
   tr.total td:not(.rnd) { font-size: clamp(12px, 1.05vw, 19px); }
 
   /* the work behind each round */
-  .work { display: flex; flex-direction: column; gap: clamp(5px, 0.5vw, 9px);
-          font-size: clamp(9.5px, 0.74vw, 13px); line-height: 1.42; }
+  .work { display: flex; flex-direction: column; gap: clamp(4px, 0.42vw, 8px);
+          font-size: clamp(9px, 0.7vw, 12.5px); line-height: 1.38; }
   .work .r { display: flex; flex-direction: column; gap: 1px; }
   .work .r b { color: var(--brass); font-weight: 800; letter-spacing: 0.06em;
                font-size: 0.92em; text-transform: uppercase; }
@@ -201,7 +206,7 @@ function styles() {
 
   .note { font-size: clamp(9px, 0.75vw, 13px); color: var(--dim); line-height: 1.5; }
   .note b { color: var(--bone); font-weight: 700; }
-  footer { border-top: 1px solid var(--line); padding-top: clamp(5px, 0.6vw, 10px);
+  footer { border-top: 1px solid var(--line); padding-top: clamp(4px, 0.5vw, 9px);
            display: flex; gap: clamp(10px, 1.4vw, 26px); flex-wrap: wrap; }
   footer p { font-size: clamp(9px, 0.72vw, 12px); color: var(--faint); line-height: 1.5;
              flex: 1 1 240px; }
@@ -233,8 +238,8 @@ function body() {
 
   const payList = settle.map(s => `      <li>
         <span class="flow">${NAME[s.from]}<span class="arrow">→</span>${NAME[s.to]}${
-          s.credit ? `<span class="was">$${s.amount.toFixed(0)} owed, less $${s.credit.toFixed(0)} already in the poker pot</span>` : ''}</span>
-        <span class="due">$${s.due.toFixed(0)}</span>
+          s.credit ? `<span class="was">$${plainAmt(s.amount)} owed, less $${plainAmt(s.credit)} already in the poker pot</span>` : ''}</span>
+        <span class="due">${s.due > 0 ? '$' + plainAmt(s.due) : '<span class="settled">paid from the pot</span>'}</span>
       </li>`).join('\n');
 
   const rows = ROUNDS.map((r, i) => `      <tr>
@@ -282,8 +287,8 @@ ${payList}
     <p class="note"><b>Read it as:</b> each pairing is netted, so nobody hands money
       both ways. The poker pot already holds Brian's $40 buy-in — that cash goes
       straight to the winners, which is why his bill lands at
-      $${settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.due, 0).toFixed(0)}
-      rather than $${settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.amount, 0).toFixed(0)}.</p>
+      $${plainAmt(settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.due, 0))}
+      rather than $${plainAmt(settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.amount, 0))}.</p>
   </section>
 
   <section class="block">
@@ -318,10 +323,14 @@ ${work}
     Crystal Springs 17/22/28/28, Cascades 17/22/28/28, Black Bear 16/22/27/27.
     The four-ball at Ballyowen uses the standard 90% allowance; at 100% the
     result is the same match.</p>
-  <p><b>Poker.</b> $120 pot paid 70/30 — Mike $84, TJ $36. Buy-ins were John $40,
-    Brian $40, TJ $20, Mike $20; Brian's is already in the pot. <b>The Rock</b>
-    (Pass the Money) is <em>not</em> settled here — nobody called it, so it stays
-    off the ledger. Turning it on would move $129 to John.</p>
+  <p><b>Shared costs.</b> Anything one man fronted is split evenly four ways —
+    the banner and the gas (John), the custom jerseys at $30 a piece, $120 all in
+    (Brian), the steak night at $85 (TJ), and the three trays at $40 (Mike). The
+    man who paid carries his own quarter and collects the other three.
+    <b>Poker</b> was a $120 pot paid 70/30 — Mike $84, TJ $36 — on buy-ins of
+    John $40, Brian $40, TJ $20, Mike $20, and Brian's is already in the pot.
+    <b>The Rock</b> (Pass the Money) is <em>not</em> settled here: nobody called
+    it, so it stays off the ledger. Turning it on would move $129 to John.</p>
   <p><b>Provenance.</b> Every figure is recomputed by the tournament engine from
     the scores the app synced during the trip, not typed in by hand. The ledger
     nets to $0 to the cent. Regenerate with

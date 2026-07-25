@@ -165,35 +165,51 @@ test('The Rock stays out of the money unless the seed says it was played', () =>
 test('off-course costs settle on the same ledger', () => {
   const extras = money().live.money.extras;
   const byId = Object.fromEntries(extras.items.map(i => [i.id, i.total]));
+  // Costs one man fronted, split evenly over all four.
   vec(byId.banner, { john: 90, brian: -30, tj: -30, mike: -30 }, 'banner');
   vec(byId.gas, { john: 60, brian: -20, tj: -20, mike: -20 }, 'gas');
+  vec(byId.jerseys, { brian: 90, john: -30, tj: -30, mike: -30 }, 'jerseys');
+  vec(byId.dinner, { tj: 63.75, john: -21.25, brian: -21.25, mike: -21.25 }, 'steak dinner');
+  vec(byId.trays, { mike: 30, john: -10, brian: -10, tj: -10 }, 'food trays');
   // $120 in, $84 to Mike and $36 to TJ back out.
   vec(byId.poker, { john: -40, brian: -40, tj: 16, mike: 64 }, 'poker');
-  vec(extras.total, { john: 110, brian: -90, tj: -34, mike: 14 }, 'extras');
+  vec(extras.total, { john: 48.75, brian: -31.25, tj: -10.25, mike: -7.25 }, 'extras');
   assert.ok(extras.netsToZero);
   eq(extras.prepaid, { brian: 40 }, "Brian's buy-in already in the pot");
 });
 
-test('the final settlement: John +110, Brian -107, TJ -6, Mike +3', () => {
+test('a stated total splits evenly across everyone who shared it', () => {
+  const items = money().model.tripExtras.items;
+  const dinner = items.find(i => i.id === 'dinner');
+  assert.equal(dinner.total, 85, 'the seed records the real bill, not the share');
+  assert.equal(dinner.perPlayer, undefined, 'the share is derived, not hand-computed');
+  // $85 over four men is $21.25 each; TJ fronted it, so he collects three shares.
+  const t = money().live.money.extras.items.find(i => i.id === 'dinner').total;
+  near(t.tj, 63.75, 'TJ collects');
+  near(t.john, -21.25, 'each share');
+  near(Object.values(t).reduce((a, b) => a + b, 0), 0, 'zero-sum');
+});
+
+test('the final settlement: John +48.75, Brian -48.25, TJ +17.75, Mike -18.25', () => {
   const m = money();
-  vec(m.live.money.total, { john: 110, brian: -107, tj: -6, mike: 3 }, 'final');
+  vec(m.live.money.total, { john: 48.75, brian: -48.25, tj: 17.75, mike: -18.25 }, 'final');
   assert.ok(m.live.money.netsToZero, 'the whole trip still nets to zero');
 });
 
 test('who pays whom, netted per matchup', () => {
   const s = money().live.money.settlements;
   const paid = (from, to) => (s.find(x => x.from === from && x.to === to) || {}).amount ?? 0;
-  near(paid('brian', 'john'), 55, 'Brian → John');
-  near(paid('brian', 'tj'), 15, 'Brian → TJ');
-  near(paid('brian', 'mike'), 37, 'Brian → Mike');
-  near(paid('tj', 'john'), 30, 'TJ → John');
-  near(paid('mike', 'john'), 25, 'Mike → John');
-  near(paid('mike', 'tj'), 9, 'Mike → TJ');
+  near(paid('brian', 'john'), 25, 'Brian → John');
+  near(paid('brian', 'tj'), 6.25, 'Brian → TJ');
+  near(paid('brian', 'mike'), 17, 'Brian → Mike');
+  near(paid('tj', 'john'), 8.75, 'TJ → John');
+  near(paid('mike', 'john'), 15, 'Mike → John');
+  near(paid('mike', 'tj'), 20.25, 'Mike → TJ');
   // Every transfer runs one way per matchup — six pairings, six entries.
   assert.equal(s.length, 6);
   const net = {};
   s.forEach(x => { net[x.from] = (net[x.from] || 0) - x.amount; net[x.to] = (net[x.to] || 0) + x.amount; });
-  vec(net, { john: 110, brian: -107, tj: -6, mike: 3 }, 'settlement net');
+  vec(net, { john: 48.75, brian: -48.25, tj: 17.75, mike: -18.25 }, 'settlement net');
 });
 
 // ── the shared money summary (app Money tab · SportsCenter · settlement board) ──
@@ -202,38 +218,41 @@ test('the money summary describes the trip the ledger settled', () => {
   const m = money();
   const sum = W.EgtMoneySummary.build(m.model, m.live);
   // Ordered by who is up the most.
-  eqList(sum.standings.map(s => s.name), ['John', 'Mike', 'TJ', 'Brian'], 'standing order');
+  eqList(sum.standings.map(s => s.name), ['John', 'TJ', 'Mike', 'Brian'], 'standing order');
   const john = sum.standings[0];
-  near(john.total, 110, 'John total');
+  near(john.total, 48.75, 'John total');
   near(john.golf, 0, 'John golf');
-  near(john.extras, 110, 'John off-course');
+  near(john.extras, 48.75, 'John off-course');
   assert.equal(john.verdict, 'collects');
   assert.equal(sum.standings[3].verdict, 'pays out');
-  // Six rounds, in the order they were played, plus the three off-course items.
+  // Six rounds, in the order they were played, plus the off-course items.
   eqList(sum.rounds.map(r => r.id), ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'], 'round order');
-  eqList(sum.extras.map(x => x.id), ['banner', 'gas', 'poker'], 'off-course items');
+  eqList(sum.extras.map(x => x.id), ['banner', 'gas', 'jerseys', 'dinner', 'trays', 'poker'], 'off-course items');
   assert.ok(sum.hasExtras && sum.complete && sum.netsToZero);
-  vec(sum.total, { john: 110, brian: -107, tj: -6, mike: 3 }, 'summary total');
+  vec(sum.total, { john: 48.75, brian: -48.25, tj: 17.75, mike: -18.25 }, 'summary total');
   vec(sum.golfOnly, { john: 0, brian: -17, tj: 28, mike: -11 }, 'summary golf');
 });
 
-test('the settle-up credits cash already in the pot against that pot only', () => {
+test('the settle-up spends cash already in the pot before asking for more', () => {
   const sum = W.EgtMoneySummary.build(money().model, money().live);
   const find = (from, to) => sum.settle.find(s => s.from === from && s.to === to) || {};
-  // Brian's $40 poker buy-in splits across the poker winners by share of the
-  // winnings ($8 TJ, $32 Mike) — and touches nothing else he owes.
-  near(find('brian', 'john').credit, 0, 'no credit against the banner/gas John fronted');
-  near(find('brian', 'john').due, 55, 'Brian → John');
-  near(find('brian', 'tj').credit, 8, 'TJ share of the pot');
-  near(find('brian', 'tj').due, 7, 'Brian → TJ');
-  near(find('brian', 'mike').credit, 32, 'Mike share of the pot');
-  near(find('brian', 'mike').due, 5, 'Brian → Mike');
-  // The credit never exceeds what was actually prepaid.
+  // Brian's $40 buy-in clears the poker winners first — he owes TJ $6.25 and
+  // Mike $17, both covered outright — and the $16.75 left over goes against
+  // what he owes John, because cash already handed over settles any bill.
+  near(find('brian', 'tj').credit, 6.25, 'TJ paid from the pot');
+  near(find('brian', 'tj').due, 0, 'nothing more to TJ');
+  near(find('brian', 'mike').credit, 17, 'Mike paid from the pot');
+  near(find('brian', 'mike').due, 0, 'nothing more to Mike');
+  near(find('brian', 'john').credit, 16.75, 'the remainder of the float');
+  near(find('brian', 'john').due, 8.25, 'Brian → John');
+  // Every dollar of the float is spent, and none of it more than once.
   const credited = sum.settle.reduce((a, s) => a + s.credit, 0);
   near(credited, 40, 'total credited equals the cash in the pot');
-  // Brian still owes $107 on the ledger; $67 of it is cash he has yet to hand over.
+  sum.settle.forEach(s => assert.ok(s.due >= 0 && s.credit <= s.amount, `${s.from}→${s.to} sane`));
+  // He owes $48.25 on the ledger; $8.25 of it is cash he has yet to hand over.
   const note = sum.prepaidNote.find(n => n.id === 'brian');
-  near(note.owed, 107, 'ledger'); near(note.due, 67, 'still to pay');
+  near(note.owed, 48.25, 'ledger'); near(note.due, 8.25, 'still to pay');
+  near(note.refund, 0, 'nothing bounces back — it all went somewhere');
 });
 
 test('the summary explains where each round\'s money came from', () => {

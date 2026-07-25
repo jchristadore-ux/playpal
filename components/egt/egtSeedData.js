@@ -3196,7 +3196,7 @@ const EGT_SEED = {
     "ptmBill": 5
   },
   "tripExtras": {
-    "description": "Off-course money that settles with the golf: shared trip costs and the Thursday poker game. Each item is zero-sum across the four players.",
+    "description": "Off-course money that settles with the golf: shared trip costs and the Thursday poker game. Costs one man fronted are split evenly across all four; each item is zero-sum.",
     "items": [
       {
         "id": "banner",
@@ -3223,6 +3223,45 @@ const EGT_SEED = {
           "mike"
         ],
         "note": "John fronted the gas; each of the other three owes him $20."
+      },
+      {
+        "id": "jerseys",
+        "label": "Custom jerseys",
+        "type": "collect",
+        "paidBy": "brian",
+        "total": 120,
+        "from": [
+          "john",
+          "tj",
+          "mike"
+        ],
+        "note": "Brian had the custom jerseys made \u2014 $30 a jersey, $120 for the four of them, so $30 a man."
+      },
+      {
+        "id": "dinner",
+        "label": "Steak dinner",
+        "type": "collect",
+        "paidBy": "tj",
+        "total": 85,
+        "from": [
+          "john",
+          "brian",
+          "mike"
+        ],
+        "note": "TJ shopped for the steak night \u2014 T-bones, broccoli, baked potatoes, asparagus. $85 split four ways is $21.25 a man."
+      },
+      {
+        "id": "trays",
+        "label": "Food trays",
+        "type": "collect",
+        "paidBy": "mike",
+        "total": 40,
+        "from": [
+          "john",
+          "brian",
+          "tj"
+        ],
+        "note": "Mike made and brought three trays \u2014 sausage, peppers and onions; chicken parm; baked ziti. $40 split four ways is $10 a man."
       },
       {
         "id": "poker",

@@ -1211,9 +1211,12 @@ const BottomLineProvider = (function () {
           due: s.due, amount: s.amount, credit: s.credit,
         })),
         note: (sum.prepaidNote || []).filter(n => n.amount)
-          .map(n => (n.refund
-            ? `${n.name} has $${n.amount} in the pot — $${n.refund} of it comes back to him`
-            : `${n.name}'s $${n.amount} is already in the pot — his bill is $${n.due}, not $${n.owed}`))
+          .map(n => {
+            const d = v => Math.abs(v).toFixed(2).replace(/\.00$/, '');
+            return n.refund
+              ? `${n.name} has $${d(n.amount)} in the pot — $${d(n.refund)} of it comes back to him`
+              : `${n.name}'s $${d(n.amount)} is already in the pot — his bill is $${d(n.due)}, not $${d(n.owed)}`;
+          })
           .join(' · ') || null,
       });
     }
