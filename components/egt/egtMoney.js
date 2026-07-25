@@ -213,6 +213,64 @@ const EgtMoney = (function () {
       netsToZero: Math.abs(Object.values(total).reduce((a, b) => a + b, 0)) < 1e-6 };
   }
 
+  // ── Off-course money (model.tripExtras) ──────────────────────────────────
+  // Shared trip costs and the poker game settle with the golf, so the running
+  // bankroll is what someone actually owes at the end of the week rather than
+  // just the on-course wagers. Two item shapes:
+  //
+  //   collect — one player fronted a cost: { paidBy, perPlayer, from: [ids] }.
+  //             Each listed player owes `perPlayer`; the payer collects the sum.
+  //   pot     — a pool: { buyIns: {id: $}, payouts: {id: $} }. Net is payout
+  //             minus buy-in, so it is zero-sum whenever the payouts add up to
+  //             the buy-ins (the poker pot does: $120 in, $84 + $36 out).
+  //
+  // `alreadyInPot` records cash a player has physically handed over. It does not
+  // move the P&L — the buy-in is already counted — but the settle-up needs it,
+  // so it is returned as `prepaid` for the settlement view to credit.
+  function tripExtrasSettlement(model, extras) {
+    const ids = model.players.map(p => p.id);
+    const total = {}; ids.forEach(id => { total[id] = 0; });
+    const pairs = {};
+    const prepaid = {};
+    const items = [];
+    ((extras && extras.items) || []).forEach(item => {
+      const vec = {}; ids.forEach(id => { vec[id] = 0; });
+      if (item.type === 'collect') {
+        const payers = (item.from || []).filter(id => ids.includes(id));
+        const per = Number(item.perPlayer) || 0;
+        if (!ids.includes(item.paidBy) || !payers.length || !per) return;
+        payers.forEach(id => { vec[id] -= per; vec[item.paidBy] += per; });
+        payers.forEach(id => owe(pairs, id, item.paidBy, per));
+      } else if (item.type === 'pot') {
+        const buyIns = item.buyIns || {}, payouts = item.payouts || {};
+        ids.forEach(id => { vec[id] += (Number(payouts[id]) || 0) - (Number(buyIns[id]) || 0); });
+        // Head-to-head: split each net loser's stake across the net winners in
+        // proportion to what they won, so the pot settles pairwise like the
+        // rest of the ledger instead of needing a banker.
+        const losers = ids.filter(id => vec[id] < 0);
+        const winners = ids.filter(id => vec[id] > 0);
+        const won = winners.reduce((a, id) => a + vec[id], 0);
+        if (won > 0) losers.forEach(l => winners.forEach(x => owe(pairs, l, x, -vec[l] * (vec[x] / won))));
+        Object.entries(item.alreadyInPot || {}).forEach(([id, amt]) => {
+          if (ids.includes(id)) prepaid[id] = (prepaid[id] || 0) + (Number(amt) || 0);
+        });
+      } else return;
+      zeroBalance(vec);
+      // Carry each item's own prepaid map on the item — a settle-up has to know
+      // WHICH pot the cash is sitting in to credit it against the right winners.
+      const itemPrepaid = {};
+      Object.entries(item.alreadyInPot || {}).forEach(([id, amt]) => {
+        if (ids.includes(id)) itemPrepaid[id] = Number(amt) || 0;
+      });
+      items.push({ id: item.id, label: item.label, note: item.note || null, total: vec,
+        prepaid: Object.keys(itemPrepaid).length ? itemPrepaid : null });
+      Object.entries(vec).forEach(([pid, amt]) => { total[pid] += amt; });
+    });
+    zeroBalance(total);
+    return { total, pairs, items, prepaid,
+      netsToZero: Math.abs(Object.values(total).reduce((a, b) => a + b, 0)) < 1e-6 };
+  }
+
   // Final Pass-the-Money settlement: the ending holder collects bill + pot from
   // the field, split equally. Zero-sum across all four.
   function passTheMoneySettlement(model, ptm) {
@@ -227,7 +285,9 @@ const EgtMoney = (function () {
   // is the head-to-head "who owes whom" list, netted per matchup (not globally
   // minimized) so it mirrors how the group settles at the bar.
   //   stakes: optional { [roundId]: { [key]: number } } overrides (Rounds tab).
-  function compute(model, resultsByRound, events, ptm, stakes) {
+  //   opts.extras: fold in the off-course ledger (final settlement only, so the
+  //     running bankroll stays golf-only until the trip closes out).
+  function compute(model, resultsByRound, events, ptm, stakes, opts) {
     const ids = model.players.map(p => p.id);
     const total = {}; ids.forEach(id => { total[id] = 0; });
     const rounds = {};
@@ -246,12 +306,22 @@ const EgtMoney = (function () {
       Object.entries(s.total).forEach(([pid, amt]) => { total[pid] = (total[pid] || 0) + amt; });
       addPairs(s.pairs);
     }
+    // Off-course money (shared costs + poker) rides on the same ledger, so the
+    // bankroll is the real bottom line rather than the on-course wagers alone.
+    const golfOnly = {}; Object.entries(total).forEach(([pid, amt]) => { golfOnly[pid] = cents(amt); });
+    let extras = null;
+    if (model.tripExtras && opts && opts.extras) {
+      extras = tripExtrasSettlement(model, model.tripExtras);
+      rounds.tripExtras = extras;
+      Object.entries(extras.total).forEach(([pid, amt]) => { total[pid] = (total[pid] || 0) + amt; });
+      addPairs(extras.pairs);
+    }
     zeroBalance(total);
-    return { rounds, total, pairs, settlements: nettedSettlements(pairs),
+    return { rounds, total, golfOnly, extras, pairs, settlements: nettedSettlements(pairs),
       netsToZero: Math.abs(Object.values(total).reduce((a, b) => a + b, 0)) < 1e-6 };
   }
 
-  return { cents, zeroBalance, flatFromEach, teamFlat, topOf, prizePot, nettedSettlements, moneyForRound, passTheMoneySettlement, compute };
+  return { cents, zeroBalance, flatFromEach, teamFlat, topOf, prizePot, nettedSettlements, moneyForRound, tripExtrasSettlement, passTheMoneySettlement, compute };
 })();
 
 if (typeof window !== 'undefined') {

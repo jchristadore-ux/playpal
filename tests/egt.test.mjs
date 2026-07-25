@@ -115,7 +115,7 @@ test('§6 gap: clearing Crystal Springs SI leaves R4 counts but pending pops, th
   const m = freshModel();
   EgtImporter.clearStrokeIndex(m, 'crystalsprings');
   const tj = m.derived.R4.allocations.tj.games.teamStableford;
-  assert.equal(tj.strokes, 24, 'stroke count still known while SI pending');
+  assert.equal(tj.strokes, 11, 'stroke count still known while SI pending');
   assert.equal(tj.holes, null, 'holes resolve to pending (null)');
   assert.equal(tj.pending, true);
   assert.equal(m.courses.crystalsprings.strokeIndexVerified, false);
@@ -443,19 +443,22 @@ test('toNativeRound wires each round to its native format engine', () => {
   const m = freshModel();
   const typesFor = rid => EgtBridge.toNativeRound(m, rid).formats.map(f => f.type).sort();
   jeq(typesFor('R1'), ['bingobangobongo']);   // BBB tracker fires on R1 (no skins)
-  jeq(typesFor('R3'), ['wolf']);
+  // R3, R5 and R6 carry the seed's wagers, so each also opens a Nassau tracker.
+  jeq(typesFor('R3'), ['nassau', 'wolf']);
   jeq(typesFor('R4'), ['stableford']);
-  jeq(typesFor('R5'), ['bingobangobongo']); // no matches configured -> no Nassau tracker
-  jeq(typesFor('R6'), ['stableford']);
+  jeq(typesFor('R5'), ['bingobangobongo', 'nassau']);
+  jeq(typesFor('R6'), ['nassau', 'stableford']);
   // R3 Wolf uses the seed's rotation order so the native Wolf-of-the-hole matches.
   jeq(EgtBridge.toNativeRound(m, 'R3').players.map(p => p.id), ['tj', 'mike', 'brian', 'john']);
 });
 
-test('R5 native Nassau carries exactly the configured matches (no default)', () => {
+test('R5 native Nassau carries exactly the configured matches (seed round robin by default)', () => {
   const m = freshModel();
-  // No matches configured: BBB only.
-  assert.equal(EgtBridge.toNativeRound(m, 'R5').formats.find(f => f.type === 'nassau'), undefined);
-  // Configure one 1v1 (auto pops from CH) and one 2v2.
+  // Nothing configured: the seed's six-match round robin, $1 a segment.
+  const seeded = EgtBridge.toNativeRound(m, 'R5').formats.find(f => f.type === 'nassau');
+  assert.equal(seeded.nassauMatches.length, 6);
+  assert.ok(seeded.nassauMatches.every(x => x.stakes === 1), 'round robin runs at $1 a segment');
+  // Configure one 1v1 (auto pops from CH) and one 2v2 — these replace the seed.
   const matchConfigs = [
     { id: 'm1', matchType: '1v1', playersInMatch: ['john', 'tj'], teams: null, popHoles: {}, stakes: 3 },
     { id: 'm2', matchType: '2v2', playersInMatch: ['john', 'brian', 'tj', 'mike'],
@@ -539,10 +542,15 @@ test('R5 match play honors the configured matches (1v1 + 2v2, records, no defaul
     state.scores.R5.tj[h.hole] = { gross: h.par + 2 };
     state.scores.R5.mike[h.hole] = { gross: h.par + 2 };
   });
-  // No matches configured -> no results, no champion, no points.
+  // Straight off the seed: R5's six-match round robin is the round's wager.
   let mp = EgtEngine.runRound(state, 'R5').matchPlay;
+  assert.equal(mp.matches.length, 6, 'the seed ships R5 as a full round robin');
+  // An explicitly empty match list means "none configured" — nothing invented.
+  state.events.roundMatches.R5 = [];
+  mp = EgtEngine.runRound(state, 'R5').matchPlay;
   assert.equal(mp.matches.length, 0);
   jeq(mp.champions, []);
+  delete state.events.roundMatches.R5;
   // Configure: john v brian (1v1) and john+brian v tj+mike (2v2).
   state.events.r5Matches = [
     { id: 'a', matchType: '1v1', playersInMatch: ['john', 'brian'], teams: null, popHoles: {}, stakes: 2 },

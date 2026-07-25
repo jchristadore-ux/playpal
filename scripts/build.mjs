@@ -26,6 +26,7 @@ const SOURCES = [
   'components/egt/egtSideGames.js',
   'components/egt/egtPoints.js',
   'components/egt/egtMoney.js',
+  'components/egt/egtMoneySummary.js',
   'components/egt/egtStandings.js',
   'components/egt/egtStore.js',
   'components/egt/egtPrintable.js',

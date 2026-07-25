@@ -37,8 +37,13 @@ const EgtEngine = (function () {
     const H = g('EgtHandicap');
     const chById = model.derived[roundId].courseHandicaps;
     const holes18 = course.holes.slice(0, 18).map(h => ({ hole: h.hole, si: h.si }));
+    // Precedence: matches configured on the Rounds tab win, then the legacy R5
+    // key (older persisted states), then the wagers the seed ships for the
+    // round. The seed fallback is what makes R3's Nassau, R5's round robin and
+    // R6's two Nassaus settle on a device that never opened the match editor.
     const overlaySrc = (state.events.roundMatches && state.events.roundMatches[roundId])
-      || (roundId === 'R5' ? state.events.r5Matches : null) || [];
+      || (roundId === 'R5' ? state.events.r5Matches : null)
+      || round.sideMatches || [];
     ctx.overlayMatches = overlaySrc
       .filter(m => (m.matchType === '2v2'
         ? m.teams && (m.teams.team1 || []).length === 2 && (m.teams.team2 || []).length === 2
@@ -161,7 +166,10 @@ const EgtEngine = (function () {
     }
 
     const points = P().compute(model, resultsByRound, seasonInputs);
-    const money = M().compute(model, resultsByRound, state.events, ptm, state.stakes);
+    // The Rock's ledger is always derived (the standings page shows it), but it
+    // only settles cash when the seed says the game was actually in play.
+    const ptmMoney = (model.sideGames?.passTheMoney?.played === false) ? null : ptm;
+    const money = M().compute(model, resultsByRound, state.events, ptmMoney, state.stakes, { extras: !!o.season });
 
     const tie = { r6Stableford: r6Stab, headToHead: h2h };
     let board = standingsMod.leaderboard(model, points, tie);

@@ -1,0 +1,765 @@
+{
+  "_comment": "Every score actually posted on the EGT 2026 trip, pulled back from the rounds the app synced (Firestore playpal_rounds). scores[player] is 18 gross, hole 1 first; bbbData/wolfData are keyed by hole INDEX (0 = hole 1) exactly as the native scorer stores them. This is the fixture the money audit runs against.",
+  "rounds": {
+    "R1": {
+      "scores": {
+        "mike": [
+          8,
+          5,
+          5,
+          5,
+          6,
+          3,
+          7,
+          5,
+          5,
+          5,
+          8,
+          9,
+          4,
+          8,
+          4,
+          8,
+          5,
+          4
+        ],
+        "tj": [
+          8,
+          4,
+          8,
+          4,
+          7,
+          7,
+          8,
+          3,
+          3,
+          6,
+          5,
+          7,
+          8,
+          7,
+          5,
+          7,
+          9,
+          5
+        ],
+        "john": [
+          5,
+          4,
+          5,
+          3,
+          4,
+          4,
+          7,
+          4,
+          5,
+          5,
+          3,
+          7,
+          6,
+          5,
+          5,
+          9,
+          5,
+          4
+        ]
+      },
+      "bbbData": {
+        "0": {
+          "bango": "mike",
+          "bingo": "john",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "1": {
+          "bango": "tj",
+          "bingo": "tj",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "2": {
+          "bango": "tj",
+          "bingo": "mike",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "3": {
+          "bango": "mike",
+          "bingo": "tj",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "4": {
+          "bango": "tj",
+          "bingo": "john",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "5": {
+          "bango": "john",
+          "bingo": "john",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "6": {
+          "bango": "john",
+          "bingo": "tj",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "7": {
+          "bango": "mike",
+          "bingo": "tj",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "8": {
+          "bango": "john",
+          "bingo": "tj",
+          "bongo": "tj",
+          "confirmed": true
+        }
+      }
+    },
+    "R2": {
+      "scores": {
+        "tj": [
+          5,
+          5,
+          7,
+          4,
+          8,
+          5,
+          5,
+          9,
+          4,
+          6,
+          2,
+          6,
+          6,
+          6,
+          7,
+          5,
+          6,
+          4
+        ],
+        "john": [
+          5,
+          4,
+          9,
+          3,
+          6,
+          4,
+          5,
+          4,
+          5,
+          5,
+          3,
+          6,
+          4,
+          5,
+          6,
+          6,
+          6,
+          7
+        ],
+        "mike": [
+          5,
+          6,
+          6,
+          4,
+          8,
+          3,
+          8,
+          7,
+          6,
+          7,
+          6,
+          5,
+          7,
+          5,
+          4,
+          6,
+          8,
+          7
+        ],
+        "brian": [
+          7,
+          7,
+          6,
+          5,
+          8,
+          4,
+          6,
+          5,
+          7,
+          7,
+          3,
+          7,
+          7,
+          6,
+          5,
+          6,
+          6,
+          5
+        ]
+      }
+    },
+    "R3": {
+      "scores": {
+        "mike": [
+          7,
+          7,
+          8,
+          5,
+          4,
+          7,
+          3,
+          9,
+          5,
+          3,
+          9,
+          6,
+          7,
+          3,
+          7,
+          4,
+          6,
+          5
+        ],
+        "brian": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          6,
+          7,
+          9,
+          7,
+          5,
+          6,
+          6,
+          7,
+          4,
+          7,
+          5,
+          9,
+          5
+        ],
+        "john": [
+          6,
+          4,
+          7,
+          7,
+          7,
+          6,
+          7,
+          5,
+          5,
+          9,
+          7,
+          4,
+          5,
+          5,
+          5,
+          5,
+          9,
+          5
+        ],
+        "tj": [
+          5,
+          4,
+          7,
+          7,
+          7,
+          6,
+          5,
+          5,
+          6,
+          5,
+          9,
+          5,
+          4,
+          5,
+          9,
+          6,
+          8,
+          6
+        ]
+      },
+      "wolfData": {
+        "0": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "john",
+          "wolfId": "tj"
+        },
+        "1": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "mike"
+        },
+        "2": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "brian"
+        },
+        "3": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "brian",
+          "wolfId": "john"
+        },
+        "4": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "john",
+          "wolfId": "tj"
+        },
+        "5": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "brian",
+          "wolfId": "mike"
+        },
+        "6": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "mike",
+          "wolfId": "brian"
+        },
+        "7": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "john"
+        },
+        "8": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "john",
+          "wolfId": "tj"
+        },
+        "9": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "mike"
+        },
+        "10": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "brian"
+        },
+        "11": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "tj",
+          "wolfId": "john"
+        },
+        "12": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "tj"
+        },
+        "13": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "mike"
+        },
+        "14": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "brian"
+        },
+        "15": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "mike",
+          "wolfId": "john"
+        },
+        "16": {
+          "confirmed": true,
+          "lone": true,
+          "partnerId": null,
+          "wolfId": "tj"
+        },
+        "17": {
+          "confirmed": true,
+          "lone": false,
+          "partnerId": "john",
+          "wolfId": "mike"
+        }
+      }
+    },
+    "R4": {
+      "scores": {
+        "brian": [
+          8,
+          7,
+          5,
+          8,
+          6,
+          8,
+          8,
+          6,
+          7,
+          7,
+          4,
+          7,
+          3,
+          7,
+          3,
+          7,
+          8,
+          7
+        ],
+        "mike": [
+          7,
+          6,
+          6,
+          4,
+          6,
+          7,
+          5,
+          6,
+          7,
+          5,
+          4,
+          9,
+          5,
+          6,
+          7,
+          6,
+          8,
+          8
+        ],
+        "john": [
+          8,
+          6,
+          5,
+          8,
+          6,
+          6,
+          6,
+          7,
+          5,
+          6,
+          4,
+          7,
+          4,
+          5,
+          4,
+          5,
+          6,
+          6
+        ],
+        "tj": [
+          6,
+          5,
+          8,
+          8,
+          6,
+          9,
+          6,
+          7,
+          4,
+          7,
+          6,
+          8,
+          4,
+          8,
+          4,
+          6,
+          5,
+          7
+        ]
+      }
+    },
+    "R5": {
+      "scores": {
+        "brian": [
+          7,
+          7,
+          5,
+          6,
+          6,
+          6,
+          6,
+          4,
+          6,
+          4,
+          9,
+          6,
+          2,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "mike": [
+          6,
+          8,
+          5,
+          4,
+          6,
+          7,
+          6,
+          5,
+          8,
+          7,
+          8,
+          5,
+          6,
+          7,
+          7,
+          7,
+          6,
+          6
+        ],
+        "john": [
+          8,
+          8,
+          6,
+          5,
+          5,
+          8,
+          5,
+          2,
+          5,
+          6,
+          5,
+          4,
+          3,
+          5,
+          6,
+          6,
+          4,
+          6
+        ],
+        "tj": [
+          7,
+          5,
+          7,
+          5,
+          4,
+          7,
+          5,
+          4,
+          7,
+          5,
+          7,
+          4,
+          7,
+          6,
+          7,
+          7,
+          7,
+          6
+        ]
+      },
+      "bbbData": {
+        "0": {
+          "bango": "john",
+          "bingo": "mike",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "1": {
+          "bango": "mike",
+          "bingo": "brian",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "2": {
+          "bango": "tj",
+          "bingo": "mike",
+          "bongo": "brian",
+          "confirmed": true
+        },
+        "3": {
+          "bango": "john",
+          "bingo": "mike",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "4": {
+          "bango": "brian",
+          "bingo": "tj",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "5": {
+          "bango": "john",
+          "bingo": "mike",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "6": {
+          "bango": "brian",
+          "bingo": "mike",
+          "bongo": "brian",
+          "confirmed": true
+        },
+        "7": {
+          "bango": "john",
+          "bingo": "brian",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "8": {
+          "bango": "brian",
+          "bingo": "tj",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "9": {
+          "bango": "brian",
+          "bingo": "tj",
+          "bongo": "brian",
+          "confirmed": true
+        },
+        "10": {
+          "bango": "john",
+          "bingo": "john",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "11": {
+          "bango": "john",
+          "bingo": "mike",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "12": {
+          "bango": "brian",
+          "bingo": "john",
+          "bongo": "brian",
+          "confirmed": true
+        },
+        "13": {
+          "bango": "john",
+          "bingo": "mike",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "14": {
+          "bango": "brian",
+          "bingo": "mike",
+          "bongo": "john",
+          "confirmed": true
+        },
+        "15": {
+          "bango": "brian",
+          "bingo": "john",
+          "bongo": "tj",
+          "confirmed": true
+        },
+        "16": {
+          "bango": "john",
+          "bingo": "mike",
+          "bongo": "mike",
+          "confirmed": true
+        },
+        "17": {
+          "bango": "mike",
+          "bingo": "brian",
+          "bongo": "john",
+          "confirmed": true
+        }
+      }
+    },
+    "R6": {
+      "scores": {
+        "brian": [
+          5,
+          9,
+          8,
+          7,
+          5,
+          8,
+          5,
+          4,
+          6,
+          6,
+          5,
+          5,
+          7,
+          4,
+          6,
+          5,
+          5,
+          6
+        ],
+        "mike": [
+          5,
+          6,
+          9,
+          6,
+          3,
+          6,
+          5,
+          8,
+          5,
+          5,
+          6,
+          7,
+          9,
+          7,
+          6,
+          9,
+          5,
+          6
+        ],
+        "john": [
+          7,
+          7,
+          6,
+          6,
+          4,
+          7,
+          3,
+          6,
+          5,
+          5,
+          5,
+          4,
+          6,
+          5,
+          3,
+          6,
+          7,
+          7
+        ],
+        "tj": [
+          7,
+          7,
+          5,
+          6,
+          4,
+          7,
+          6,
+          5,
+          8,
+          7,
+          4,
+          9,
+          9,
+          4,
+          5,
+          5,
+          6,
+          5
+        ]
+      }
+    }
+  }
+}
