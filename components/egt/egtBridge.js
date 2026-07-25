@@ -141,7 +141,10 @@ const EgtBridge = (function () {
       name: `${round.id} · ${course.name}`,
       players,
       course: { id: course.courseId, name: course.name, location: course.location, rating: tee.cr, slope: tee.slope, holes },
-      formats: formatsFor(model, round, stakes, opts && opts.matchConfigs),
+      // Matches configured on the Rounds tab win; otherwise the wagers the seed
+      // ships for the round, so the scorer opens with the right Nassau trackers
+      // and the synced round carries them to the broadcast.
+      formats: formatsFor(model, round, stakes, (opts && opts.matchConfigs) || round.sideMatches),
       games: [],
       teeId: course.playedTee,
       startingTee: 1,

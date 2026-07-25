@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="EGT 2026 Cup — the final money settlement: every round's stakes, the off-course costs, and who pays whom."/>
+<meta name="theme-color" content="#05090C"/>
+<title>EGT 2026 · Final Settlement</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
+<link href="vendor/fonts.css" rel="stylesheet"/>
+<style>
+
+  /* The EGT SportsCenter's own palette (bottomline.html): near-black ground,
+     bone type, brass accent, broadcast green/coral for up and down. This board
+     is a TV card, so it commits to the dark world rather than following the
+     viewer's theme. */
+  :root {
+    --ground: #05090C;
+    --panel: #0B1218;
+    --panel-2: #101922;
+    --line: rgba(200, 161, 90, 0.22);
+    --bone: #F6F4EE;
+    --dim: rgba(246, 244, 238, 0.52);
+    --faint: rgba(246, 244, 238, 0.30);
+    --brass: #C8A15A;
+    --up: #3DCB6C;
+    --down: #F26D6D;
+    --ui: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --num: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--ground); }
+  body {
+    background: var(--ground); color: var(--bone); font-family: var(--ui);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh; padding: clamp(10px, 1.4vw, 22px);
+    display: flex; flex-direction: column; gap: clamp(8px, 0.9vw, 14px);
+  }
+
+  /* masthead */
+  .top { display: flex; align-items: baseline; gap: clamp(8px, 1vw, 18px); flex-wrap: wrap;
+         border-bottom: 1px solid var(--line); padding-bottom: clamp(6px, 0.7vw, 12px); }
+  .mark { font-size: clamp(15px, 1.7vw, 30px); font-weight: 800; letter-spacing: 0.16em; color: var(--brass); }
+  .title { font-size: clamp(15px, 1.7vw, 30px); font-weight: 800; letter-spacing: 0.02em; }
+  .sub { font-size: clamp(10px, 0.82vw, 15px); color: var(--dim); margin-left: auto; text-align: right; }
+
+  .label { font-size: clamp(9px, 0.72vw, 13px); font-weight: 800; letter-spacing: 0.2em;
+           color: var(--brass); text-transform: uppercase; }
+
+  /* the answer, first */
+  .standings { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 0.7vw, 12px); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: clamp(8px, 0.9vw, 16px); display: flex; flex-direction: column; gap: 2px;
+          border-top: 3px solid var(--faint); }
+  .card.up { border-top-color: var(--up); }
+  .card.down { border-top-color: var(--down); }
+  .card .who { font-size: clamp(12px, 1.05vw, 19px); font-weight: 800; letter-spacing: 0.04em; }
+  .card .amt { font-family: var(--num); font-variant-numeric: tabular-nums;
+               font-size: clamp(22px, 2.7vw, 50px); font-weight: 700; line-height: 1.02; }
+  .card .verdict { font-size: clamp(9px, 0.74vw, 13px); color: var(--dim); }
+  .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+
+  /* Body: what to do · what it adds up to · why. Three columns so the whole
+     reckoning lands on one screen without scrolling. */
+  main { display: grid;
+         grid-template-columns: minmax(230px, 0.74fr) minmax(340px, 1.1fr) minmax(260px, 0.98fr);
+         gap: clamp(8px, 0.9vw, 14px); align-items: stretch; flex: 1; }
+  .block { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+           padding: clamp(9px, 1vw, 16px); display: flex; flex-direction: column;
+           gap: clamp(6px, 0.6vw, 10px); }
+
+  .pay { list-style: none; display: flex; flex-direction: column; gap: clamp(3px, 0.35vw, 6px); }
+  .pay li { display: grid; grid-template-columns: 1fr auto; align-items: baseline;
+            gap: 8px; padding: clamp(4px, 0.42vw, 8px) 0; border-bottom: 1px solid rgba(246,244,238,0.07); }
+  .pay li:last-child { border-bottom: 0; }
+  .pay .flow { font-size: clamp(11px, 0.95vw, 17px); font-weight: 600; }
+  .pay .arrow { color: var(--brass); padding: 0 0.35em; }
+  .pay .due { font-family: var(--num); font-variant-numeric: tabular-nums;
+              font-size: clamp(13px, 1.15vw, 21px); font-weight: 700; }
+  .pay .was { display: block; font-size: clamp(9px, 0.7vw, 12px); color: var(--dim); font-weight: 500; }
+
+  /* ledger */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: clamp(10px, 0.85vw, 15px); }
+  th, td { text-align: right; padding: clamp(3px, 0.4vw, 7px) clamp(4px, 0.5vw, 10px); white-space: nowrap; }
+  thead th { font-size: clamp(9px, 0.7vw, 12px); font-weight: 800; letter-spacing: 0.14em;
+             color: var(--brass); text-transform: uppercase; border-bottom: 1px solid var(--line); }
+  th.rnd, td.rnd { text-align: left; white-space: normal; }
+  tbody tr { border-bottom: 1px solid rgba(246,244,238,0.06); }
+  tbody td { font-family: var(--num); font-variant-numeric: tabular-nums; font-weight: 700; }
+  tbody td.rnd { font-family: var(--ui); font-weight: 600; }
+  .rnd .where { font-weight: 800; }
+  .rnd .when { color: var(--faint); font-weight: 600; font-size: 0.85em; padding-left: 0.5em; }
+  .rnd .fmt { display: block; color: var(--dim); font-weight: 500; font-size: 0.85em; }
+  tr.sum td { border-top: 1px solid var(--line); padding-top: clamp(5px, 0.5vw, 9px); }
+  tr.sum td.rnd { font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+                  font-size: clamp(9px, 0.72vw, 13px); color: var(--brass); }
+  tr.total td { background: var(--panel-2); }
+  tr.total td.rnd { color: var(--bone); font-size: clamp(10px, 0.8vw, 14px); }
+  tr.total td:not(.rnd) { font-size: clamp(12px, 1.05vw, 19px); }
+
+  /* the work behind each round */
+  .work { display: flex; flex-direction: column; gap: clamp(5px, 0.5vw, 9px);
+          font-size: clamp(9.5px, 0.74vw, 13px); line-height: 1.42; }
+  .work .r { display: flex; flex-direction: column; gap: 1px; }
+  .work .r b { color: var(--brass); font-weight: 800; letter-spacing: 0.06em;
+               font-size: 0.92em; text-transform: uppercase; }
+  .work .r span { color: var(--dim); }
+  .work .r span.ind { padding-left: 1.1em; text-indent: -0.6em; }
+
+  .note { font-size: clamp(9px, 0.75vw, 13px); color: var(--dim); line-height: 1.5; }
+  .note b { color: var(--bone); font-weight: 700; }
+  footer { border-top: 1px solid var(--line); padding-top: clamp(5px, 0.6vw, 10px);
+           display: flex; gap: clamp(10px, 1.4vw, 26px); flex-wrap: wrap; }
+  footer p { font-size: clamp(9px, 0.72vw, 12px); color: var(--faint); line-height: 1.5;
+             flex: 1 1 240px; }
+  footer b { color: var(--dim); }
+
+  a { color: var(--brass); }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (max-width: 1180px) {
+    main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .work-block { grid-column: 1 / -1; }
+  }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; }
+    .standings { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="mark">EGT SPORTSCENTER</span>
+  <span class="title">Final Settlement</span>
+  <span class="sub">EGT 2026 Cup · 108 holes · Jul 21–24 · Crystal Springs Resort, NJ<br/>
+    six rounds, all stakes and off-course costs · v1.11.0</span>
+</header>
+
+<section class="standings">
+    <div class="card up">
+      <span class="who">John</span>
+      <span class="amt up">+$110</span>
+      <span class="verdict">collects · golf +$0 · off-course +$110</span>
+    </div>
+    <div class="card up">
+      <span class="who">Mike</span>
+      <span class="amt up">+$3</span>
+      <span class="verdict">collects · golf −$11 · off-course +$14</span>
+    </div>
+    <div class="card down">
+      <span class="who">TJ</span>
+      <span class="amt down">−$6</span>
+      <span class="verdict">pays out · golf +$28 · off-course −$34</span>
+    </div>
+    <div class="card down">
+      <span class="who">Brian</span>
+      <span class="amt down">−$107</span>
+      <span class="verdict">pays out · golf −$17 · off-course −$90</span>
+    </div>
+</section>
+
+<main>
+  <section class="block">
+    <span class="label">Settle up</span>
+    <ul class="pay">
+      <li>
+        <span class="flow">TJ<span class="arrow">→</span>John</span>
+        <span class="due">$30</span>
+      </li>
+      <li>
+        <span class="flow">Mike<span class="arrow">→</span>TJ</span>
+        <span class="due">$9</span>
+      </li>
+      <li>
+        <span class="flow">Mike<span class="arrow">→</span>John</span>
+        <span class="due">$25</span>
+      </li>
+      <li>
+        <span class="flow">Brian<span class="arrow">→</span>John</span>
+        <span class="due">$55</span>
+      </li>
+      <li>
+        <span class="flow">Brian<span class="arrow">→</span>TJ<span class="was">$15 owed, less $8 already in the poker pot</span></span>
+        <span class="due">$7</span>
+      </li>
+      <li>
+        <span class="flow">Brian<span class="arrow">→</span>Mike<span class="was">$37 owed, less $32 already in the poker pot</span></span>
+        <span class="due">$5</span>
+      </li>
+    </ul>
+    <p class="note"><b>Read it as:</b> each pairing is netted, so nobody hands money
+      both ways. The poker pot already holds Brian's $40 buy-in — that cash goes
+      straight to the winners, which is why his bill lands at
+      $67
+      rather than $107.</p>
+  </section>
+
+  <section class="block">
+    <span class="label">Where it came from</span>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th class="rnd">Round</th><th>John</th><th>Brian</th><th>TJ</th><th>Mike</th></tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td class="rnd"><span class="where">1. Minerals</span><span class="when">Tue</span>
+          <span class="fmt">Bingo Bango Bongo (front) + The Nines (back)</span></td>
+        <td class="up">+$5</td>
+        <td class="flat">—</td>
+        <td class="up">+$5</td>
+        <td class="down">−$10</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">2. Ballyowen</span><span class="when">Wed AM</span>
+          <span class="fmt">18-hole four-ball · John + TJ v Brian + Mike</span></td>
+        <td class="up">+$10</td>
+        <td class="down">−$10</td>
+        <td class="up">+$10</td>
+        <td class="down">−$10</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">3. Wild Turkey</span><span class="when">Wed PM</span>
+          <span class="fmt">Wolf + a TJ v John $2 Nassau</span></td>
+        <td class="down">−$9</td>
+        <td class="down">−$5</td>
+        <td class="down">−$1</td>
+        <td class="up">+$15</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">4. Crystal Springs</span><span class="when">Thu AM</span>
+          <span class="fmt">2v2 aggregate Stableford over all 18</span></td>
+        <td class="down">−$10</td>
+        <td class="up">+$10</td>
+        <td class="down">−$10</td>
+        <td class="up">+$10</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">5. Cascades</span><span class="when">Thu PM</span>
+          <span class="fmt">Full-18 Bingo Bango Bongo + six-match round robin</span></td>
+        <td class="up">+$17</td>
+        <td class="down">−$7</td>
+        <td class="up">+$1</td>
+        <td class="down">−$11</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">6. Black Bear</span><span class="when">Fri</span>
+          <span class="fmt">Individual Stableford + two $2 Nassaus</span></td>
+        <td class="down">−$13</td>
+        <td class="down">−$5</td>
+        <td class="up">+$23</td>
+        <td class="down">−$5</td>
+      </tr>
+      <tr class="sum">
+        <td class="rnd">Golf subtotal</td>
+        <td class="flat">—</td>
+        <td class="down">−$17</td>
+        <td class="up">+$28</td>
+        <td class="down">−$11</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">EGT banner</span></td>
+        <td class="up">+$90</td>
+        <td class="down">−$30</td>
+        <td class="down">−$30</td>
+        <td class="down">−$30</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">Gas</span></td>
+        <td class="up">+$60</td>
+        <td class="down">−$20</td>
+        <td class="down">−$20</td>
+        <td class="down">−$20</td>
+      </tr>
+      <tr>
+        <td class="rnd"><span class="where">Poker</span></td>
+        <td class="down">−$40</td>
+        <td class="down">−$40</td>
+        <td class="up">+$16</td>
+        <td class="up">+$64</td>
+      </tr>
+      <tr class="total">
+        <td class="rnd">Final</td>
+        <td class="up">+$110</td>
+        <td class="down">−$107</td>
+        <td class="down">−$6</td>
+        <td class="up">+$3</td>
+      </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block work-block">
+    <span class="label">How each stake was decided</span>
+    <div class="work">
+      <div class="r"><b>1 · Minerals</b>
+        <span>BBB — John 8 · TJ 11 · Mike 8 → TJ takes $5 from each</span>
+        <span>Nines — John 30 · TJ 23 · Mike 28 → John takes $5 from each</span>
+      </div>
+      <div class="r"><b>2 · Ballyowen</b>
+        <span>Match — John + TJ by 6 → each winner collects $5 from each opponent</span>
+      </div>
+      <div class="r"><b>3 · Wild Turkey</b>
+        <span>Wolf units — John −2 · Brian −4 · TJ −4 · Mike +10 → Mike takes $5 from each</span>
+        <span>TJ v John — front TJ by 5 · back John by 1 · overall TJ by 4 → TJ +$4</span>
+      </div>
+      <div class="r"><b>4 · Crystal Springs</b>
+        <span>Points — John 7 · Brian 10 · TJ 11 · Mike 16</span>
+        <span>Teams — John + TJ 18 v Brian + Mike 26 → each winner collects $5 from each opponent</span>
+      </div>
+      <div class="r"><b>5 · Cascades</b>
+        <span>BBB — John 17 · Brian 14 · TJ 9 · Mike 14 → John takes $5 from each</span>
+        <span>Round robin, $1 front / $1 back / $2 overall:</span>
+        <span class="ind">John v Brian — front halved · back halved · overall halved → no money</span>
+        <span class="ind">John v TJ — front TJ by 2 · back John by 2 · overall halved → no money</span>
+        <span class="ind">John v Mike — front Mike by 3 · back John by 5 · overall John by 2 → John +$2</span>
+        <span class="ind">Brian v TJ — front TJ by 2 · back Brian by 1 · overall TJ by 1 → TJ +$2</span>
+        <span class="ind">Brian v Mike — front Mike by 1 · back Brian by 1 · overall halved → no money</span>
+        <span class="ind">TJ v Mike — front TJ by 2 · back TJ by 2 · overall TJ by 4 → TJ +$4</span>
+      </div>
+      <div class="r"><b>6 · Black Bear</b>
+        <span>Stableford — John 25 · Brian 25 · TJ 27 · Mike 26 → TJ takes $5 from each</span>
+        <span>TJ v John — front TJ by 3 · back TJ by 1 · overall TJ by 4 → TJ +$8</span>
+        <span>Mike v Brian — front Mike by 4 · back Brian by 4 · overall halved → no money</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><b>Handicaps.</b> Every net game runs off the low ball on that course — John
+    plays scratch in all of them. Course handicaps come from the White tees:
+    Minerals 14/23/23, Ballyowen 13/18/23/23, Wild Turkey 19/24/30/30,
+    Crystal Springs 17/22/28/28, Cascades 17/22/28/28, Black Bear 16/22/27/27.
+    The four-ball at Ballyowen uses the standard 90% allowance; at 100% the
+    result is the same match.</p>
+  <p><b>Poker.</b> $120 pot paid 70/30 — Mike $84, TJ $36. Buy-ins were John $40,
+    Brian $40, TJ $20, Mike $20; Brian's is already in the pot. <b>The Rock</b>
+    (Pass the Money) is <em>not</em> settled here — nobody called it, so it stays
+    off the ledger. Turning it on would move $129 to John.</p>
+  <p><b>Provenance.</b> Every figure is recomputed by the tournament engine from
+    the scores the app synced during the trip, not typed in by hand. The ledger
+    nets to $0 to the cent. Regenerate with
+    <code>node scripts/gen-settlement.mjs</code>.</p>
+</footer>
+</body>
+</html>

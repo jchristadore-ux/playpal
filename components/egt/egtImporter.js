@@ -20,7 +20,10 @@ const EgtImporter = (function () {
     skinsNet:       { allowance: 1.0,  basis: 'offLow', scope: '18',  label: 'off low, over all 18' },
     fourBallMatch:  { allowance: 0.9,  basis: 'offLow', scope: '18',  label: '90% off low' },
     wolf:           { allowance: 1.0,  basis: 'offLow', scope: '18',  label: '100% off low; best net ball' },
-    teamStableford: { allowance: 0.85, basis: 'full',   scope: '18',  label: '85% full dots' },
+    // R4's 2v2 aggregate Stableford settles off the low ball — the group plays
+    // it like every other head-to-head game on the trip, so the low course
+    // handicap goes to scratch and everyone else gets the difference.
+    teamStableford: { allowance: 1.0,  basis: 'offLow', scope: '18',  label: '100% off low (the low ball plays scratch)' },
     stableford:     { allowance: 1.0,  basis: 'full',   scope: '18',  label: '100% full dots' },
     nines:          { allowance: 1.0,  basis: 'offLow', scope: 'loop2', nine: true, label: '9-hole handicaps, loop 2 only; BBB (loop 1) is gross' },
   };
@@ -192,6 +195,11 @@ const EgtImporter = (function () {
       allowance: r.allowance,
       teams: r.teams || [],
       pairings: r.pairings || null,
+      // Wagers agreed at the tee that aren't the round's primary format (R3's
+      // TJ v John Nassau, R5's six-match round robin, R6's two Nassaus). The
+      // engine uses these when nobody has configured matches on the Rounds tab,
+      // so the money is right straight out of the seed.
+      sideMatches: r.sideMatches || [],
       seedCourseHandicaps: r.courseHandicaps || {},   // kept for reference/QA
     }));
 
@@ -207,6 +215,8 @@ const EgtImporter = (function () {
       sideGames: seed.sideGames,
       pointsConfig: seed.pointsConfig,
       moneyDefaults: seed.moneyDefaults,
+      // Off-course money (shared costs, poker) that settles alongside the golf.
+      tripExtras: seed.tripExtras || null,
       // Derived, recomputed from courseLibrary SI (the live source of truth):
       derived: {},
       // The seed's own allocations, retained so a golden test can diff.

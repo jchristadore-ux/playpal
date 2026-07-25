@@ -59,7 +59,7 @@ const EGT_SEED = {
   "handicapAllowances": {
     "singlesMatch": 1,
     "fourBallMatch": 0.9,
-    "fourBallStableford": 0.85,
+    "fourBallStableford": 1,
     "scramble2": {
       "low": 0.35,
       "high": 0.15
@@ -1068,7 +1068,19 @@ const EGT_SEED = {
         "brian": 24,
         "tj": 30,
         "mike": 30
-      }
+      },
+      "sideMatches": [
+        {
+          "id": "egt-r3-nassau-tj-john",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "tj",
+            "john"
+          ],
+          "stakes": 2
+        }
+      ],
+      "sideMatchesNote": "TJ v John $2 Nassau played alongside the Wolf game."
     },
     {
       "id": "R4",
@@ -1090,7 +1102,7 @@ const EGT_SEED = {
         "mike"
       ],
       "primaryGame": "fourBallAggregateStableford",
-      "allowance": 0.85,
+      "allowance": 1,
       "teams": [
         {
           "name": "Team 1",
@@ -1185,7 +1197,64 @@ const EGT_SEED = {
         "brian": 22,
         "tj": 28,
         "mike": 28
-      }
+      },
+      "sideMatches": [
+        {
+          "id": "egt-r5-rr-john-brian",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "john",
+            "brian"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-john-tj",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "john",
+            "tj"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-john-mike",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "john",
+            "mike"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-brian-tj",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "brian",
+            "tj"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-brian-mike",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "brian",
+            "mike"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-tj-mike",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "tj",
+            "mike"
+          ],
+          "stakes": 1
+        }
+      ],
+      "sideMatchesNote": "The round-robin IS the round: all six 1v1s at $1 a segment, so $1 front / $1 back / $2 overall."
     },
     {
       "id": "R6",
@@ -1227,7 +1296,28 @@ const EGT_SEED = {
         "brian": 22,
         "tj": 27,
         "mike": 27
-      }
+      },
+      "sideMatches": [
+        {
+          "id": "egt-r6-nassau-tj-john",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "tj",
+            "john"
+          ],
+          "stakes": 2
+        },
+        {
+          "id": "egt-r6-nassau-mike-brian",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "mike",
+            "brian"
+          ],
+          "stakes": 2
+        }
+      ],
+      "sideMatchesNote": "The two head-to-heads actually played on Friday, each a $2 Nassau."
     }
   ],
   "strokeAllocations": {
@@ -1966,68 +2056,10 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 14,
-            "strokes": 14,
-            "holes": [
-              {
-                "hole": 1,
-                "strokes": 1
-              },
-              {
-                "hole": 2,
-                "strokes": 1
-              },
-              {
-                "hole": 3,
-                "strokes": 1
-              },
-              {
-                "hole": 4,
-                "strokes": 1
-              },
-              {
-                "hole": 6,
-                "strokes": 1
-              },
-              {
-                "hole": 7,
-                "strokes": 1
-              },
-              {
-                "hole": 8,
-                "strokes": 1
-              },
-              {
-                "hole": 10,
-                "strokes": 1
-              },
-              {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
-                "hole": 12,
-                "strokes": 1
-              },
-              {
-                "hole": 14,
-                "strokes": 1
-              },
-              {
-                "hole": 16,
-                "strokes": 1
-              },
-              {
-                "hole": 17,
-                "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
-              }
-            ],
-            "basis": "85% full dots"
+            "allowance": 1,
+            "strokes": 0,
+            "holes": [],
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       },
@@ -2062,36 +2094,15 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 19,
-            "strokes": 19,
+            "allowance": 1,
+            "strokes": 5,
             "holes": [
-              {
-                "hole": 1,
-                "strokes": 1
-              },
               {
                 "hole": 2,
                 "strokes": 1
               },
               {
                 "hole": 3,
-                "strokes": 2
-              },
-              {
-                "hole": 4,
-                "strokes": 1
-              },
-              {
-                "hole": 5,
-                "strokes": 1
-              },
-              {
-                "hole": 6,
-                "strokes": 1
-              },
-              {
-                "hole": 7,
                 "strokes": 1
               },
               {
@@ -2099,47 +2110,15 @@ const EGT_SEED = {
                 "strokes": 1
               },
               {
-                "hole": 9,
-                "strokes": 1
-              },
-              {
-                "hole": 10,
-                "strokes": 1
-              },
-              {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
-                "hole": 12,
-                "strokes": 1
-              },
-              {
-                "hole": 13,
-                "strokes": 1
-              },
-              {
                 "hole": 14,
-                "strokes": 1
-              },
-              {
-                "hole": 15,
                 "strokes": 1
               },
               {
                 "hole": 16,
                 "strokes": 1
-              },
-              {
-                "hole": 17,
-                "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
               }
             ],
-            "basis": "85% full dots"
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       },
@@ -2198,9 +2177,8 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 24,
-            "strokes": 24,
+            "allowance": 1,
+            "strokes": 11,
             "holes": [
               {
                 "hole": 1,
@@ -2208,18 +2186,14 @@ const EGT_SEED = {
               },
               {
                 "hole": 2,
-                "strokes": 2
-              },
-              {
-                "hole": 3,
-                "strokes": 2
-              },
-              {
-                "hole": 4,
                 "strokes": 1
               },
               {
-                "hole": 5,
+                "hole": 3,
+                "strokes": 1
+              },
+              {
+                "hole": 4,
                 "strokes": 1
               },
               {
@@ -2227,15 +2201,7 @@ const EGT_SEED = {
                 "strokes": 1
               },
               {
-                "hole": 7,
-                "strokes": 1
-              },
-              {
                 "hole": 8,
-                "strokes": 2
-              },
-              {
-                "hole": 9,
                 "strokes": 1
               },
               {
@@ -2243,39 +2209,23 @@ const EGT_SEED = {
                 "strokes": 1
               },
               {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
                 "hole": 12,
-                "strokes": 2
-              },
-              {
-                "hole": 13,
                 "strokes": 1
               },
               {
                 "hole": 14,
-                "strokes": 2
-              },
-              {
-                "hole": 15,
                 "strokes": 1
               },
               {
                 "hole": 16,
-                "strokes": 2
+                "strokes": 1
               },
               {
                 "hole": 17,
                 "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
               }
             ],
-            "basis": "85% full dots"
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       },
@@ -2334,9 +2284,8 @@ const EGT_SEED = {
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 24,
-            "strokes": 24,
+            "allowance": 1,
+            "strokes": 11,
             "holes": [
               {
                 "hole": 1,
@@ -2344,18 +2293,14 @@ const EGT_SEED = {
               },
               {
                 "hole": 2,
-                "strokes": 2
-              },
-              {
-                "hole": 3,
-                "strokes": 2
-              },
-              {
-                "hole": 4,
                 "strokes": 1
               },
               {
-                "hole": 5,
+                "hole": 3,
+                "strokes": 1
+              },
+              {
+                "hole": 4,
                 "strokes": 1
               },
               {
@@ -2363,15 +2308,7 @@ const EGT_SEED = {
                 "strokes": 1
               },
               {
-                "hole": 7,
-                "strokes": 1
-              },
-              {
                 "hole": 8,
-                "strokes": 2
-              },
-              {
-                "hole": 9,
                 "strokes": 1
               },
               {
@@ -2379,39 +2316,23 @@ const EGT_SEED = {
                 "strokes": 1
               },
               {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
                 "hole": 12,
-                "strokes": 2
-              },
-              {
-                "hole": 13,
                 "strokes": 1
               },
               {
                 "hole": 14,
-                "strokes": 2
-              },
-              {
-                "hole": 15,
                 "strokes": 1
               },
               {
                 "hole": 16,
-                "strokes": 2
+                "strokes": 1
               },
               {
                 "hole": 17,
                 "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
               }
             ],
-            "basis": "85% full dots"
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       }
@@ -3130,7 +3051,7 @@ const EGT_SEED = {
     },
     "R4": {
       "game": "fourBallAggregateStableford",
-      "allowance": 0.85,
+      "allowance": 1,
       "stablefordPoints": {
         "netEagle": 4,
         "netBirdie": 3,
@@ -3152,7 +3073,8 @@ const EGT_SEED = {
           18
         ]
       ],
-      "pickUp": "at net double bogey"
+      "pickUp": "at net double bogey",
+      "basis": "100% course handicap off the low player"
     },
     "R5": {
       "loop1": {
@@ -3183,6 +3105,8 @@ const EGT_SEED = {
   "sideGames": {
     "passTheMoney": {
       "token": "The Rock \u2014 $5 bill",
+      "played": false,
+      "playedNote": "Set true if The Rock was actually in play. The ledger is always derived from the scores, but it only settles money when this is true \u2014 the 2026 trip settled without it.",
       "startHolder": "john",
       "startsAt": "R2 hole 1",
       "steal": "make a net birdie",
@@ -3270,6 +3194,57 @@ const EGT_SEED = {
     "teamStablefordWinner": 5,
     "stablefordWinner": 5,
     "ptmBill": 5
+  },
+  "tripExtras": {
+    "description": "Off-course money that settles with the golf: shared trip costs and the Thursday poker game. Each item is zero-sum across the four players.",
+    "items": [
+      {
+        "id": "banner",
+        "label": "EGT banner",
+        "type": "collect",
+        "paidBy": "john",
+        "perPlayer": 30,
+        "from": [
+          "brian",
+          "tj",
+          "mike"
+        ],
+        "note": "John fronted the banner; each of the other three owes him $30."
+      },
+      {
+        "id": "gas",
+        "label": "Gas",
+        "type": "collect",
+        "paidBy": "john",
+        "perPlayer": 20,
+        "from": [
+          "brian",
+          "tj",
+          "mike"
+        ],
+        "note": "John fronted the gas; each of the other three owes him $20."
+      },
+      {
+        "id": "poker",
+        "label": "Poker",
+        "type": "pot",
+        "potTotal": 120,
+        "buyIns": {
+          "john": 40,
+          "brian": 40,
+          "tj": 20,
+          "mike": 20
+        },
+        "payouts": {
+          "mike": 84,
+          "tj": 36
+        },
+        "alreadyInPot": {
+          "brian": 40
+        },
+        "note": "$120 pot paid 70/30 \u2014 Mike $84, TJ $36. Brian's $40 buy-in is already sitting in the pot, so he owes nothing further and the cash on hand pays out."
+      }
+    ]
   }
 };
 if (typeof window !== "undefined") { window.EGT_SEED = EGT_SEED; }

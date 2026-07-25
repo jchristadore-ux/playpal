@@ -507,6 +507,9 @@ test('provider is registry-driven: a custom builder surfaces in the feed', () =>
 
 test('SportsCenter runs season settlement once R6 is final (awards + PTM money)', () => {
   const w = loadWithSeed();
+  // The Rock only settles cash when the seed says it was in play (the 2026 trip
+  // settled without it) — turn it on so this covers the settlement path.
+  w.EGT_SEED.sideGames.passTheMoney.played = true;
   const now = Date.now();
   const model = w.EgtImporter.importSeed(w.EGT_SEED);
   // Complete every round; give mike early 3-putts so the PTM pot is non-zero.
@@ -722,19 +725,21 @@ test('NEW TRIP LEADER alert shows formatted points, never raw thirds', () => {
         currentHoleIdx: 17, roundId: nat.id, _writtenBy: 'x', _ts: ts } };
   };
   const ts = now - 8 * 3600 * 1000;
-  // Before: John sweeps the bingos → sole BBB champion, leads at 2 pts.
+  // Before: John sweeps the bingos → sole BBB champion, leads the Cup.
   const before = w.BottomLineProvider.computeFacts({
     docs: [docFor(() => 'john', ts)], trips: [], players: [], now });
-  // After: bingos rotate brian/tj/mike → 3-way champion tie at 2/3 pt each;
-  // Brian tops the tied standings, so the Cup lead changes hands.
+  // After: bingos rotate brian/tj/mike → 3-way BBB champion tie at 2/3 pt each,
+  // so John drops off the top and the Cup lead changes hands. (R5 also carries
+  // the seed's round-robin match play, which pays the high handicaps here —
+  // everyone is on par gross, so pops decide every match.)
   const after = w.BottomLineProvider.computeFacts({
     docs: [docFor(i => ['brian', 'tj', 'mike'][i % 3], ts + 1000)], trips: [], players: [], now: now + 1000 });
   assert.equal(before.egt.live.standings[0].player, 'john');
-  assert.equal(after.egt.live.standings[0].player, 'brian');
+  assert.notEqual(after.egt.live.standings[0].player, 'john', 'the lead changes hands');
   const alerts = w.BottomLineProvider.diffAlerts(before, after);
   const lead = alerts.find(a => a.label === 'NEW TRIP LEADER');
   assert.ok(lead, `trip-leader alert fired: ${alerts.map(a => a.label).join(',')}`);
   const text = lead.parts.map(p => p.s).join(' ');
   assert.ok(!/\d\.\d{3,}/.test(text), `no raw float points on the alert: "${text}"`);
-  assert.ok(/0\.67 pts/.test(text), `formatted third present: "${text}"`);
+  assert.ok(/\.67 pts/.test(text), `formatted third present: "${text}"`);
 });

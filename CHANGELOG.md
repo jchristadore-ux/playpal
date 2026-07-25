@@ -4,6 +4,56 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.11.0] — 2026-07-25
+
+The EGT 2026 money audit — the settlement the trip actually ended on.
+
+### Fixed
+- **Round 4's Stableford was scored on the wrong handicap basis, and paid
+  nobody.** Crystal Springs ran at the seed's 85% full-dot allowance
+  (John 14 / Brian 19 / TJ 24 / Mike 24), which landed on a **39–39 tie** — so
+  the round settled $0 despite a clear result on the course. Every other net
+  game on the trip runs off the low ball, and so does this one now: 100% course
+  handicap off the low player, John scratch (0 / 5 / 11 / 11). The real result
+  is **Brian + Mike 26, John + TJ 18**, worth $10 a side.
+  (`egtImporter.js` `GAME_RULES.teamStableford`, seed `strokeAllocations.R4`.)
+- **Three rounds' side wagers settled for $0 unless someone opened the match
+  editor.** R3's TJ v John $2 Nassau, R5's six-match round robin, and R6's two
+  $2 Nassaus are the wagers the group actually played, but the engine only ever
+  read matches from `events.roundMatches` — configured by hand, per device. The
+  seed now ships them (`rounds[].sideMatches`) and the engine falls back to them
+  when nothing is configured, so the money is right out of the box. Between them
+  they move **$29** that was previously never settled.
+  (`egtEngine.js` `buildRoundCtx`, `egtBridge.js` `toNativeRound`.)
+- **Pass the Money settled cash nobody wagered.** The Rock's ledger is derived
+  from the scores, so it always produced a final holder and quietly moved
+  **$129** to John at season settlement. It now settles only when the seed says
+  the game was in play (`sideGames.passTheMoney.played`, default `false`); the
+  ledger is still derived for display.
+
+### Added
+- **Off-course money on the same ledger** (`model.tripExtras` →
+  `EgtMoney.tripExtrasSettlement`). Shared costs and the poker game settle with
+  the golf, so the running bankroll is the real bottom line: the EGT banner
+  ($30 to John from each), gas ($20 to John from each), and the $120 poker pot
+  (70/30 — Mike $84, TJ $36). Two item shapes — `collect` (one player fronted a
+  cost) and `pot` (buy-ins in, payouts out) — both zero-sum. Cash already handed
+  over rides along as `prepaid` so the settle-up doesn't double-charge it. Folds
+  in at final settlement only, so the mid-trip bankroll stays golf-only.
+  `EgtMoney.compute` now also returns `golfOnly` and `extras` alongside `total`.
+- **`settlement.html` — a one-screen final money board**, in the SportsCenter's
+  own livery: each player's final position, the netted who-pays-whom, the
+  round-by-round ledger, and how every stake was decided. Generated from the
+  engine (`node scripts/gen-settlement.mjs`), never hand-typed, so it cannot
+  drift from what the app computes.
+- **`fixtures/egt-2026-results.json`** — every score posted on the trip,
+  recovered from the rounds the app synced, including the manually entered
+  Bingo-Bango-Bongo and Wolf events.
+- **`tests/egtAudit.test.mjs`** — 14 tests that replay the real trip and pin
+  every round's payout, the off-course ledger, and the final settlement
+  (John +$110 · Brian −$107 · TJ −$6 · Mike +$3), so a future scoring change
+  can't silently move a number the group already settled on.
+
 ## [1.10.0] — 2026-07-24
 
 The post-tournament results show for the EGT SportsCenter.

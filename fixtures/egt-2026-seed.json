@@ -55,7 +55,7 @@
   "handicapAllowances": {
     "singlesMatch": 1.0,
     "fourBallMatch": 0.9,
-    "fourBallStableford": 0.85,
+    "fourBallStableford": 1.0,
     "scramble2": {
       "low": 0.35,
       "high": 0.15
@@ -933,8 +933,14 @@
       "playedTee": "White",
       "teeTimeTarget": "Loop 1 10:00 AM \u00b7 Loop 2 12:36 PM",
       "teeTimes": [
-        { "label": "Loop 1", "time": "10:00 AM" },
-        { "label": "Loop 2", "time": "12:36 PM" }
+        {
+          "label": "Loop 1",
+          "time": "10:00 AM"
+        },
+        {
+          "label": "Loop 2",
+          "time": "12:36 PM"
+        }
       ],
       "players": [
         "john",
@@ -945,8 +951,13 @@
       "teams": [],
       "pairings": {
         "carts": [
-          ["john", "tj"],
-          ["mike"]
+          [
+            "john",
+            "tj"
+          ],
+          [
+            "mike"
+          ]
         ],
         "rationale": "Opening threesome \u2014 Brian arrives for R2. R1 is flat / stakes-only (no Cup points), so carts are set purely for pace of play. John (14) rides with TJ (23) to spread the field across carts; Mike (23) rides solo in the two-loop rotation."
       },
@@ -964,7 +975,10 @@
       "playedTee": "White",
       "teeTimeTarget": "7:30 AM",
       "teeTimes": [
-        { "label": "Tee", "time": "7:30 AM" }
+        {
+          "label": "Tee",
+          "time": "7:30 AM"
+        }
       ],
       "players": [
         "john",
@@ -992,10 +1006,16 @@
       ],
       "pairings": {
         "carts": [
-          ["john", "tj"],
-          ["brian", "mike"]
+          [
+            "john",
+            "tj"
+          ],
+          [
+            "brian",
+            "mike"
+          ]
         ],
-        "rationale": "First team round. John and TJ are paired here by request — they ride and partner together at Ballyowen (and again at Crystal Springs in R4). The split stays balanced despite the fixed pairing: John (13, low) + TJ (23, high) at 36 combined face Brian (18) + Mike (23) at 41 — a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Carts follow the teams so partners can strategize between shots."
+        "rationale": "First team round. John and TJ are paired here by request \u2014 they ride and partner together at Ballyowen (and again at Crystal Springs in R4). The split stays balanced despite the fixed pairing: John (13, low) + TJ (23, high) at 36 combined face Brian (18) + Mike (23) at 41 \u2014 a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Carts follow the teams so partners can strategize between shots."
       },
       "courseHandicaps": {
         "john": 13,
@@ -1012,7 +1032,10 @@
       "playedTee": "White",
       "teeTimeTarget": "1:45 PM",
       "teeTimes": [
-        { "label": "Tee", "time": "1:45 PM" }
+        {
+          "label": "Tee",
+          "time": "1:45 PM"
+        }
       ],
       "players": [
         "john",
@@ -1025,17 +1048,35 @@
       "teams": [],
       "pairings": {
         "carts": [
-          ["john", "brian"],
-          ["tj", "mike"]
+          [
+            "john",
+            "brian"
+          ],
+          [
+            "tj",
+            "mike"
+          ]
         ],
-        "rationale": "Wolf is an individual game — the Wolf rotates partners hole by hole, so there are no fixed teams. Carts rotate the riding partners: John + Brian and TJ + Mike are the pairing NOT used as R2 carts, so after two rounds every player has ridden with two different people. The Wolf order (TJ, Mike, Brian, John) is unaffected by cart assignment."
+        "rationale": "Wolf is an individual game \u2014 the Wolf rotates partners hole by hole, so there are no fixed teams. Carts rotate the riding partners: John + Brian and TJ + Mike are the pairing NOT used as R2 carts, so after two rounds every player has ridden with two different people. The Wolf order (TJ, Mike, Brian, John) is unaffected by cart assignment."
       },
       "courseHandicaps": {
         "john": 19,
         "brian": 24,
         "tj": 30,
         "mike": 30
-      }
+      },
+      "sideMatches": [
+        {
+          "id": "egt-r3-nassau-tj-john",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "tj",
+            "john"
+          ],
+          "stakes": 2
+        }
+      ],
+      "sideMatchesNote": "TJ v John $2 Nassau played alongside the Wolf game."
     },
     {
       "id": "R4",
@@ -1045,7 +1086,10 @@
       "playedTee": "White",
       "teeTimeTarget": "7:50 AM",
       "teeTimes": [
-        { "label": "Tee", "time": "7:50 AM" }
+        {
+          "label": "Tee",
+          "time": "7:50 AM"
+        }
       ],
       "players": [
         "john",
@@ -1054,7 +1098,7 @@
         "mike"
       ],
       "primaryGame": "fourBallAggregateStableford",
-      "allowance": 0.85,
+      "allowance": 1.0,
       "teams": [
         {
           "name": "Team 1",
@@ -1073,10 +1117,16 @@
       ],
       "pairings": {
         "carts": [
-          ["john", "tj"],
-          ["brian", "mike"]
+          [
+            "john",
+            "tj"
+          ],
+          [
+            "brian",
+            "mike"
+          ]
         ],
-        "rationale": "Same teams as R2 — John (17) + TJ (28) vs Brian (22) + Mike (28) — keeping John and TJ partnered by request. Pairing the lowest with a highest on each side (45 vs 50 combined) stays balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike); the two pairs that haven't shared a cart yet (John + Mike, Brian + TJ) ride together in R5, completing the rotation by the end of Thursday."
+        "rationale": "Same teams as R2 \u2014 John (17) + TJ (28) vs Brian (22) + Mike (28) \u2014 keeping John and TJ partnered by request. Pairing the lowest with a highest on each side (45 vs 50 combined) stays balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike); the two pairs that haven't shared a cart yet (John + Mike, Brian + TJ) ride together in R5, completing the rotation by the end of Thursday."
       },
       "courseHandicaps": {
         "john": 17,
@@ -1091,10 +1141,16 @@
       "date": "THU \u00b7 JUL 23 PM",
       "courseId": "cascades",
       "playedTee": "White",
-      "teeTimeTarget": "Loop 1 2:02 PM · Loop 2 4:08 PM",
+      "teeTimeTarget": "Loop 1 2:02 PM \u00b7 Loop 2 4:08 PM",
       "teeTimes": [
-        { "label": "Loop 1", "time": "2:02 PM" },
-        { "label": "Loop 2", "time": "4:08 PM" }
+        {
+          "label": "Loop 1",
+          "time": "2:02 PM"
+        },
+        {
+          "label": "Loop 2",
+          "time": "4:08 PM"
+        }
       ],
       "players": [
         "john",
@@ -1121,17 +1177,80 @@
       ],
       "pairings": {
         "carts": [
-          ["john", "mike"],
-          ["brian", "tj"]
+          [
+            "john",
+            "mike"
+          ],
+          [
+            "brian",
+            "tj"
+          ]
         ],
-        "rationale": "R5 is an individual round — full-18 Bingo-Bango-Bongo plus round-robin 1v1 match play, so every player faces every other player head-to-head (all six 1v1 matches). Combined with the R2 and R4 team-round match-ups, this evens out the opponent matrix. Carts (John + Mike, Brian + TJ) keep the rotation flat — by the end of Thursday every player has still ridden with all three of the others at least once."
+        "rationale": "R5 is an individual round \u2014 full-18 Bingo-Bango-Bongo plus round-robin 1v1 match play, so every player faces every other player head-to-head (all six 1v1 matches). Combined with the R2 and R4 team-round match-ups, this evens out the opponent matrix. Carts (John + Mike, Brian + TJ) keep the rotation flat \u2014 by the end of Thursday every player has still ridden with all three of the others at least once."
       },
       "courseHandicaps": {
         "john": 17,
         "brian": 22,
         "tj": 28,
         "mike": 28
-      }
+      },
+      "sideMatches": [
+        {
+          "id": "egt-r5-rr-john-brian",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "john",
+            "brian"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-john-tj",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "john",
+            "tj"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-john-mike",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "john",
+            "mike"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-brian-tj",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "brian",
+            "tj"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-brian-mike",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "brian",
+            "mike"
+          ],
+          "stakes": 1
+        },
+        {
+          "id": "egt-r5-rr-tj-mike",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "tj",
+            "mike"
+          ],
+          "stakes": 1
+        }
+      ],
+      "sideMatchesNote": "The round-robin IS the round: all six 1v1s at $1 a segment, so $1 front / $1 back / $2 overall."
     },
     {
       "id": "R6",
@@ -1141,7 +1260,10 @@
       "playedTee": "White",
       "teeTimeTarget": "8:36 AM",
       "teeTimes": [
-        { "label": "Tee", "time": "8:36 AM" }
+        {
+          "label": "Tee",
+          "time": "8:36 AM"
+        }
       ],
       "players": [
         "john",
@@ -1154,17 +1276,44 @@
       "teams": [],
       "pairings": {
         "carts": [
-          ["john", "tj"],
-          ["brian", "mike"]
+          [
+            "john",
+            "tj"
+          ],
+          [
+            "brian",
+            "mike"
+          ]
         ],
-        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + TJ, Brian + Mike) put John and TJ together one last time to close out the trip — their fourth ride together (R1, R2, R4, R6) at the request to keep them paired as much as possible. Every player has still shared a cart with each of the other three at least once by the end of R5, so cart coverage is complete regardless of the seeded matches. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
+        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + TJ, Brian + Mike) put John and TJ together one last time to close out the trip \u2014 their fourth ride together (R1, R2, R4, R6) at the request to keep them paired as much as possible. Every player has still shared a cart with each of the other three at least once by the end of R5, so cart coverage is complete regardless of the seeded matches. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
       },
       "courseHandicaps": {
         "john": 16,
         "brian": 22,
         "tj": 27,
         "mike": 27
-      }
+      },
+      "sideMatches": [
+        {
+          "id": "egt-r6-nassau-tj-john",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "tj",
+            "john"
+          ],
+          "stakes": 2
+        },
+        {
+          "id": "egt-r6-nassau-mike-brian",
+          "matchType": "1v1",
+          "playersInMatch": [
+            "mike",
+            "brian"
+          ],
+          "stakes": 2
+        }
+      ],
+      "sideMatchesNote": "The two head-to-heads actually played on Friday, each a $2 Nassau."
     }
   ],
   "strokeAllocations": {
@@ -1903,68 +2052,10 @@
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 14,
-            "strokes": 14,
-            "holes": [
-              {
-                "hole": 1,
-                "strokes": 1
-              },
-              {
-                "hole": 2,
-                "strokes": 1
-              },
-              {
-                "hole": 3,
-                "strokes": 1
-              },
-              {
-                "hole": 4,
-                "strokes": 1
-              },
-              {
-                "hole": 6,
-                "strokes": 1
-              },
-              {
-                "hole": 7,
-                "strokes": 1
-              },
-              {
-                "hole": 8,
-                "strokes": 1
-              },
-              {
-                "hole": 10,
-                "strokes": 1
-              },
-              {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
-                "hole": 12,
-                "strokes": 1
-              },
-              {
-                "hole": 14,
-                "strokes": 1
-              },
-              {
-                "hole": 16,
-                "strokes": 1
-              },
-              {
-                "hole": 17,
-                "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
-              }
-            ],
-            "basis": "85% full dots"
+            "allowance": 1.0,
+            "strokes": 0,
+            "holes": [],
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       },
@@ -1999,36 +2090,15 @@
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 19,
-            "strokes": 19,
+            "allowance": 1.0,
+            "strokes": 5,
             "holes": [
-              {
-                "hole": 1,
-                "strokes": 1
-              },
               {
                 "hole": 2,
                 "strokes": 1
               },
               {
                 "hole": 3,
-                "strokes": 2
-              },
-              {
-                "hole": 4,
-                "strokes": 1
-              },
-              {
-                "hole": 5,
-                "strokes": 1
-              },
-              {
-                "hole": 6,
-                "strokes": 1
-              },
-              {
-                "hole": 7,
                 "strokes": 1
               },
               {
@@ -2036,47 +2106,15 @@
                 "strokes": 1
               },
               {
-                "hole": 9,
-                "strokes": 1
-              },
-              {
-                "hole": 10,
-                "strokes": 1
-              },
-              {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
-                "hole": 12,
-                "strokes": 1
-              },
-              {
-                "hole": 13,
-                "strokes": 1
-              },
-              {
                 "hole": 14,
-                "strokes": 1
-              },
-              {
-                "hole": 15,
                 "strokes": 1
               },
               {
                 "hole": 16,
                 "strokes": 1
-              },
-              {
-                "hole": 17,
-                "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
               }
             ],
-            "basis": "85% full dots"
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       },
@@ -2135,9 +2173,8 @@
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 24,
-            "strokes": 24,
+            "allowance": 1.0,
+            "strokes": 11,
             "holes": [
               {
                 "hole": 1,
@@ -2145,18 +2182,14 @@
               },
               {
                 "hole": 2,
-                "strokes": 2
-              },
-              {
-                "hole": 3,
-                "strokes": 2
-              },
-              {
-                "hole": 4,
                 "strokes": 1
               },
               {
-                "hole": 5,
+                "hole": 3,
+                "strokes": 1
+              },
+              {
+                "hole": 4,
                 "strokes": 1
               },
               {
@@ -2164,15 +2197,7 @@
                 "strokes": 1
               },
               {
-                "hole": 7,
-                "strokes": 1
-              },
-              {
                 "hole": 8,
-                "strokes": 2
-              },
-              {
-                "hole": 9,
                 "strokes": 1
               },
               {
@@ -2180,39 +2205,23 @@
                 "strokes": 1
               },
               {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
                 "hole": 12,
-                "strokes": 2
-              },
-              {
-                "hole": 13,
                 "strokes": 1
               },
               {
                 "hole": 14,
-                "strokes": 2
-              },
-              {
-                "hole": 15,
                 "strokes": 1
               },
               {
                 "hole": 16,
-                "strokes": 2
+                "strokes": 1
               },
               {
                 "hole": 17,
                 "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
               }
             ],
-            "basis": "85% full dots"
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       },
@@ -2271,9 +2280,8 @@
             "basis": "off low, over all 18"
           },
           "teamStableford": {
-            "allowance": 0.85,
-            "playingHandicap": 24,
-            "strokes": 24,
+            "allowance": 1.0,
+            "strokes": 11,
             "holes": [
               {
                 "hole": 1,
@@ -2281,18 +2289,14 @@
               },
               {
                 "hole": 2,
-                "strokes": 2
-              },
-              {
-                "hole": 3,
-                "strokes": 2
-              },
-              {
-                "hole": 4,
                 "strokes": 1
               },
               {
-                "hole": 5,
+                "hole": 3,
+                "strokes": 1
+              },
+              {
+                "hole": 4,
                 "strokes": 1
               },
               {
@@ -2300,15 +2304,7 @@
                 "strokes": 1
               },
               {
-                "hole": 7,
-                "strokes": 1
-              },
-              {
                 "hole": 8,
-                "strokes": 2
-              },
-              {
-                "hole": 9,
                 "strokes": 1
               },
               {
@@ -2316,39 +2312,23 @@
                 "strokes": 1
               },
               {
-                "hole": 11,
-                "strokes": 1
-              },
-              {
                 "hole": 12,
-                "strokes": 2
-              },
-              {
-                "hole": 13,
                 "strokes": 1
               },
               {
                 "hole": 14,
-                "strokes": 2
-              },
-              {
-                "hole": 15,
                 "strokes": 1
               },
               {
                 "hole": 16,
-                "strokes": 2
+                "strokes": 1
               },
               {
                 "hole": 17,
                 "strokes": 1
-              },
-              {
-                "hole": 18,
-                "strokes": 1
               }
             ],
-            "basis": "85% full dots"
+            "basis": "100% off low (the low ball plays scratch)"
           }
         }
       }
@@ -3067,7 +3047,7 @@
     },
     "R4": {
       "game": "fourBallAggregateStableford",
-      "allowance": 0.85,
+      "allowance": 1.0,
       "stablefordPoints": {
         "netEagle": 4,
         "netBirdie": 3,
@@ -3089,7 +3069,8 @@
           18
         ]
       ],
-      "pickUp": "at net double bogey"
+      "pickUp": "at net double bogey",
+      "basis": "100% course handicap off the low player"
     },
     "R5": {
       "loop1": {
@@ -3120,6 +3101,8 @@
   "sideGames": {
     "passTheMoney": {
       "token": "The Rock \u2014 $5 bill",
+      "played": false,
+      "playedNote": "Set true if The Rock was actually in play. The ledger is always derived from the scores, but it only settles money when this is true \u2014 the 2026 trip settled without it.",
       "startHolder": "john",
       "startsAt": "R2 hole 1",
       "steal": "make a net birdie",
@@ -3207,5 +3190,56 @@
     "teamStablefordWinner": 5,
     "stablefordWinner": 5,
     "ptmBill": 5
+  },
+  "tripExtras": {
+    "description": "Off-course money that settles with the golf: shared trip costs and the Thursday poker game. Each item is zero-sum across the four players.",
+    "items": [
+      {
+        "id": "banner",
+        "label": "EGT banner",
+        "type": "collect",
+        "paidBy": "john",
+        "perPlayer": 30,
+        "from": [
+          "brian",
+          "tj",
+          "mike"
+        ],
+        "note": "John fronted the banner; each of the other three owes him $30."
+      },
+      {
+        "id": "gas",
+        "label": "Gas",
+        "type": "collect",
+        "paidBy": "john",
+        "perPlayer": 20,
+        "from": [
+          "brian",
+          "tj",
+          "mike"
+        ],
+        "note": "John fronted the gas; each of the other three owes him $20."
+      },
+      {
+        "id": "poker",
+        "label": "Poker",
+        "type": "pot",
+        "potTotal": 120,
+        "buyIns": {
+          "john": 40,
+          "brian": 40,
+          "tj": 20,
+          "mike": 20
+        },
+        "payouts": {
+          "mike": 84,
+          "tj": 36
+        },
+        "alreadyInPot": {
+          "brian": 40
+        },
+        "note": "$120 pot paid 70/30 \u2014 Mike $84, TJ $36. Brian's $40 buy-in is already sitting in the pot, so he owes nothing further and the cash on hand pays out."
+      }
+    ]
   }
 }

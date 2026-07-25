@@ -1,5 +1,49 @@
 # Project Progress
 
+## 2026-07-25 — EGT 2026 money audit (branch claude/golf-money-audit-hom5rs) — v1.11.0
+
+Status: **complete — 200 tests green (14 new), dist rebuilt, settlement board generated.**
+
+Full recalculation of what everyone owes after the trip, against the real scores.
+
+### Where the data came from
+The six rounds were all synced by the app to Firestore `playpal_rounds` under
+codes W/X/Y/Z/2/3 + `4K336`. Those docs carry the full hole-by-hole cards **and**
+the manually entered Bingo-Bango-Bongo and Wolf events, so nothing had to be
+retyped. Captured verbatim as `fixtures/egt-2026-results.json`.
+
+### Three real defects found in the money engine
+1. **R4 Stableford basis.** Ran at the seed's 85% full dots → a 39–39 tie → the
+   round paid $0. Every other net game runs off the low ball; R4 now does too
+   (John scratch). Real result: Brian + Mike 26, John + TJ 18.
+2. **Side wagers never settled.** R3's Nassau, R5's round robin and R6's two
+   Nassaus only existed if someone opened the match editor on that device. The
+   seed now ships them as `rounds[].sideMatches`; the engine and the scorer
+   bridge both fall back to them. Worth $29 that was going unsettled.
+3. **The Rock settled money nobody wagered** — $129 to John, purely derived from
+   3-putts and net birdies. Gated behind `sideGames.passTheMoney.played`.
+
+### Added
+- `model.tripExtras` + `EgtMoney.tripExtrasSettlement` — banner, gas and the
+  poker pot on the same zero-sum ledger, folded in at final settlement only.
+  `compute()` now returns `golfOnly` and `extras` beside `total`.
+- `settlement.html` + `scripts/gen-settlement.mjs` — the one-screen board, in
+  the SportsCenter's livery, generated from the engine.
+- `tests/egtAudit.test.mjs` — replays the trip and pins every figure.
+
+### The answer
+Golf only: John $0 · Brian −$17 · TJ +$28 · Mike −$11.
+With costs: **John +$110 · Brian −$107 · TJ −$6 · Mike +$3** (nets to $0).
+Settle: Brian → John $55, → TJ $7, → Mike $5; TJ → John $30; Mike → John $25,
+→ TJ $9. (Brian's $40 poker buy-in is already in the pot — $8 of it is TJ's,
+$32 Mike's — which is why his bill is $67, not $107.)
+
+### Open question left for the organizer
+R6's Cup **points** still seed the singles 1v2 / 3v4 off the R5 standings, but
+the matches actually played were TJ v John and Brian v Mike. Money is correct
+either way (the Nassaus are settled as side matches); only the Cup-points
+attribution for R6 singles would change.
+
 ## EGT SportsCenter — post-tournament REVEAL ceremony (branch claude/egt-sportscenter-reveal-sequence-dicwe5) — v1.10.0
 
 The user wanted to reveal the trip results on the EGT SportsCenter as a
@@ -312,7 +356,7 @@ regenerates `components/egt/egtSeedData.js` (do not hand-edit the embed).
 
 
 
-## Current work — EGT 2026 Cup tournament engine (branch claude/playpal-egt-tournament-25w5g0)
+## Previously — EGT 2026 Cup tournament engine (branch claude/playpal-egt-tournament-25w5g0)
 
 Status: **engine + UI complete, all tests green (111 pass), browser-smoke verified.**
 
