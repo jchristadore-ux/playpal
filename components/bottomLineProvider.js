@@ -1171,6 +1171,55 @@ const BottomLineProvider = (function () {
              subtitle: subtitle || null, accent: accent || null };
   }
 
+  // The tournament's money, built off the shared summary so the broadcast, the
+  // app's Money tab and the printable settlement board all say the same thing.
+  // Two cards: the ledger (every round + the off-course costs) and the
+  // who-pays-whom. Returns [] when nothing has settled yet.
+  function _moneyModules(facts) {
+    const egt = facts.egt;
+    const MS = g('EgtMoneySummary');
+    if (!MS || !egt || !egt.live || !egt.model) return [];
+    let sum;
+    try { sum = MS.build(egt.model, egt.live); } catch (e) { return []; }
+    if (!sum.rounds.length) return [];
+
+    const cols = sum.players.map(p => Object.assign({}, playerInfo(p.id), { id: p.id }));
+    const row = (label, sub, by, emphasis) => ({
+      label, sub: sub || null, emphasis: emphasis || null,
+      cells: cols.map(c => ({ id: c.id, value: by[c.id] || 0 })),
+    });
+    const rows = sum.rounds.map(r => row(r.course, r.date, r.by));
+    if (sum.hasExtras) {
+      rows.push(row('Golf subtotal', null, sum.golfOnly, 'subtotal'));
+      sum.extras.forEach(x => rows.push(row(x.label, null, x.by)));
+    }
+    rows.push(row('Final', null, sum.total, 'total'));
+
+    const mods = [{
+      id: 'money-ledger', type: 'money-ledger',
+      title: sum.complete ? 'THE FINAL RECKONING' : 'MONEY SO FAR',
+      subtitle: sum.netsToZero ? 'Nets to $0 to the cent' : 'Rounds still to finalize',
+      columns: cols, rows,
+    }];
+
+    if (sum.settle.length) {
+      mods.push({
+        id: 'money-settle', type: 'money-settle', title: 'SETTLE UP',
+        subtitle: 'Netted per matchup — nobody pays both ways',
+        lines: sum.settle.map(s => ({
+          from: playerInfo(s.from), to: playerInfo(s.to),
+          due: s.due, amount: s.amount, credit: s.credit,
+        })),
+        note: (sum.prepaidNote || []).filter(n => n.amount)
+          .map(n => (n.refund
+            ? `${n.name} has $${n.amount} in the pot — $${n.refund} of it comes back to him`
+            : `${n.name}'s $${n.amount} is already in the pot — his bill is $${n.due}, not $${n.owed}`))
+          .join(' · ') || null,
+      });
+    }
+    return mods;
+  }
+
   // Season-award "hardware" decided over the scored rounds, read from the same
   // tournament stats the award races use (Birdie King is gross birdies, etc.).
   function _awardWinnersModule(facts) {
@@ -1323,6 +1372,7 @@ const BottomLineProvider = (function () {
           puttsPerRound: a.puttsPerRound, birdies: a.birdies });
       });
       mods.push(..._statsModules(facts, agg));
+      mods.push(..._moneyModules(facts));
     }
 
     if (mode === 'reveal' && model) {
@@ -1352,6 +1402,13 @@ const BottomLineProvider = (function () {
       if (marquee.length) {
         mods.push(_titleCard('reveal-numbers', tripName, 'BY THE NUMBERS', 'How the trip was played'));
         mods.push(...marquee);
+      }
+
+      // Act I½ — the wallet. Every stake and cost, then who hands what to whom.
+      const moneyMods = _moneyModules(facts);
+      if (moneyMods.length) {
+        mods.push(_titleCard('reveal-money', tripName, 'THE DAMAGE', 'Every stake, every cost, settled'));
+        mods.push(...moneyMods);
       }
 
       // Act II — The hardware (season award winners).
@@ -1402,6 +1459,7 @@ const BottomLineProvider = (function () {
     // broadcast layer
     PLAYERS, playerInfo, FORMAT_RULES, formatFor,
     aggregateEgtStats, roundRecap, broadcastMode, broadcastModules,
+    _moneyModules, // exposed for tests
   };
 })();
 

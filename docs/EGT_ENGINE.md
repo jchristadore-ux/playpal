@@ -31,6 +31,7 @@ EgtEngine.liveUpdate ─▶ calculators (EgtScoring) ─▶ EgtPoints / EgtMoney
 | `egtSideGames.js` | Pass the Money (The Rock) ledger, CTP, Long Drive, tracked stats. |
 | `egtPoints.js` | EGT Cup points per round + season awards (verified vs `maxPossible`). |
 | `egtMoney.js` | Zero-sum money — each finalized round nets to $0 by construction, plus the off-course `tripExtras` ledger at final settlement. |
+| `egtMoneySummary.js` | One description of the money for every surface that shows it: standings, settle-up, the per-round ledger, and how each stake was decided. |
 | `egtStandings.js` | Leaderboard, tiebreakers, R6 reseed, night snapshots + deltas. |
 | `egtStore.js` | localStorage persistence; re-import preserves entered data. |
 | `egtPrintable.js` | Print-ready standings + scorecards from stored data. |
@@ -97,6 +98,27 @@ per-round $0 money invariant, plus calculator/standings units.
 — the scores the app actually synced — and pins every round's payout, the
 off-course ledger, and the final settlement. It's the regression net for money
 the group has already settled on. Run `npm test`.
+
+## Where the money is shown
+
+`EgtMoneySummary.build(model, live)` is the single description of the tournament's
+money. Three surfaces render it, so none of them can drift:
+
+| Surface | What it shows |
+|---|---|
+| EGT Cup screen → **Money** tab | Standings, settle-up, the ledger, and how each stake was decided |
+| SportsCenter | `money-ledger` and `money-settle` cards — in the post-round rotation and in THE REVEAL |
+| `settlement.html` | The one-screen printable board |
+
+The summary degrades: call it with two rounds finalized and you get two round
+rows, no off-course ledger, and a golf-only bottom line.
+
+**Settle-up and prepaid cash.** `EgtMoney` nets each pairing, which is who owes
+whom. But a buy-in already sitting in a pot has physically been paid, so the
+summary credits it against that pot's winners in proportion to their winnings —
+otherwise the payer is charged twice. The credit only ever applies to the item
+holding the cash, and clamps at the amount owed; any excess is reported as
+`refund` rather than becoming a backwards transfer.
 
 ## The settlement board
 

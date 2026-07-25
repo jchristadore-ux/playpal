@@ -195,3 +195,120 @@ test('who pays whom, netted per matchup', () => {
   s.forEach(x => { net[x.from] = (net[x.from] || 0) - x.amount; net[x.to] = (net[x.to] || 0) + x.amount; });
   vec(net, { john: 110, brian: -107, tj: -6, mike: 3 }, 'settlement net');
 });
+
+// ── the shared money summary (app Money tab · SportsCenter · settlement board) ──
+
+test('the money summary describes the trip the ledger settled', () => {
+  const m = money();
+  const sum = W.EgtMoneySummary.build(m.model, m.live);
+  // Ordered by who is up the most.
+  eqList(sum.standings.map(s => s.name), ['John', 'Mike', 'TJ', 'Brian'], 'standing order');
+  const john = sum.standings[0];
+  near(john.total, 110, 'John total');
+  near(john.golf, 0, 'John golf');
+  near(john.extras, 110, 'John off-course');
+  assert.equal(john.verdict, 'collects');
+  assert.equal(sum.standings[3].verdict, 'pays out');
+  // Six rounds, in the order they were played, plus the three off-course items.
+  eqList(sum.rounds.map(r => r.id), ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'], 'round order');
+  eqList(sum.extras.map(x => x.id), ['banner', 'gas', 'poker'], 'off-course items');
+  assert.ok(sum.hasExtras && sum.complete && sum.netsToZero);
+  vec(sum.total, { john: 110, brian: -107, tj: -6, mike: 3 }, 'summary total');
+  vec(sum.golfOnly, { john: 0, brian: -17, tj: 28, mike: -11 }, 'summary golf');
+});
+
+test('the settle-up credits cash already in the pot against that pot only', () => {
+  const sum = W.EgtMoneySummary.build(money().model, money().live);
+  const find = (from, to) => sum.settle.find(s => s.from === from && s.to === to) || {};
+  // Brian's $40 poker buy-in splits across the poker winners by share of the
+  // winnings ($8 TJ, $32 Mike) — and touches nothing else he owes.
+  near(find('brian', 'john').credit, 0, 'no credit against the banner/gas John fronted');
+  near(find('brian', 'john').due, 55, 'Brian → John');
+  near(find('brian', 'tj').credit, 8, 'TJ share of the pot');
+  near(find('brian', 'tj').due, 7, 'Brian → TJ');
+  near(find('brian', 'mike').credit, 32, 'Mike share of the pot');
+  near(find('brian', 'mike').due, 5, 'Brian → Mike');
+  // The credit never exceeds what was actually prepaid.
+  const credited = sum.settle.reduce((a, s) => a + s.credit, 0);
+  near(credited, 40, 'total credited equals the cash in the pot');
+  // Brian still owes $107 on the ledger; $67 of it is cash he has yet to hand over.
+  const note = sum.prepaidNote.find(n => n.id === 'brian');
+  near(note.owed, 107, 'ledger'); near(note.due, 67, 'still to pay');
+});
+
+test('the summary explains where each round\'s money came from', () => {
+  const sum = W.EgtMoneySummary.build(money().model, money().live);
+  const work = rid => sum.rounds.find(r => r.id === rid).work.join('\n');
+  assert.match(work('R1'), /Bingo Bango Bongo — TJ 11 .* → TJ takes the stake/);
+  assert.match(work('R1'), /The Nines — John 30 .* → John takes the stake/);
+  assert.match(work('R2'), /Four-ball — John \+ TJ by 6/);
+  assert.match(work('R3'), /Wolf units — Mike \+10 .* → Mike takes the stake/);
+  assert.match(work('R3'), /TJ v John — front TJ by 5 · back John by 1 · overall TJ by 4 → TJ \+\$4/);
+  assert.match(work('R4'), /Teams — John \+ TJ 18 v Brian \+ Mike 26 → Brian \+ Mike take it/);
+  assert.match(work('R5'), /TJ v Mike — .* → TJ \+\$4/);
+  assert.match(work('R6'), /TJ v John — .* → TJ \+\$8/);
+  assert.match(work('R6'), /Mike v Brian — .* overall halved → no money/);
+});
+
+test('the summary degrades to golf-only partway through the trip', () => {
+  const model = EgtImporter.importSeed(JSON.parse(JSON.stringify(SEED)));
+  const state = EgtStore.emptyState(model.trip.id);
+  state.model = model;
+  ['R1', 'R2'].forEach(rid => {
+    const r = RESULTS[rid];
+    EgtBridge.bridge(model, state, rid, {
+      scores: r.scores, wolfData: r.wolfData || {}, bbbData: r.bbbData || {},
+      putts: {}, firData: {}, girData: {}, extraStats: {},
+    });
+    state.finalized.push(rid);
+  });
+  const live = EgtEngine.liveUpdate(state, { noPersist: true });   // not the season pass
+  const sum = W.EgtMoneySummary.build(model, live);
+  eqList(sum.rounds.map(r => r.id), ['R1', 'R2'], 'only the finalized rounds');
+  assert.equal(sum.hasExtras, false, 'no off-course ledger before the trip closes');
+  assert.equal(sum.complete, false);
+  // R1 + R2 only: John +15, Brian -10, TJ +15, Mike -20.
+  vec(sum.total, { john: 15, brian: -10, tj: 15, mike: -20 }, 'partial total');
+});
+
+test('an unscored trip yields an empty summary rather than throwing', () => {
+  const model = EgtImporter.importSeed(JSON.parse(JSON.stringify(SEED)));
+  const state = EgtStore.emptyState(model.trip.id);
+  state.model = model;
+  const sum = W.EgtMoneySummary.build(model, EgtEngine.liveUpdate(state, { noPersist: true }));
+  assert.equal(sum.rounds.length, 0);
+  assert.equal(sum.settle.length, 0);
+  assert.equal(sum.standings.length, 4, 'still lists the field');
+  assert.ok(sum.standings.every(s => s.total === 0));
+});
+
+test('a pot credit never reverses a bill — the excess comes back instead', () => {
+  const m = money();
+  // Same trip, but pretend Brian floated $200 into the poker pot. His share of
+  // the credit ($40 to TJ, $160 to Mike) now dwarfs what he owes them, so the
+  // settle-up must clamp at zero rather than invent transfers running backwards.
+  const live = JSON.parse(JSON.stringify({
+    money: {
+      settlements: m.live.money.settlements,
+      extras: {
+        items: m.live.money.extras.items.map(i => (i.id === 'poker'
+          ? Object.assign({}, i, { prepaid: { brian: 200 } }) : i)),
+        prepaid: { brian: 200 },
+        total: m.live.money.extras.total,
+      },
+      total: m.live.money.total, golfOnly: m.live.money.golfOnly,
+      rounds: m.live.money.rounds, netsToZero: true,
+    },
+    resultsByRound: {},
+  }));
+  const sum = W.EgtMoneySummary.build(m.model, live);
+  sum.settle.forEach(s => {
+    assert.ok(s.due >= 0, `${s.from}→${s.to} stays a one-way transfer, got ${s.due}`);
+    assert.ok(s.credit <= s.amount, `${s.from}→${s.to} credit never exceeds the bill`);
+  });
+  const note = sum.prepaidNote.find(n => n.id === 'brian');
+  assert.ok(note.refund > 0, 'the unusable remainder is reported as coming back');
+  // Nothing is lost: what was applied plus what comes back is what went in.
+  const applied = sum.settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.credit, 0);
+  near(applied + note.refund, 200, 'every dollar of the float is accounted for');
+});

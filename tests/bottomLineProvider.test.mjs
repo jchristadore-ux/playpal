@@ -743,3 +743,62 @@ test('NEW TRIP LEADER alert shows formatted points, never raw thirds', () => {
   assert.ok(!/\d\.\d{3,}/.test(text), `no raw float points on the alert: "${text}"`);
   assert.ok(/\.67 pts/.test(text), `formatted third present: "${text}"`);
 });
+
+test('the broadcast carries the money ledger and the settle-up', () => {
+  const w = loadWithSeed();
+  const now = Date.now();
+  const model = w.EgtImporter.importSeed(w.EGT_SEED);
+  // Finalize every round with a spread of scores so real money changes hands.
+  const docs = model.rounds.map(r => {
+    const nat = w.EgtBridge.toNativeRound(model, r.id);
+    const holes = nat.course.holes;
+    const scores = {}, putts = {};
+    nat.players.forEach(p => {
+      scores[p.id] = holes.map(h => h.par + ({ john: 0, brian: 2, tj: 1, mike: 3 }[p.id] ?? 1));
+      putts[p.id] = holes.map(() => 2);
+    });
+    const ts = now - 8 * 3600 * 1000;
+    return { syncCode: nat.syncCode, savedAt: ts, round: nat,
+      liveScores: { scores, putts, firData: {}, girData: {}, extraStats: {},
+        wolfData: {}, bbbData: {}, teeBallData: {}, popFlags: {},
+        currentHoleIdx: 17, roundId: nat.id, _writtenBy: 'x', _ts: ts } };
+  });
+  const facts = w.BottomLineProvider.computeFacts({ docs, trips: [], players: [], now });
+  assert.ok(facts.egt.state.finalized.includes('R6'), 'the trip is closed out');
+
+  const mods = w.BottomLineProvider._moneyModules(facts);
+  const ledger = mods.find(m => m.type === 'money-ledger');
+  assert.ok(ledger, 'a money ledger card is built');
+  assert.equal(ledger.columns.length, 4, 'one column per player');
+  // A row per round, the golf subtotal, the three off-course items, the final.
+  const labels = ledger.rows.map(r => r.label);
+  assert.equal(ledger.rows.filter(r => r.emphasis === 'total').length, 1, 'exactly one Final row');
+  assert.ok(labels.includes('Golf subtotal') && labels.includes('Poker'),
+    `off-course lines present: ${labels.join(', ')}`);
+  ledger.rows.forEach(r => assert.equal(r.cells.length, 4, `${r.label} has a cell per player`));
+  // The Final row is the zero-sum bottom line.
+  const final = ledger.rows.find(r => r.emphasis === 'total');
+  const sum = final.cells.reduce((a, c) => a + c.value, 0);
+  assert.ok(Math.abs(sum) < 1e-6, `the broadcast's bottom line nets to zero, got ${sum}`);
+
+  const settle = mods.find(m => m.type === 'money-settle');
+  assert.ok(settle && settle.lines.length, 'a settle-up card is built');
+  settle.lines.forEach(l => {
+    assert.ok(l.from.name && l.to.name, 'both sides named');
+    assert.ok(l.due >= 0, 'transfers run one way');
+  });
+
+  // Both cards reach the post-round broadcast and the reveal ceremony.
+  const post = w.BottomLineProvider.broadcastModules(facts, 'post').map(m => m.type);
+  assert.ok(post.includes('money-ledger') && post.includes('money-settle'), 'on SPORTSCENTER');
+  const reveal = w.BottomLineProvider.broadcastModules(facts, 'reveal').map(m => m.type);
+  assert.ok(reveal.includes('money-ledger') && reveal.includes('money-settle'), 'in THE REVEAL');
+});
+
+test('the money cards stay out of the broadcast until something settles', () => {
+  const w = loadWithSeed();
+  const facts = w.BottomLineProvider.computeFacts({ docs: [], trips: [], players: [], now: Date.now() });
+  assert.equal(w.BottomLineProvider._moneyModules(facts).length, 0);
+  const pre = w.BottomLineProvider.broadcastModules(facts, 'pre').map(m => m.type);
+  assert.ok(!pre.includes('money-ledger'), 'nothing to settle pre-round');
+});

@@ -661,6 +661,131 @@ const EgtTournament = ({ onScoreRound }) => {
     <div>{model.rounds.map(r => <React.Fragment key={r.id}>{RoundCard({ round: r })}</React.Fragment>)}</div>
   );
 
+  // ── money tab — the whole tournament ledger on one screen ─────────────────
+  // Same summary the SportsCenter and the printable settlement board render,
+  // so the three can never disagree about who owes what.
+  const Money = () => {
+    const MS = window.EgtMoneySummary;
+    const sum = MS.build(model, live);
+    const cash = (v, dash) => MS.money(v, { dashZero: !!dash });
+    const col = v => (v > 0 ? '#137a3f' : v < 0 ? '#b3261e' : '#8a988f');
+    const amt = (v, dash) => <span style={{ color: col(v), fontWeight: 700 }}>{cash(v, dash)}</span>;
+    const cell = { ...td, fontVariantNumeric: 'tabular-nums', textAlign: 'right' };
+    const rowLabel = { ...td, textAlign: 'left' };
+
+    if (!sum.rounds.length) return (
+      <div style={{ fontSize: 13, color: '#8a988f', lineHeight: 1.6 }}>
+        No money yet. Finalize a round on the Rounds tab and the full ledger — every
+        stake, the off-course costs, and who owes whom — shows up here.
+      </div>
+    );
+
+    return (
+      <div>
+        <div style={EGT_UI.secLabel}><span>Where everyone stands</span><span style={EGT_UI.secRule} /></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
+          {sum.standings.map(s => (
+            <div key={s.id} style={{
+              border: `1px solid ${LINE}`, borderTop: `3px solid ${col(s.total)}`,
+              borderRadius: 10, padding: '10px 12px',
+            }}>
+              <div style={{ fontWeight: 800, fontSize: 13 }}>{s.name}</div>
+              <div style={{ fontWeight: 800, fontSize: 26, color: col(s.total), fontVariantNumeric: 'tabular-nums' }}>
+                {cash(s.total)}
+              </div>
+              <div style={{ fontSize: 11, color: '#8a988f' }}>
+                {s.verdict}{sum.hasExtras && ` · golf ${cash(s.golf)} · off-course ${cash(s.extras)}`}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {sum.settle.length > 0 && <>
+          <div style={EGT_UI.secLabel}><span>Settle up</span><span style={EGT_UI.secRule} /></div>
+          <div style={{ marginBottom: 16 }}>
+            {sum.settle.map((s, i) => {
+              const nm = id => (model.playersById[id] || {}).name || id;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'baseline', gap: 8,
+                  padding: '7px 0', borderBottom: i < sum.settle.length - 1 ? `1px solid ${LINE}` : 'none',
+                }}>
+                  <div style={{ flex: 1, fontSize: 13 }}>
+                    <strong>{nm(s.from)}</strong> <span style={{ color: GOLD }}>→</span> <strong>{nm(s.to)}</strong>
+                    {s.credit > 0 && <div style={{ fontSize: 11, color: '#8a988f' }}>
+                      ${s.amount.toFixed(2).replace(/\.00$/, '')} owed, less ${s.credit.toFixed(2).replace(/\.00$/, '')} already in the pot
+                    </div>}
+                  </div>
+                  <div style={{ fontWeight: 800, color: '#137a3f', fontVariantNumeric: 'tabular-nums' }}>
+                    ${s.due.toFixed(2).replace(/\.00$/, '')}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>}
+
+        <div style={EGT_UI.secLabel}><span>Where it came from</span><span style={EGT_UI.secRule} /></div>
+        <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 420 }}>
+            <thead><tr>
+              <th style={{ ...th, textAlign: 'left' }}>Round</th>
+              {model.players.map(p => <th key={p.id} style={th}>{p.name}</th>)}
+            </tr></thead>
+            <tbody>
+              {sum.rounds.map(r => (
+                <tr key={r.id}>
+                  <td style={rowLabel}>
+                    <div style={{ fontWeight: 700, fontSize: 12.5 }}>{r.course}</div>
+                    <div style={{ fontSize: 10.5, color: '#8a988f' }}>{r.date}</div>
+                  </td>
+                  {model.players.map(p => <td key={p.id} style={cell}>{amt(r.by[p.id], true)}</td>)}
+                </tr>
+              ))}
+              {sum.hasExtras && <>
+                <tr style={{ background: '#f6faf7' }}>
+                  <td style={{ ...rowLabel, fontWeight: 800, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', color: GREEN }}>Golf subtotal</td>
+                  {model.players.map(p => <td key={p.id} style={cell}>{amt(sum.golfOnly[p.id], true)}</td>)}
+                </tr>
+                {sum.extras.map(x => (
+                  <tr key={x.id}>
+                    <td style={{ ...rowLabel, fontWeight: 700, fontSize: 12.5 }}>{x.label}</td>
+                    {model.players.map(p => <td key={p.id} style={cell}>{amt(x.by[p.id], true)}</td>)}
+                  </tr>
+                ))}
+              </>}
+              <tr style={{ background: '#eef6f0' }}>
+                <td style={{ ...rowLabel, fontWeight: 800 }}>Final</td>
+                {model.players.map(p => <td key={p.id} style={{ ...cell, fontWeight: 800 }}>{amt(sum.total[p.id])}</td>)}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 11, color: '#8a988f', marginBottom: 16 }}>
+          {sum.netsToZero ? 'The ledger nets to $0 to the cent.' : 'Rounds still to finalize — this is the money so far.'}
+        </div>
+
+        <div style={EGT_UI.secLabel}><span>How each stake was decided</span><span style={EGT_UI.secRule} /></div>
+        <div style={{ marginBottom: 8 }}>
+          {sum.rounds.filter(r => r.work.length).map(r => (
+            <div key={r.id} style={{ marginBottom: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 11, letterSpacing: 0.6, color: GREEN, textTransform: 'uppercase' }}>
+                {r.id} · {r.course}
+              </div>
+              {r.work.map((line, i) => (
+                <div key={i} style={{
+                  fontSize: 12, color: '#5c6b62', lineHeight: 1.5,
+                  paddingLeft: line.startsWith('   ') ? 12 : 0,
+                }}>{line.trim()}</div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <Btn onClick={openPrintable}>🖨 Printable packet</Btn>
+      </div>
+    );
+  };
+
   // ── courses tab (SI status + edit) ────────────────────────────────────────
   const Courses = () => (
     <div>
@@ -679,7 +804,7 @@ const EgtTournament = ({ onScoreRound }) => {
     </div>
   );
 
-  const tabs = [['standings', 'Standings'], ['rounds', 'Rounds'], ['courses', 'Courses']];
+  const tabs = [['standings', 'Standings'], ['rounds', 'Rounds'], ['money', 'Money'], ['courses', 'Courses']];
   return (
     <div style={{ flex: 1, overflow: 'auto', background: '#fff', fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', color: INK }}>
       <div style={{ background: GREEN, color: '#fff', padding: '16px 16px 12px' }}>
@@ -699,6 +824,7 @@ const EgtTournament = ({ onScoreRound }) => {
       <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
         {tab === 'standings' && Standings()}
         {tab === 'rounds' && Rounds()}
+        {tab === 'money' && Money()}
         {tab === 'courses' && Courses()}
       </div>
       {siEditCourse && (

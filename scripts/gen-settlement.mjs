@@ -33,82 +33,26 @@ const live = EgtEngine.liveUpdate(state, { noPersist: true, season: true });
 const money = live.money;
 const res = live.resultsByRound;
 
-// ── round headlines, straight off the calculators ───────────────────────────
-const winners = obj => {
-  const best = Math.max(...Object.values(obj));
-  return Object.keys(obj).filter(k => obj[k] === best).map(k => NAME[k]).join(' & ');
-};
-// Segments read as "who, by how much". The engine's close-out labels ("4&2")
-// are right for a scorecard but confusing beside a dollar figure, so the board
-// states the final margin instead.
-const segText = (m, seg) => (seg.winner === 'halve' ? 'halved'
-  : `${NAME[m.sides[seg.winner === 'A' ? 0 : 1][0]]} by ${Math.abs(seg.up)}`);
-const matchOf = (rid, a, b) => res[rid].overlayMatchPlay.matches.find(x =>
-  [x.sides[0][0], x.sides[1][0]].sort().join() === [a, b].sort().join());
-// What a single 1v1 paid its first-named player: front + back at 1 unit, the
-// overall at 2, times the match's own stake.
-const matchCash = m => [[m.front, 1], [m.back, 1], [m.overall, 2]].reduce((a, [seg, units]) =>
-  a + (seg.winner === 'halve' ? 0 : units * m.stakes * (seg.winner === 'A' ? 1 : -1)), 0);
-const nassauLine = (rid, a, b) => {
-  const m = matchOf(rid, a, b);
-  const net = matchCash(m) * (m.sides[0][0] === a ? 1 : -1);
-  const paid = net === 0 ? 'no money' : `${NAME[net > 0 ? a : b]} +$${Math.abs(net)}`;
-  return `${NAME[a]} v ${NAME[b]} — front ${segText(m, m.front)} · back ${segText(m, m.back)}`
-    + ` · overall ${segText(m, m.overall)} → ${paid}`;
-};
+// ── the summary ─────────────────────────────────────────────────────────────
+// Shape it with the shared module, so this board, the app's Money tab and the
+// SportsCenter all describe the trip's money identically.
+const summary = W.EgtMoneySummary.build(model, live);
+const settle = summary.settle;
 
-const ROUNDS = [
-  { id: 'R1', day: 'Tue', course: 'Minerals', format: 'Bingo Bango Bongo (front) + The Nines (back)',
-    lines: [
-      `BBB — ${Object.entries(res.R1.bbb.totals).map(([p, v]) => `${NAME[p]} ${v}`).join(' · ')} → ${winners(res.R1.bbb.totals)} takes $5 from each`,
-      `Nines — ${Object.entries(res.R1.nines.totals).map(([p, v]) => `${NAME[p]} ${v}`).join(' · ')} → ${winners(res.R1.nines.totals)} takes $5 from each`,
-    ] },
-  { id: 'R2', day: 'Wed AM', course: 'Ballyowen', format: '18-hole four-ball · John + TJ v Brian + Mike',
-    lines: [
-      `Match — ${res.R2.fourBall.segments.overall.winnerTeam === 'Team 1' ? 'John + TJ' : 'Brian + Mike'}`
-        + ` by ${Math.abs(res.R2.fourBall.segments.overall.up)} → each winner collects $5 from each opponent`,
-    ] },
-  { id: 'R3', day: 'Wed PM', course: 'Wild Turkey', format: 'Wolf + a TJ v John $2 Nassau',
-    lines: [
-      `Wolf units — ${IDS.map(p => `${NAME[p]} ${res.R3.wolf.units[p] < 0 ? '−' : '+'}${Math.abs(res.R3.wolf.units[p])}`).join(' · ')} → ${winners(res.R3.wolf.units)} takes $5 from each`,
-      nassauLine('R3', 'tj', 'john'),
-    ] },
-  { id: 'R4', day: 'Thu AM', course: 'Crystal Springs', format: '2v2 aggregate Stableford over all 18',
-    lines: [
-      `Points — ${IDS.map(p => `${NAME[p]} ${res.R4.teamStableford.playerPoints[p]}`).join(' · ')}`,
-      `Teams — John + TJ ${res.R4.teamStableford.teamTotals['Team 1']} v Brian + Mike ${res.R4.teamStableford.teamTotals['Team 2']} → each winner collects $5 from each opponent`,
-    ] },
-  { id: 'R5', day: 'Thu PM', course: 'Cascades', format: 'Full-18 Bingo Bango Bongo + six-match round robin',
-    lines: [
-      `BBB — ${IDS.map(p => `${NAME[p]} ${res.R5.bbb.totals[p]}`).join(' · ')} → ${winners(res.R5.bbb.totals)} takes $5 from each`,
-      'Round robin, $1 front / $1 back / $2 overall:',
-      ...res.R5.matchPlay.matches.map(m => `   ${nassauLine('R5', m.sides[0][0], m.sides[1][0])}`),
-    ] },
-  { id: 'R6', day: 'Fri', course: 'Black Bear', format: 'Individual Stableford + two $2 Nassaus',
-    lines: [
-      `Stableford — ${IDS.map(p => `${NAME[p]} ${res.R6.stableford.totals[p]}`).join(' · ')} → ${winners(res.R6.stableford.totals)} takes $5 from each`,
-      nassauLine('R6', 'tj', 'john'),
-      nassauLine('R6', 'mike', 'brian'),
-    ] },
-];
-
-// ── settle-up, adjusted for cash already in the poker pot ────────────────────
-// The netted ledger is the truth, but Brian's $40 buy-in is physically sitting
-// in the pot already. That cash pays the poker winners in proportion to what
-// they won, so it comes straight off what Brian still has to hand over.
-const poker = money.extras.items.find(i => i.id === 'poker');
-const prepaidFlows = [];
-Object.entries(money.extras.prepaid).forEach(([pid, amt]) => {
-  const won = IDS.filter(p => poker.total[p] > 0);
-  const pot = won.reduce((a, p) => a + poker.total[p], 0);
-  won.forEach(p => prepaidFlows.push({ from: pid, to: p, amount: (amt * poker.total[p]) / pot }));
-});
-const settle = money.settlements.map(s => {
-  const credit = prepaidFlows
-    .filter(f => f.from === s.from && f.to === s.to)
-    .reduce((a, f) => a + f.amount, 0);
-  return { ...s, credit, due: s.amount - credit };
-});
+// Formats and day labels are board furniture, not engine output.
+const DAY = { R1: 'Tue', R2: 'Wed AM', R3: 'Wed PM', R4: 'Thu AM', R5: 'Thu PM', R6: 'Fri' };
+const FORMAT = {
+  R1: 'Bingo Bango Bongo (front) + The Nines (back)',
+  R2: '18-hole four-ball · John + TJ v Brian + Mike',
+  R3: 'Wolf + a TJ v John $2 Nassau',
+  R4: '2v2 aggregate Stableford over all 18',
+  R5: 'Full-18 Bingo Bango Bongo + six-match round robin',
+  R6: 'Individual Stableford + two $2 Nassaus',
+};
+const ROUNDS = summary.rounds.map(r => ({
+  id: r.id, day: DAY[r.id] || r.date, course: r.course,
+  format: FORMAT[r.id] || '', lines: r.work,
+}));
 
 // ── render ──────────────────────────────────────────────────────────────────
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

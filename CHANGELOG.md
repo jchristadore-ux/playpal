@@ -4,6 +4,41 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.12.0] — 2026-07-25
+
+The tournament money summary, on every screen that shows the Cup.
+
+### Added
+- **`components/egt/egtMoneySummary.js` — one description of the money**, shared
+  by the three surfaces that show it so they can never disagree: the final
+  standing per player (with golf and off-course split out), the netted
+  who-pays-whom, a row per round plus the off-course costs, and a plain-language
+  line for every stake that changed hands ("TJ v John — front TJ by 5 · back
+  John by 1 · overall TJ by 4 → TJ +$4"). Degrades cleanly: called mid-trip it
+  reports the rounds finalized so far and a golf-only bottom line.
+- **A Money tab on the EGT Cup screen.** Standing cards, the settle-up, the full
+  ledger, and how each stake was decided — the whole reckoning without leaving
+  the app. Empty until a round is finalized.
+- **Money on the SportsCenter.** Two new broadcast cards: `money-ledger` (every
+  round and cost as one grid, sized off the row count so six rounds plus the
+  extras still fit a TV) and `money-settle` (who hands what to whom, with player
+  logos). Both play in the post-round rotation and in **THE REVEAL**, as a new
+  act — *THE DAMAGE* — right after By the Numbers.
+- `settlement.html` now renders from the same shared summary rather than its own
+  copy of the logic.
+
+### Fixed
+- **A prepaid pot credit could be applied against the wrong item.** Cash already
+  handed over was matched to every off-course item where the payer was down, so
+  Brian's $40 poker buy-in was also being credited against the banner and gas
+  John fronted — crediting $80 of a $40 float and turning one settlement
+  negative. Each item now carries its own `prepaid` map and the credit only ever
+  applies to that item's winners. (`egtMoney.tripExtrasSettlement`.)
+- **A pot credit can no longer reverse a bill.** If the pot holds more of
+  someone's cash than that pairing ends up owing, the credit clamps at the
+  amount owed and the remainder is reported as `refund` — money owed back to
+  them — instead of producing a transfer running the wrong way.
+
 ## [1.11.0] — 2026-07-25
 
 The EGT 2026 money audit — the settlement the trip actually ended on.

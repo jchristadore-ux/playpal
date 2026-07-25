@@ -256,7 +256,14 @@ const EgtMoney = (function () {
         });
       } else return;
       zeroBalance(vec);
-      items.push({ id: item.id, label: item.label, note: item.note || null, total: vec });
+      // Carry each item's own prepaid map on the item — a settle-up has to know
+      // WHICH pot the cash is sitting in to credit it against the right winners.
+      const itemPrepaid = {};
+      Object.entries(item.alreadyInPot || {}).forEach(([id, amt]) => {
+        if (ids.includes(id)) itemPrepaid[id] = Number(amt) || 0;
+      });
+      items.push({ id: item.id, label: item.label, note: item.note || null, total: vec,
+        prepaid: Object.keys(itemPrepaid).length ? itemPrepaid : null });
       Object.entries(vec).forEach(([pid, amt]) => { total[pid] += amt; });
     });
     zeroBalance(total);

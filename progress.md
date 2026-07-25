@@ -1,5 +1,40 @@
 # Project Progress
 
+## 2026-07-25 — Tournament money summary on every surface (branch claude/golf-money-audit-hom5rs) — v1.12.0
+
+Status: **complete — 208 tests green (8 new), dist rebuilt, both surfaces browser-verified.**
+
+Follow-on to the money audit: the settlement board's content now lives on the
+EGT Cup screen and the SportsCenter too, off one shared description.
+
+### Added
+- `components/egt/egtMoneySummary.js` — `build(model, live)` reshapes an
+  `EgtEngine.liveUpdate` result into: standings (total / golf / off-course),
+  the netted settle-up, a row per round + the off-course items, and
+  plain-language "how this stake was decided" lines per round. Pure; registered
+  in build.mjs SOURCES and tests/helpers/load.mjs.
+- EGT Cup screen: a **Money** tab between Rounds and Courses.
+- SportsCenter: `money-ledger` + `money-settle` stage cards, in the post-round
+  rotation and as a new REVEAL act ("THE DAMAGE") after By the Numbers.
+- `scripts/gen-settlement.mjs` now renders from the shared summary, so the
+  printable board, the app and the TV cannot drift apart.
+
+### Two real bugs found while sharing the logic
+1. **Prepaid credit hit the wrong items.** `settleUp` matched a payer's prepaid
+   cash against every extras item where they were down — so Brian's $40 poker
+   buy-in was also credited against the banner and gas John fronted ($80 of
+   credit on a $40 float, and one settlement went negative). Items now carry
+   their own `prepaid` map; the credit applies only to that item's winners.
+2. **Credit could reverse a transfer.** If a pot holds more of someone's cash
+   than the pairing owes, the credit now clamps at the bill and the remainder
+   surfaces as `refund` rather than a backwards payment.
+
+### Verified in a browser
+Replayed the real trip into localStorage and drove the app to the Money tab
+(430×932: settle-up, +$110/−$107 correct, no page-level horizontal scroll — the
+ledger scrolls inside its own container), and mounted both TV cards at 1920×1080
+off the real synced rounds.
+
 ## 2026-07-25 — EGT 2026 money audit (branch claude/golf-money-audit-hom5rs) — v1.11.0
 
 Status: **complete — 200 tests green (14 new), dist rebuilt, settlement board generated.**

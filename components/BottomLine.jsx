@@ -511,6 +511,75 @@ function StageModule({ m }) {
       </Stage>
     );
 
+    // ── MONEY ───────────────────────────────────────────────────────────────
+    // The whole ledger as one grid: a row per round, then the off-course costs,
+    // then the bottom line. Sized off the row count so six rounds plus the
+    // extras still fit a TV without scrolling.
+    case 'money-ledger': {
+      const n = m.rows.length;
+      const rowH = n > 9 ? '0.55vh' : '0.95vh';
+      const fs = n > 9 ? 'clamp(11px,1.35vw,32px)' : 'clamp(13px,1.6vw,38px)';
+      return (
+        <Stage eyebrow={m.subtitle ? m.subtitle.toUpperCase() : null} title={m.title}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4vh', fontSize: fs }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1vw', padding: `0 1.2vw ${rowH}` }}>
+              <span style={{ flex: 1 }} />
+              {m.columns.map(c => (
+                <span key={c.id} style={{ minWidth: '7.5vw', textAlign: 'right', fontWeight: 800,
+                  letterSpacing: '0.14em', color: C.gold, fontSize: '0.8em' }}>{c.name.toUpperCase()}</span>
+              ))}
+            </div>
+            {m.rows.map((r, i) => {
+              const isTotal = r.emphasis === 'total', isSub = r.emphasis === 'subtotal';
+              return (
+                <div key={r.label + i} style={{
+                  display: 'flex', alignItems: 'baseline', gap: '1vw',
+                  padding: `${rowH} 1.2vw`, borderRadius: '0.8vh',
+                  background: isTotal ? 'rgba(200,161,90,0.14)' : isSub ? 'rgba(246,244,238,0.04)' : 'transparent',
+                  borderTop: isSub || isTotal ? `1px solid ${C.panelEdge}` : 'none',
+                }}>
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    fontWeight: isTotal ? 800 : 700, color: isSub ? C.gold : C.text,
+                    letterSpacing: isSub ? '0.1em' : 0, textTransform: isSub ? 'uppercase' : 'none' }}>
+                    {r.label}
+                    {r.sub && <span style={{ color: C.dim, fontWeight: 600, fontSize: '0.72em', marginLeft: '0.7vw' }}>{r.sub}</span>}
+                  </span>
+                  {r.cells.map(c => (
+                    <span key={c.id} style={{ minWidth: '7.5vw', textAlign: 'right', fontWeight: isTotal ? 800 : 700,
+                      fontVariantNumeric: 'tabular-nums', fontSize: isTotal ? '1.2em' : '1em',
+                      color: c.value ? moneyColor(c.value) : C.dim }}>
+                      {c.value ? money(c.value) : '—'}
+                    </span>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </Stage>
+      );
+    }
+
+    case 'money-settle': return (
+      <Stage eyebrow={m.subtitle ? m.subtitle.toUpperCase() : null} title={m.title}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1vh' }}>
+          {m.lines.map((l, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1.4vw',
+              background: C.panel, border: `1px solid ${C.panelEdge}`, borderRadius: '1.2vh', padding: '1vh 1.8vw' }}>
+              <Logo p={l.from} size="clamp(38px,4vw,88px)" />
+              <span style={{ fontSize: 'clamp(18px,2.2vw,52px)', fontWeight: 800 }}>{l.from.name}</span>
+              <span style={{ fontSize: 'clamp(18px,2.2vw,52px)', color: C.gold, fontWeight: 800 }}>→</span>
+              <Logo p={l.to} size="clamp(38px,4vw,88px)" />
+              <span style={{ flex: 1, fontSize: 'clamp(18px,2.2vw,52px)', fontWeight: 800 }}>{l.to.name}</span>
+              <span style={{ fontSize: 'clamp(24px,3.2vw,78px)', fontWeight: 800, color: C.green, fontVariantNumeric: 'tabular-nums' }}>
+                ${Math.round(l.due)}
+              </span>
+            </div>
+          ))}
+          {m.note && <div style={{ fontSize: 'clamp(12px,1.4vw,30px)', color: C.dim, fontWeight: 600, paddingTop: '0.6vh' }}>{m.note}</div>}
+        </div>
+      </Stage>
+    );
+
     // ── REVEAL CEREMONY ─────────────────────────────────────────────────────
     case 'reveal-title': return (
       <Stage>
