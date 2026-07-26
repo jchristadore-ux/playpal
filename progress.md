@@ -1,5 +1,66 @@
 # Project Progress
 
+## 2026-07-26 — The 2026 recap book (branch claude/tournament-results-pages-kp4bse) — v1.14.0
+
+Status: **complete — 218 tests green (9 new), 25 pages generated, browser-verified
+at desktop and narrow widths, zero broken links, dist rebuilt.**
+
+Asked for: individual single-page outputs of all matches, scorecards, the
+individual awards, standings and points earned, to memorialize the trip.
+
+Built `scripts/gen-recap.mjs` → `recap/`, 25 standalone pages (692 KB):
+
+| Page | What's on it |
+|---|---|
+| `recap/index.html` | The cover: champion, final board, the trip, a directory of every page |
+| `recap/rounds/r1–r6.html` | Full scorecard (pop dots + to-par marks), every game hole by hole, course handicaps and pops with bases, Cup points offered and collected, the money and its settle-up, carts |
+| `recap/matches/*.html` (10) | R2 four-ball, R3 side Nassau, six R5 round-robin matches, both R6 singles — hole by hole with best net ball, running match state, front/back/overall, cash, Cup points |
+| `recap/players/*.html` (4) | Round by round, every match, every Cup point traced, every dollar incl. off-course, his numbers vs the field |
+| `recap/standings.html` | Final board + tiebreakers, the night-by-night climb, where all 33 points come from, every player's points ledger |
+| `recap/awards.html` | Five season awards + the stat race behind each, every title on the trip, The Rock's ledger |
+| `recap/money.html` | Bankroll, settle-up, round-by-round + off-course matrix, how each stake was decided |
+| `recap/print.html` | Every other page in order, one sheet each, links rebased so they still work |
+
+### How it stays honest
+- Replays the trip exactly as `gen-settlement.mjs` does (seed + results fixtures
+  → `EgtBridge.bridge` per round → `EgtEngine.liveUpdate` with `season: true`).
+- Per-round Cup points come from `EgtPoints.compute(model, {[rid]: results}, null)`
+  and the awards from `EgtPoints.seasonAwards` on a fresh accumulator, so every
+  point can be attributed to where it was won. The generator **throws** if those
+  parts don't sum to the engine's published totals, or if money doesn't net to $0.
+- "The climb" re-runs the engine over a truncated `finalized` list on a copy of
+  the state, so each night's board is that night's real board.
+- 1v1 match pop counts are derived as gross − net off the engine's own per-hole
+  numbers (never recomputed), so a match page can't disagree with the match.
+- The money engine's two-letter side-match keys (`Match tj v jo front`) are
+  rewritten to full names for display only.
+
+### Decisions worth knowing
+- **Light "paper" theme, not the SportsCenter dark board** — these are documents
+  to keep and print. `@media print` gives each part its own sheet.
+- **Self-contained pages**: styles inlined, no scripts, no remote assets (only
+  the site favicon). A test asserts this for all 25 pages.
+- **No in-app link added.** `recap/` is a web artifact like `settlement.html` and
+  `packlist.html`, which `build-www.mjs` does not copy into the native bundle —
+  linking it from the EGT Cup screen would 404 in the iOS build. If it should be
+  reachable in-app, add `recap` to `build-www.mjs` DIRS first.
+- **R1 stays out of the Cup** everywhere in the book (cash only), matching the
+  engine, and the climb shows a four-way 0 after Tuesday.
+- The book reports untracked stats honestly: no putt was recorded on the trip, so
+  **Flat Stick is "Not awarded"** and **Iron Man is a four-way tie at zero**
+  (0.25 each) — stated on the page rather than papered over.
+
+### Also fixed (pre-existing, adjacent)
+`deploy-pages.yml` never copied `settlement.html` or `packlist.html`, both of
+which sit in `sw.js`'s `PRECACHE`. `cache.addAll()` rejects wholesale on a 404,
+so the service worker never installed on the deployed site. Now copied, with
+`recap/`.
+
+### Next actions (if resumed)
+- Nothing pending. Regenerate after any scoring/stake change with
+  `npm run recap` (and `npm run settlement`); `tests/recap.test.mjs` pins the
+  headline figures.
+
 ## 2026-07-25 — Three more shared costs, split four ways (branch claude/golf-money-audit-hom5rs) — v1.13.0
 
 Status: **complete — 209 tests green, dist rebuilt, board + both surfaces re-verified.**

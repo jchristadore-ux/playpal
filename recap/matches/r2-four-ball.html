@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="EGT 2026 Cup match: John + TJ v Brian + Mike at Ballyowen — hole by hole, front, back and the 18, with the cash and the Cup points."/>
+<meta name="theme-color" content="#FBFAF6"/>
+<title>EGT 2026 · John + TJ v Brian + Mike (R2)</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../../icons/favicon-32.png"/>
+<style>
+
+  /* The recap book is paper, not a TV: warm stock, deep-green ink, brass rules.
+     It commits to the light world so a printed page and a phone screen show the
+     same document. */
+  :root {
+    --paper: #FBFAF6;
+    --card: #FFFFFF;
+    --ink: #12241C;
+    --deep: #0E2B20;
+    --dim: #5B6B63;
+    --faint: #93A29A;
+    --line: #D8E2DB;
+    --rule: #C8A15A;
+    --brass: #8A6D24;
+    --wash: #F1F6F2;
+    --up: #137A3F;
+    --down: #B3261E;
+    --ui: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --num: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); -webkit-text-size-adjust: 100%; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--ui);
+         -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 16px 56px; }
+
+  /* masthead */
+  .top { border-bottom: 2px solid var(--rule); padding-bottom: 10px; margin-bottom: 18px; }
+  .mark { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.22em;
+          text-transform: uppercase; color: var(--brass); }
+  h1 { font-size: clamp(24px, 4vw, 38px); font-weight: 800; letter-spacing: -0.01em;
+       line-height: 1.1; margin: 4px 0 2px; color: var(--deep); }
+  .kicker { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--dim); }
+  .sub { font-size: 13px; color: var(--dim); margin-top: 4px; }
+  .crumbs { font-size: 12px; margin-bottom: 12px; color: var(--faint); }
+  .crumbs a { color: var(--brass); text-decoration: none; font-weight: 700; }
+  .crumbs a:hover { text-decoration: underline; }
+  .crumbs span { padding: 0 6px; }
+
+  h2 { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+       color: var(--brass); margin: 0 0 8px; }
+  h3 { font-size: 15px; font-weight: 800; color: var(--deep); margin: 0 0 4px; }
+  section.block { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+                  padding: 14px 16px; margin-bottom: 14px; }
+  p { font-size: 13.5px; color: var(--ink); }
+  p + p { margin-top: 8px; }
+  .note { font-size: 12.5px; color: var(--dim); line-height: 1.55; }
+  .note b { color: var(--ink); }
+  ul.plain { list-style: none; }
+  ul.bul { padding-left: 18px; font-size: 13px; color: var(--ink); }
+  ul.bul li { margin-bottom: 3px; }
+
+  /* headline cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 10px; }
+  .cards.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cd { background: var(--card); border: 1px solid var(--line); border-top: 3px solid var(--faint);
+        border-radius: 10px; padding: 10px 12px; }
+  .cd.up { border-top-color: var(--up); } .cd.down { border-top-color: var(--down); }
+  .cd.win { border-top-color: var(--rule); background: var(--wash); }
+  /* Cards and tiles stack their spans — each is its own line of the card. */
+  .cd > span, a.tile > span { display: block; }
+  .cd .who { font-size: 14px; font-weight: 800; letter-spacing: 0.03em; color: var(--deep); }
+  .cd .big { font-family: var(--num); font-variant-numeric: tabular-nums; font-weight: 700;
+             font-size: clamp(22px, 3.4vw, 32px); line-height: 1.05; }
+  /* Match labels ("4&1", "1 up", "AS") are words, not figures — no monospace. */
+  .cd .big.lbl { font-family: var(--ui); letter-spacing: -0.01em; }
+  .cd .meta { font-size: 11.5px; color: var(--dim); }
+  .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+
+  .pill { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em;
+          text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+          border: 1px solid var(--line); color: var(--dim); background: var(--paper); }
+  .pill.gold { border-color: var(--rule); color: var(--brass); background: #FBF6EA; }
+  .pill.win { border-color: var(--up); color: var(--up); background: #EEF6F0; }
+  .pill.halve { border-color: var(--faint); color: var(--dim); }
+
+  /* tables */
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { border: 1px solid var(--line); padding: 4px 7px; text-align: center; white-space: nowrap; }
+  thead th { background: var(--deep); color: #fff; font-weight: 700; font-size: 11px;
+             letter-spacing: 0.05em; }
+  td.name, th.name { text-align: left; font-weight: 700; color: var(--deep); }
+  td.txt, th.txt { text-align: left; white-space: normal; font-weight: 500; }
+  /* Left-aligned header cells still live on the dark head — keep them legible. */
+  thead th.name, thead th.txt { color: #fff; font-weight: 700; }
+  tbody td { font-variant-numeric: tabular-nums; }
+  tbody tr.lead td { background: var(--wash); }
+  tbody tr.tot td { border-top: 2px solid var(--rule); font-weight: 800; }
+  tr.sub td { background: var(--wash); font-weight: 700; }
+  tfoot td { font-weight: 800; background: var(--wash); }
+  caption { caption-side: bottom; font-size: 11.5px; color: var(--dim); text-align: left;
+            padding-top: 6px; }
+
+  /* scorecard */
+  table.card { font-size: 11.5px; }
+  table.card th, table.card td { padding: 3px 4px; min-width: 22px; }
+  table.card tr.par td, table.card tr.si td { color: var(--dim); background: var(--paper); font-size: 10.5px; }
+  /* Shaded cells: the nine subtotals on a card, and the leader's figure in any
+     race or climb table. */
+  td.seg, td.tot { background: var(--wash); font-weight: 800; }
+  .mk { display: inline-flex; align-items: center; justify-content: center;
+        min-width: 1.55em; height: 1.55em; line-height: 1; font-weight: 700; }
+  .mk.cir { border: 1px solid var(--down); border-radius: 50%; }
+  .mk.cir2 { border: 1px solid var(--down); border-radius: 50%; box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--down); }
+  .mk.sq { border: 1px solid var(--deep); }
+  .mk.sq2 { border: 1px solid var(--deep); box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--deep); }
+  sup.pop { color: var(--brass); font-weight: 800; letter-spacing: -0.05em; padding-left: 1px; }
+  .key { font-size: 11.5px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+  .key > span { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* bars (the climb, the stat races) */
+  .bar { display: block; background: var(--wash); border: 1px solid var(--line); border-radius: 3px;
+         height: 9px; position: relative; min-width: 60px; }
+  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--rule); border-radius: 2px; display: block; }
+  td.barcell { width: 34%; }
+
+  /* directory */
+  .dir { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  a.tile { display: block; text-decoration: none; color: inherit; background: var(--card);
+           border: 1px solid var(--line); border-left: 3px solid var(--rule); border-radius: 8px;
+           padding: 9px 11px; }
+  a.tile:hover { background: var(--wash); }
+  a.tile .t { font-size: 13.5px; font-weight: 800; color: var(--deep); }
+  a.tile .d { font-size: 11.5px; color: var(--dim); }
+
+  a { color: var(--brass); }
+  :focus-visible { outline: 2px solid var(--rule); outline-offset: 2px; border-radius: 4px; }
+  footer { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 10px;
+           font-size: 11.5px; color: var(--faint); line-height: 1.6; }
+  footer b { color: var(--dim); }
+  footer code { font-family: var(--num); }
+
+  @media (max-width: 620px) {
+    .cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media print {
+    :root { --paper: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    .crumbs, .noprint { display: none; }
+    section.block { break-inside: avoid; border-color: #ccc; }
+    .sheet { break-after: page; }
+    .sheet:last-child { break-after: auto; }
+    thead th { background: #0E2B20 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="crumbs">
+  <a href="../index.html">The 2026 Cup</a><span>·</span>John + TJ v Brian + Mike
+</nav>
+<header class="top">
+  <span class="mark">EGT 2026 Cup · R2 match</span>
+  <h1>John + TJ v Brian + Mike</h1>
+  <p class="sub">Four-ball match play at Ballyowen — the Cup’s first team round · Ballyowen</p>
+</header>
+
+<section class="block">
+  <h2>Result</h2>
+  <p style="font-size:20px;font-weight:800;color:var(--deep)">John + TJ won 6&amp;5</p>
+  <p class="note">Ballyowen · WED · JUL 22 AM · Four-ball match play at Ballyowen — the Cup’s first team round.</p>
+  <div style="margin-top:10px"><div class="cards"><div class="cd win">
+    <span class="meta">Front nine</span>
+    <span class="big lbl">4&amp;1</span>
+    <span class="who">John + TJ</span>
+    
+  </div>
+<div class="cd win">
+    <span class="meta">Back nine</span>
+    <span class="big lbl">2 up</span>
+    <span class="who">John + TJ</span>
+    
+  </div>
+<div class="cd win">
+    <span class="meta">The 18</span>
+    <span class="big lbl">6&amp;5</span>
+    <span class="who">John + TJ</span>
+    
+  </div></div></div>
+  
+  
+</section>
+
+<section class="block"><h2>Hole by hole · the 18</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Hole</th><th>Par</th><th>John + TJ</th><th>Brian + Mike</th><th class="txt">Won by</th><th class="txt">Match stood</th></tr></thead>
+  <tbody>
+<tr><td>1</td><td>4</td><td>5</td><td>5</td><td class="txt">halved</td><td class="txt">AS</td></tr>
+<tr class="lead"><td>2</td><td>4</td><td>4</td><td>6</td><td class="txt">John + TJ</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>3</td><td>5</td><td>6 <span class="note">(7)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">Brian + Mike</td><td class="txt">AS</td></tr>
+<tr class="lead"><td>4</td><td>3</td><td>3</td><td>4</td><td class="txt">John + TJ</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>5</td><td>5</td><td>6</td><td>7 <span class="note">(8)</span></td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+<tr class="lead"><td>6</td><td>3</td><td>4</td><td>3</td><td class="txt">Brian + Mike</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>7</td><td>4</td><td>4 <span class="note">(5)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+<tr class="lead"><td>8</td><td>4</td><td>4</td><td>5</td><td class="txt">John + TJ</td><td class="txt">3 up John + TJ</td></tr>
+<tr class="lead"><td>9</td><td>4</td><td>3 <span class="note">(4)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">John + TJ</td><td class="txt">4 up John + TJ</td></tr>
+<tr class="lead"><td>10</td><td>5</td><td>5</td><td>7</td><td class="txt">John + TJ</td><td class="txt">5 up John + TJ</td></tr>
+<tr class="lead"><td>11</td><td>3</td><td>2</td><td>3</td><td class="txt">John + TJ</td><td class="txt">6 up John + TJ</td></tr>
+<tr class="lead"><td>12</td><td>4</td><td>6</td><td>5</td><td class="txt">Brian + Mike</td><td class="txt">5 up John + TJ</td></tr>
+<tr class="lead"><td>13</td><td>4</td><td>4</td><td>6 <span class="note">(7)</span></td><td class="txt">John + TJ</td><td class="txt">6 up John + TJ</td></tr>
+<tr class="lead"><td>14</td><td>4</td><td>5</td><td>4 <span class="note">(5)</span></td><td class="txt">Brian + Mike</td><td class="txt">5 up John + TJ</td></tr>
+<tr class="lead"><td>15</td><td>3</td><td>6</td><td>4</td><td class="txt">Brian + Mike</td><td class="txt">4 up John + TJ</td></tr>
+<tr class="lead"><td>16</td><td>4</td><td>4 <span class="note">(5)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">John + TJ</td><td class="txt">5 up John + TJ</td></tr>
+<tr><td>17</td><td>5</td><td>6</td><td>6</td><td class="txt">halved</td><td class="txt">5 up John + TJ</td></tr>
+<tr class="lead"><td>18</td><td>4</td><td>3 <span class="note">(4)</span></td><td>5</td><td class="txt">John + TJ</td><td class="txt">6 up John + TJ</td></tr>
+  </tbody>
+  <caption>Best net ball per side; the gross is in brackets where a pop applied. Closed out on hole 13.</caption>
+</table></div></section>
+
+<section class="block"><h2>The cash</h2>
+<p class="note">Flat $5 a man to the winning pair — no Nassau segments on the cash.</p>
+<div style="margin-top:10px"><div class="scroll"><table><thead><tr><th class="name">Player</th><th>Four-ball (team)</th></tr></thead><tbody><tr><td class="name">John</td><td class="up">+$10</td></tr><tr><td class="name">Brian</td><td class="down">−$10</td></tr><tr><td class="name">TJ</td><td class="up">+$10</td></tr><tr><td class="name">Mike</td><td class="down">−$10</td></tr></tbody></table></div></div></section>
+
+<section class="block"><h2>Cup points</h2>
+<div class="scroll"><table><thead><tr><th class="txt">Match</th><th class="txt">Winner</th><th>Points</th></tr></thead><tbody><tr><td class="txt">Nassau front</td><td class="txt">John + TJ</td><td>1 each</td></tr><tr><td class="txt">Nassau back</td><td class="txt">John + TJ</td><td>1 each</td></tr><tr><td class="txt">Nassau overall</td><td class="txt">John + TJ</td><td>2 each</td></tr></tbody></table></div>
+<p class="note" style="margin-top:8px">Front, back and 18-hole matches each paid Cup points to both players on the winning side.</p></section>
+
+<section class="block"><h2>Both nines, separately</h2>
+<h3>Front nine — John + TJ 4&amp;1</h3>
+<div class="scroll"><table>
+  <thead><tr><th>Hole</th><th>Par</th><th>John + TJ</th><th>Brian + Mike</th><th class="txt">Won by</th><th class="txt">Match stood</th></tr></thead>
+  <tbody>
+<tr><td>1</td><td>4</td><td>5</td><td>5</td><td class="txt">halved</td><td class="txt">AS</td></tr>
+<tr class="lead"><td>2</td><td>4</td><td>4</td><td>6</td><td class="txt">John + TJ</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>3</td><td>5</td><td>6 <span class="note">(7)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">Brian + Mike</td><td class="txt">AS</td></tr>
+<tr class="lead"><td>4</td><td>3</td><td>3</td><td>4</td><td class="txt">John + TJ</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>5</td><td>5</td><td>6</td><td>7 <span class="note">(8)</span></td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+<tr class="lead"><td>6</td><td>3</td><td>4</td><td>3</td><td class="txt">Brian + Mike</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>7</td><td>4</td><td>4 <span class="note">(5)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+<tr class="lead"><td>8</td><td>4</td><td>4</td><td>5</td><td class="txt">John + TJ</td><td class="txt">3 up John + TJ</td></tr>
+<tr class="lead"><td>9</td><td>4</td><td>3 <span class="note">(4)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">John + TJ</td><td class="txt">4 up John + TJ</td></tr>
+  </tbody>
+  <caption>Best net ball per side; the gross is in brackets where a pop applied. Closed out on hole 8.</caption>
+</table></div>
+<h3 style="margin-top:14px">Back nine — John + TJ 2 up</h3>
+<div class="scroll"><table>
+  <thead><tr><th>Hole</th><th>Par</th><th>John + TJ</th><th>Brian + Mike</th><th class="txt">Won by</th><th class="txt">Match stood</th></tr></thead>
+  <tbody>
+<tr class="lead"><td>10</td><td>5</td><td>5</td><td>7</td><td class="txt">John + TJ</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>11</td><td>3</td><td>2</td><td>3</td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+<tr class="lead"><td>12</td><td>4</td><td>6</td><td>5</td><td class="txt">Brian + Mike</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>13</td><td>4</td><td>4</td><td>6 <span class="note">(7)</span></td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+<tr class="lead"><td>14</td><td>4</td><td>5</td><td>4 <span class="note">(5)</span></td><td class="txt">Brian + Mike</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>15</td><td>3</td><td>6</td><td>4</td><td class="txt">Brian + Mike</td><td class="txt">AS</td></tr>
+<tr class="lead"><td>16</td><td>4</td><td>4 <span class="note">(5)</span></td><td>5 <span class="note">(6)</span></td><td class="txt">John + TJ</td><td class="txt">1 up John + TJ</td></tr>
+<tr><td>17</td><td>5</td><td>6</td><td>6</td><td class="txt">halved</td><td class="txt">1 up John + TJ</td></tr>
+<tr class="lead"><td>18</td><td>4</td><td>3 <span class="note">(4)</span></td><td>5</td><td class="txt">John + TJ</td><td class="txt">2 up John + TJ</td></tr>
+  </tbody>
+  <caption>Best net ball per side; the gross is in brackets where a pop applied. Closed out on hole 18.</caption>
+</table></div>
+</section>
+
+<section class="block noprint"><h2>Also on this card</h2>
+<div class="dir"><a class="tile" href="../rounds/r2.html"><span class="t">R2 · Ballyowen</span><span class="d">The full round — card, games, points, money</span></a>
+<a class="tile" href="../players/john.html"><span class="t">John</span><span class="d">His whole week</span></a>
+<a class="tile" href="../players/tj.html"><span class="t">TJ</span><span class="d">His whole week</span></a>
+<a class="tile" href="../players/brian.html"><span class="t">Brian</span><span class="d">His whole week</span></a>
+<a class="tile" href="../players/mike.html"><span class="t">Mike</span><span class="d">His whole week</span></a></div></section>
+
+<footer>
+  <p><b>EGT 2026 Cup</b> · Crystal Springs Resort — Hamburg / Vernon / Hardyston / Franklin, NJ · 2026-07-21 to 2026-07-24 · 108 holes.
+    Every number on this page is recomputed by the tournament engine from the scores the app
+    synced during the trip — not typed in by hand. Regenerate the book with
+    <code>node scripts/gen-recap.mjs</code> · PlayPal v1.14.0.</p>
+</footer>
+</div>
+</body>
+</html>

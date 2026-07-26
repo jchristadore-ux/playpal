@@ -2,6 +2,18 @@
 
 Branch `claude/playpal-egt-tournament-25w5g0`.
 
+## Done — the 2026 recap book (v1.14.0, branch claude/tournament-results-pages-kp4bse)
+- [x] `scripts/gen-recap.mjs` → `recap/`, 25 standalone pages, `npm run recap`.
+- [x] A page per round (card + every game hole by hole + pops + points + money),
+      per match (10), per player (4), plus standings, awards, money, print sheet.
+- [x] Generator self-checks: per-round + award points must sum to the engine's
+      totals, money must net to $0 — otherwise it refuses to write the book.
+- [x] Self-contained pages (inlined styles, no scripts, no remote assets),
+      print-friendly, verified at desktop and narrow widths, zero broken links.
+- [x] `tests/recap.test.mjs` (9 tests) pins page inventory + headline figures.
+- [x] Fixed: the Pages deploy omitted `settlement.html` / `packlist.html`, which
+      are precached — `addAll()` 404 meant the service worker never installed.
+
 ## Done
 - [x] Import `egt-2026-seed.json` → persisted model (idempotent by trip.id).
 - [x] §2 course-handicap + pop-allocation core (two-loop 9s, 2nd stroke past 18).
