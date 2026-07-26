@@ -36,8 +36,12 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
+          # settlement.html and packlist.html are in the service worker's
+          # precache list — leaving them out of the deploy fails the whole
+          # addAll(), so the worker never installs and the PWA loses offline.
           cp -r index.html bottomline.html join.html privacy.html terms.html support.html \
-                manifest.webmanifest sw.js playpal-logo.png dist icons vendor _site/
+                settlement.html packlist.html \
+                manifest.webmanifest sw.js playpal-logo.png dist icons vendor recap _site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

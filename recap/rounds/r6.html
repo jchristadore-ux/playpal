@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="EGT 2026 Cup R6 at Black Bear Golf Club — full scorecard, every game decided, the pops, the Cup points and the money."/>
+<meta name="theme-color" content="#FBFAF6"/>
+<title>EGT 2026 · R6 Black Bear Golf Club</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../../icons/favicon-32.png"/>
+<style>
+
+  /* The recap book is paper, not a TV: warm stock, deep-green ink, brass rules.
+     It commits to the light world so a printed page and a phone screen show the
+     same document. */
+  :root {
+    --paper: #FBFAF6;
+    --card: #FFFFFF;
+    --ink: #12241C;
+    --deep: #0E2B20;
+    --dim: #5B6B63;
+    --faint: #93A29A;
+    --line: #D8E2DB;
+    --rule: #C8A15A;
+    --brass: #8A6D24;
+    --wash: #F1F6F2;
+    --up: #137A3F;
+    --down: #B3261E;
+    --ui: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --num: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--paper); -webkit-text-size-adjust: 100%; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--ui);
+         -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 16px 56px; }
+
+  /* masthead */
+  .top { border-bottom: 2px solid var(--rule); padding-bottom: 10px; margin-bottom: 18px; }
+  .mark { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.22em;
+          text-transform: uppercase; color: var(--brass); }
+  h1 { font-size: clamp(24px, 4vw, 38px); font-weight: 800; letter-spacing: -0.01em;
+       line-height: 1.1; margin: 4px 0 2px; color: var(--deep); }
+  .kicker { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--dim); }
+  .sub { font-size: 13px; color: var(--dim); margin-top: 4px; }
+  .crumbs { font-size: 12px; margin-bottom: 12px; color: var(--faint); }
+  .crumbs a { color: var(--brass); text-decoration: none; font-weight: 700; }
+  .crumbs a:hover { text-decoration: underline; }
+  .crumbs span { padding: 0 6px; }
+
+  h2 { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+       color: var(--brass); margin: 0 0 8px; }
+  h3 { font-size: 15px; font-weight: 800; color: var(--deep); margin: 0 0 4px; }
+  section.block { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+                  padding: 14px 16px; margin-bottom: 14px; }
+  p { font-size: 13.5px; color: var(--ink); }
+  p + p { margin-top: 8px; }
+  .note { font-size: 12.5px; color: var(--dim); line-height: 1.55; }
+  .note b { color: var(--ink); }
+  ul.plain { list-style: none; }
+  ul.bul { padding-left: 18px; font-size: 13px; color: var(--ink); }
+  ul.bul li { margin-bottom: 3px; }
+
+  /* headline cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 10px; }
+  .cards.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cd { background: var(--card); border: 1px solid var(--line); border-top: 3px solid var(--faint);
+        border-radius: 10px; padding: 10px 12px; }
+  .cd.up { border-top-color: var(--up); } .cd.down { border-top-color: var(--down); }
+  .cd.win { border-top-color: var(--rule); background: var(--wash); }
+  /* Cards and tiles stack their spans — each is its own line of the card. */
+  .cd > span, a.tile > span { display: block; }
+  .cd .who { font-size: 14px; font-weight: 800; letter-spacing: 0.03em; color: var(--deep); }
+  .cd .big { font-family: var(--num); font-variant-numeric: tabular-nums; font-weight: 700;
+             font-size: clamp(22px, 3.4vw, 32px); line-height: 1.05; }
+  /* Match labels ("4&1", "1 up", "AS") are words, not figures — no monospace. */
+  .cd .big.lbl { font-family: var(--ui); letter-spacing: -0.01em; }
+  .cd .meta { font-size: 11.5px; color: var(--dim); }
+  .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+
+  .pill { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em;
+          text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+          border: 1px solid var(--line); color: var(--dim); background: var(--paper); }
+  .pill.gold { border-color: var(--rule); color: var(--brass); background: #FBF6EA; }
+  .pill.win { border-color: var(--up); color: var(--up); background: #EEF6F0; }
+  .pill.halve { border-color: var(--faint); color: var(--dim); }
+
+  /* tables */
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { border: 1px solid var(--line); padding: 4px 7px; text-align: center; white-space: nowrap; }
+  thead th { background: var(--deep); color: #fff; font-weight: 700; font-size: 11px;
+             letter-spacing: 0.05em; }
+  td.name, th.name { text-align: left; font-weight: 700; color: var(--deep); }
+  td.txt, th.txt { text-align: left; white-space: normal; font-weight: 500; }
+  /* Left-aligned header cells still live on the dark head — keep them legible. */
+  thead th.name, thead th.txt { color: #fff; font-weight: 700; }
+  tbody td { font-variant-numeric: tabular-nums; }
+  tbody tr.lead td { background: var(--wash); }
+  tbody tr.tot td { border-top: 2px solid var(--rule); font-weight: 800; }
+  tr.sub td { background: var(--wash); font-weight: 700; }
+  tfoot td { font-weight: 800; background: var(--wash); }
+  caption { caption-side: bottom; font-size: 11.5px; color: var(--dim); text-align: left;
+            padding-top: 6px; }
+
+  /* scorecard */
+  table.card { font-size: 11.5px; }
+  table.card th, table.card td { padding: 3px 4px; min-width: 22px; }
+  table.card tr.par td, table.card tr.si td { color: var(--dim); background: var(--paper); font-size: 10.5px; }
+  /* Shaded cells: the nine subtotals on a card, and the leader's figure in any
+     race or climb table. */
+  td.seg, td.tot { background: var(--wash); font-weight: 800; }
+  .mk { display: inline-flex; align-items: center; justify-content: center;
+        min-width: 1.55em; height: 1.55em; line-height: 1; font-weight: 700; }
+  .mk.cir { border: 1px solid var(--down); border-radius: 50%; }
+  .mk.cir2 { border: 1px solid var(--down); border-radius: 50%; box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--down); }
+  .mk.sq { border: 1px solid var(--deep); }
+  .mk.sq2 { border: 1px solid var(--deep); box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--deep); }
+  sup.pop { color: var(--brass); font-weight: 800; letter-spacing: -0.05em; padding-left: 1px; }
+  .key { font-size: 11.5px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+  .key > span { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* bars (the climb, the stat races) */
+  .bar { display: block; background: var(--wash); border: 1px solid var(--line); border-radius: 3px;
+         height: 9px; position: relative; min-width: 60px; }
+  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--rule); border-radius: 2px; display: block; }
+  td.barcell { width: 34%; }
+
+  /* directory */
+  .dir { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  a.tile { display: block; text-decoration: none; color: inherit; background: var(--card);
+           border: 1px solid var(--line); border-left: 3px solid var(--rule); border-radius: 8px;
+           padding: 9px 11px; }
+  a.tile:hover { background: var(--wash); }
+  a.tile .t { font-size: 13.5px; font-weight: 800; color: var(--deep); }
+  a.tile .d { font-size: 11.5px; color: var(--dim); }
+
+  a { color: var(--brass); }
+  :focus-visible { outline: 2px solid var(--rule); outline-offset: 2px; border-radius: 4px; }
+  footer { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 10px;
+           font-size: 11.5px; color: var(--faint); line-height: 1.6; }
+  footer b { color: var(--dim); }
+  footer code { font-family: var(--num); }
+
+  @media (max-width: 620px) {
+    .cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media print {
+    :root { --paper: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    .crumbs, .noprint { display: none; }
+    section.block { break-inside: avoid; border-color: #ccc; }
+    .sheet { break-after: page; }
+    .sheet:last-child { break-after: auto; }
+    thead th { background: #0E2B20 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="crumbs">
+  <a href="../index.html">The 2026 Cup</a><span>·</span>R6 · Black Bear Golf Club
+</nav>
+<header class="top">
+  <span class="mark">EGT 2026 Cup · Round 6 of 6</span>
+  <h1>Black Bear Golf Club</h1>
+  <p class="sub">FRI · JUL 24 · Individual Stableford + two $2 Nassaus</p>
+</header>
+
+<section class="block">
+  <h2>The round</h2>
+  <div class="cards">
+    <div class="cd"><span class="meta">Course</span><span class="who">Black Bear Golf Club</span><span class="meta">Franklin, NJ · White tees · par 72</span></div>
+    <div class="cd"><span class="meta">Played</span><span class="who">FRI · JUL 24</span><span class="meta">8:36 AM</span></div>
+    <div class="cd"><span class="meta">Format</span><span class="who">Championship singles + Stableford</span><span class="meta">Individual Stableford + two $2 Nassaus</span></div>
+    <div class="cd"><span class="meta">Field</span><span class="who">John · Brian · TJ · Mike</span><span class="meta">Individual</span></div>
+  </div>
+  <h3 style="margin-top:12px">Won on the day</h3><ul class="bul"><li>Championship singles — <b>TJ</b> <span class="note">(4&amp;1)</span></li><li>Bronze singles — <b>halved</b></li><li>Stableford medal — <b>TJ</b> <span class="note">(27 points)</span></li></ul>
+</section>
+
+<section class="block"><h2>The card</h2>
+<div class="scroll"><table class="card">
+  <thead><tr><th class="name">Hole</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>Out</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>In</th><th>Tot</th><th>Net</th></tr><tr class="par"><td class="name">Par</td><td>4</td><td>5</td><td>4</td><td>4</td><td>3</td><td>5</td><td>3</td><td>4</td><td>4</td><td class="seg">36</td><td>4</td><td>3</td><td>4</td><td>5</td><td>3</td><td>4</td><td>5</td><td>4</td><td>4</td><td class="seg">36</td><td class="tot">72</td><td></td></tr><tr class="si"><td class="name">SI</td><td>9</td><td>11</td><td>1</td><td>5</td><td>17</td><td>13</td><td>7</td><td>15</td><td>3</td><td class="seg"></td><td>8</td><td>18</td><td>4</td><td>2</td><td>16</td><td>14</td><td>12</td><td>6</td><td>10</td><td class="seg"></td><td class="tot"></td><td></td></tr></thead>
+  <tbody>
+<tr><td class="name">John</td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk sq">4</span></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk ">3</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td class="seg">51</td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td><span class="mk sq2">5</span></td><td><span class="mk ">4</span><sup class="pop">•</sup></td><td><span class="mk sq">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">5</span><sup class="pop">•</sup></td><td><span class="mk cir">3</span><sup class="pop">•</sup></td><td><span class="mk sq">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td class="seg">48</td><td class="tot">99</td><td class="tot">83</td></tr>
+<tr><td class="name">Brian</td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td><span class="mk sq2">9</span><sup class="pop">•</sup></td><td><span class="mk sq2">8</span><sup class="pop">••</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq2">5</span><sup class="pop">•</sup></td><td><span class="mk sq2">8</span><sup class="pop">•</sup></td><td><span class="mk sq2">5</span><sup class="pop">•</sup></td><td><span class="mk ">4</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">••</sup></td><td class="seg">57</td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">5</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">••</sup></td><td><span class="mk sq2">7</span><sup class="pop">••</sup></td><td><span class="mk sq">4</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk ">5</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td class="seg">49</td><td class="tot">106</td><td class="tot">84</td></tr>
+<tr><td class="name">TJ</td><td><span class="mk sq2">7</span><sup class="pop">••</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">••</sup></td><td><span class="mk sq2">6</span><sup class="pop">••</sup></td><td><span class="mk sq">4</span><sup class="pop">•</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">••</sup></td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td><span class="mk sq2">8</span><sup class="pop">••</sup></td><td class="seg">55</td><td><span class="mk sq2">7</span><sup class="pop">••</sup></td><td><span class="mk sq">4</span><sup class="pop">•</sup></td><td><span class="mk sq2">9</span><sup class="pop">••</sup></td><td><span class="mk sq2">9</span><sup class="pop">••</sup></td><td><span class="mk sq">4</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td><span class="mk ">5</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">••</sup></td><td><span class="mk sq">5</span><sup class="pop">•</sup></td><td class="seg">54</td><td class="tot">109</td><td class="tot">82</td></tr>
+<tr><td class="name">Mike</td><td><span class="mk sq">5</span><sup class="pop">••</sup></td><td><span class="mk sq">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">9</span><sup class="pop">••</sup></td><td><span class="mk sq2">6</span><sup class="pop">••</sup></td><td><span class="mk ">3</span><sup class="pop">•</sup></td><td><span class="mk sq">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">5</span><sup class="pop">••</sup></td><td><span class="mk sq2">8</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">••</sup></td><td class="seg">53</td><td><span class="mk sq">5</span><sup class="pop">••</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">7</span><sup class="pop">••</sup></td><td><span class="mk sq2">9</span><sup class="pop">••</sup></td><td><span class="mk sq2">7</span><sup class="pop">•</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td><span class="mk sq2">9</span><sup class="pop">•</sup></td><td><span class="mk sq">5</span><sup class="pop">••</sup></td><td><span class="mk sq2">6</span><sup class="pop">•</sup></td><td class="seg">60</td><td class="tot">113</td><td class="tot">86</td></tr>
+  </tbody>
+  <caption>Black Bear Golf Club · White tees · par 72. Net = gross less Stableford pops.</caption>
+</table></div>
+<p class="key"><span><span class="mk cir2">4</span> eagle or better</span><span><span class="mk cir">3</span> birdie</span><span>5 par</span><span><span class="mk sq">6</span> bogey</span><span><span class="mk sq2">7</span> double or worse</span><span><sup class="pop">•</sup> a pop on that hole</span></p>
+<p class="note">Dots are the Stableford pops — full dots, 100% of the course handicap with no off-the-low adjustment. The singles matches used the course-handicap difference instead (see the match pages).</p></section>
+
+<section class="block"><h2>Championship singles</h2>
+<p class="note">Seeded off the Cup standings through R5 — 1 v 2 for the Cup, 3 v 4 for bronze. The higher course handicap received the difference on the lowest-index holes; 3 points for the win, 1.5 each for a halve.</p>
+<div class="dir"><a class="tile" href="../matches/r6-championship-john-tj.html"><span class="t">Championship · John v TJ</span><span class="d">TJ 4&amp;1</span></a>
+<a class="tile" href="../matches/r6-bronze-mike-brian.html"><span class="t">Bronze · Mike v Brian</span><span class="d">Halved (AS)</span></a></div>
+<div class="scroll" style="margin-top:12px"><table>
+  <thead><tr><th class="txt">Match</th><th class="txt">Tier</th><th>Handicaps</th><th class="txt">Strokes</th><th class="txt">Result</th></tr></thead>
+  <tbody><tr><td class="txt">John v TJ</td><td class="txt">Championship</td><td>16 v 27</td><td class="txt">TJ +11</td><td class="txt">TJ 4&amp;1</td></tr><tr><td class="txt">Mike v Brian</td><td class="txt">Bronze</td><td>27 v 22</td><td class="txt">Mike +5</td><td class="txt">Halved (AS)</td></tr></tbody>
+</table></div>
+</section>
+
+<section class="block"><h2>Individual Stableford</h2>
+<p class="note">Full dots — every player's whole course handicap, no off-the-low adjustment. Net eagle 4, birdie 3, par 2, bogey 1, net double or worse 0.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Hole</th><th>Par</th><th>John net</th><th>Brian net</th><th>TJ net</th><th>Mike net</th><th>John pts</th><th>Brian pts</th><th>TJ pts</th><th>Mike pts</th></tr></thead>
+  <tbody>
+<tr><td>1</td><td>4</td><td>6<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>5<sup class="pop">••</sup></td><td>3<sup class="pop">••</sup></td><td class="seg">0</td><td class="seg">2</td><td class="seg">1</td><td class="seg">3</td></tr>
+<tr><td>2</td><td>5</td><td>6<sup class="pop">•</sup></td><td>8<sup class="pop">•</sup></td><td>6<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td class="seg">1</td><td class="seg">0</td><td class="seg">1</td><td class="seg">2</td></tr>
+<tr><td>3</td><td>4</td><td>5<sup class="pop">•</sup></td><td>6<sup class="pop">••</sup></td><td>3<sup class="pop">••</sup></td><td>7<sup class="pop">••</sup></td><td class="seg">1</td><td class="seg">0</td><td class="seg">3</td><td class="seg">0</td></tr>
+<tr><td>4</td><td>4</td><td>5<sup class="pop">•</sup></td><td>6<sup class="pop">•</sup></td><td>4<sup class="pop">••</sup></td><td>4<sup class="pop">••</sup></td><td class="seg">1</td><td class="seg">0</td><td class="seg">2</td><td class="seg">2</td></tr>
+<tr><td>5</td><td>3</td><td>4</td><td>4<sup class="pop">•</sup></td><td>3<sup class="pop">•</sup></td><td>2<sup class="pop">•</sup></td><td class="seg">1</td><td class="seg">1</td><td class="seg">2</td><td class="seg">3</td></tr>
+<tr><td>6</td><td>5</td><td>6<sup class="pop">•</sup></td><td>7<sup class="pop">•</sup></td><td>6<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td class="seg">1</td><td class="seg">0</td><td class="seg">1</td><td class="seg">2</td></tr>
+<tr><td>7</td><td>3</td><td>2<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>4<sup class="pop">••</sup></td><td>3<sup class="pop">••</sup></td><td class="seg">3</td><td class="seg">1</td><td class="seg">1</td><td class="seg">2</td></tr>
+<tr><td>8</td><td>4</td><td>5<sup class="pop">•</sup></td><td>3<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>7<sup class="pop">•</sup></td><td class="seg">1</td><td class="seg">3</td><td class="seg">2</td><td class="seg">0</td></tr>
+<tr><td>9</td><td>4</td><td>4<sup class="pop">•</sup></td><td>4<sup class="pop">••</sup></td><td>6<sup class="pop">••</sup></td><td>3<sup class="pop">••</sup></td><td class="seg">2</td><td class="seg">2</td><td class="seg">0</td><td class="seg">3</td></tr>
+<tr><td>10</td><td>4</td><td>4<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td>5<sup class="pop">••</sup></td><td>3<sup class="pop">••</sup></td><td class="seg">2</td><td class="seg">1</td><td class="seg">1</td><td class="seg">3</td></tr>
+<tr><td>11</td><td>3</td><td>5</td><td>4<sup class="pop">•</sup></td><td>3<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td class="seg">0</td><td class="seg">1</td><td class="seg">2</td><td class="seg">0</td></tr>
+<tr><td>12</td><td>4</td><td>3<sup class="pop">•</sup></td><td>3<sup class="pop">••</sup></td><td>7<sup class="pop">••</sup></td><td>5<sup class="pop">••</sup></td><td class="seg">3</td><td class="seg">3</td><td class="seg">0</td><td class="seg">1</td></tr>
+<tr><td>13</td><td>5</td><td>5<sup class="pop">•</sup></td><td>5<sup class="pop">••</sup></td><td>7<sup class="pop">••</sup></td><td>7<sup class="pop">••</sup></td><td class="seg">2</td><td class="seg">2</td><td class="seg">0</td><td class="seg">0</td></tr>
+<tr><td>14</td><td>3</td><td>4<sup class="pop">•</sup></td><td>3<sup class="pop">•</sup></td><td>3<sup class="pop">•</sup></td><td>6<sup class="pop">•</sup></td><td class="seg">1</td><td class="seg">2</td><td class="seg">2</td><td class="seg">0</td></tr>
+<tr><td>15</td><td>4</td><td>2<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td class="seg">4</td><td class="seg">1</td><td class="seg">2</td><td class="seg">1</td></tr>
+<tr><td>16</td><td>5</td><td>5<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>8<sup class="pop">•</sup></td><td class="seg">2</td><td class="seg">3</td><td class="seg">3</td><td class="seg">0</td></tr>
+<tr><td>17</td><td>4</td><td>6<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>4<sup class="pop">••</sup></td><td>3<sup class="pop">••</sup></td><td class="seg">0</td><td class="seg">2</td><td class="seg">2</td><td class="seg">3</td></tr>
+<tr><td>18</td><td>4</td><td>6<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td>4<sup class="pop">•</sup></td><td>5<sup class="pop">•</sup></td><td class="seg">0</td><td class="seg">1</td><td class="seg">2</td><td class="seg">1</td></tr>
+  </tbody>
+</table></div>
+<h3 style="margin-top:12px">Finish</h3>
+<div class="scroll"><table><thead><tr><th>Pos</th><th class="name">Player</th><th>Stableford</th><th>Cup points</th></tr></thead><tbody><tr class="lead"><td>1st</td><td class="name">TJ</td><td>27</td><td>4</td></tr><tr><td>2nd</td><td class="name">Mike</td><td>26</td><td>3</td></tr><tr><td>3rd</td><td class="name">John</td><td>25</td><td>1.5</td></tr><tr><td>4th</td><td class="name">Brian</td><td>25</td><td>1.5</td></tr></tbody>
+<caption>Every position paid (4 / 3 / 2 / 1); ties pool and split. The medal also took a flat $5 a man.</caption></table></div>
+</section>
+
+<section class="block"><h2>Cup points</h2>
+<div class="scroll"><table>
+  <thead><tr><th class="txt">On offer</th><th>Points</th></tr></thead>
+  <tbody><tr><td class="txt">Win your singles match (halve = 1.5 each)</td><td>3</td></tr><tr><td class="txt">Finish 1st in Stableford</td><td>4</td></tr><tr><td class="txt">Finish 2nd in Stableford</td><td>3</td></tr><tr><td class="txt">Finish 3rd in Stableford</td><td>2</td></tr><tr><td class="txt">Finish 4th in Stableford</td><td>1</td></tr>
+  <tr class="tot"><td class="txt">Most one player could take</td><td>7</td></tr></tbody>
+</table></div><h3 style="margin-top:12px">Who collected</h3><div class="scroll"><table>
+  <thead><tr><th class="name">Player</th><th class="txt">Earned</th><th>Points</th></tr></thead>
+  <tbody><tr class="lead"><td class="name">TJ</td><td class="txt">Singles win 3 · Stableford finish 4</td><td>7</td></tr><tr><td class="name">Mike</td><td class="txt">Singles halve 1.5 · Stableford finish 3</td><td>4.5</td></tr><tr><td class="name">Brian</td><td class="txt">Singles halve 1.5 · Stableford finish 1.5</td><td>3</td></tr><tr><td class="name">John</td><td class="txt">Stableford finish 1.5</td><td>1.5</td></tr></tbody>
+</table></div>
+<p class="note" style="margin-top:8px">Championship night: singles seeded off the standings (1v2 for the title, 3v4 for bronze), plus an all-play individual Stableford that pays every finish spot. Ties split.</p></section>
+
+<section class="block"><h2>The money</h2>
+<div class="scroll"><table>
+  <thead><tr><th class="txt">Stake</th><th>John</th><th>Brian</th><th>TJ</th><th>Mike</th></tr></thead>
+  <tbody>
+<tr><td class="txt">Stableford (winner)</td><td class="down">−$5</td><td class="down">−$5</td><td class="up">+$15</td><td class="down">−$5</td></tr>
+<tr><td class="txt">TJ v John — front nine</td><td class="down">−$2</td><td class="flat">—</td><td class="up">+$2</td><td class="flat">—</td></tr>
+<tr><td class="txt">TJ v John — back nine</td><td class="down">−$2</td><td class="flat">—</td><td class="up">+$2</td><td class="flat">—</td></tr>
+<tr><td class="txt">TJ v John — the 18</td><td class="down">−$4</td><td class="flat">—</td><td class="up">+$4</td><td class="flat">—</td></tr>
+<tr><td class="txt">Mike v Brian — front nine</td><td class="flat">—</td><td class="down">−$2</td><td class="flat">—</td><td class="up">+$2</td></tr>
+<tr><td class="txt">Mike v Brian — back nine</td><td class="flat">—</td><td class="up">+$2</td><td class="flat">—</td><td class="down">−$2</td></tr>
+<tr class="tot"><td class="txt">Round total</td><td class="down">−$13</td><td class="down">−$5</td><td class="up">+$23</td><td class="down">−$5</td></tr>
+  </tbody>
+  <caption>Nets to $0 — a flat stake to the winner of each game, plus any side Nassau at its own stake.</caption>
+</table></div>
+<h3 style="margin-top:12px">Netted for the night</h3>
+<ul class="bul"><li>John → TJ <b>$13</b></li><li>Brian → TJ <b>$5</b></li><li>Mike → TJ <b>$5</b></li></ul></section>
+
+<section class="block"><h2>Matches on this card</h2>
+<div class="dir"><a class="tile" href="../matches/r6-championship-john-tj.html"><span class="t">John v TJ</span><span class="d">TJ 4&amp;1</span></a>
+<a class="tile" href="../matches/r6-bronze-mike-brian.html"><span class="t">Mike v Brian</span><span class="d">Halved</span></a></div></section>
+
+<section class="block"><h2>Handicaps and pops</h2>
+<div class="scroll"><table>
+  <thead><tr><th class="name">Player</th><th>CH</th><th>skinsNet</th><th>stableford</th></tr></thead>
+  <tbody>
+<tr><td class="name">John</td><td>16</td><td class="txt">0 pops</td><td class="txt">16 pops <span class="note">on 1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18</span></td></tr>
+<tr><td class="name">Brian</td><td>22</td><td class="txt">6 pops <span class="note">on 3, 4, 9, 12, 13, 17</span></td><td class="txt">22 pops <span class="note">on 1, 2, 3×2, 4, 5, 6, 7, 8, 9×2, 10, 11, 12×2, 13×2, 14, 15, 16, 17, 18</span></td></tr>
+<tr><td class="name">TJ</td><td>27</td><td class="txt">11 pops <span class="note">on 1, 2, 3, 4, 7, 9, 10, 12, 13, 17, 18</span></td><td class="txt">27 pops <span class="note">on 1×2, 2, 3×2, 4×2, 5, 6, 7×2, 8, 9×2, 10×2, 11, 12×2, 13×2, 14, 15, 16, 17×2, 18</span></td></tr>
+<tr><td class="name">Mike</td><td>27</td><td class="txt">11 pops <span class="note">on 1, 2, 3, 4, 7, 9, 10, 12, 13, 17, 18</span></td><td class="txt">27 pops <span class="note">on 1×2, 2, 3×2, 4×2, 5, 6, 7×2, 8, 9×2, 10×2, 11, 12×2, 13×2, 14, 15, 16, 17×2, 18</span></td></tr>
+  </tbody>
+</table></div>
+<p class="note" style="margin-top:6px">Handicap index → course handicap at Black Bear Golf Club (White tees), then pops distributed by stroke index. Bases: <b>skinsNet</b> — off low, over all 18; <b>stableford</b> — 100% full dots.</p></section>
+
+<section class="block"><h2>Carts and pairings</h2>
+<p><b>John + TJ · Brian + Mike</b></p>
+<p class="note">Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + TJ, Brian + Mike) put John and TJ together one last time to close out the trip — their fourth ride together (R1, R2, R4, R6) at the request to keep them paired as much as possible. Every player has still shared a cart with each of the other three at least once by the end of R5, so cart coverage is complete regardless of the seeded matches. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD.</p></section>
+
+<footer>
+  <p><b>EGT 2026 Cup</b> · Crystal Springs Resort — Hamburg / Vernon / Hardyston / Franklin, NJ · 2026-07-21 to 2026-07-24 · 108 holes.
+    Every number on this page is recomputed by the tournament engine from the scores the app
+    synced during the trip — not typed in by hand. Regenerate the book with
+    <code>node scripts/gen-recap.mjs</code> · PlayPal v1.14.0.</p>
+</footer>
+</div>
+</body>
+</html>

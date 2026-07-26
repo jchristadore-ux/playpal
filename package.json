@@ -1,12 +1,14 @@
 {
   "name": "playpal",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "private": true,
   "description": "PlayPal \u2014 golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "icons": "node scripts/make-icons.mjs",
+    "settlement": "node scripts/gen-settlement.mjs",
+    "recap": "node scripts/gen-recap.mjs",
     "test": "npm run build && node --test \"tests/**/*.test.mjs\"",
     "dev": "npm run build && npx -y http-server -p 8080 -c-1 .",
     "build:www": "npm run build && node scripts/build-www.mjs",
