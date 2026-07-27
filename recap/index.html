@@ -77,6 +77,7 @@
   .cd .big.lbl { font-family: var(--ui); letter-spacing: -0.01em; }
   .cd .meta { font-size: 11.5px; color: var(--dim); }
   .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+  .amt { white-space: nowrap; }
 
   .pill { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em;
           text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
@@ -146,19 +147,38 @@
     .cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media print {
+    /* Paper has no scrollbars. On screen a wide scorecard scrolls inside its
+       own box; on paper that box would CLIP it and the last holes would simply
+       be missing from the PDF — so overflow goes visible and the tables shrink
+       to fit the printable width of a Letter page (8.5in less 0.45in margins,
+       about 730px at 96dpi). */
+    @page { size: Letter; margin: 0.45in; }
     :root { --paper: #fff; }
+    html, body { background: #fff; }
     .wrap { max-width: none; padding: 0; }
     .crumbs, .noprint { display: none; }
     section.block { break-inside: avoid; border-color: #ccc; }
     .sheet { break-after: page; }
     .sheet:last-child { break-after: auto; }
+    .scroll { overflow: visible; }
+    table { font-size: 9.5px; }
+    th, td { padding: 2px 4px; }
+    table.card { font-size: 8.5px; }
+    table.card th, table.card td { padding: 1px 2px; min-width: 0; }
+    .mk { min-width: 1.35em; height: 1.35em; }
+    /* A table is a unit of the record — keep its head with its body, and never
+       leave one row stranded on the next sheet. */
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
     thead th { background: #0E2B20 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    td.seg, td.tot, tr.sub td, tr.lead td, tfoot td, .cd.win, .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-
+<nav class="crumbs noprint"><a href="pdf/index.pdf">Save this page as a PDF</a></nav>
 <header class="top">
   <span class="mark">EGT 2026 Cup</span>
   <h1>The 2026 Cup</h1>
@@ -175,25 +195,25 @@
     <span class="meta">1st · Cup</span>
     <span class="who"><a href="players/john.html" style="text-decoration:none;color:inherit">John</a></span>
     <span class="big">18.75</span>
-    <span class="meta">+$48.75 on the week</span>
+    <span class="meta"><span class="amt">+$48.75</span> on the week</span>
   </div>
 <div class="cd ">
     <span class="meta">2nd</span>
     <span class="who"><a href="players/tj.html" style="text-decoration:none;color:inherit">TJ</a></span>
     <span class="big">15.75</span>
-    <span class="meta">+$17.75 on the week</span>
+    <span class="meta"><span class="amt">+$17.75</span> on the week</span>
   </div>
 <div class="cd ">
     <span class="meta">3rd</span>
     <span class="who"><a href="players/mike.html" style="text-decoration:none;color:inherit">Mike</a></span>
     <span class="big">12.75</span>
-    <span class="meta">−$18.25 on the week</span>
+    <span class="meta"><span class="amt">−$18.25</span> on the week</span>
   </div>
 <div class="cd ">
     <span class="meta">4th</span>
     <span class="who"><a href="players/brian.html" style="text-decoration:none;color:inherit">Brian</a></span>
     <span class="big">8.75</span>
-    <span class="meta">−$48.25 on the week</span>
+    <span class="meta"><span class="amt">−$48.25</span> on the week</span>
   </div>
   </div>
 </section>
@@ -243,10 +263,10 @@
   <h2>The players</h2>
   <p class="note" style="margin-bottom:8px">A week in one page — round by round, every match, every point, every dollar.</p>
   <div class="dir">
-    <a class="tile" href="players/john.html"><span class="t">John</span><span class="d">1st · 18.75 pts · +$48.75</span></a>
-    <a class="tile" href="players/tj.html"><span class="t">TJ</span><span class="d">2nd · 15.75 pts · +$17.75</span></a>
-    <a class="tile" href="players/mike.html"><span class="t">Mike</span><span class="d">3rd · 12.75 pts · −$18.25</span></a>
-    <a class="tile" href="players/brian.html"><span class="t">Brian</span><span class="d">4th · 8.75 pts · −$48.25</span></a>
+    <a class="tile" href="players/john.html"><span class="t">John</span><span class="d">1st · 18.75 pts · <span class="amt">+$48.75</span></span></a>
+    <a class="tile" href="players/tj.html"><span class="t">TJ</span><span class="d">2nd · 15.75 pts · <span class="amt">+$17.75</span></span></a>
+    <a class="tile" href="players/mike.html"><span class="t">Mike</span><span class="d">3rd · 12.75 pts · <span class="amt">−$18.25</span></span></a>
+    <a class="tile" href="players/brian.html"><span class="t">Brian</span><span class="d">4th · 8.75 pts · <span class="amt">−$48.25</span></span></a>
   </div>
 </section>
 
@@ -258,6 +278,7 @@
     <a class="tile" href="awards.html"><span class="t">Awards &amp; titles</span><span class="d">Season awards, every title won, The Rock</span></a>
     <a class="tile" href="money.html"><span class="t">The money</span><span class="d">Round by round, the off-course ledger, who paid whom</span></a>
     <a class="tile" href="print.html"><span class="t">The whole book</span><span class="d">Every page on one sheet — for printing or PDF</span></a>
+    <a class="tile" href="pdf/print.pdf"><span class="t">The whole book as a PDF</span><span class="d">All 25 pages, print-ready. Every page has its own PDF too</span></a>
   </div>
 </section>
 
@@ -265,7 +286,7 @@
   <p><b>EGT 2026 Cup</b> · Crystal Springs Resort — Hamburg / Vernon / Hardyston / Franklin, NJ · 2026-07-21 to 2026-07-24 · 108 holes.
     Every number on this page is recomputed by the tournament engine from the scores the app
     synced during the trip — not typed in by hand. Regenerate the book with
-    <code>node scripts/gen-recap.mjs</code> · PlayPal v1.14.0.</p>
+    <code>node scripts/gen-recap.mjs</code> · PlayPal v1.15.0.</p>
 </footer>
 </div>
 </body>

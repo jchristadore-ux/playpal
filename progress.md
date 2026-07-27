@@ -1,5 +1,56 @@
 # Project Progress
 
+## 2026-07-27 — The recap book as PDFs (branch claude/tournament-results-pages-kp4bse) — v1.15.0
+
+Status: **complete — 222 tests green (4 new), 25 PDFs / 146 sheets generated and
+verified page-complete, dist rebuilt.** Follow-on to v1.14.0 (PR #108, merged),
+so the branch restarted from main.
+
+Asked for: "all the individual pdfs".
+
+`npm run recap:pdf` → `scripts/gen-recap-pdf.mjs` prints every page of the book
+to `recap/pdf/`, mirroring the folder layout. Chrome's own PDF engine renders it
+(found via `$CHROME` → Playwright browsers → system paths), so paper matches the
+browser. 7.9 MB, `print.pdf` being 3 MB of that.
+
+### Two real defects the PDF pass exposed
+1. **Wide scorecards would have been clipped, not just cut.** `.scroll` boxes
+   scroll on screen; Chrome *clips* them when printing, so R6's 23-column card
+   would have lost its last holes, totals and net column entirely. Print CSS now
+   sets `overflow: visible`, shrinks `table.card` to 8.5px with 1px padding, and
+   pins `@page { size: Letter; margin: 0.45in }` — the whole card fits one sheet
+   (verified by rasterizing the PDF, not by assuming).
+2. **`−$31.25` wrapped after its sign**, leaving `$31.25` alone on the next line
+   — which reads as money owed *to* the man rather than *by* him. `cash()` now
+   emits a nowrap span; `nbMoney()` does the same for figures inside the money
+   engine's own prose lines. Caught by extracting text back out of the PDFs.
+
+Fixing (2) surfaced a third: the cover's player tiles ran `cash()` output through
+`esc()`, printing `&lt;span class="amt"&gt;` on the page. `group()` now takes
+HTML and each caller escapes its own text.
+
+### How the PDFs were verified
+Not by eye alone. For all 25: extract text with pdfplumber, strip `<style>`,
+the breadcrumb and `.noprint` blocks from the HTML, uppercase-fold (headings and
+pills are `text-transform: uppercase`), and assert every token on the page is in
+the PDF. Result: **25/25 complete, 0 missing tokens, 0 orphaned money signs**
+(the two flagged were the "+" in "Individual Stableford + two $2 Nassaus").
+Plus rasterized spot checks of the widest cards.
+
+### Guards left behind (tests/recap.test.mjs, 13 tests)
+- The three print rules that stop clipping are pinned by regex — remove one and
+  the suite fails before a clipped PDF ever ships.
+- Every signed money figure in every page must sit inside `.amt`.
+- `pagesIn()` finds all 25 pages, skips its own `pdf/` output, cover first.
+- Every page links its own PDF at the right relative depth.
+
+### Next actions (if resumed)
+- Nothing pending. After any scoring/stake change:
+  `npm run recap:pdf` (HTML + PDFs) and `npm run settlement`.
+- Note: the PDF step needs Chrome. It is deliberately not in `npm test` or CI —
+  the committed PDFs are the artifact, the tests guard the CSS that makes them
+  correct.
+
 ## 2026-07-26 — The 2026 recap book (branch claude/tournament-results-pages-kp4bse) — v1.14.0
 
 Status: **complete — 218 tests green (9 new), 25 pages generated, browser-verified

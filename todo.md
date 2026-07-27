@@ -2,6 +2,19 @@
 
 Branch `claude/playpal-egt-tournament-25w5g0`.
 
+## Done — the recap book as PDFs (v1.15.0, branch claude/tournament-results-pages-kp4bse)
+- [x] `scripts/gen-recap-pdf.mjs` + `npm run recap:pdf` → `recap/pdf/`, one PDF
+      per page (25 files, 146 sheets), folder layout mirrored, whole book in
+      `recap/pdf/print.pdf`.
+- [x] Fixed: wide scorecards were clipped by their scroll boxes when printed —
+      print CSS now unclips and shrinks them onto one Letter sheet.
+- [x] Fixed: money figures could wrap after the sign (`−$31.25` → `$31.25` alone
+      on the next line, reading as the wrong direction). Now nowrap everywhere,
+      including inside the money engine's prose.
+- [x] Fixed: cover tiles printed escaped markup in their subtitles.
+- [x] Verified 25/25 PDFs contain every token their page shows (pdfplumber),
+      plus rasterized checks of the widest cards. 4 new tests guard the rules.
+
 ## Done — the 2026 recap book (v1.14.0, branch claude/tournament-results-pages-kp4bse)
 - [x] `scripts/gen-recap.mjs` → `recap/`, 25 standalone pages, `npm run recap`.
 - [x] A page per round (card + every game hole by hole + pops + points + money),

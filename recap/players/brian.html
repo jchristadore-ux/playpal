@@ -77,6 +77,7 @@
   .cd .big.lbl { font-family: var(--ui); letter-spacing: -0.01em; }
   .cd .meta { font-size: 11.5px; color: var(--dim); }
   .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+  .amt { white-space: nowrap; }
 
   .pill { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em;
           text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
@@ -146,20 +147,40 @@
     .cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media print {
+    /* Paper has no scrollbars. On screen a wide scorecard scrolls inside its
+       own box; on paper that box would CLIP it and the last holes would simply
+       be missing from the PDF — so overflow goes visible and the tables shrink
+       to fit the printable width of a Letter page (8.5in less 0.45in margins,
+       about 730px at 96dpi). */
+    @page { size: Letter; margin: 0.45in; }
     :root { --paper: #fff; }
+    html, body { background: #fff; }
     .wrap { max-width: none; padding: 0; }
     .crumbs, .noprint { display: none; }
     section.block { break-inside: avoid; border-color: #ccc; }
     .sheet { break-after: page; }
     .sheet:last-child { break-after: auto; }
+    .scroll { overflow: visible; }
+    table { font-size: 9.5px; }
+    th, td { padding: 2px 4px; }
+    table.card { font-size: 8.5px; }
+    table.card th, table.card td { padding: 1px 2px; min-width: 0; }
+    .mk { min-width: 1.35em; height: 1.35em; }
+    /* A table is a unit of the record — keep its head with its body, and never
+       leave one row stranded on the next sheet. */
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
     thead th { background: #0E2B20 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    td.seg, td.tot, tr.sub td, tr.lead td, tfoot td, .cd.win, .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-<nav class="crumbs">
+<nav class="crumbs noprint">
   <a href="../index.html">The 2026 Cup</a><span>·</span>Brian
+  <a href="../pdf/players/brian.pdf" style="float:right">PDF</a>
 </nav>
 <header class="top">
   <span class="mark">EGT 2026 Cup · 4th · 8.75 points</span>
@@ -171,7 +192,7 @@
   <h2>The week</h2>
   <div class="cards four">
     <div class="cd "><span class="meta">Cup finish</span><span class="big">4th</span><span class="meta">8.75 of 33 points</span></div>
-    <div class="cd down"><span class="meta">Bankroll</span><span class="big down">−$48.25</span><span class="meta">golf −$17 · off-course −$31.25</span></div>
+    <div class="cd down"><span class="meta">Bankroll</span><span class="big down"><span class="amt">−$48.25</span></span><span class="meta">golf <span class="amt">−$17</span> · off-course <span class="amt">−$31.25</span></span></div>
     <div class="cd"><span class="meta">Matches</span><span class="big">0–2–3</span><span class="meta">won · lost · halved</span></div>
     <div class="cd"><span class="meta">Best round</span><span class="big">104</span><span class="meta">Cascades Golf Club · +32</span></div>
   </div>
@@ -188,32 +209,32 @@
     <td>55</td><td>52</td><td><b>107</b></td>
     <td>+35</td>
     <td>0</td>
-    <td class="down">−$10</td></tr>
+    <td class="down"><span class="amt">−$10</span></td></tr>
 <tr><td class="txt"><a href="../rounds/r3.html">R3 · Wild Turkey</a><br/><span class="note">Wed PM</span></td>
     <td>24</td>
     <td>64</td><td>54</td><td><b>118</b></td>
     <td>+47</td>
     <td>1.5</td>
-    <td class="down">−$5</td></tr>
+    <td class="down"><span class="amt">−$5</span></td></tr>
 <tr><td class="txt"><a href="../rounds/r4.html">R4 · Crystal Springs Golf Club</a><br/><span class="note">Thu AM</span></td>
     <td>22</td>
     <td>63</td><td>53</td><td><b>116</b></td>
     <td>+44</td>
     <td>4</td>
-    <td class="up">+$10</td></tr>
+    <td class="up"><span class="amt">+$10</span></td></tr>
 <tr><td class="txt"><a href="../rounds/r5.html">R5 · Cascades Golf Club</a><br/><span class="note">Thu PM</span></td>
     <td>22</td>
     <td>53</td><td>51</td><td><b>104</b></td>
     <td>+32</td>
     <td>0</td>
-    <td class="down">−$7</td></tr>
+    <td class="down"><span class="amt">−$7</span></td></tr>
 <tr><td class="txt"><a href="../rounds/r6.html">R6 · Black Bear Golf Club</a><br/><span class="note">Fri</span></td>
     <td>22</td>
     <td>57</td><td>49</td><td><b>106</b></td>
     <td>+34</td>
     <td>3</td>
-    <td class="down">−$5</td></tr>
-  <tr class="tot"><td class="txt">Trip</td><td></td><td></td><td></td><td>551</td><td></td><td>8.75</td><td class="down">−$17</td></tr>
+    <td class="down"><span class="amt">−$5</span></td></tr>
+  <tr class="tot"><td class="txt">Trip</td><td></td><td></td><td></td><td>551</td><td></td><td>8.75</td><td class="down"><span class="amt">−$17</span></td></tr>
   </tbody>
   <caption>Gross scores. CH is the course handicap at that course from the tees played.</caption>
 </table></div></section>
@@ -230,7 +251,7 @@
     <td class="flat">—</td></tr>
 <tr><td class="txt"><a href="../matches/r5-rr-brian-tj.html">Brian v TJ</a><br/><span class="note">R5 · Round-robin match play at Cascades</span></td>
     <td class="txt"><span class="pill ">Lost 1 up</span></td>
-    <td class="down">−$2</td></tr>
+    <td class="down"><span class="amt">−$2</span></td></tr>
 <tr><td class="txt"><a href="../matches/r5-rr-brian-mike.html">Brian v Mike</a><br/><span class="note">R5 · Round-robin match play at Cascades</span></td>
     <td class="txt"><span class="pill halve">Halved</span></td>
     <td class="flat">—</td></tr>
@@ -257,19 +278,19 @@
 <div class="scroll"><table>
   <thead><tr><th class="txt">Where</th><th class="txt">What</th><th>Net</th></tr></thead>
   <tbody>
-<tr><td class="txt">R2 · Ballyowen</td><td class="txt">Four-ball (team) −$10</td><td class="down">−$10</td></tr>
-<tr><td class="txt">R3 · Wild Turkey</td><td class="txt">Wolf (winner) −$5</td><td class="down">−$5</td></tr>
-<tr><td class="txt">R4 · Crystal Springs Golf Club</td><td class="txt">Stableford (team) +$10</td><td class="up">+$10</td></tr>
-<tr><td class="txt">R5 · Cascades Golf Club</td><td class="txt">BBB (winner) −$5 · Brian v TJ — front nine −$1 · Brian v TJ — back nine +$1 · Brian v TJ — the 18 −$2 · Brian v Mike — front nine −$1 · Brian v Mike — back nine +$1</td><td class="down">−$7</td></tr>
-<tr><td class="txt">R6 · Black Bear Golf Club</td><td class="txt">Stableford (winner) −$5 · Mike v Brian — front nine −$2 · Mike v Brian — back nine +$2</td><td class="down">−$5</td></tr>
-  <tr class="sub"><td class="txt">Golf subtotal</td><td class="txt"></td><td class="down">−$17</td></tr>
-<tr><td class="txt">EGT banner</td><td class="txt"><span class="note">John fronted the banner; each of the other three owes him $30.</span></td><td class="down">−$30</td></tr>
-<tr><td class="txt">Gas</td><td class="txt"><span class="note">John fronted the gas; each of the other three owes him $20.</span></td><td class="down">−$20</td></tr>
-<tr><td class="txt">Custom jerseys</td><td class="txt"><span class="note">Brian had the custom jerseys made — $30 a jersey, $120 for the four of them, so $30 a man.</span></td><td class="up">+$90</td></tr>
-<tr><td class="txt">Steak dinner</td><td class="txt"><span class="note">TJ shopped for the steak night — T-bones, broccoli, baked potatoes, asparagus. $85 split four ways is $21.25 a man.</span></td><td class="down">−$21.25</td></tr>
-<tr><td class="txt">Food trays</td><td class="txt"><span class="note">Mike made and brought three trays — sausage, peppers and onions; chicken parm; baked ziti. $40 split four ways is $10 a man.</span></td><td class="down">−$10</td></tr>
-<tr><td class="txt">Poker</td><td class="txt"><span class="note">$120 pot paid 70/30 — Mike $84, TJ $36. Brian's $40 buy-in is already sitting in the pot, so he owes nothing further and the cash on hand pays out.</span></td><td class="down">−$40</td></tr>
-  <tr class="tot"><td class="txt">Final</td><td class="txt"></td><td class="down">−$48.25</td></tr>
+<tr><td class="txt">R2 · Ballyowen</td><td class="txt">Four-ball (team) <span class="amt">−$10</span></td><td class="down"><span class="amt">−$10</span></td></tr>
+<tr><td class="txt">R3 · Wild Turkey</td><td class="txt">Wolf (winner) <span class="amt">−$5</span></td><td class="down"><span class="amt">−$5</span></td></tr>
+<tr><td class="txt">R4 · Crystal Springs Golf Club</td><td class="txt">Stableford (team) <span class="amt">+$10</span></td><td class="up"><span class="amt">+$10</span></td></tr>
+<tr><td class="txt">R5 · Cascades Golf Club</td><td class="txt">BBB (winner) <span class="amt">−$5</span> · Brian v TJ — front nine <span class="amt">−$1</span> · Brian v TJ — back nine <span class="amt">+$1</span> · Brian v TJ — the 18 <span class="amt">−$2</span> · Brian v Mike — front nine <span class="amt">−$1</span> · Brian v Mike — back nine <span class="amt">+$1</span></td><td class="down"><span class="amt">−$7</span></td></tr>
+<tr><td class="txt">R6 · Black Bear Golf Club</td><td class="txt">Stableford (winner) <span class="amt">−$5</span> · Mike v Brian — front nine <span class="amt">−$2</span> · Mike v Brian — back nine <span class="amt">+$2</span></td><td class="down"><span class="amt">−$5</span></td></tr>
+  <tr class="sub"><td class="txt">Golf subtotal</td><td class="txt"></td><td class="down"><span class="amt">−$17</span></td></tr>
+<tr><td class="txt">EGT banner</td><td class="txt"><span class="note">John fronted the banner; each of the other three owes him $30.</span></td><td class="down"><span class="amt">−$30</span></td></tr>
+<tr><td class="txt">Gas</td><td class="txt"><span class="note">John fronted the gas; each of the other three owes him $20.</span></td><td class="down"><span class="amt">−$20</span></td></tr>
+<tr><td class="txt">Custom jerseys</td><td class="txt"><span class="note">Brian had the custom jerseys made — $30 a jersey, $120 for the four of them, so $30 a man.</span></td><td class="up"><span class="amt">+$90</span></td></tr>
+<tr><td class="txt">Steak dinner</td><td class="txt"><span class="note">TJ shopped for the steak night — T-bones, broccoli, baked potatoes, asparagus. $85 split four ways is $21.25 a man.</span></td><td class="down"><span class="amt">−$21.25</span></td></tr>
+<tr><td class="txt">Food trays</td><td class="txt"><span class="note">Mike made and brought three trays — sausage, peppers and onions; chicken parm; baked ziti. $40 split four ways is $10 a man.</span></td><td class="down"><span class="amt">−$10</span></td></tr>
+<tr><td class="txt">Poker</td><td class="txt"><span class="note">$120 pot paid 70/30 — Mike $84, TJ $36. Brian's $40 buy-in is already sitting in the pot, so he owes nothing further and the cash on hand pays out.</span></td><td class="down"><span class="amt">−$40</span></td></tr>
+  <tr class="tot"><td class="txt">Final</td><td class="txt"></td><td class="down"><span class="amt">−$48.25</span></td></tr>
   </tbody>
 </table></div></section>
 
@@ -289,7 +310,7 @@
   <p><b>EGT 2026 Cup</b> · Crystal Springs Resort — Hamburg / Vernon / Hardyston / Franklin, NJ · 2026-07-21 to 2026-07-24 · 108 holes.
     Every number on this page is recomputed by the tournament engine from the scores the app
     synced during the trip — not typed in by hand. Regenerate the book with
-    <code>node scripts/gen-recap.mjs</code> · PlayPal v1.14.0.</p>
+    <code>node scripts/gen-recap.mjs</code> · PlayPal v1.15.0.</p>
 </footer>
 </div>
 </body>
