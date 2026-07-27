@@ -4,6 +4,37 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.15.0] — 2026-07-27
+
+The recap book on paper: a PDF of every page.
+
+### Added
+- **`recap/pdf/` — one PDF per page**, 25 of them, mirroring the book's folder
+  layout (`recap/pdf/rounds/r3.pdf`, `recap/pdf/matches/…`, `recap/pdf/players/…`).
+  146 sheets in all, printed through Chrome's own PDF engine by
+  `npm run recap:pdf` (`scripts/gen-recap-pdf.mjs`), so the paper matches the
+  browser exactly. `recap/pdf/print.pdf` is the whole book in one file.
+- Chrome is located from `$CHROME`, then the Playwright browsers the repo's
+  tooling already installs, then the usual system paths — with a clear error if
+  none is found.
+- Each page links to its own PDF (screen only), and the cover lists the
+  whole-book PDF.
+
+### Fixed
+- **Wide scorecards would have been clipped on paper.** On screen a 23-column
+  card scrolls inside its own box; printing that box drops everything past the
+  edge, so the last holes, the totals and the net column would have been
+  *absent* from the PDF rather than merely cut off. Print rules now let the
+  table overflow visibly and shrink it to the printable width of a Letter page,
+  and the whole card lands on one sheet. Table heads repeat across page breaks
+  and rows no longer split.
+- **A money figure could break after its sign.** Printed narrow, `−$31.25`
+  wrapped to leave `$31.25` alone on the next line — reading as money owed *to*
+  a player rather than *by* him. Every signed figure now sits in a nowrap span,
+  including the ones inside the engine's own "how each stake was decided" prose.
+- The cover's player tiles rendered escaped markup (`&lt;span class="amt"&gt;`)
+  in their subtitles.
+
 ## [1.14.0] — 2026-07-26
 
 The 2026 trip, memorialized: a recap book of standalone pages under `recap/`.

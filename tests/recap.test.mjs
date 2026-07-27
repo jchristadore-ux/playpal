@@ -10,7 +10,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { buildPages } from '../scripts/gen-recap.mjs';
+import { pagesIn } from '../scripts/gen-recap-pdf.mjs';
 
 const pages = buildPages();
 const byPath = new Map(pages.map(p => [p.path, p.html]));
@@ -121,6 +125,63 @@ test('a player page adds up to the player’s engine totals', () => {
   for (const rid of ['r1', 'r2', 'r3', 'r4', 'r5', 'r6']) {
     assert.ok(html.includes(`href="../rounds/${rid}.html"`), `no link to ${rid}`);
   }
+});
+
+test('the print rules keep a wide scorecard on the paper', () => {
+  // On screen a 23-column card scrolls inside its own box. Printing that box
+  // CLIPS it — the last holes, the totals and the net column would simply be
+  // absent from the PDF. These three rules are what stop that, so they are
+  // pinned: overflow goes visible, the card shrinks, and the page is Letter.
+  const html = byPath.get('rounds/r6.html');
+  assert.match(html, /@media print \{[\s\S]*?\.scroll \{ overflow: visible; \}/);
+  assert.match(html, /@media print \{[\s\S]*?@page \{ size: Letter; margin: 0\.45in; \}/);
+  assert.match(html, /@media print \{[\s\S]*?table\.card \{ font-size: 8\.5px; \}/);
+  assert.match(html, /@media print \{[\s\S]*?table\.card th, table\.card td \{ padding: 1px 2px; min-width: 0; \}/);
+});
+
+test('every money figure is unbreakable', () => {
+  // "−$31.25" wrapping after its sign leaves "$31.25" alone on the next line,
+  // which reads as money owed TO the man rather than BY him. Every signed
+  // figure must sit inside the nowrap span.
+  for (const { path, html } of pages) {
+    const stripped = html.replace(/<span class="amt">[−+]\$[\d.,]+<\/span>/g, '');
+    const loose = stripped.match(/[−+]\$[\d.,]+/g);
+    assert.equal(loose, null, `${path} has a money figure outside .amt: ${loose && loose.slice(0, 3)}`);
+  }
+  assert.match(byPath.get('money.html'), /\.amt \{ white-space: nowrap; \}/);
+});
+
+test('the PDF printer finds every page, cover first', () => {
+  // gen-recap-pdf walks whatever `npm run recap` wrote and mirrors the layout
+  // into recap/pdf/. It must see all of it, skip its own output directory, and
+  // lead with the cover.
+  const dir = mkdtempSync(join(tmpdir(), 'recap-'));
+  for (const p of pages) {
+    const file = join(dir, p.path);
+    mkdirSync(join(file, '..'), { recursive: true });
+    writeFileSync(file, p.html);
+  }
+  mkdirSync(join(dir, 'pdf'), { recursive: true });
+  writeFileSync(join(dir, 'pdf', 'index.pdf'), 'not html');
+
+  const found = pagesIn(dir).filter(p => !p.startsWith('pdf/'));
+  assert.equal(found.length, pages.length);
+  assert.equal(found[0], 'index.html');
+  assert.deepEqual(
+    new Set(found),
+    new Set(pages.map(p => p.path)),
+  );
+});
+
+test('each page links to its own PDF, and the link never prints', () => {
+  for (const { path, html } of pages) {
+    const depth = path.split('/').length - 1;
+    const href = `${'../'.repeat(depth)}pdf/${path.replace(/\.html$/, '.pdf')}`;
+    assert.ok(html.includes(`href="${href}"`), `${path} does not link its PDF (${href})`);
+  }
+  // Screen furniture only — on paper you are already holding the thing.
+  assert.match(byPath.get('standings.html'), /<nav class="crumbs noprint">/);
+  assert.match(byPath.get('standings.html'), /\.crumbs, \.noprint \{ display: none; \}/);
 });
 
 test('the print sheet holds every other page and keeps its links working', () => {

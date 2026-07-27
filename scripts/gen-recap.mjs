@@ -70,8 +70,16 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&am
 // Whole dollars read cleaner, but a split bill can land on cents — show them
 // when they exist rather than rounding real money away.
 const plainAmt = n => Math.abs(Math.round((n || 0) * 100) / 100).toFixed(2).replace(/\.00$/, '');
-const cash = n => `${(n || 0) < 0 ? '−' : '+'}$${plainAmt(n)}`;
+// A money figure must never break across lines: printed narrow, "−$31.25" was
+// wrapping after the sign, leaving "$31.25" alone on the next line reading as
+// money owed TO the man rather than BY him. The span keeps sign and amount
+// together everywhere a figure lands — table cell, card, or sentence.
+const cash = n => `<span class="amt">${(n || 0) < 0 ? '−' : '+'}$${plainAmt(n)}</span>`;
 const tone = n => ((n || 0) > 0 ? 'up' : (n || 0) < 0 ? 'down' : 'flat');
+// The same protection for money figures that arrive inside prose the engine
+// wrote ("… → TJ +$4"), where cash() never touched them. Run it on already
+// escaped text — it adds the only markup those lines carry.
+const nbMoney = escaped => escaped.replace(/([−+]\$[\d.,]+)/g, '<span class="amt">$1</span>');
 const cashCell = n => (Math.round((n || 0) * 100) === 0 ? '<td class="flat">—</td>' : `<td class="${tone(n)}">${cash(n)}</td>`);
 const ord = i => ['1st', '2nd', '3rd', '4th'][i] || `${i + 1}th`;
 // "John", "John & TJ", "John, Brian & TJ" — a shared award should read like one.
@@ -197,6 +205,7 @@ function styles() {
   .cd .big.lbl { font-family: var(--ui); letter-spacing: -0.01em; }
   .cd .meta { font-size: 11.5px; color: var(--dim); }
   .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+  .amt { white-space: nowrap; }
 
   .pill { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em;
           text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
@@ -266,13 +275,32 @@ function styles() {
     .cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media print {
+    /* Paper has no scrollbars. On screen a wide scorecard scrolls inside its
+       own box; on paper that box would CLIP it and the last holes would simply
+       be missing from the PDF — so overflow goes visible and the tables shrink
+       to fit the printable width of a Letter page (8.5in less 0.45in margins,
+       about 730px at 96dpi). */
+    @page { size: Letter; margin: 0.45in; }
     :root { --paper: #fff; }
+    html, body { background: #fff; }
     .wrap { max-width: none; padding: 0; }
     .crumbs, .noprint { display: none; }
     section.block { break-inside: avoid; border-color: #ccc; }
     .sheet { break-after: page; }
     .sheet:last-child { break-after: auto; }
+    .scroll { overflow: visible; }
+    table { font-size: 9.5px; }
+    th, td { padding: 2px 4px; }
+    table.card { font-size: 8.5px; }
+    table.card th, table.card td { padding: 1px 2px; min-width: 0; }
+    .mk { min-width: 1.35em; height: 1.35em; }
+    /* A table is a unit of the record — keep its head with its body, and never
+       leave one row stranded on the next sheet. */
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
     thead th { background: #0E2B20 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    td.seg, td.tot, tr.sub td, tr.lead td, tfoot td, .cd.win, .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
   }`;
 }
 
@@ -281,8 +309,15 @@ function styles() {
 function shell(page) {
   const up = '../'.repeat(page.depth || 0);      // to the book's root (recap/)
   const site = '../'.repeat((page.depth || 0) + 1); // to the site root (icons, app pages)
-  const crumbs = page.path === 'index.html' ? '' : `<nav class="crumbs">
+  // Every page has a printed twin under recap/pdf/, same path with a .pdf
+  // extension (`npm run recap:pdf`). The link is screen-only — on paper you are
+  // already holding it.
+  const pdf = `${up}pdf/${page.path.replace(/\.html$/, '.pdf')}`;
+  const crumbs = page.path === 'index.html'
+    ? `<nav class="crumbs noprint"><a href="${pdf}">Save this page as a PDF</a></nav>`
+    : `<nav class="crumbs noprint">
   <a href="${up}index.html">The 2026 Cup</a>${page.crumb ? `<span>·</span>${esc(page.crumb)}` : ''}
+  <a href="${pdf}" style="float:right">PDF</a>
 </nav>`;
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1258,7 +1293,7 @@ ${IDS.map(pid => `    ${cashCell(r.by[pid])}`).join('\n')}
   const pay = summary.settle.map(s => `<li>${esc(NAME(s.from))} → ${esc(NAME(s.to))} <b>${s.due > 0 ? `$${plainAmt(s.due)}` : 'settled from the pot'}</b>${s.credit ? ` <span class="note">($${plainAmt(s.amount)} owed, less $${plainAmt(s.credit)} already in the poker pot)</span>` : ''}</li>`).join('\n');
 
   const work = summary.rounds.map((r, i) => `<h3 style="margin-top:12px">${i + 1} · ${esc(r.course)}</h3>
-<ul class="bul">${r.work.map(l => `<li${l.startsWith('   ') ? ' style="list-style:none;margin-left:-8px"' : ''}>${esc(l.trim())}</li>`).join('')}</ul>`).join('\n');
+<ul class="bul">${r.work.map(l => `<li${l.startsWith('   ') ? ' style="list-style:none;margin-left:-8px"' : ''}>${nbMoney(esc(l.trim()))}</li>`).join('')}</ul>`).join('\n');
 
   return `<section class="block">
   <h2>The bankroll</h2>
@@ -1422,36 +1457,39 @@ function indexBody(pageList) {
     <span class="meta">${cash(live.money.total[r.player])} on the week</span>
   </div>`).join('\n');
 
+  // `t` and `d` are rendered as HTML so a tile can carry a money figure in its
+  // nowrap span — each caller below escapes its own text.
   const group = (heading, blurb, items) => `<section class="block">
   <h2>${esc(heading)}</h2>
   ${blurb ? `<p class="note" style="margin-bottom:8px">${blurb}</p>` : ''}
   <div class="dir">
-${items.map(it => `    <a class="tile" href="${it.href}"><span class="t">${esc(it.t)}</span><span class="d">${esc(it.d)}</span></a>`).join('\n')}
+${items.map(it => `    <a class="tile" href="${it.href}"><span class="t">${it.t}</span><span class="d">${it.d}</span></a>`).join('\n')}
   </div>
 </section>`;
 
   const bookItems = [
     { href: 'standings.html', t: 'Final standings', d: 'The board, the climb, and every point traced' },
-    { href: 'awards.html', t: 'Awards & titles', d: 'Season awards, every title won, The Rock' },
+    { href: 'awards.html', t: 'Awards &amp; titles', d: 'Season awards, every title won, The Rock' },
     { href: 'money.html', t: 'The money', d: 'Round by round, the off-course ledger, who paid whom' },
     { href: 'print.html', t: 'The whole book', d: 'Every page on one sheet — for printing or PDF' },
+    { href: 'pdf/print.pdf', t: 'The whole book as a PDF', d: 'All 25 pages, print-ready. Every page has its own PDF too' },
   ];
   const roundItems = ROUND_IDS.map(rid => {
     const t = titlesFor(rid).filter(x => x.winners.length);
     return {
       href: `rounds/${rid.toLowerCase()}.html`,
-      t: `${rid} · ${courseOf(rid).name}`,
-      d: `${DAY[rid]} — ${t.length ? `${t[0].title} to ${t[0].winners.map(NAME).join(' & ')}` : 'all square'}`,
+      t: esc(`${rid} · ${courseOf(rid).name}`),
+      d: esc(`${DAY[rid]} — ${t.length ? `${t[0].title} to ${listOf(t[0].winners.map(NAME))}` : 'all square'}`),
     };
   });
   const matchItems = MATCHES.map(m => ({
     href: matchPath(m),
-    t: m.title,
-    d: `${m.roundId} — ${m.segs.overall.winner === 'halve' ? 'halved' : `${m.segs.overall.winner === 'A' ? m.sides[0].label : m.sides[1].label} ${m.segs.overall.label}`}`,
+    t: esc(m.title),
+    d: esc(`${m.roundId} — ${m.segs.overall.winner === 'halve' ? 'halved' : `${m.segs.overall.winner === 'A' ? m.sides[0].label : m.sides[1].label} ${m.segs.overall.label}`}`),
   }));
   const playerItems = board.map(r => ({
     href: `players/${r.player}.html`,
-    t: r.name,
+    t: esc(r.name),
     d: `${ord(r.rank - 1)} · ${pts(r.points)} pts · ${cash(live.money.total[r.player])}`,
   }));
 
