@@ -73,6 +73,35 @@ The flow:
 Your login is cached in `~/.amazon-music-uploader` (a normal Chromium
 profile owned by you), so subsequent runs skip the login step.
 
+## Windows without admin rights
+
+Every step has a per-user (no-admin) path:
+
+1. **Python** — install from the Microsoft Store ("Python 3.12", publisher
+   Python Software Foundation), or run the python.org installer and take the
+   default "Install Now" (per-user) — just make sure "Add python.exe to
+   PATH" is checked and do **not** pick any "all users" option.
+2. **No Git needed** — on github.com use Code → **Download ZIP**, then
+   right-click → Extract All into your Documents folder.
+3. **No Chromium download needed** — run the script with `--channel msedge`
+   and it drives the Microsoft Edge that's already on every Windows PC.
+4. Everything the script writes lives in your user profile
+   (`%USERPROFILE%\.amazon-music-uploader` and the automation folder itself).
+
+In PowerShell (regular, not "as administrator"):
+
+```powershell
+cd "$env:USERPROFILE\Documents\playpal-main\crystal-springs-trip\automation"
+python -m pip install -r requirements.txt
+python amazon_music_uploader.py --dry-run --channel msedge
+python amazon_music_uploader.py --playlists "Trip Anthem" --channel msedge
+python amazon_music_uploader.py --channel msedge
+```
+
+Tip: if typing `python` opens the Microsoft Store, that's Windows telling
+you Python isn't installed yet — installing it from that very Store page
+works fine without admin.
+
 ## If Amazon changes their web player
 
 All DOM lookups go through the `SELECTORS` dict at the top of

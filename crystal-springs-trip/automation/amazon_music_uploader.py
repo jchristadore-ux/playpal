@@ -24,6 +24,9 @@ Usage:
   python amazon_music_uploader.py --playlists "Minerals,Trip Anthem"
   python amazon_music_uploader.py --dry-run             # no clicks, just plan
   python amazon_music_uploader.py --delay 3             # slower pacing
+  python amazon_music_uploader.py --channel msedge      # use installed Edge
+                                                        # (no Chromium download
+                                                        # or admin rights needed)
 
 The run is RESUMABLE: progress is checkpointed to amazon_progress.json
 after every song, so you can Ctrl-C and re-run any time. Results land in
@@ -275,6 +278,10 @@ def main():
                     help="print the plan without opening a browser")
     ap.add_argument("--headless", action="store_true",
                     help="headless mode (only works once already logged in)")
+    ap.add_argument("--channel", choices=["msedge", "chrome"],
+                    help="drive an already-installed browser (Edge/Chrome) "
+                         "instead of Playwright's downloaded Chromium — "
+                         "handy on locked-down machines without admin rights")
     args = ap.parse_args()
 
     if not PLAYLISTS_JSON.exists():
@@ -298,12 +305,27 @@ def main():
     progress = load_progress()
     results = []
 
+    launch_kwargs = dict(
+        user_data_dir=str(PROFILE_DIR),
+        headless=args.headless,
+        viewport={"width": 1440, "height": 900},
+    )
+    if args.channel:
+        launch_kwargs["channel"] = args.channel
+
     with sync_playwright() as pw:
-        ctx = pw.chromium.launch_persistent_context(
-            user_data_dir=str(PROFILE_DIR),
-            headless=args.headless,
-            viewport={"width": 1440, "height": 900},
-        )
+        try:
+            ctx = pw.chromium.launch_persistent_context(**launch_kwargs)
+        except Exception as e:
+            if "Executable doesn't exist" in str(e) and not args.channel:
+                sys.exit(
+                    "Playwright's Chromium isn't installed. Either run\n"
+                    "  python -m playwright install chromium\n"
+                    "or skip the download entirely and use your installed "
+                    "browser:\n"
+                    "  python amazon_music_uploader.py --channel msedge"
+                )
+            raise
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
         page.goto(AMAZON_MUSIC_URL, wait_until="domcontentloaded")
 
