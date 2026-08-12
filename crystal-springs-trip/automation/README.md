@@ -1,6 +1,6 @@
 # Amazon Music Automation
 
-How to get all nine playlists into Amazon Music with as little manual
+How to get all ten playlists into Amazon Music with as little manual
 work as possible, while respecting Amazon's authentication and terms of use.
 
 ## Method comparison (in the preferred order)
@@ -31,7 +31,7 @@ Chromium window using **your own login session**:
 ### 3. Selenium — works, but strictly worse here
 Same browser-automation approach, but Playwright has auto-waiting, better
 selector ergonomics, and persistent browser profiles built in, which is
-exactly what a 553-song batch job needs. If you ever need Selenium (e.g.
+exactly what a 620-song batch job needs. If you ever need Selenium (e.g.
 corporate policy), the flow in `amazon_music_uploader.py` ports 1:1.
 
 ### 4. CSV import services — zero-code fallback
@@ -39,7 +39,7 @@ corporate policy), the flow in `amazon_music_uploader.py` ports 1:1.
 both import CSV → Amazon Music playlists. The files in `../output/import/`
 are already formatted for them (`title,artist`). Free tiers limit playlist
 size/count (Soundiiz free caps imports at 200 tracks/playlist and pushes you
-to one-at-a-time), so doing all ~553 songs likely needs one month of their
+to one-at-a-time), so doing all ~620 songs likely needs one month of their
 premium tier — but it's the most "it just works" option if the script's
 selectors ever drift.
 
