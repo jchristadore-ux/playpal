@@ -12,11 +12,47 @@ function scoreName(gross, par) {
   return               { label:`+${d}`,   short:`+${d}`,color:'#8B0000' };
 }
 
+// Pop flags carry a stroke COUNT per hole. `true` still means one stroke so
+// rounds saved before multi-stroke pops keep scoring exactly as they did, and a
+// negative value hands a stroke back (plus handicaps).
+function popStrokesAt(popFlags, playerId, holeIdx) {
+  const v = popFlags?.[playerId]?.[holeIdx];
+  if (v === true) return 1;
+  if (v === false || v === null || v === undefined) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function getAdjustedHoleScore(scores, popFlags, playerId, holeIdx) {
   const gross = scores[playerId]?.[holeIdx];
   if (!gross) return 0;
-  const pop = !!(popFlags?.[playerId]?.[holeIdx]);
-  return Math.max(1, gross - (pop ? 1 : 0));
+  return Math.max(1, gross - popStrokesAt(popFlags, playerId, holeIdx));
+}
+
+// Strokes each player gets on each hole, off the low ball, from their course
+// handicap (so slope, rating and the chosen tee all count). This is what the
+// app seeds pops with at the start of a round.
+//   opts: { allowancePct = 100, relative = true, overrides }
+function autoPopStrokes(players, course, teeId, opts) {
+  const o = opts || {};
+  const holes = course?.holes || [];
+  if (!players?.length || !holes.length) return {};
+  const HS = (typeof window !== 'undefined' && window.HandicapService) || null;
+  if (!HS) {
+    const low = Math.min(...players.map(p => p.handicap || 0));
+    return Object.fromEntries(players.map(p =>
+      [p.id, holes.map(h => getHoleStrokes(Math.max(0, (p.handicap || 0) - low), h.hdcp, holes.length))]));
+  }
+  const tee = (typeof window !== 'undefined' && window.CourseService)
+    ? window.CourseService.getTee(course, teeId)
+    : { rating: course.rating, slope: course.slope };
+  const hcp = HS.playingHandicaps(players, holes, tee, {
+    allowancePct: o.allowancePct !== undefined ? o.allowancePct : 100,
+    relative:     o.relative     !== undefined ? o.relative     : true,
+    overrides:    o.overrides || {},
+  });
+  return Object.fromEntries(players.map(p =>
+    [p.id, (hcp[p.id] && hcp[p.id].strokes) || holes.map(() => 0)]));
 }
 
 function calcStablefordPoints(gross, par) {
@@ -75,6 +111,10 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
   const others   = players.map(p => p.id).filter(id => !wolfTeam.includes(id));
   const deltas   = Object.fromEntries(players.map(p => [p.id, 0]));
 
+  // Wolf needs a field to play against: partnered play needs someone on the
+  // other side, lone wolf needs two. Anything less is a push, not a walkover.
+  if (!others.length) return { wolfWins:false, otherWins:false, tied:true, deltas };
+
   if (isLone) {
     const wolfStrokes = strokes[wolfId];
     if (wolfStrokes === null) return { wolfWins:false, otherWins:false, tied:true, deltas };
@@ -106,7 +146,8 @@ function resolveWolfHole(scores, holeIdx, wolfId, partnerId, isLone, players) {
 
 function calcWolfStandings(scores, wolfData, players, course) {
   const pts = Object.fromEntries(players.map(p => [p.id, 0]));
-  for (let i = 0; i < 18; i++) {
+  const holeCount = course?.holes?.length || 18;
+  for (let i = 0; i < holeCount; i++) {
     const wd = wolfData?.[i];
     if (!wd?.confirmed) continue;
     const { deltas } = resolveWolfHole(scores, i, wd.wolfId, wd.partnerId, !!wd.lone, players);
@@ -311,8 +352,22 @@ function nassauSegmentStatus(scores, players, course, holesRange, currentHole, p
   return `${p2.name.split(' ')[0]} +${p2Holes - p1Holes}`;
 }
 
-// calcNassauPayouts: three fixed segments, no presses
-// Front 9: baseStake, Back 9: baseStake, Overall: baseStake * 2
+// The three Nassau bets for an 18-hole layout — front nine, back nine, and the
+// overall (traditionally double). Nine-hole layouts play a single bet.
+function nassauSegments(course, baseStake) {
+  const holeCount = course?.holes?.length || 18;
+  if (holeCount < 18) {
+    return [{ key:'Match', holes: Array.from({length:holeCount}, (_, i) => i), stake: baseStake }];
+  }
+  const half = Math.floor(holeCount / 2);
+  return [
+    { key:'Front', holes: Array.from({length:half},              (_, i) => i),        stake: baseStake     },
+    { key:'Back',  holes: Array.from({length:holeCount - half},  (_, i) => i + half), stake: baseStake     },
+    { key:'Total', holes: Array.from({length:holeCount},         (_, i) => i),        stake: baseStake * 2 },
+  ];
+}
+
+// calcNassauPayouts: fixed segments, no presses
 function calcNassauPayouts(scores, players, course, baseStake, _ignoredPresses, popFlags, nassauConfig) {
   const payouts = Object.fromEntries(players.map(p => [p.id, 0]));
 
@@ -320,11 +375,9 @@ function calcNassauPayouts(scores, players, course, baseStake, _ignoredPresses, 
     ? _buildNassauPopFlags(nassauConfig)
     : (popFlags || {});
 
-  const segments = [
-    { holes: Array.from({length:9},  (_, i) => i),    stake: baseStake     },
-    { holes: Array.from({length:9},  (_, i) => i + 9), stake: baseStake    },
-    { holes: Array.from({length:18}, (_, i) => i),    stake: baseStake * 2 },
-  ];
+  // A nine-hole layout is one bet, not three: front/back/overall would settle
+  // the same nine holes three times over.
+  const segments = nassauSegments(course, baseStake);
 
   // 2v2 best-ball path: each segment moves the full stake per side,
   // split evenly across the two team members (zero-sum).
@@ -416,8 +469,9 @@ function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
 // ─── SKINS (pop-aware) ───────────────────────────────────────────────────────
 function calcSkins(scores, players, course, stakes, popFlags) {
   const skins = Object.fromEntries(players.map(p => [p.id, 0]));
+  const holeCount = course?.holes?.length || 18;
   let carryover = 0;
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < holeCount; i++) {
     const raw = players.map(p => {
       const g = getAdjustedHoleScore(scores, popFlags, p.id, i);
       return g ? { id: p.id, strokes: g } : null;
@@ -444,8 +498,10 @@ function calcSkins(scores, players, course, stakes, popFlags) {
 
 function calcBBBStandings(bbbData, players) {
   const pts = Object.fromEntries(players.map(p => [p.id, { bingo:0, bango:0, bongo:0, total:0 }]));
-  for (let i = 0; i < 18; i++) {
-    const hole = bbbData?.[i];
+  // Keyed by hole index — walk the entries that exist so 9- and 18-hole
+  // layouts both count every awarded hole and nothing else.
+  for (const key of Object.keys(bbbData || {})) {
+    const hole = bbbData[key];
     if (!hole?.confirmed) continue;
     ['bingo','bango','bongo'].forEach(cat => {
       const winner = hole[cat];
@@ -476,8 +532,8 @@ function calcBBBPayouts(bbbStandings, players, stake) {
 
 function calcTeeBallStandings(teeBallData, players) {
   const pts = Object.fromEntries(players.map(p => [p.id, 0]));
-  for (let i = 0; i < 18; i++) {
-    const hole = teeBallData?.[i];
+  for (const key of Object.keys(teeBallData || {})) {
+    const hole = teeBallData[key];
     if (!hole?.confirmed || !hole.winner) continue;
     if (pts[hole.winner] !== undefined) pts[hole.winner]++;
   }
@@ -511,10 +567,12 @@ function totalVsPar(scores, pid, holes) {
 // Order holes are played in. Starting on the 10th tee plays 10→18 then 1→9.
 // Returned values are actual hole indices (0–17); position in the array is the
 // play-order position. Data arrays stay indexed by actual hole index throughout.
-function getPlayOrder(startingTee) {
-  return startingTee === 10
-    ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-    : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+function getPlayOrder(startingTee, holeCount) {
+  const n = holeCount || 18;
+  if (startingTee === 10 && n === 18) {
+    return [9, 10, 11, 12, 13, 14, 15, 16, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+  }
+  return Array.from({ length: n }, (_, i) => i);
 }
 
 function getMarkeyAdjustedScore(scores, markeyPopStrokes, playerId, holeIdx) {
@@ -526,12 +584,26 @@ function getMarkeyAdjustedScore(scores, markeyPopStrokes, playerId, holeIdx) {
 
 // Returns { [playerId]: number[18] } — stroke counts per hole for each player,
 // based on each player's handicap relative to the lowest in the foursome.
-function calcMarkeyMatchPops(players, course) {
+function calcMarkeyMatchPops(players, course, teeId) {
+  const holes = course?.holes || [];
+  if (!players.length || !holes.length) return {};
+  const HS = (typeof window !== 'undefined' && window.HandicapService) || null;
+  if (HS) {
+    // Course handicap off the low ball, so slope/rating and the chosen tee count
+    // and a 20-handicap gets a second stroke on the hardest holes.
+    const tee = (typeof window !== 'undefined' && window.CourseService)
+      ? window.CourseService.getTee(course, teeId)
+      : { rating: course.rating, slope: course.slope };
+    const hcp = HS.playingHandicaps(players, holes, tee, { allowancePct: 100, relative: true });
+    const out = {};
+    players.forEach(p => { out[p.id] = (hcp[p.id] && hcp[p.id].strokes) || holes.map(() => 0); });
+    return out;
+  }
   const lowestHdcp = Math.min(...players.map(p => p.handicap || 0));
   const result = {};
   players.forEach(p => {
     const effectiveHdcp = Math.max(0, (p.handicap || 0) - lowestHdcp);
-    result[p.id] = course.holes.map(h => getHoleStrokes(effectiveHdcp, h.hdcp));
+    result[p.id] = holes.map(h => getHoleStrokes(effectiveHdcp, h.hdcp, holes.length));
   });
   return result;
 }
@@ -540,16 +612,21 @@ function calcMarkeyMatchPops(players, course) {
 // automatically when a team goes 2 down. A fresh press also begins at the turn
 // (the 10th hole played) while the overall match score continues across all 18.
 // Holes are walked in play order so the press timing respects the starting tee.
-function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
+function calcMarkeyMatchState(scores, markeyPopStrokes, players, format, holeCount) {
   const cfg = format.markeyMatchConfig;
   if (!cfg) return [];
   const { team1, team2 } = cfg;
   const pops = markeyPopStrokes || cfg.markeyPopStrokes || {};
 
+  // Sized off the layout being played: a nine-hole round has no turn press.
+  const n = holeCount || cfg.holeCount || format.holeCount
+    || (pops && Object.keys(pops).length ? (pops[Object.keys(pops)[0]] || []).length : 0) || 18;
+  const turnSeq = Math.floor(n / 2);
+
   // Play order: starting on the 10th tee plays holes 10→18 then 1→9.
   const startingTee = (cfg.startingTee || format.startingTee) === 10 ? 10 : 1;
-  const playOrder = getPlayOrder(startingTee);
-  const lastHole = playOrder[17]; // actual hole index played last in the round
+  const playOrder = getPlayOrder(startingTee, n);
+  const lastHole = playOrder[n - 1]; // actual hole index played last in the round
 
   const allMatches = [];
   const activeMatches = [];
@@ -562,7 +639,7 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
     startSeq,
     endHole: lastHole,
     isTurnPress: !!isTurnPress,
-    holeResults: Array(18).fill(null),
+    holeResults: Array(n).fill(null),
     team1Holes: 0,
     team2Holes: 0,
     status: 'active',
@@ -574,7 +651,7 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
 
   let turnPressSpawned = false;
 
-  for (let seq = 0; seq < 18; seq++) {
+  for (let seq = 0; seq < n; seq++) {
     const holeIdx = playOrder[seq];
 
     // Best net score per team (lower is better; 0 = unscored)
@@ -585,8 +662,8 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
 
     // Turn press: once the back nine of the round (10th hole played) begins, a fresh
     // even match kicks off. The overall match (Match 1) keeps running underneath it.
-    if (!turnPressSpawned && seq >= 9) {
-      const turnMatch = makeMatch(9, true);
+    if (!turnPressSpawned && n >= 18 && seq >= turnSeq) {
+      const turnMatch = makeMatch(turnSeq, true);
       allMatches.push(turnMatch);
       activeMatches.push(turnMatch);
       turnPressSpawned = true;
@@ -606,7 +683,7 @@ function calcMarkeyMatchState(scores, markeyPopStrokes, players, format) {
 
       // Press check: if a team just went 2 down, spawn a new match next hole
       const deficit = match.team2Holes - match.team1Holes;
-      if ((deficit === 2 || deficit === -2) && seq < 17) {
+      if ((deficit === 2 || deficit === -2) && seq < n - 1) {
         // Only spawn once per deficit of exactly 2 (check it wasn't already 2 before this hole)
         const prevT1 = match.team1Holes - (holeResult === 'team1' ? 1 : 0);
         const prevT2 = match.team2Holes - (holeResult === 'team2' ? 1 : 0);
@@ -651,12 +728,15 @@ function calcMarkeyMatchPayouts(matchStates, stake, team1, team2) {
 // ─── calcAllPayouts ───────────────────────────────────────────────────────────
 // Handles both single nassauConfig (legacy) and nassauMatches[] (new multi-match).
 // nassauConfig param is kept for backward compat but ignored when nassauMatches[] is present on the format object.
-function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPresses, ptmHolderId, popFlags, nassauConfig, bbbData, teeBallData) {
+// opts: { games, startingTee, teeId } — MatchEngine games settle alongside the
+// built-in money games so a round's total is every wager, not just some of them.
+function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPresses, ptmHolderId, popFlags, nassauConfig, bbbData, teeBallData, opts) {
   popFlags   = popFlags   || {};
   bbbData    = bbbData    || {};
   teeBallData = teeBallData || {};
+  const o = opts || {};
   const totals = Object.fromEntries(players.map(p => [p.id, 0]));
-  formats.forEach(f => {
+  (formats || []).forEach(f => {
     let pay = {};
     if (f.type === 'wolf') {
       const pts = calcWolfStandings(scores, wolfData, players, course);
@@ -684,7 +764,7 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
     } else if (f.type === 'markeymatch') {
       const cfg = f.markeyMatchConfig;
       if (cfg && cfg.team1 && cfg.team2) {
-        const matchStates = calcMarkeyMatchState(scores, cfg.markeyPopStrokes, players, f);
+        const matchStates = calcMarkeyMatchState(scores, cfg.markeyPopStrokes, players, f, course?.holes?.length);
         pay = calcMarkeyMatchPayouts(matchStates, cfg.stake || f.stakes || 0, cfg.team1, cfg.team2);
       }
     } else if (f.type === 'stableford') {
@@ -707,7 +787,74 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
     }
     players.forEach(p => { totals[p.id] += (pay[p.id] || 0); });
   });
+
+  // MatchEngine games (stroke play, match play, scrambles, quota, …) settle
+  // through the engine's own per-format rules.
+  const ME = (typeof window !== 'undefined' && window.MatchEngine) || null;
+  (o.games || []).forEach(g => {
+    if (!ME || !g) return;
+    if (!(Number(g.config && g.config.stake) > 0)) return;
+    let pay = {};
+    try {
+      pay = ME.payouts(g, {
+        course, players, scores,
+        startingTee: o.startingTee,
+        gameState: { wolf: wolfData || {}, bbb: bbbData },
+      });
+    } catch (e) { pay = {}; }
+    players.forEach(p => { totals[p.id] += (pay[p.id] || 0); });
+  });
+
   return totals;
+}
+
+// Money as people expect to read it: whole dollars stay whole, anything with
+// cents shows them. Never round a half-dollar away — that is the difference
+// between the figure on screen and the figure in the Venmo request.
+function fmtMoney(amount, opts) {
+  const o = opts || {};
+  const v = Math.round((Number(amount) || 0) * 100) / 100;
+  const abs = Math.abs(v);
+  const body = '$' + (Number.isInteger(abs) ? String(abs) : abs.toFixed(2));
+  if (!o.signed) return (v < 0 ? '−' : '') + body;
+  if (v > 0) return '+' + body;
+  if (v < 0) return '−' + body;
+  return o.zero || '—';
+}
+
+// Rounds a money map to whole cents while keeping it zero-sum: the largest
+// creditor absorbs the rounding residue so a settlement never invents a cent.
+function roundMoneyMap(map) {
+  const ids = Object.keys(map || {});
+  if (!ids.length) return {};
+  const out = {};
+  ids.forEach(id => { out[id] = Math.round((map[id] || 0) * 100) / 100; });
+  const residue = Math.round(ids.reduce((a, id) => a + out[id], 0) * 100) / 100;
+  if (residue !== 0) {
+    const anchor = ids.reduce((best, id) => (out[id] > out[best] ? id : best), ids[0]);
+    out[anchor] = Math.round((out[anchor] - residue) * 100) / 100;
+  }
+  return out;
+}
+
+// One call that settles an entire round — every money game and every engine
+// game — so the summary, the trip dashboard and the email can't disagree.
+//   round: { players, course, formats, games, startingTee, teeId }
+//   data:  { scores, wolfData, putts, popFlags, bbbData, teeBallData }
+function calcRoundPayouts(round, data) {
+  const d = data || {};
+  const players = round.players || [];
+  const course  = round.course;
+  const scores  = d.scores || {};
+  const ptm = (round.formats || []).some(f => f.type === 'passmoney') && players.length
+    ? computePTMState(scores, d.putts || {}, players, course, players[0].id)
+    : { holderId: null };
+  const raw = calcAllPayouts(
+    scores, d.wolfData || {}, players, course, round.formats || [], [],
+    ptm.holderId, d.popFlags || {}, null, d.bbbData || {}, d.teeBallData || {},
+    { games: round.games || [], startingTee: round.startingTee, teeId: round.teeId }
+  );
+  return roundMoneyMap(raw);
 }
 
 // ─── DEVTOOLS TEST SUITE ─────────────────────────────────────────────────────
@@ -807,6 +954,8 @@ if (typeof window !== 'undefined') {
     checkPTMPass, checkPTMWin18, ptmNextPlayer, computePTMState, calcPTMPayouts,
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
+    nassauSegments, calcRoundPayouts, roundMoneyMap, fmtMoney,
+    popStrokesAt, autoPopStrokes,
     calcBBBStandings, calcBBBPayouts, calcTeeBallStandings, calcTeeBallPayouts,
     getPlayOrder, getMarkeyAdjustedScore, calcMarkeyMatchPops, calcMarkeyMatchState, calcMarkeyMatchPayouts,
     runPlayPalTests,

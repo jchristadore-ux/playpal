@@ -21,8 +21,17 @@
 //   {
 //     kind: 'leaderboard' | 'match' | 'segments',
 //     entries: [{ id, label, playerIds, color, total, totalLabel, detail, perHole }],
-//     leaderIds, thru, complete, status, winner: { ids, label, text } | null
+//     leaderIds, thru, complete, status, winner: { ids, label, text } | null,
+//     segments: [{ key, up, complete }]        // 'segments' kind only
 //   }
+//
+// Money: every format also declares how a stake settles —
+//   settlement: 'pot'    losing players ante the stake, winners split the pot
+//               'unit'   per skin/point: pairwise difference × stake
+//               'match'  the losing side pays the stake per player
+//               'nassau' each decided segment pays (overall counts double)
+// MatchEngine.payouts(game, raw) turns a game + its config.stake into a
+// zero-sum { playerId: amount } map. A stake of 0 means "no money on it".
 //
 // Depends on HandicapService + CourseService (loaded first).
 
@@ -64,6 +73,8 @@ const MatchEngine = (function () {
         defaultAllowance: r.defaultAllowance !== undefined ? r.defaultAllowance : 100,
         teamEntry: !!r.teamEntry,
         needsInput: r.needsInput || null,
+        settlement: r.settlement || 'pot',
+        stakeHint: r.stakeHint || null,
         aliasOf: d.aliasOf || null,
       };
     });
@@ -407,6 +418,101 @@ const MatchEngine = (function () {
     };
   }
 
+  // ── Money ───────────────────────────────────────────────────────────────────
+  // Every settlement below is zero-sum by construction: what one player is
+  // credited, the others are debited, so a round always nets to $0.
+
+  // Expands entries (players or teams) into a flat { playerId: entryTotal } map
+  // plus the participating player ids, so team results settle per player.
+  function _entryPlayers(result) {
+    const ids = [];
+    const totalFor = {};
+    (result.entries || []).forEach(e => {
+      (e.playerIds || []).forEach(pid => {
+        if (!ids.includes(pid)) ids.push(pid);
+        totalFor[pid] = e.total;
+      });
+    });
+    return { ids, totalFor };
+  }
+
+  // Losing players each ante `stake`; the pot is split among the winners.
+  function _potPayouts(result, stake, pay) {
+    const { ids } = _entryPlayers(result);
+    if (!result.complete || !result.winner || ids.length < 2) return pay;
+    const winnerIds = [];
+    (result.entries || []).forEach(e => {
+      if ((result.winner.ids || []).includes(e.id)) (e.playerIds || []).forEach(pid => winnerIds.push(pid));
+    });
+    const losers = ids.filter(id => !winnerIds.includes(id));
+    if (!winnerIds.length || !losers.length) return pay;   // everyone tied → no exchange
+    losers.forEach(id => { pay[id] -= stake; });
+    const pot = stake * losers.length;
+    winnerIds.forEach(id => { pay[id] += pot / winnerIds.length; });
+    return pay;
+  }
+
+  // Per skin / per point: each player settles the difference with every other.
+  function _unitPayouts(result, stake, pay) {
+    const { ids, totalFor } = _entryPlayers(result);
+    if (ids.length < 2) return pay;
+    ids.forEach(a => {
+      ids.forEach(b => {
+        if (a === b) return;
+        pay[a] += stake * ((totalFor[a] || 0) - (totalFor[b] || 0));
+      });
+    });
+    return pay;
+  }
+
+  // Head-to-head: every player on the losing side pays the stake, and the
+  // winning side's players split what the losers put up.
+  function _matchPayouts(result, stake, pay) {
+    if (!result.complete || !result.winner) return pay;
+    if ((result.winner.ids || []).length !== 1) return pay;   // halved
+    return _potPayouts(result, stake, pay);
+  }
+
+  // Nassau: front nine, back nine and overall settle independently. The overall
+  // bet is worth double. Only segments that are actually finished pay out.
+  function _nassauPayouts(result, stake, pay) {
+    const sideIds = result.sideIds || (result.entries || []).map(e => e.id);
+    if (sideIds.length < 2) return pay;
+    const membersOf = (sideId) => {
+      const e = (result.entries || []).find(x => x.id === sideId);
+      return e ? (e.playerIds || []) : [];
+    };
+    const sides = [membersOf(sideIds[0]), membersOf(sideIds[1])];
+    if (!sides[0].length || !sides[1].length) return pay;
+    (result.segments || []).forEach(seg => {
+      if (!seg.complete || !seg.up) return;
+      const segStake = stake * (seg.weight || 1);
+      const winners = seg.up > 0 ? sides[0] : sides[1];
+      const losers  = seg.up > 0 ? sides[1] : sides[0];
+      losers.forEach(id => { pay[id] -= segStake; });
+      const pot = segStake * losers.length;
+      winners.forEach(id => { pay[id] += pot / winners.length; });
+    });
+    return pay;
+  }
+
+  // payouts(game, raw) → { playerId: amount }. `raw` is the same context object
+  // compute() takes. Returns zeros when the game carries no stake.
+  function payouts(game, raw, precomputed) {
+    const def = resolve(game.formatId);
+    const cfg = game.config || {};
+    const stake = Number(cfg.stake) || 0;
+    const result = precomputed || (def ? compute(game, raw) : null);
+    const ids = result ? _entryPlayers(result).ids : [];
+    const pay = Object.fromEntries(ids.map(id => [id, 0]));
+    if (!def || !result || stake <= 0) return pay;
+    const mode = def.settlement || 'pot';
+    if (mode === 'unit')   return _unitPayouts(result, stake, pay);
+    if (mode === 'match')  return _matchPayouts(result, stake, pay);
+    if (mode === 'nassau') return _nassauPayouts(result, stake, pay);
+    return _potPayouts(result, stake, pay);
+  }
+
   // Builds a sensible starting config for a format: serpentine team assignment
   // by handicap so sides start balanced.
   function defaultConfig(formatId, players) {
@@ -416,6 +522,7 @@ const MatchEngine = (function () {
     if (def.basis === 'choice') cfg.scoringBasis = 'net';
     if (def.defaultAllowance !== undefined) cfg.allowancePct = def.defaultAllowance;
     if (def.defaultRelative) cfg.relative = true;
+    cfg.stake = 0;                       // no money on a game until a stake is set
     if (def.teams) {
       const count = def.teams.count || 2;
       const sorted = players.slice().sort((a, b) => (a.handicap || 0) - (b.handicap || 0));
@@ -469,6 +576,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'strokePlay', label: 'Stroke Play', icon: '⛳',
+    settlement: 'pot', stakeHint: 'Low gross wins the pot — every other player antes the stake.',
     desc: 'Classic medal play — lowest gross total wins.',
     category: 'individual', basis: 'gross', players: { min: 1, max: 8 },
     compute(ctx) {
@@ -484,6 +592,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'individualNet', label: 'Individual Net', icon: '🧮',
+    settlement: 'pot', stakeHint: 'Low net wins the pot — every other player antes the stake.',
     desc: 'Stroke play with full playing handicaps — lowest net total wins.',
     category: 'individual', basis: 'net', defaultAllowance: 100, players: { min: 1, max: 8 },
     compute(ctx) {
@@ -493,6 +602,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'stableford', label: 'Stableford', icon: '⭐',
+    settlement: 'pot', stakeHint: 'Most points wins the pot — every other player antes the stake.',
     desc: 'Points per hole vs par (net): birdie 3, par 2, bogey 1 — highest total wins.',
     category: 'points', basis: 'choice', defaultAllowance: 95, players: { min: 1, max: 8 },
     compute(ctx) {
@@ -504,6 +614,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'quota', label: 'Quota', icon: '📈',
+    settlement: 'pot', stakeHint: 'Best vs quota wins the pot — every other player antes the stake.',
     desc: 'Beat your points quota (36 − playing handicap). Bogey 1 · Par 2 · Birdie 4 · Eagle 8.',
     category: 'points', basis: 'gross', defaultAllowance: 100, players: { min: 1, max: 8 },
     compute(ctx) {
@@ -518,6 +629,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'matchPlay', label: 'Match Play', icon: '⚔️',
+    settlement: 'match', stakeHint: 'The losing side pays the stake per player.',
     desc: 'Hole-by-hole duel — most holes won takes the match. Singles or 2v2.',
     category: 'match', basis: 'choice', defaultAllowance: 100, defaultRelative: true,
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
@@ -530,6 +642,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'fourBall', label: 'Four Ball', icon: '👥',
+    settlement: 'match', stakeHint: 'The losing side pays the stake per player.',
     desc: '2v2 match play — each side counts its better ball on every hole.',
     category: 'match', basis: 'net', defaultAllowance: 90, defaultRelative: true,
     players: { min: 4, max: 4 }, teams: { count: 2, size: [2, 2] },
@@ -542,6 +655,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'nassau', label: 'Nassau', icon: '💰',
+    settlement: 'nassau', stakeHint: 'Front 9, back 9 and overall each pay — overall counts double.',
     desc: 'Three matches in one: front nine, back nine, and overall.',
     category: 'match', basis: 'choice', defaultAllowance: 100, defaultRelative: true,
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
@@ -560,6 +674,7 @@ const MatchEngine = (function () {
 
       const segWins = [0, 0];
       const segDetail = [[], []];
+      const segments = [];
       let thru = 0;
       segs.forEach(seg => {
         let up = 0, played = 0;
@@ -576,6 +691,8 @@ const MatchEngine = (function () {
         segDetail[0].push(seg.key + ' ' + tag);
         segDetail[1].push(seg.key + ' ' + (up === 0 ? 'AS' : (up < 0 ? '+' + (-up) : String(-up))));
         if (segDone && up !== 0) segWins[up > 0 ? 0 : 1]++;
+        // The overall bet is traditionally worth double the two nine bets.
+        segments.push({ key: seg.key, up, played, complete: segDone, weight: seg.key === '18' ? 2 : 1 });
       });
 
       const complete = segs.every(seg => seg.holes.every(i => sideScore(sides[0], i) > 0 && sideScore(sides[1], i) > 0));
@@ -604,12 +721,13 @@ const MatchEngine = (function () {
         status = winner.text;
       }
       const ordered = segWins[1] > segWins[0] ? [entries[1], entries[0]] : entries;
-      return { kind: 'segments', entries: ordered, leaderIds, thru, complete, status, winner };
+      return { kind: 'segments', entries: ordered, sideIds: sides.map(s => s.id), segments, leaderIds, thru, complete, status, winner };
     },
   });
 
   register({
     id: 'skins', label: 'Skins', icon: '🎴',
+    settlement: 'unit', stakeHint: 'Per skin: you collect the stake from each player you out-skin.',
     desc: 'Win a hole outright to take the skin — ties carry the pot to the next hole.',
     category: 'points', basis: 'choice', defaultAllowance: 100, defaultRelative: true,
     players: { min: 2, max: 8 },
@@ -651,6 +769,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'sixes', label: 'Sixes', icon: '🔁',
+    settlement: 'unit', stakeHint: 'Per point: settled against every other player.',
     desc: 'Foursome round robin — partners rotate every six holes; win holes with your side\'s better ball.',
     category: 'match', basis: 'choice', defaultAllowance: 100, defaultRelative: true,
     players: { min: 4, max: 4 },
@@ -696,6 +815,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'bestBall', label: 'Best Ball', icon: '🏆',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Teams count their best ball (or best two) each hole — lowest team total wins.',
     category: 'team', basis: 'choice', defaultAllowance: 85,
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
@@ -714,6 +834,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'shamble', label: 'Shamble', icon: '🌿',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Pick the best drive, then everyone plays their own ball in — best ball counts.',
     category: 'team', basis: 'choice', defaultAllowance: 80,
     players: { min: 2, max: 8 }, teams: { count: 2, size: [2, 4] },
@@ -726,6 +847,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'teamGross', label: 'Team Gross', icon: '➕',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Add up every team member\'s gross score — lowest combined total wins.',
     category: 'team', basis: 'gross',
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
@@ -737,6 +859,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'teamNet', label: 'Team Net', icon: '🧮',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Add up every team member\'s net score — lowest combined total wins.',
     category: 'team', basis: 'net', defaultAllowance: 100,
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
@@ -761,6 +884,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'scramble', label: 'Scramble', icon: '🤝',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Everyone tees off, the team plays the best shot until holed. Enter the team score on any player\'s card.',
     category: 'team', basis: 'choice',
     players: { min: 2, max: 8 }, teams: { count: 2, size: [2, 4] },
@@ -770,6 +894,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'scramble2', label: '2-Person Scramble', icon: '🤜🤛',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Two-player scramble — best shot every time. Handicaps blend 35% low + 15% high.',
     category: 'team', basis: 'choice',
     players: { min: 4, max: 8 }, teams: { count: 2, size: [2, 2] },
@@ -779,6 +904,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'alternateShot', label: 'Alternate Shot', icon: '🔀',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Partners play one ball, alternating strokes. Team handicap is 50% of the pair\'s combined.',
     category: 'team', basis: 'choice',
     players: { min: 4, max: 8 }, teams: { count: 2, size: [2, 2] },
@@ -794,6 +920,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'chapman', label: 'Chapman (Pinehurst)', icon: '🔄',
+    settlement: 'pot', stakeHint: 'Losing team\'s players each ante the stake to the winners.',
     desc: 'Both tee off, swap balls for the second shot, pick one ball and alternate in. 60/40 handicaps.',
     category: 'team', basis: 'choice',
     players: { min: 4, max: 8 }, teams: { count: 2, size: [2, 2] },
@@ -805,6 +932,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'wolf', label: 'Wolf (Engine)', icon: '🐺',
+    settlement: 'unit', stakeHint: 'Per wolf point: settled against every other player.',
     desc: 'Rotating wolf picks a partner or goes alone after watching tee shots.',
     category: 'points', basis: 'choice', defaultAllowance: 100, defaultRelative: true,
     players: { min: 3, max: 5 }, needsInput: 'wolf',
@@ -848,6 +976,7 @@ const MatchEngine = (function () {
 
   register({
     id: 'bingoBangoBongo', label: 'Bingo Bango Bongo (Engine)', icon: '🎯',
+    settlement: 'unit', stakeHint: 'Per point: settled against every other player.',
     desc: 'Three points a hole: first on the green, closest to the pin, first to hole out.',
     category: 'points', basis: 'gross',
     players: { min: 2, max: 8 }, needsInput: 'bbb',
@@ -878,6 +1007,7 @@ const MatchEngine = (function () {
     get,
     list,
     compute,
+    payouts,
     defaultConfig,
     validateGame,
     stablefordPoints,

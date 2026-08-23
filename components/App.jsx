@@ -57,9 +57,10 @@ const App = () => {
     const ss = sessionStorage.getItem('pp_screen');
     // 'summary', 'viewround', and 'trip' depend on in-memory state that does
     // not survive a reload — restoring them would render a blank screen.
-    const restorable = ['home', 'setup', 'score', 'trips', 'stats'];
+    const restorable = ['home', 'setup', 'score', 'trips', 'stats', 'egt'];
     if (ss && restorable.includes(ss)) {
       if (ss === 'score') return localStorage.getItem('pp_round') ? 'score' : 'home';
+      if (ss === 'egt' && localStorage.getItem('pp_egt_unlocked') !== '1') return 'home';
       return ss;
     }
     if (localStorage.getItem('pp_active_round') === '1' && localStorage.getItem('pp_round')) return 'score';
@@ -112,6 +113,29 @@ const App = () => {
 
   const [tweaks,     setTweaks]     = React.useState(TWEAK_DEFAULTS);
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+  // The EGT Cup is one private group's tournament: its seed carries four named
+  // people, their photos and their money. A public build should not put that
+  // on the tab bar for a stranger who just installed a golf scorer. Devices
+  // that already hold Cup data — and anyone who enters the unlock word — keep
+  // it exactly as before.
+  const [egtUnlocked, setEgtUnlocked] = React.useState(() => {
+    try {
+      if (localStorage.getItem('pp_egt_unlocked') === '1') return true;
+      for (let i = 0; i < localStorage.length; i++) {
+        if (String(localStorage.key(i) || '').startsWith('egt:')) return true;
+      }
+    } catch(e) {}
+    return false;
+  });
+  React.useEffect(() => {
+    const onUnlock = () => {
+      try { localStorage.setItem('pp_egt_unlocked', '1'); } catch(e) {}
+      setEgtUnlocked(true);
+    };
+    window.addEventListener('pp:unlock-egt', onUnlock);
+    return () => window.removeEventListener('pp:unlock-egt', onUnlock);
+  }, []);
 
   const [recentRounds, setRecentRounds] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('pp_recent') || '[]'); } catch(e) { return []; }
@@ -267,7 +291,17 @@ const App = () => {
     });
   };
 
-  const handleCourseSaved = () => {};
+  // A course built on the phone must appear in the list immediately — waiting
+  // for the cloud subscription to echo it back means it vanishes offline.
+  const handleCourseSaved = (newCourse, allCourses) => {
+    setCustomCourses(prev => {
+      const next = Array.isArray(allCourses) && allCourses.length
+        ? allCourses
+        : (newCourse ? [...prev.filter(c => c.id !== newCourse.id), newCourse] : prev);
+      try { localStorage.setItem('pp_custom_courses', JSON.stringify(next)); } catch(e) {}
+      return next;
+    });
+  };
 
   const handleStartRound = (config) => {
     const { tripSelection, ...rest } = config;
@@ -382,12 +416,11 @@ const App = () => {
       });
     });
 
-    // Compute payouts at save time so trip dashboard can aggregate without re-running format logic.
-    const _ptmState = window.computePTMState
-      ? window.computePTMState(scores, putts || {}, round.players, round.course, round.players[0].id)
-      : { holderId: null };
-    const _computedPayouts = window.calcAllPayouts
-      ? window.calcAllPayouts(scores, wolfData || {}, round.players, round.course, round.formats, presses || [], _ptmState.holderId, popFlags || {}, null, bbbData || {}, teeBallData || {})
+    // Compute payouts at save time so trip dashboard can aggregate without
+    // re-running format logic. calcRoundPayouts settles the money games AND the
+    // MatchEngine games, so the stored figure is the whole round's money.
+    const _computedPayouts = window.calcRoundPayouts
+      ? window.calcRoundPayouts(round, { scores, wolfData, putts, popFlags, bbbData, teeBallData })
       : {};
 
     const completedRound = {
@@ -432,7 +465,10 @@ const App = () => {
       courseName: round.course.name,
       date:       new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
       players:    round.players.length,
-      formats:    round.formats.map(f => FORMAT_INFO[f.type].label).join(' · '),
+      formats:    [
+        ...(round.formats || []).map(f => (FORMAT_INFO[f.type] || {}).label || f.type),
+        ...(round.games   || []).map(g => g.name || g.formatId),
+      ].join(' · '),
       syncCode:   round.syncCode || null,
       tripId:     round.tripId || null,
       tripName:   round.tripId ? (trips.find(function(t){return t.id===round.tripId;})||{}).name || null : null,
@@ -583,6 +619,7 @@ const App = () => {
           <SetupScreen
             allPlayers={players}
             customCourses={customCourses}
+            onCourseSaved={handleCourseSaved}
             onStart={handleStartRound}
           />
         }
@@ -686,7 +723,7 @@ const App = () => {
           />
         }
 
-        {screen === 'egt' && <EgtTournament onScoreRound={handleEgtScoreRound} />}
+        {screen === 'egt' && egtUnlocked && <EgtTournament onScoreRound={handleEgtScoreRound} />}
 
       </div>
 
@@ -697,7 +734,7 @@ const App = () => {
             { id:'home',    icon:'🏠', label:'HOME' },
             { id:'stats',   icon:'📈', label:'STATS' },
             { id:'trips',   icon:'🗺️', label:'TRIPS' },
-            { id:'egt',     icon:'🏆', label:'EGT CUP' },
+            ...(egtUnlocked ? [{ id:'egt', icon:'🏆', label:'EGT CUP' }] : []),
             { id:'setup',   icon:'⛳', label:'NEW ROUND' },
             ...(round       ? [{ id:'score',   icon:'🏌️', label:'SCORING' }] : []),
             ...(finalScores ? [{ id:'summary', icon:'📊', label:'RESULTS' }] : []),

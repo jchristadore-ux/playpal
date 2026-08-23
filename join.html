@@ -24,9 +24,14 @@
     var params = new URLSearchParams(location.search);
     var raw = (params.get('code') || params.get('join') || '').toUpperCase();
     var code = raw.replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    // A round lives inside a group, so the invite carries the group too —
+    // otherwise a friend on a fresh install has nowhere to look the code up.
+    var grp = (params.get('g') || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 40);
     var dir = location.pathname.replace(/[^/]*$/, '');  // strip "join.html" or "join"
-    var target = dir + (code ? '?code=' + encodeURIComponent(code) : '');
-    location.replace(target);
+    var qs = [];
+    if (code) qs.push('code=' + encodeURIComponent(code));
+    if (grp)  qs.push('g='    + encodeURIComponent(grp));
+    location.replace(dir + (qs.length ? '?' + qs.join('&') : ''));
   })();
 </script>
 </body>

@@ -56,7 +56,11 @@ const QRModal = ({ open, onClose, syncCode }) => {
     if (lastCodeRef.current === syncCode && instanceRef.current) return;
 
     const base    = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-    const joinUrl = base + 'join.html?code=' + syncCode;
+    // The invite has to name the group as well as the round: a friend opening
+    // this on a fresh install starts in a group of their own and would find
+    // nothing under the code alone.
+    const grp = window.GroupService ? window.GroupService.current() : '';
+    const joinUrl = base + 'join.html?code=' + syncCode + (grp && grp !== 'LEGACY' ? '&g=' + grp : '');
 
     const render = () => {
       if (!window.QRCode) return false;

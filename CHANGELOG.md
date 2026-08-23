@@ -4,6 +4,142 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.16.0] — 2026-08-23 — App Store submission audit
+
+A full pass over the app ahead of an App Store submission: the money, the
+handicap strokes, the layouts, the post-round summary, and everything a public
+build must not ship.
+
+### Money — every format now settles
+
+- **The 20 MatchEngine formats paid nothing.** Stroke play, individual net,
+  Stableford, Quota, match play, four-ball, Nassau, skins, sixes, best ball,
+  shamble, team gross/net, scramble, 2-person scramble, alternate shot,
+  foursomes, Chapman, Wolf and Bingo Bango Bongo all computed standings and a
+  winner, and then no money changed hands — there was no stake field and no
+  payout path. Each format now declares how a stake settles (`pot`, `unit`,
+  `match`, `nassau`), Setup has a stake input per game (zero = play for pride),
+  and `MatchEngine.payouts()` returns a zero-sum ledger. Verified zero-sum for
+  all 19 concrete formats.
+- **New `calcRoundPayouts(round, data)`** settles the money games and the engine
+  games in one call, rounded to cents and still netting to $0, so the summary,
+  the trip dashboard, the email and the stored round can't disagree.
+- **Cents.** Money was displayed with `toFixed(0)` while Venmo was charged
+  `toFixed(2)` — a $12.50 debt showed as "$13" and requested $12.50. All money
+  now goes through `fmtMoney`, which shows cents only when there are cents, and
+  the Venmo request asks for exactly the figure on screen.
+
+### Nine-hole layouts
+
+- A nine-hole Nassau settled front nine, back nine AND overall against the same
+  nine holes — three bets for one match, paying 3× what it should. It is now a
+  single bet; eighteen holes still settles front + back + double overall.
+- Skins, Wolf, Bingo Bango Bongo, Tee Ball and Markey Match all iterated a
+  hardcoded 18 holes. Every one now sizes off the course being played, and a
+  nine-hole Markey Match no longer spawns a turn press it never reached.
+
+### Handicap strokes and auto-pops
+
+- **Pops are now automatic.** Skins, Stableford, Pass the Money and Bingo Bango
+  Bongo scored gross unless someone remembered to tap "POP?" on the right holes.
+  Strokes are now allocated at round setup from each player's course handicap
+  (slope, rating and the chosen tee) off the low ball, and every hole stays
+  editable.
+- **Pop flags carry a stroke count**, not a yes/no — a 27-handicap off scratch
+  gets a second stroke on the hardest nine. Rounds saved before this still read
+  correctly (`true` = one stroke).
+- **Nassau auto-pops work for 2v2**, not just singles, and come off course
+  handicaps rather than raw index difference. The pop grid sizes to the layout.
+- **Plus handicaps work.** `getHoleStrokes` returned −1 on *every* hole for a
+  plus player; it now hands strokes back from the easiest hole down. The profile
+  form no longer clamps a handicap index at zero.
+
+### Small fields and solo rounds
+
+- Wolf with two players paid the wolf a phantom win (the "field" summed to zero).
+  Too small a field is now a push.
+- **Rounds can have one player.** Setup required two. A solo practice round with
+  "Just the scorecard" now works, and money games that need a field are disabled
+  with the reason shown rather than silently producing nothing.
+- Verified every screen at 1, 2, 3 and 4 players in portrait and landscape.
+
+### Portrait and landscape
+
+- The scorer now re-lays-out on rotation instead of reading the viewport once at
+  mount, lays player cards out in columns when there is width for them, and
+  shrinks the card on short screens so a player still fits.
+- The PWA manifest no longer locks the app to portrait.
+
+### Post-round summary, email and Venmo
+
+- **One report builder** (`SharingService.roundReport`) drives the screen, the
+  email and the share sheet: leaderboard, net scores, every game with its money
+  and its result, per-player stats, the whole-round ledger, the settle-up list
+  and Venmo links — plus the hole-by-hole grid in the full version.
+  Engine games were previously absent from the email entirely.
+- **The email now fits.** A full 18-hole ASCII card blew past what a `mailto:`
+  URL carries and iOS Mail silently truncated it. The mail body is assembled at
+  the richest level that fits the budget, the money always survives the trim,
+  and the complete card goes to the clipboard so it can be pasted in.
+- Missing email addresses and missing Venmo handles are now named on screen
+  instead of silently dropping people from the send.
+- Venmo no longer force-opens a second browser tab 1.2 seconds after the app
+  link; the web fallback is a visible link on the row.
+
+### App Store blockers
+
+- **The GHIN posting was fake.** "POST SCORES TO GHIN" ran a 2.2-second timer
+  and reported "Scores posted to GHIN ✓" having posted nothing (App Review 2.3.1).
+  Replaced with an honest export: it copies every player's hole-by-hole scores,
+  tees, rating and slope to paste into GHIN's own score entry, and says plainly
+  that PlayPal cannot post on your behalf.
+- **All synced data lived in one global namespace.** Every anonymous user of a
+  public build would have read and overwritten every other user's player
+  profiles — including email addresses and Venmo handles — and `players.set()`
+  wiped the previous roster on each save. Data is now namespaced by a 130-bit
+  **group** code created on the device and shared with your playing partners;
+  Home gained a group panel (show, copy, join, start fresh) and join links carry
+  the group. Firestore and RTDB rules were rewritten to match. Installs that
+  predate this keep their data on the reserved `LEGACY` group.
+- **No more sample personal data.** The app shipped four player profiles
+  carrying names, GHIN numbers, email addresses and Venmo handles. A fresh
+  install now starts empty and prompts for the first player.
+- **The EGT Cup is gated.** Its seed carries four named people, their photos and
+  their money; it is no longer on the tab bar of a fresh install. Devices that
+  already hold Cup data keep it, and tapping the version line seven times
+  unlocks it.
+- `Info.plist`: `armv7` → `arm64` (no iOS 13+ device is 32-bit), plus camera and
+  photo-library usage strings for the scorecard photo picker.
+- Privacy policy and support pages updated for groups, scorecard photos, the
+  email/Venmo behaviour, and the GHIN correction.
+
+### Added — a course from a scorecard photo
+
+- New Round → Course → ADD A COURSE takes a photo or screenshot of a scorecard,
+  pins it above the entry grid with zoom and rotate, and keeps it entirely on
+  the device — no upload, no OCR service, no network call.
+- **Paste the numbers** reads par, yardage and stroke-index rows in whatever
+  shape they arrive — labelled or not, one row of 18 or two rows of 9, with
+  OUT/IN/TOTAL subtotals mixed in — and fills the grid. It says what it could
+  not read rather than guessing.
+
+### Fixed
+
+- A custom course added while offline vanished from the list: the screen waited
+  for Firebase to echo it back instead of using what it had just saved.
+- `roundMeta.formats` crashed on an unknown format type and omitted engine games.
+
+### Tests
+
+- `tests/moneyAudit.test.mjs` — 37 new tests covering payouts for every engine
+  format, zero-sum settlement, nine-hole layouts, small fields, plus handicaps,
+  auto-pops, money formatting, the report builder, the scorecard parser and
+  group codes. Suite: 259 passing.
+- Browser verification: 16 viewport × player-count combinations, three complete
+  18-hole rounds through to the settlement and send tabs, the photo import flow,
+  and a true first-run install.
+
+
 ## [1.15.0] — 2026-07-27
 
 The recap book on paper: a PDF of every page.

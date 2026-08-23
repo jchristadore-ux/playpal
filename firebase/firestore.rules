@@ -2,33 +2,63 @@ rules_version = '2';
 
 // PlayPal Firestore rules.
 //
-// The app signs every client in with Firebase Anonymous Auth, so requiring
-// request.auth != null shuts out the open internet (default "test mode"
-// rules expire and/or allow anyone, including bots that scan for open
-// Firebase projects). Deploy with:
+// Every client signs in with Firebase Anonymous Auth, so `request.auth != null`
+// shuts out the open internet. On its own that is not enough for a public app:
+// anonymous auth is free to anyone who downloads it, so authentication alone
+// would put every user of PlayPal in one shared bucket.
 //
+// Data is therefore namespaced by GROUP. A group id is 26 characters of a
+// 32-symbol alphabet (~130 bits) generated on the device and shared with your
+// playing partners as a code or a join link. Rules never allow listing groups,
+// only addressing one you already hold the id for, so knowing the id is what
+// grants access — the same model the round sync codes already use.
+//
+// Deploy with:
 //   npx firebase-tools deploy --only firestore:rules
 //
-// IMPORTANT: Anonymous Auth must be enabled in Firebase Console →
-// Authentication → Sign-in method → Anonymous, or the app cannot write.
+// Anonymous Auth must be enabled in Firebase Console → Authentication →
+// Sign-in method → Anonymous, or the app cannot write.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Shared rounds, keyed by sync code (e.g. AB3X9K).
+    function signedIn()  { return request.auth != null; }
+    function isGroup(id) { return id.matches('^[0-9A-Z]{8,40}$'); }
+
+    // ── Group-scoped data (current clients) ────────────────────────────────
+    // Collections are named g_<GROUPID>_rounds / g_<GROUPID>_trips.
+
+    match /g_{groupId}_rounds/{syncCode} {
+      allow read:   if signedIn() && isGroup(groupId);
+      allow write:  if signedIn() && isGroup(groupId)
+                    && syncCode.matches('^[A-Z0-9]{4,12}$')
+                    && request.resource.size() < 50;
+      allow delete: if signedIn() && isGroup(groupId);
+    }
+
+    match /g_{groupId}_trips/{tripId} {
+      allow read:   if signedIn() && isGroup(groupId);
+      allow write:  if signedIn() && isGroup(groupId)
+                    && tripId.matches('^trip_[0-9]+$');
+      allow delete: if signedIn() && isGroup(groupId);
+    }
+
+    // ── Legacy unscoped data (installs that predate groups) ────────────────
+    // Kept so the original group's phones keep working through the upgrade.
+    // Once every device in that group has moved, delete these two blocks and
+    // the collections behind them.
+
     match /playpal_rounds/{syncCode} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read:  if signedIn();
+      allow write: if signedIn()
                    && syncCode.matches('^[A-Z0-9]{4,12}$')
                    && request.resource.size() < 50;
     }
 
-    // Golf trips.
     match /golf_trips/{tripId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && tripId.matches('^trip_[0-9]+$');
-      allow delete: if request.auth != null;
+      allow read:   if signedIn();
+      allow write:  if signedIn() && tripId.matches('^trip_[0-9]+$');
+      allow delete: if signedIn();
     }
 
     // Everything else: denied.

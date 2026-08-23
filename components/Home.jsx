@@ -11,6 +11,13 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const [joining,     setJoining]       = React.useState(false);
   const [showCourses, setShowCourses]   = React.useState(false);
   const [addCourseOpen, setAddCourseOpen] = React.useState(false);
+  const [versionTaps, setVersionTaps]   = React.useState(0);
+  const [egtNote,     setEgtNote]       = React.useState('');
+  const [showGroup,   setShowGroup]     = React.useState(false);
+  const [groupInput,  setGroupInput]    = React.useState('');
+  const [groupError,  setGroupError]    = React.useState('');
+  const [groupCopied, setGroupCopied]   = React.useState(false);
+  const groupId = window.GroupService ? window.GroupService.current() : 'LEGACY';
 
   const courses = customCourses || [];
 
@@ -69,6 +76,33 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     } catch(e) {}
   }
 
+  // Switching group changes which synced pile of players, courses and rounds
+  // this device reads, so the app reloads to start clean rather than mixing
+  // the old group's cached state into the new one.
+  const joinGroup = () => {
+    if (!window.GroupService || !window.GroupService.isValidCode(groupInput)) {
+      setGroupError('That does not look like a group code — check it and try again.');
+      return;
+    }
+    window.GroupService.join(groupInput);
+    ['pp_players','pp_custom_courses','pp_recent'].forEach(k => localStorage.removeItem(k));
+    window.location.reload();
+  };
+
+  const newGroup = () => {
+    if (!window.GroupService) return;
+    window.GroupService.reset();
+    ['pp_players','pp_custom_courses','pp_recent'].forEach(k => localStorage.removeItem(k));
+    window.location.reload();
+  };
+
+  const copyGroup = () => {
+    const code = window.GroupService.displayCode(groupId);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(()=>{ setGroupCopied(true); setTimeout(()=>setGroupCopied(false), 2500); }).catch(()=>{});
+    }
+  };
+
   const colors = ['#15803D','#DC2626','#C8A15A','#2563EB','#9333EA','#EA580C','#0891B2'];
 
   const openEdit = (p) => {
@@ -93,7 +127,11 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     const base = {
       ...form,
       name:     form.name.trim(),
-      handicap: Math.max(0, parseFloat(form.handicap) || 0),
+      // WHS indexes run from +10 (a plus player, entered as -10) to 54, and
+      // clamping at zero made a plus handicap impossible to record.
+      handicap: window.HandicapService
+        ? window.HandicapService.clampIndex(form.handicap)
+        : (parseFloat(form.handicap) || 0),
     };
     const normalized = window.ProfileService ? window.ProfileService.normalizePlayer(base) : base;
     const updated = normalized.initials ? normalized : {...normalized, initials: normalized.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)};
@@ -296,17 +334,55 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           >+ ADD</button>
         </div>
         <div style={{display:'flex', flexDirection:'column', gap:8}}>
+          {localPlayers.length === 0 && (
+            <div style={{background:'#FFFFFF', border:'1px dashed #C8D5C0', borderRadius:14, padding:'18px 16px', textAlign:'center'}}>
+              <div style={{fontSize:26, marginBottom:6}} aria-hidden="true">⛳</div>
+              <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:15, color:'#0E2B20'}}>Add yourself to get started</div>
+              <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', marginTop:4, lineHeight:1.5}}>
+                A name and a handicap index is all a round needs. Email and Venmo are optional — they only power the post-round summary.
+              </div>
+              <Btn onClick={()=>{openEdit(null); setShowPlayers(true);}} variant="gold" style={{width:'100%', marginTop:12, fontSize:14}}>+ ADD A PLAYER</Btn>
+            </div>
+          )}
           {localPlayers.map(p => (
             <div key={p.id} style={homeS.playerCard} onClick={()=>{ openEdit(p); setShowPlayers(true); }}>
               <Avatar player={p} size={44} />
               <div style={{flex:1, minWidth:0}}>
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20', letterSpacing:0.2}}>{p.name}</div>
-                <div style={{fontSize:11, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', marginTop:1}}>HCP {p.handicap} · GHIN {p.ghin}</div>
-                <div style={{fontSize:10, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', marginTop:1}}>@{p.venmo}</div>
+                <div style={{fontSize:11, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', marginTop:1}}>HCP {p.handicap}{p.ghin ? ' · GHIN ' + p.ghin : ''}</div>
+                {p.venmo && <div style={{fontSize:10, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', marginTop:1}}>@{p.venmo}</div>}
               </div>
               <div style={{color:'#C8D5C0', fontSize:20, fontWeight:400}}>›</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Your group — who these profiles, courses and rounds are shared with */}
+      <div style={homeS.section}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
+          <Label>Your Group</Label>
+          <button onClick={()=>{setShowGroup(true); setGroupError(''); setGroupInput('');}}
+            style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:10, padding:'6px 14px', cursor:'pointer',
+              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, letterSpacing:0.3, color:'#0E2B20',
+              WebkitTapHighlightColor:'transparent'}}>MANAGE</button>
+        </div>
+        <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:14, padding:'14px 16px'}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', lineHeight:1.5}}>
+            Player profiles, custom courses and shared rounds sync privately inside your group. Nobody outside it can see them.
+          </div>
+          <div style={{display:'flex', alignItems:'center', gap:10, marginTop:10}}>
+            <code style={{flex:1, minWidth:0, fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize:12,
+              color:'#0E2B20', background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:8, padding:'8px 10px',
+              overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+              {groupId === 'LEGACY' ? 'Original group' : window.GroupService.displayCode(groupId)}
+            </code>
+            {groupId !== 'LEGACY' && (
+              <Btn onClick={copyGroup} variant="surface" style={{padding:'8px 12px', fontSize:11, flexShrink:0}}>
+                {groupCopied ? '✓ COPIED' : 'COPY'}
+              </Btn>
+            )}
+          </div>
         </div>
       </div>
 
@@ -319,10 +395,74 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           {'  ·  '}
           <a href="terms.html" style={{color:'#3F5F4A', textDecoration:'underline'}}>Terms of Use</a>
         </div>
-        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5}}>
-          PlayPal v1.8.1
+        <div role="button" tabIndex={0}
+          onClick={()=>{
+            const n = versionTaps + 1;
+            setVersionTaps(n);
+            if (n >= 7) {
+              window.dispatchEvent(new Event('pp:unlock-egt'));
+              setVersionTaps(0);
+              setEgtNote('EGT Cup unlocked — see the tab bar.');
+              setTimeout(()=>setEgtNote(''), 4000);
+            }
+          }}
+          onKeyDown={e=>{ if (e.key === 'Enter') e.currentTarget.click(); }}
+          style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5, cursor:'default', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
+          PlayPal v1.16.0
         </div>
+        {egtNote && (
+          <div role="status" style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D', marginTop:6}}>{egtNote}</div>
+        )}
       </div>
+
+      {/* Group Modal */}
+      <Modal open={showGroup} onClose={()=>setShowGroup(false)} title="Your Group">
+        <div style={{display:'flex', flexDirection:'column', gap:16}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.7}}>
+            A group is how PlayPal keeps your data yours. There is no account and no password —
+            everyone who holds the code below sees the same player profiles, courses and rounds,
+            and nobody else can. Send it to the people you play with.
+          </div>
+
+          <div>
+            <Label style={{display:'block', marginBottom:6}}>YOUR GROUP CODE</Label>
+            <div style={{background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:12, padding:'12px 14px',
+              fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize:14, color:'#0E2B20', wordBreak:'break-all', lineHeight:1.6}}>
+              {groupId === 'LEGACY'
+                ? 'This device is on the original, pre-group data. Start a new group below to get a shareable code.'
+                : window.GroupService.displayCode(groupId)}
+            </div>
+            {groupId !== 'LEGACY' && (
+              <Btn onClick={copyGroup} variant="surface" style={{width:'100%', marginTop:8, fontSize:13}}>
+                {groupCopied ? '✓ COPIED' : '📋 COPY CODE'}
+              </Btn>
+            )}
+          </div>
+
+          <div style={{borderTop:'1px solid #E7E3D9', paddingTop:14}}>
+            <Label htmlFor="pp-group-code" style={{display:'block', marginBottom:6}}>JOIN A DIFFERENT GROUP</Label>
+            <input id="pp-group-code" value={groupInput}
+              onChange={e=>{setGroupInput(e.target.value); setGroupError('');}}
+              placeholder="Paste a group code"
+              style={{width:'100%', boxSizing:'border-box', background:'#F6F4EE',
+                border:`1.5px solid ${groupError?'#DC2626':'#E7E3D9'}`, borderRadius:12, padding:'12px 14px',
+                color:'#0E2B20', fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize:14, outline:'none'}}/>
+            {groupError && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#DC2626', marginTop:6}}>{groupError}</div>}
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginTop:6, lineHeight:1.5}}>
+              This device will stop syncing with your current group and reload. Rounds already saved on this phone stay put.
+            </div>
+            <Btn onClick={joinGroup} variant="green" disabled={!groupInput.trim()} style={{width:'100%', marginTop:10, fontSize:14}}>JOIN GROUP</Btn>
+          </div>
+
+          <div style={{borderTop:'1px solid #E7E3D9', paddingTop:14}}>
+            <Label style={{display:'block', marginBottom:6}}>START A FRESH GROUP</Label>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', lineHeight:1.5, marginBottom:10}}>
+              Creates an empty group with a new code. Your old group is untouched — other phones in it carry on as before.
+            </div>
+            <Btn onClick={newGroup} variant="ghost" style={{width:'100%', fontSize:13}}>NEW GROUP</Btn>
+          </div>
+        </div>
+      </Modal>
 
       {/* Join Round Modal */}
       <Modal open={showJoin} onClose={()=>{ setShowJoin(false); setJoinError(''); setJoining(false); }} title="Join a Round">
