@@ -13,7 +13,9 @@
     "test": "npm run build && node --test \"tests/**/*.test.mjs\"",
     "dev": "npm run build && npx -y http-server -p 8080 -c-1 .",
     "build:www": "npm run build && node scripts/build-www.mjs",
-    "ios:sync": "npm run build:www && npx cap sync ios"
+    "ios:sync": "npm run build:www && npx cap sync ios",
+    "build:www:public": "npm run build && node scripts/build-www.mjs --public",
+    "ios:sync:public": "npm run build:www:public && npx cap sync ios"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",

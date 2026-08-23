@@ -1,4 +1,65 @@
-# Project Progress
+# PlayPal — Progress
+
+## v1.16.0 — App Store submission audit (23 Aug 2026)
+
+**Branch:** `claude/app-store-submission-audit-pqkj74`
+**Status:** complete. 259 tests green, verified in a browser. Everything left is
+outside this repo — see `APP_STORE_AUDIT.md` §7.
+
+### What this pass found and fixed
+
+The app was not submittable. Three findings would each have blocked it:
+
+1. **20 of 28 game formats settled no money.** Every `MatchEngine` format
+   computed a winner and moved $0 — no stake field, no payout path,
+   `calcAllPayouts` never saw `round.games`.
+2. **The GHIN button faked success** (2.3.1) — a 2.2s timer and a green tick.
+3. **All synced data was in one global namespace** — every user of a public
+   build would read and overwrite every other user's profiles, emails and
+   Venmo handles; `players.set()` wiped the roster on each save.
+
+Plus: nine-hole rounds scored as eighteen (Nassau paid 3× for one match), stroke
+pops were manual so skins/Stableford silently scored gross, money displayed to
+the dollar while Venmo charged to the cent, the round email omitted the same 20
+formats and was truncated by iOS Mail, Wolf with 2 players paid a phantom win,
+plus handicaps took a stroke away on every hole, solo rounds were impossible.
+
+### Files added
+- `components/groupService.js` — group ids, join codes, normalization
+- `components/scorecardImport.js` — the paste-the-numbers parser
+- `tests/moneyAudit.test.mjs` — 37 regression tests
+- `APP_STORE_AUDIT.md` — the audit, the Firebase plan, the submission
+  checklist and the pricing model
+
+### Files changed
+`components/`: matchEngine.js (settlement modes + `payouts()`), gameUtils.js
+(`calcRoundPayouts`, `autoPopStrokes`, `popStrokesAt`, `fmtMoney`,
+`nassauSegments`, layout-aware Wolf/Skins/BBB/TeeBall/Markey), gameData.js
+(`getHoleStrokes` plus handicaps; `DEFAULT_PLAYERS` emptied), sharingService.js
+(`roundReport`, `settleDebts`, `venmoRequest`), Setup.jsx (stakes per game,
+photo pane, paste box, solo rounds, scorecard-only, pop grid), ScoreEntry.jsx
+(viewport hook, columns, compact cards, stroke-count pops), Summary.jsx (engine
+money, cents, new SEND tab, honest GHIN), Home.jsx (empty roster, group panel,
+Cup unlock, plus handicaps), App.jsx (`calcRoundPayouts`, course save, Cup gate),
+Shared.jsx (group in join links).
+Root: index.html (group-scoped sync), join.html, sw.js, manifest.webmanifest,
+privacy.html, support.html, package.json, CHANGELOG.md,
+APP_STORE_READINESS.md, todo.md.
+`firebase/`: both rule files rewritten. `ios/`: Info.plist (arm64 + permission
+strings). `scripts/`: build.mjs, build-www.mjs (`--public`).
+
+### Exact next action
+Deploy the Firebase rules. Nothing else in the audit is real until they are live:
+
+```bash
+cd firebase && npx firebase-tools login && npx firebase-tools use playpal-sync
+npx firebase-tools deploy --only firestore:rules,database
+```
+
+Then work down `APP_STORE_AUDIT.md` §7.
+
+---
+
 
 ## 2026-07-27 — The recap book as PDFs (branch claude/tournament-results-pages-kp4bse) — v1.15.0
 
