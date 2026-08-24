@@ -1,66 +1,40 @@
-# App Store Readiness Report
+# App Store Readiness
 
-**Verdict (updated v1.4.0): ✅ ALL CODE-SIDE WORK IS DONE — the native Xcode project now lives in `ios/`, the web bundle is fully self-contained (no CDN requests), icon/splash/privacy-manifest are installed, and the submission path is a ~30-minute copy-paste on a Mac (`docs/IOS_APP_STORE_PATH.md`).**
-**The two remaining blockers are outside this repository and cannot be coded away: Apple charges $99/year for the Developer Program, and building/signing the iOS binary requires a Mac with Xcode.**
+> **This file is superseded by [`APP_STORE_AUDIT.md`](APP_STORE_AUDIT.md).**
+> Go there for the current verdict, the submission checklist, the Firebase plan,
+> what to do with the data already in the project, and the pricing model.
 
-Everything software-side has been prepared. There is also a **free path that works today**: PlayPal is now an installable PWA — open it in Safari on iPhone → Share → **Add to Home Screen** and it behaves like an app (own icon, full screen, offline shell). For a personal-use app with a zero-budget requirement, that is the recommended ship vehicle. The App Store path is fully documented in `docs/IOS_APP_STORE_PATH.md` for when/if the $99 is worth it.
+## Why this file changed
 
----
+Up to v1.15.0 this document said:
 
-## Scorecard against App Review Guidelines
+> **Verdict: ✅ ALL CODE-SIDE WORK IS DONE … the submission path is a
+> ~30-minute copy-paste on a Mac.**
 
-| Area | Guideline | Status | Notes |
-|---|---|---|---|
-| Privacy policy | 5.1.1 | ✅ PASS | `privacy.html`, linked in-app (Home footer) |
-| Terms of service | 3.1 / 5 | ✅ PASS | `terms.html`, linked in-app |
-| Support URL | App Store Connect | ✅ PASS | `support.html` with FAQ + contact |
-| Data deletion | 5.1.1(v) | ✅ PASS | In-app profile deletion + documented full-deletion request path (no accounts exist, so "account deletion" = data deletion) |
-| Sign-in requirements | 4.8 | ✅ PASS | No third-party login; anonymous auth only — Sign in with Apple not required |
-| Tracking transparency (ATT) | 5.1.2 | ✅ PASS | No tracking, no ads, no third-party analytics → no ATT prompt needed; declare "no tracking" in labels |
-| Permissions strings | 5.1.1 | ✅ PASS | App uses no camera/location/contacts → no `NSxxxUsageDescription` needed (scanner feature that wanted camera-adjacent use was removed) |
-| Broken features | 2.1 | ✅ PASS | Scorecard scanner removed; crash boundary added |
-| Performance | 2.1 / 4.2 | ✅ PASS | Production React, precompiled JS (no in-browser Babel), offline cache |
-| Subscriptions / IAP | 3.1 | ✅ N/A | Free app, no purchases |
-| Gambling | 5.3 | ⚠️ CAUTION | App computes friendly wagers but never holds money. Terms state this. In Review Notes, describe as "scorekeeping calculator"; set age rating questionnaire "Simulated Gambling: Infrequent/Mild" |
-| Minimum functionality | 4.2 | ⚠️ RISK (mitigated) | Web-wrapper apps get extra scrutiny. Mitigations now IN PLACE: every asset vendored and bundled inside the binary (no CDN/remote shell), offline operation, one-screen native-feel scoring UI, haptics, safe-area layout. Residual risk cannot be engineered to zero |
-| Native binary exists | — | ⚠️ MAC NEEDED | Capacitor 8 Xcode project committed at `ios/` (SPM, icon, splash, privacy manifest, v1.4.0, export-compliance flag). Building/signing the .ipa still requires a Mac — steps in `docs/IOS_APP_STORE_PATH.md` |
-| Apple Developer account | — | ❌ FAIL | $99/year. **Conflicts with the zero-paid-tools requirement** — your call |
+That was wrong, and it is worth recording why so the claim is not made again.
+The 23 August 2026 audit found three things that would each have stopped a
+submission on their own:
 
-**Score (v1.4.0): 12 pass / 2 caution (both mitigated as far as code allows) / 1 fail.** The fail is money ($99/yr) — and hardware access for the final build — not code.
+1. **Twenty of the twenty-eight game formats settled no money at all.** Every
+   MatchEngine format — stroke play, match play, four-ball, the scrambles,
+   Stableford, Quota, Nassau, skins — computed a winner and then moved $0.
+2. **The GHIN button reported "Scores posted to GHIN ✓" having posted nothing.**
+   App Review guideline 2.3.1.
+3. **All synced data lived in one global namespace.** Every user of a public
+   build would have read and overwritten every other user's player profiles,
+   including their email addresses and Venmo handles.
 
----
+Plus: nine-hole rounds were scored as eighteen-hole rounds, stroke pops were
+manual so half the games silently scored gross, the money on screen did not
+match the money in the Venmo request, and the round email omitted the same
+twenty formats.
 
-## Remaining blockers (in order)
+All of the above is fixed in v1.16.0. The lesson for this file: "code-side work
+is done" is a claim that needs a test suite and a browser behind it, not a
+checklist of guidelines with ticks next to them.
 
-1. **Decide: PWA (free, ready now) vs App Store ($99/yr + Mac).**
-2. If App Store: enroll at https://developer.apple.com/programs/ ($99).
-3. On a Mac: clone, `npm install && npm run ios:sync`, open Xcode, pick your team, Archive → Upload (~30 min, `docs/IOS_APP_STORE_PATH.md`).
-4. Deploy the Firebase security rules (5 min, see `firebase/README.md`) — do this **regardless of path**; it is the one remaining security hole and the command is ready.
-5. Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) so `https://<user>.github.io/playpal/` serves the PWA over HTTPS — required for the service worker and for the privacy/support URLs you'll paste into App Store Connect.
+## Current status
 
----
-
-## Submission checklist (when you go the App Store route)
-
-**App Store Connect fields — copy from `appstore/APP_STORE_LISTING.md`:**
-- [ ] App name, subtitle, keywords, description, promotional text, release notes
-- [ ] Support URL: `https://<your-pages-domain>/support.html`
-- [ ] Privacy Policy URL: `https://<your-pages-domain>/privacy.html`
-- [ ] Privacy nutrition labels: answers in `appstore/PRIVACY_NUTRITION_LABELS.md`
-- [ ] Age rating questionnaire: all "No" except Simulated Gambling → "Infrequent/Mild" → rating lands at 12+/17+ depending on region; accept Apple's computed rating
-- [ ] Category: Sports (primary), Utilities (secondary)
-- [ ] Price: Free; availability: your countries
-
-**Binaries & signing (Mac required):**
-- [ ] Xcode installed; signed in with the developer Apple ID (Xcode → Settings → Accounts)
-- [ ] Capacitor project created per `docs/IOS_APP_STORE_PATH.md`
-- [ ] Bundle ID `com.playpal.golf` (or your reverse-domain choice) registered automatically by Xcode "Automatically manage signing" — no manual certificates/profiles needed with automatic signing
-- [ ] App icon (1024×1024 source = `icons/icon-512.png` upscaled or regenerate via `npm run icons` from the 1254×1254 master)
-- [ ] Archive → Distribute → App Store Connect → Upload
-
-**Screenshots (taken in Simulator, free):**
-- [ ] 6.9" iPhone (1320×2868): Home, Round setup, Live scoring, Results/payouts — 4 shots minimum
-- [ ] 13" iPad (2064×2752) only if you enable iPad support; otherwise mark iPhone-only
-
-**Review Notes to paste:**
-> PlayPal is a golf scorekeeping calculator for a private group of friends. It tracks strokes and computes the arithmetic of traditional golf side games (Wolf, Nassau, Skins). The app never holds, transfers, or processes money and contains no purchases. Sync uses Firebase with anonymous authentication; no account is created and no data is sold or used for tracking.
+See [`APP_STORE_AUDIT.md` §7 Still open](APP_STORE_AUDIT.md#7-still-open). In
+short — the remaining blockers are money ($99/year), hardware (a Mac with Xcode)
+and five minutes of `firebase deploy`. None of them are code.

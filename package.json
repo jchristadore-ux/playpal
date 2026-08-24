@@ -1,6 +1,6 @@
 {
   "name": "playpal",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "private": true,
   "description": "PlayPal \u2014 golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
   "type": "module",
@@ -13,7 +13,9 @@
     "test": "npm run build && node --test \"tests/**/*.test.mjs\"",
     "dev": "npm run build && npx -y http-server -p 8080 -c-1 .",
     "build:www": "npm run build && node scripts/build-www.mjs",
-    "ios:sync": "npm run build:www && npx cap sync ios"
+    "ios:sync": "npm run build:www && npx cap sync ios",
+    "build:www:public": "npm run build && node scripts/build-www.mjs --public",
+    "ios:sync:public": "npm run build:www:public && npx cap sync ios"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",
@@ -23,5 +25,8 @@
   "dependencies": {
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1"
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.9"
   }
 }

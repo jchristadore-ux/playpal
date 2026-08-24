@@ -19,10 +19,13 @@
 <header><a href="./">‹ BACK TO PLAYPAL</a></header>
 <main>
   <h1>Privacy Policy</h1>
-  <p class="meta">Effective date: June 11, 2026 · Applies to the PlayPal app and website.</p>
+  <p class="meta">Effective date: August 23, 2026 · Applies to the PlayPal app and website.</p>
 
   <h2>What PlayPal is</h2>
-  <p>PlayPal is a golf scoring companion built for a private group of golf friends. It is not an advertising-supported product, it does not sell data, and it contains no third-party trackers or analytics.</p>
+  <p>PlayPal is a golf scoring companion for you and the people you play with. It is not an advertising-supported product, it does not sell data, and it contains no third-party trackers or analytics.</p>
+
+  <h2>Groups</h2>
+  <p>PlayPal has no accounts. Instead, each install belongs to a <strong>group</strong> — a long random code created on your device the first time you open the app. Player profiles, custom courses and shared rounds sync only within your group. You share the code (or a join link) with the people you play with; anyone who does not have it cannot see your group's data, and you cannot see theirs. You can leave a group, join another, or start a fresh empty one at any time from the Home screen.</p>
 
   <h2>Information the app stores</h2>
   <ul>
@@ -30,6 +33,7 @@
     <li><strong>Round data</strong>: golf scores, putts, game formats, stakes, and computed payouts.</li>
     <li><strong>Custom courses</strong> you add: course name, location, par/yardage/handicap values.</li>
     <li><strong>A random device identifier</strong> stored on your device, used only to avoid echoing your own live-score updates back to you.</li>
+    <li><strong>A random group code</strong> stored on your device, which determines whose data your device syncs with. It is not derived from anything about you.</li>
   </ul>
 
   <h2>Where it is stored</h2>
@@ -37,21 +41,28 @@
     <li><strong>On your device</strong> (browser local storage) so the app works offline.</li>
     <li><strong>In Google Firebase</strong> (Firestore and Realtime Database, operated by Google LLC) so rounds sync between the devices in your group. Firebase's own privacy practices are described at <a href="https://firebase.google.com/support/privacy">firebase.google.com/support/privacy</a>.</li>
   </ul>
-  <p>Data synced to Firebase is shared with the other players in your PlayPal group — that is the point of the sync feature. Anyone with a round's share code can view that round's scores.</p>
+  <p>Data synced to Firebase is shared with the other players in your PlayPal group — that is the point of the sync feature. Within your group, anyone with a round's share code can view that round's scores. Nothing is shared outside your group.</p>
 
   <h2>What PlayPal does <em>not</em> do</h2>
   <ul>
     <li>No advertising, no ad identifiers, no cross-app tracking.</li>
     <li>No analytics or behavioral profiling.</li>
     <li>No sale or sharing of personal information with third parties beyond the Firebase infrastructure described above.</li>
-    <li>No collection of location, contacts, photos, or health data.</li>
+    <li>No collection of location, contacts or health data.</li>
+    <li>No uploading of photos. See <em>Scorecard photos</em> below.</li>
   </ul>
+
+  <h2>Scorecard photos</h2>
+  <p>When you add a course, you can take or choose a photo of its scorecard so you can read the numbers off it while you type them in. Your device may ask for camera or photo-library permission at that moment. The picture is displayed from your device's own memory and is <strong>never uploaded, never sent to any server, and never stored by PlayPal</strong>; it is discarded when you leave the screen. There is no image recognition and no third-party image service involved. You can decline the permission and type the numbers in by hand instead.</p>
+
+  <h2>Email and payment links</h2>
+  <p>The post-round summary can open your device's own mail app pre-filled with the round's results, addressed to the email addresses in your group's player profiles. PlayPal does not send email itself and has no mail server. Venmo handles in player profiles are used only to build a Venmo request link. <strong>PlayPal never holds, moves or processes money</strong> — any payment happens inside Venmo, under Venmo's own terms, and you confirm every request there.</p>
 
   <h2>Account &amp; sign-in</h2>
   <p>PlayPal uses anonymous Firebase authentication — there is no username or password, and no account is created in your name.</p>
 
   <h2>Deleting your data</h2>
-  <p>You can remove a player profile at any time inside the app (open the profile and tap <strong>Delete</strong>), which removes it from the synced database. To request deletion of all data associated with you — profiles, scores, and round history — email <a href="mailto:jchristadore@gmail.com?subject=PlayPal%20data%20deletion%20request">jchristadore@gmail.com</a> and it will be removed within 30 days. Clearing the app's website data in your browser/device settings removes everything stored locally.</p>
+  <p>You can remove a player profile at any time inside the app (open the profile and tap <strong>Delete</strong>), which removes it from the synced database. Starting a fresh group from the Home screen disconnects this device from all previously synced data. To request deletion of all data associated with you — profiles, scores, and round history — email <a href="mailto:jchristadore@gmail.com?subject=PlayPal%20data%20deletion%20request">jchristadore@gmail.com</a> and it will be removed within 30 days. Clearing the app's website data in your browser/device settings removes everything stored locally.</p>
 
   <h2>Data retention</h2>
   <p>Round history is kept so your group can review past rounds and trips. It remains until you delete it or request deletion as described above.</p>

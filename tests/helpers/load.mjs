@@ -39,7 +39,9 @@ export function loadPlayPal(opts = {}) {
     'components/statsService.js',
     'components/profileService.js',
     'components/roundHistoryService.js',
+    'components/groupService.js',
     'components/sharingService.js',
+    'components/scorecardImport.js',
     'components/migrations.js',
     // EGT tournament engine (classic scripts, self-assign to window):
     'components/egt/egtHandicap.js',
@@ -68,7 +70,9 @@ export function loadPlayPal(opts = {}) {
     'window.HandicapService = HandicapService; window.CourseService = CourseService; ' +
     'window.MatchEngine = MatchEngine; window.StatsService = StatsService; ' +
     'window.ProfileService = ProfileService; window.RoundHistoryService = RoundHistoryService; ' +
-    'window.SharingService = SharingService; window.PP_SCHEMA_VERSION = PP_SCHEMA_VERSION; ' +
+    'window.SharingService = SharingService; window.ScorecardImport = ScorecardImport; '
+    + 'window.GroupService = GroupService; '
+    + 'window.PP_SCHEMA_VERSION = PP_SCHEMA_VERSION; ' +
     'window.migratePlayersV2 = migratePlayersV2; window.migrateCoursesV2 = migrateCoursesV2; ' +
     'window.runMigrations = runMigrations;',
     ctx

@@ -1,3 +1,37 @@
+# TODO — PlayPal
+
+## Done — App Store submission audit (v1.16.0, branch claude/app-store-submission-audit-pqkj74)
+- [x] Full audit written to `APP_STORE_AUDIT.md`; `APP_STORE_READINESS.md` now
+      points at it and records why its old "all code-side work is done" verdict
+      was wrong.
+- [x] Money: all 20 MatchEngine formats now settle (they paid $0 before).
+      Per-format settlement modes + stake UI + `calcRoundPayouts`. Zero-sum.
+- [x] Money: 9-hole layouts (Nassau paid 3× for one match), cents vs Venmo
+      amounts, plus handicaps, Wolf with 2 players.
+- [x] Auto-pops from course handicap, off the low ball, seeded at setup; pop
+      flags carry stroke counts; 2v2 Nassau pops.
+- [x] Solo rounds + "Just the scorecard"; verified 1–4 players × 4 viewports.
+- [x] One round report drives screen/email/share; mail body fits a mailto: URL.
+- [x] Scorecard photo import (local only) + paste-the-numbers parser.
+- [x] Removed the fake GHIN post; group-scoped Firebase + rewritten rules;
+      emptied DEFAULT_PLAYERS; gated the EGT Cup; `--public` build excludes the
+      private tournament data; arm64; camera/photo permission strings.
+- [x] 259 tests green (37 new in tests/moneyAudit.test.mjs).
+
+## Next actions (all outside this repo — see APP_STORE_AUDIT.md §7)
+- [ ] Deploy the Firebase rules — `cd firebase && npx firebase-tools deploy
+      --only firestore:rules,database`. Do this first.
+- [ ] Decide PWA vs App Store; if App Store, enrol ($99/yr) and build on a Mac
+      with `npm run ios:sync:public`.
+- [ ] Enable GitHub Pages for the privacy/support URLs.
+- [ ] Move the group off the LEGACY namespace (audit §2.3 steps 3–5).
+- [ ] Rewrite `appstore/APP_STORE_LISTING.md` — it still says "eight games".
+
+## Constraints
+- dist/ committed; run `npm run build` before every commit.
+- Web/PWA + Capacitor bundle must keep working (build-www copies dist/egt/).
+- Submit the `--public` bundle, not the default one.
+
 # TODO — EGT 2026 Cup tournament engine
 
 Branch `claude/playpal-egt-tournament-25w5g0`.

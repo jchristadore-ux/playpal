@@ -338,19 +338,31 @@ const COURSES = [
   },
 ];
 
-const DEFAULT_PLAYERS = [
-  {id:'p1', name:'Thatch Adams', initials:'TA', ghin:'1234567', ghinLogin:'tadams@gmail.com', email:'tadams@gmail.com', venmo:'thatch-adams', handicap:8,  color:'#3DCB6C'},
-  {id:'p2', name:'Bird',         initials:'BI', ghin:'7654321', ghinLogin:'bird@gmail.com',   email:'bird@gmail.com',   venmo:'bird-golf',    handicap:14, color:'#E5534B'},
-  {id:'p3', name:'Shark',        initials:'SH', ghin:'2345678', ghinLogin:'shark@gmail.com',  email:'shark@gmail.com',  venmo:'shark-golf',   handicap:5,  color:'#C9A84C'},
-  {id:'p4', name:'Bulldog',      initials:'BU', ghin:'8765432', ghinLogin:'bulldog@gmail.com',email:'bulldog@gmail.com',venmo:'bulldog-golf', handicap:18, color:'#7B9FE0'},
-];
+// A fresh install starts with nobody. The app used to ship four sample
+// profiles carrying names, GHIN numbers, email addresses and Venmo handles;
+// on a public build those read as real people's contact details, and the
+// first thing a new user would do is email a stranger their scorecard.
+// Home prompts for the first player instead.
+const DEFAULT_PLAYERS = [];
 
 function generateSyncCode() {
   return Math.random().toString(36).substring(2,8).toUpperCase();
 }
 
-function getHoleStrokes(handicap, holeHdcp) {
-  const base = Math.floor(handicap / 18);
-  const rem  = handicap % 18;
-  return base + (holeHdcp <= rem ? 1 : 0);
+// Strokes a player gets on one hole for a whole-number handicap.
+// Positive handicaps take strokes on the hardest holes first and wrap past 18
+// (a 20 gets a second stroke on stroke indexes 1–2). Plus handicaps give
+// strokes back, starting from the easiest hole (stroke index 18).
+function getHoleStrokes(handicap, holeHdcp, holeCount) {
+  const n = holeCount || 18;
+  const h = Math.round(handicap || 0);
+  if (!h) return 0;
+  const magnitude = Math.abs(h);
+  const base = Math.floor(magnitude / n);
+  const rem  = magnitude % n;
+  // Plus players hand strokes back from the easiest hole down.
+  const rank = h > 0 ? holeHdcp : (n + 1 - holeHdcp);
+  const magnitudeHere = base + (rank <= rem ? 1 : 0);
+  if (!magnitudeHere) return 0;            // never hand back a signed zero
+  return (h > 0 ? 1 : -1) * magnitudeHere;
 }

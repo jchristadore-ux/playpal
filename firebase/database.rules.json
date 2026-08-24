@@ -2,6 +2,31 @@
   "rules": {
     ".read": false,
     ".write": false,
+
+    "comment": [
+      "Group-scoped data. A group id is 26 characters of a 32-symbol alphabet",
+      "(~130 bits) created on the device and shared with your playing partners.",
+      "Rules never permit listing groups, only reading and writing one whose id",
+      "you already hold, so two unrelated installs can never see each other."
+    ],
+
+    "groups": {
+      "$groupId": {
+        ".read":  "auth != null && $groupId.matches(/^[0-9A-Z]{8,40}$/)",
+        ".write": "auth != null && $groupId.matches(/^[0-9A-Z]{8,40}$/)",
+        "players":      { ".validate": true },
+        "courses":      { ".validate": true },
+        "saved_rounds": {
+          "$syncCode": { ".validate": "$syncCode.matches(/^[A-Z0-9]{4,12}$/)" }
+        }
+      }
+    },
+
+    "legacy_comment": [
+      "Unscoped paths used by installs that predate groups. Remove these three",
+      "blocks — and the data under them — once every device has upgraded."
+    ],
+
     "players": {
       ".read": "auth != null",
       ".write": "auth != null"

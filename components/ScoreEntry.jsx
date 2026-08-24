@@ -96,8 +96,14 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
 // spacing, high-contrast for bright sunlight, and one-handed operation. Every
 // per-hole interaction lives here; read-only match/bet status is tucked into a
 // collapsible footer so it never competes with score entry.
-const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, showPopToggle = true }) => {
+const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, showPopToggle = true, compact = false }) => {
   const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  // Landscape on a phone leaves ~230px of scroll room: the card shrinks so a
+  // player still fits without hunting for the buttons.
+  const heroH  = compact ? 78 : 112;
+  const heroFs = compact ? 44 : 64;
+  const rowH   = compact ? 42 : 52;
+  const padY   = compact ? 10 : 16;
   const diff     = score ? score - hole.par : null;
   const relColor = diff===null?'#C8D5C0':diff<=-2?'#B45309':diff===-1?'#15803D':diff===0?'#3F5F4A':diff===1?'#DC2626':'#991B1B';
   const relLabel = diff===null?'':diff<=-3?'ALBATROSS':diff===-2?'EAGLE':diff===-1?'BIRDIE':diff===0?'PAR':diff===1?'BOGEY':diff===2?'DOUBLE':diff===3?'TRIPLE':`+${diff}`;
@@ -113,6 +119,9 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
 
   const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
   const pen = ex.pen || 0;
+
+  // gettingPop arrives as a stroke count (legacy rounds send `true` = 1 stroke).
+  const popCount = gettingPop === true ? 1 : (Number(gettingPop) || 0);
 
   const cardBorder = isWolf ? '2px solid rgba(220,38,38,0.45)' : isPartner ? `2px solid ${p.color}66` : '1px solid #E7E3D9';
   const cardBg     = isWolf ? 'rgba(220,38,38,0.04)' : '#FFFFFF';
@@ -133,7 +142,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
           return (
             <button key={String(val)} onClick={() => onSet(p.id, selected ? null : val)}
               aria-label={`${p.name} ${ariaKey} ${val ? 'hit' : 'miss'}`} aria-pressed={selected}
-              style={{ flex:1, height:52, borderRadius:14,
+              style={{ flex:1, height:rowH, borderRadius:14,
                 border: selected ? 'none' : '1.5px solid #E4E0D5',
                 background: selected ? onColor : '#F0EDE4',
                 color: selected ? '#FFFFFF' : '#9AA79A',
@@ -184,16 +193,16 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
     ? (
       <button
         onClick={()=>onPopToggle(p.id)}
-        aria-pressed={gettingPop} aria-label={`Pop stroke for ${p.name}`}
+        aria-label={`Strokes for ${p.name} on this hole: ${popCount}. Tap to change.`}
         style={{
           borderRadius:999, padding:'8px 16px', minHeight:40,
-          border:gettingPop ? '1px solid rgba(200,161,90,0.45)' : '1.5px solid #E4E0D5',
-          background:gettingPop ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
-          color:gettingPop ? '#B8903A' : '#3F5F4A',
+          border:popCount ? '1px solid rgba(200,161,90,0.45)' : '1.5px solid #E4E0D5',
+          background:popCount ? 'rgba(200,161,90,0.12)' : '#F6F4EE',
+          color:popCount ? '#B8903A' : '#3F5F4A',
           fontFamily:F, fontWeight:800, fontSize:13, letterSpacing:0.5,
           cursor:'pointer', WebkitTapHighlightColor:'transparent'
         }}>
-        {gettingPop ? '💰 POP ON' : 'POP?'}
+        {popCount > 1 ? `💰 ${popCount} POPS` : popCount === 1 ? '💰 POP ON' : 'POP?'}
       </button>
     )
     : null;
@@ -204,7 +213,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
 
   return (
     <article style={{background:cardBg, border:cardBorder, borderRadius:22,
-      padding:'16px 16px 14px', boxShadow:'0 1px 3px rgba(14,43,32,0.05)'}}>
+      padding:`${padY}px 16px ${padY - 2}px`, boxShadow:'0 1px 3px rgba(14,43,32,0.05)'}}>
 
       {/* Identity row */}
       <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:14}}>
@@ -255,7 +264,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
       )}
 
       {/* Score hero — the primary interaction, big and unmissable */}
-      <div style={{display:'flex', alignItems:'stretch', gap:12, height:112, marginBottom:16}}>
+      <div style={{display:'flex', alignItems:'stretch', gap:12, height:heroH, marginBottom:compact ? 10 : 16}}>
         <button
           onClick={()=>onScore(p.id, (score||hole.par)-1)}
           disabled={score !== null && score <= 1}
@@ -278,7 +287,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
             WebkitTapHighlightColor:'transparent', userSelect:'none', gap:2, minWidth:0, overflow:'hidden'}}>
           <div key={score ?? 'none'} style={{fontFamily:F, fontWeight:900, lineHeight:1,
-            fontSize:64, color:score?relColor:'#C8D5C0', transition:'color 0.15s',
+            fontSize:heroFs, color:score?relColor:'#C8D5C0', transition:'color 0.15s',
             animation: score ? 'ppScorePop 0.22s ease-out' : 'none'}}>
             {score||'—'}
           </div>
@@ -312,7 +321,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
                 <button key={n}
                   onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
                   aria-label={`${p.name}: ${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
-                  style={{flex:1, height:52, borderRadius:14,
+                  style={{flex:1, height:rowH, borderRadius:14,
                     border: puttVal===n ? 'none' : '1.5px solid #E4E0D5',
                     background: puttVal===n ? p.color : '#F0EDE4',
                     color: puttVal===n ? '#FFFFFF' : '#3F5F4A',
@@ -333,10 +342,10 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
             <span style={labelStyle}>PEN</span>
             <div style={{display:'flex', alignItems:'center', gap:12}}>
               <button onClick={() => onExtraStat(p.id, 'pen', Math.max(0, pen - 1))} disabled={pen === 0} aria-label="One fewer penalty"
-                style={{width:52, height:52, borderRadius:14, border:'1.5px solid #E4E0D5', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:24, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
+                style={{width:rowH, height:rowH, borderRadius:14, border:'1.5px solid #E4E0D5', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:24, cursor:'pointer', opacity:pen===0?0.35:1, WebkitTapHighlightColor:'transparent'}}>−</button>
               <span style={{fontFamily:F, fontWeight:900, fontSize:24, color:pen>0?'#DC2626':'#8A9E8A', minWidth:28, textAlign:'center'}}>{pen}</span>
               <button onClick={() => onExtraStat(p.id, 'pen', pen + 1)} aria-label="One more penalty"
-                style={{width:52, height:52, borderRadius:14, border:'1.5px solid #E4E0D5', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:24, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
+                style={{width:rowH, height:rowH, borderRadius:14, border:'1.5px solid #E4E0D5', background:'#F0EDE4', color:'#3F5F4A', fontWeight:900, fontSize:24, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>+</button>
             </div>
           </div>
         )}
@@ -536,6 +545,31 @@ const SyncPulse = ({ syncing }) => {
   );
 };
 
+// Live viewport size. Rotating a phone changes both the room available and the
+// best shape for the player list, and neither can be read once at mount.
+function useViewport() {
+  const read = () => ({
+    w: typeof window === 'undefined' ? 900 : window.innerWidth,
+    h: typeof window === 'undefined' ? 900 : window.innerHeight,
+  });
+  const [vp, setVp] = React.useState(read);
+  React.useEffect(() => {
+    let frame = null;
+    const onResize = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setVp(read()));
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+  return vp;
+}
+
 // ── Main ScoreEntry Screen ────────────────────────────────────────────────────
 const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const { getWolfForHole, computePTMState, calcWolfStandings, calcStablefordPoints, calcSkins, getAdjustedHoleScore } = window;
@@ -576,7 +610,22 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // ── State initializers ────────────────────────────────────────────────────
   const _initScores  = () => { try { const s = localStorage.getItem('pp_scores_'+round.id); return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } };
   const _initPutts   = () => { try { const s = localStorage.getItem('pp_putts_'+round.id);  return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(0)]));    } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(0)]));    } };
-  const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(false)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(false)])); } };
+  // Pops start from the round's auto allocation (course handicap, off the low
+  // ball) so whole-field games score net from the first hole. Every hole stays
+  // editable and the edits persist.
+  const _defaultPop = () => {
+    const auto = round.autoPops || (window.autoPopStrokes
+      ? window.autoPopStrokes(players, course, round.teeId, { allowancePct: 100, relative: true })
+      : null);
+    return Object.fromEntries(players.map(p => {
+      const arr = auto && auto[p.id];
+      if (!Array.isArray(arr)) return [p.id, Array(holeCount).fill(0)];
+      const sized = arr.slice(0, holeCount);
+      while (sized.length < holeCount) sized.push(0);
+      return [p.id, sized];
+    }));
+  };
+  const _initPop     = () => { try { const s = localStorage.getItem('pp_pop_'+round.id);    return s ? JSON.parse(s) : _defaultPop(); } catch(e) { return _defaultPop(); } };
   const _initWolf    = () => { try { const s = localStorage.getItem('pp_wolf_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
   const _initBBB     = () => { try { const s = localStorage.getItem('pp_bbb_'+round.id);    return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
   const _initTeeBall = () => { try { const s = localStorage.getItem('pp_teeball_'+round.id);return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
@@ -634,6 +683,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     ud:    statsCfg.ud,
   }), [statsCfg, hasPTM]);
 
+  const vp         = useViewport();
   const hole       = course.holes[holeIdx];
   const wolfPlayer = hasWolf ? getWolfForHole(players, holeIdx) : null;
   const wolfHoleData = wolfData[holeIdx] || { wolfId: wolfPlayer?.id, partnerId: null, confirmed: false, lone: false };
@@ -834,10 +884,14 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     });
   };
 
+  // Cycles this hole's strokes 0 → 1 → 2 → 0 so a big index can take a second
+  // stroke on the hardest holes without a separate control.
   const togglePop = (playerId) => {
+    window.ppHaptic && window.ppHaptic();
     setPopFlags(prev => {
-      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(false))]};
-      next[playerId][holeIdx] = !next[playerId][holeIdx];
+      const next = {...prev, [playerId]: [...(prev[playerId]||Array(holeCount).fill(0))]};
+      const now = window.popStrokesAt(next, playerId, holeIdx);
+      next[playerId][holeIdx] = now >= 2 ? 0 : now + 1;
       scheduleCloudWrite(null, null, next, null);
       return next;
     });
@@ -974,7 +1028,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // Optimized for speed, visibility and touch accuracy over information density
   // — no pinching, zooming, or horizontal scrolling, ever.
   const showPopToggle = hasAnyTracker; // pops only affect game math — hide in casual rounds
-  const shortHeader   = window.innerHeight < 620; // trim the hole header on tiny screens
+  const shortHeader   = vp.h < 620;    // trim the hole header on short screens
+  // Landscape and tablets get more players side by side instead of one tall
+  // column nobody can see the bottom of.
+  const columns = Math.min(players.length, Math.max(1, Math.floor(vp.w / 330)));
 
   // Always-visible primary action — tells the golfer exactly what's next.
   const primary = !currentHoleScored
@@ -1054,7 +1111,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       <div style={{flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch',
         overflowX:'hidden', overscrollBehaviorY:'contain',
         padding:`12px calc(12px + env(safe-area-inset-right, 0px)) 16px calc(12px + env(safe-area-inset-left, 0px))`}}>
-        <div style={{display:'flex', flexDirection:'column', gap:14, maxWidth:640, margin:'0 auto'}}>
+        <div style={{display:'grid', gridTemplateColumns:`repeat(${columns}, minmax(0, 1fr))`, gap:14,
+          maxWidth: columns > 1 ? 1200 : 640, margin:'0 auto', alignItems:'start'}}>
           {players.map(p => {
             const isWolf       = hasWolf && wolfPlayer?.id === p.id;
             const isPartner    = hasWolf && wolfHoleData.confirmed && wolfHoleData.partnerId === p.id;
@@ -1062,7 +1120,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             const isNassauPlayer = allNassauPlayerIds.has(p.id);
             const nassauPopActive = isNassauPlayer && nassauMatches.some(match => {
               if (!match.playersInMatch.includes(p.id)) return false;
-              return !!(match.popHoles?.[p.id]?.[holeIdx]);
+              return window.popStrokesAt(match.popHoles || {}, p.id, holeIdx) !== 0;
             });
             const markeyPopCount = hasMarkey && markeyFmt?.markeyMatchConfig
               ? (markeyFmt.markeyMatchConfig.markeyPopStrokes?.[p.id]?.[holeIdx] || 0)
@@ -1071,7 +1129,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
               <PlayerScoreCard
                 key={p.id}
                 p={p} score={scores[p.id]?.[holeIdx]||null} hole={hole} holeIdx={holeIdx}
-                putts={putts} gettingPop={!!popFlags[p.id]?.[holeIdx]}
+                putts={putts} gettingPop={window.popStrokesAt(popFlags, p.id, holeIdx)}
                 nassauPopActive={nassauPopActive} isNassauPlayer={isNassauPlayer}
                 markeyPopCount={markeyPopCount}
                 isWolf={isWolf} isPartner={isPartner} isPTMHolder={isPTM}
@@ -1082,6 +1140,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
                 stats={cardStats} firData={firData} girData={girData} onFIR={setFIR} onGIR={setGIR}
                 extraStats={extraStats} onExtraStat={setExtraStat}
                 showPopToggle={showPopToggle}
+                compact={vp.h < 560}
               />
             );
           })}
