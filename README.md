@@ -1,9 +1,10 @@
 # PlayPal ⛳
 
 Golf scoring & side-game companion for your foursome. Live shared scorecards,
-**22 match formats** (stroke play, match play, four ball, best ball,
+**27 match formats** (stroke play, match play, four ball, best ball,
 scrambles, alternate shot, Chapman, shamble, stableford, quota, skins,
-Nassau, sixes, …) with WHS handicap support, plus the classic money games
+Nassau, sixes, …), a five-award **mini cup** (FLATSTICK, FIR KING, BOGEY BRO,
+PAR PRINCE, BIRDIE BRO) with WHS handicap support, plus the classic money games
 (Wolf, Nassau, Skins, Pass the Money, Bingo Bango Bongo, Tee Ball, Markey
 Match) with automatic payout math, stats dashboards, and golf-trip
 leaderboards — synced across every phone in the group.
@@ -36,7 +37,7 @@ commit the updated `dist/` (CI fails otherwise).
 |---|---|
 | `index.html` | App shell: Firebase config, sync services, script loading |
 | `components/` | Source of truth — React components (JSX) + game engines |
-| `components/matchEngine.js` | Registry-based scoring engine (22 formats; add formats without touching existing code) |
+| `components/matchEngine.js` | Registry-based scoring engine (27 formats incl. the 5 awards; add formats without touching existing code) |
 | `components/*Service.js` | Handicap (WHS), course (tees/favorites/providers), stats, profile, history, sharing services |
 | `dist/` | Compiled output served to browsers (committed) |
 | `tests/` | node:test suite for the scoring engines |

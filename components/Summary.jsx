@@ -35,7 +35,10 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     }
   }, []);
 
-  const roundData = { scores:_scores, wolfData:_wolfData, putts:_putts, popFlags:_popFlags, bbbData:_bbbData, teeBallData:_teeBallData };
+  const roundData = { scores:_scores, wolfData:_wolfData, putts:_putts, popFlags:_popFlags, bbbData:_bbbData, teeBallData:_teeBallData, firData:_firData, girData:_girData };
+
+  // Tracked stats in the shape MatchEngine award formats read them.
+  const _statsData = { putts:_putts, fir:_firData, gir:_girData };
 
   // Whole-round money: every money game plus every MatchEngine game that
   // carries a stake, rounded to cents and still netting to zero.
@@ -65,6 +68,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         return window.MatchEngine.payouts(g, {
           course, players, scores: _scores,
           startingTee: round.startingTee,
+          stats: _statsData,
           gameState: { wolf: _wolfData, bbb: _bbbData },
         });
       } catch(e) {
@@ -114,6 +118,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         return window.MatchEngine.compute(g, {
           course, players, scores: _scores,
           startingTee: round.startingTee,
+          stats: _statsData,
           gameState: { wolf: _wolfData, bbb: _bbbData },
         });
       } catch(e) { console.warn('[Summary] game compute failed:', e); return null; }

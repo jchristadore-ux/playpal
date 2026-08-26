@@ -799,6 +799,7 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
       pay = ME.payouts(g, {
         course, players, scores,
         startingTee: o.startingTee,
+        stats: o.stats || {},
         gameState: { wolf: wolfData || {}, bbb: bbbData },
       });
     } catch (e) { pay = {}; }
@@ -852,7 +853,8 @@ function calcRoundPayouts(round, data) {
   const raw = calcAllPayouts(
     scores, d.wolfData || {}, players, course, round.formats || [], [],
     ptm.holderId, d.popFlags || {}, null, d.bbbData || {}, d.teeBallData || {},
-    { games: round.games || [], startingTee: round.startingTee, teeId: round.teeId }
+    { games: round.games || [], startingTee: round.startingTee, teeId: round.teeId,
+      stats: { putts: d.putts || {}, fir: d.firData || {}, gir: d.girData || {} } }
   );
   return roundMoneyMap(raw);
 }

@@ -1162,7 +1162,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
       <TrackersSheet open={trackersOpen} onClose={() => setTrackersOpen(false)} formats={formats}>
         <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
-        {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
+        {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee}
+                          stats={{ putts, fir: firData, gir: girData }} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
         {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
         {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
         {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}

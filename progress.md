@@ -1,5 +1,64 @@
 # PlayPal — Progress
 
+## v1.17.0 — Round awards / mini cup (26 Aug 2026)
+
+**Branch:** `claude/golf-awards-setup-fy1s6d`
+**Status:** complete. 276 tests green (17 new in `tests/awards.test.mjs`),
+`dist/` rebuilt, browser smoke through setup → mini cup → live tracker with
+zero page errors.
+
+### What was built
+
+Five trophies from the EGT Cup's season awards, re-cut as ordinary MatchEngine
+formats so they run on any single round with their own stakes, alongside
+whatever else is being played:
+
+| Format id | Award | Counts | Default |
+|---|---|---|---|
+| `flatstick` | FLATSTICK | putts (or three-putts) | total putts, gross |
+| `firKing` | FIR KING | fairways off the tee, par 3s excluded | gross |
+| `bogeyBro` | BOGEY BRO | bogeys exactly (or bogey-or-better) | exact, gross |
+| `parPrince` | PAR PRINCE | pars (or par-or-better) | exact, gross |
+| `birdieBro` | BIRDIE BRO | birdies or better | **net** |
+
+Each settles `pot` against its own `config.stake` — losers ante, winner takes,
+ties split — so five awards are five independent pots inside the same round
+total, and `calcRoundPayouts` still nets to $0.
+
+### Rules that keep an award honest
+
+- A "most X" award where every eligible player counts zero returns
+  `awardEmpty` with `winner: null` — a birdie-less Friday pays nobody rather
+  than splitting four ways among four zeros.
+- A player who never recorded the stat behind an award (putts, FIR) is
+  ineligible: out of the standings and out of the pot, neither anteing nor
+  winning.
+- FLATSTICK additionally requires putts on *every* played hole — it is the one
+  award where a blank would improve your score.
+- Completeness follows the scorecard, not eligibility, so one untracked card
+  can't hold an award open.
+
+### Files
+
+- `components/matchEngine.js` — `raw.stats` → `ctx.stats` accessors,
+  `def.defaultBasis`, `def.requiresStats`, `def.options`, the `awards`
+  category, `AWARD_FORMAT_IDS`, `_awardCompute` + `_toParCount`, the five
+  registrations, and `_potPayouts` skipping entries that sat out.
+- `components/Setup.jsx` — generic `def.options` selector, missing-stat
+  warning on the game card, adding an award switches its tracking on, and the
+  **Mini Cup** card in the picker (all five at $1/$2/$5/pride).
+- Stats threaded to every surface that settles: `components/GameTrackers.jsx`,
+  `ScoreEntry.jsx`, `Summary.jsx`, `gameUtils.js` (`calcAllPayouts` /
+  `calcRoundPayouts`), `sharingService.js`, `App.jsx`.
+- `tests/awards.test.mjs` (17 tests), docs (`README.md`,
+  `docs/USER_GUIDE.md`, `docs/DEVELOPER_GUIDE.md`), CHANGELOG, version 1.17.0.
+
+### Next action if resuming
+
+Nothing pending. Optional follow-ups are listed in `todo.md`.
+
+---
+
 ## v1.16.0 — App Store submission audit (23 Aug 2026)
 
 **Branch:** `claude/app-store-submission-audit-pqkj74`

@@ -40,6 +40,7 @@ const result = MatchEngine.compute(game, {
   players,           // round players (id, name, color, handicap)
   scores,            // { [playerId]: (number|null)[] }
   startingTee,       // 1 | 10 (optional)
+  stats: { putts, fir, gir },                    // tracked stats — award formats
   gameState: { wolf: wolfData, bbb: bbbData },   // input-driven formats only
 });
 // → { kind, entries[], leaderIds, thru, complete, status, winner }
@@ -58,9 +59,13 @@ MatchEngine.register({
   id: 'flags',                      // unique, stable — stored in round.games
   label: 'Flags', icon: '🚩',
   desc: 'Start with par + handicap strokes; plant your flag where the ball dies.',
-  category: 'points',               // individual | match | team | points
+  category: 'points',               // individual | match | team | points | awards
   basis: 'gross',                   // or 'net' or 'choice'
+  defaultBasis: 'gross',            // which way a 'choice' format starts
   defaultAllowance: 100,            // when net
+  requiresStats: ['putts'],         // optional — Setup switches the tracking on
+  options: [{ key:'mode', label:'COUNT', default:'total',
+              choices:[{ value:'total', label:'TOTAL', hint:'…' }] }],
   players: { min: 2, max: 8 },      // optional
   teams: { count: 2, size: [2, 2] },// optional — Setup renders the team builder
   teamEntry: false,                 // true → one score per team per hole
@@ -69,7 +74,9 @@ MatchEngine.register({
   compute(ctx) {
     // ctx: holes, holeCount, playOrder, players, teams, config, basis,
     //      gross(pid,i), net(pid,i), score(pid,i)  ← basis-aware,
-    //      teamBest(team,i,count), teamEntered(team,i), handicaps, gameState
+    //      teamBest(team,i,count), teamEntered(team,i), handicaps, gameState,
+    //      stats.putts(pid,i) / stats.fir(pid,i) / stats.gir(pid,i) and the
+    //      stats.puttHoles(pid) / firHoles(pid) / girHoles(pid) counts
     return { kind: 'leaderboard', entries: [...], leaderIds: [...],
              thru, complete, status, winner };
   },
@@ -82,6 +89,22 @@ shares the canonical implementation but keeps its own name/desc in the picker.
 Then add a test in `tests/matchEngine.test.mjs` (see the
 "every non-input format returns a normalized result" invariant — new formats
 are swept automatically).
+
+### Awards
+
+The five mini-cup awards (`MatchEngine.AWARD_FORMAT_IDS`) are ordinary
+registered formats in the `awards` category, each settling `pot` against its
+own stake. They share one helper, `_awardCompute(ctx, spec)`, which turns a
+per-player count into the standard leaderboard result and enforces two rules:
+
+* **eligibility** — `spec.eligible(pid)` gates a player out of the award (and
+  out of its pot) when the stat behind it was never recorded on their card;
+* **the empty award** — when every eligible player counts zero on a
+  "most X" award, the result carries `awardEmpty` with `winner: null`, so no
+  money moves.
+
+Completeness follows the scorecard, not eligibility, so one untracked card
+can't hold an award open forever.
 
 ### Setup integration
 

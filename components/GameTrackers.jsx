@@ -74,12 +74,12 @@ const GameStandingsCard = ({ result, stake, final: isFinal }) => {
 
 // Computes every configured engine game against live scores and renders a card
 // per game. `gameState` carries input-driven data (wolf picks, BBB awards).
-const EngineGamesTracker = ({ games, players, course, scores, startingTee, gameState, final: isFinal }) => {
+const EngineGamesTracker = ({ games, players, course, scores, startingTee, stats, gameState, final: isFinal }) => {
   const ME = window.MatchEngine;
   if (!ME || !games || games.length === 0) return null;
   const results = games.map(g => {
     try {
-      return { game: g, result: ME.compute(g, { course, players, scores, startingTee, gameState: gameState || {} }) };
+      return { game: g, result: ME.compute(g, { course, players, scores, startingTee, stats: stats || {}, gameState: gameState || {} }) };
     } catch (e) {
       console.warn('[PlayPal] game compute failed:', g.formatId, e);
       return null;

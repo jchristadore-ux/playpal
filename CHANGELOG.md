@@ -4,6 +4,54 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.17.0] — 2026-08-26 — Round awards: run a mini cup on any Friday
+
+The EGT Cup's season trophies now exist as ordinary formats you can put on a
+single round, each with its own stake, alongside whatever else you're playing.
+
+### Five awards, five pots
+
+- **FLATSTICK** — fewest putts, or (a tap away) fewest three-putts, which is
+  fairer to whoever actually hits greens instead of chipping close all day.
+- **FIR KING** — most fairways off the tee. Par 3s never count, so the
+  denominator is the 14 driving holes, not 18.
+- **BOGEY BRO** — the grinder trophy: most bogeys exactly, where a par is too
+  good to count and a double is too bad. "Bogey or better" turns it into the
+  no-blow-up award instead.
+- **PAR PRINCE** — most pars, gross by default.
+- **BIRDIE BRO** — most birdies-or-better, **net** by default, so the award
+  still has a race in a group that rarely makes one gross.
+
+Each is a separate pot with its own stake: the losers ante, the winner takes
+it, ties split it. Add them one at a time, or take the **Mini Cup** card at the
+top of the game picker to put all five on the round at one stake and tune them
+card by card afterwards.
+
+### Awards that can't pay the wrong person
+
+- **A trophy nobody earned pays nobody.** A birdie-less Friday leaves BIRDIE
+  BRO with no winner and moves no money, rather than splitting the pot four
+  ways among four zeros.
+- **An untracked stat can't be won.** FLATSTICK and FIR KING settle off what
+  the group actually recorded; a player who tracked none of it sits the award
+  out — neither antes nor wins — and an award nobody tracked says so instead of
+  crowning someone.
+- **A card with gaps sits out FLATSTICK.** Fewest putts is the one award where
+  leaving a number blank would *improve* your score, so a card missing putts on
+  a played hole is ineligible until the number goes in.
+
+### Plumbing
+
+- `MatchEngine` formats can now read the round's tracked stats (`raw.stats` —
+  putts, FIR, GIR), declare the stats they require (`requiresStats`), offer
+  their own config choices (`options`, rendered generically in Setup), and pick
+  a default scoring basis (`defaultBasis`) instead of always defaulting to net.
+- Adding an award switches on the per-hole tracking it needs, so the stat is
+  being recorded from hole 1 rather than discovered missing at settlement.
+- A pot no longer charges an entry that sat the game out (`played === 0`).
+- The live tracker, the summary, the emailed scorecard and `calcRoundPayouts`
+  all pass the tracked stats through, so every surface settles the same money.
+
 ## [1.16.0] — 2026-08-23 — App Store submission audit
 
 A full pass over the app ahead of an App Store submission: the money, the
