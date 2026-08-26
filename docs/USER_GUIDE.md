@@ -37,6 +37,29 @@ Tap **+ ADD GAME**, pick a format, and PlayPal pre-fills everything:
 
 A green **✓ Ready to play** means the game is set.
 
+### Awards — running a mini cup
+
+Under **Awards** in the game picker are five one-stat trophies you can put on
+any round, each with its own pot and its own stake:
+
+| Award | What wins it |
+|---|---|
+| 🥄 **FLATSTICK** | Fewest putts — or switch it to fewest three-putts, which is fairer to whoever actually hits greens |
+| 🟢 **FIR KING** | Most fairways off the tee (par 3s don't count, so it's out of 14) |
+| 😤 **BOGEY BRO** | Most bogeys exactly — a par is too good, a double too bad. "Bogey or better" turns it into the no-blow-up award |
+| 👑 **PAR PRINCE** | Most pars |
+| 🐦 **BIRDIE BRO** | Most birdies or better — **net** by default, so a popped par counts |
+
+Tap the **Mini Cup** card at the top of the picker to add all five at one
+stake, then change any of them card by card. Each award settles on its own:
+everyone else antes the stake, the winner takes the pot, and a tie splits it.
+
+Two things keep them honest. An award nobody earned — no birdies all day —
+crowns nobody and moves no money. And an award settled off a tracked stat
+(putts, fairways) only counts players who recorded it; PlayPal switches that
+tracking on for you when you add the award, so it's being recorded from the
+first tee.
+
 ## Handicaps
 
 Each profile stores a **Handicap Index**. On every round PlayPal computes a

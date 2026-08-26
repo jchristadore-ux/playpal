@@ -420,7 +420,7 @@ const App = () => {
     // re-running format logic. calcRoundPayouts settles the money games AND the
     // MatchEngine games, so the stored figure is the whole round's money.
     const _computedPayouts = window.calcRoundPayouts
-      ? window.calcRoundPayouts(round, { scores, wolfData, putts, popFlags, bbbData, teeBallData })
+      ? window.calcRoundPayouts(round, { scores, wolfData, putts, popFlags, bbbData, teeBallData, firData, girData })
       : {};
 
     const completedRound = {

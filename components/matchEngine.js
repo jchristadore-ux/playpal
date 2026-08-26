@@ -33,6 +33,13 @@
 // MatchEngine.payouts(game, raw) turns a game + its config.stake into a
 // zero-sum { playerId: amount } map. A stake of 0 means "no money on it".
 //
+// Awards (category 'awards') are single-stat trophies — FLATSTICK, FIR KING,
+// BOGEY BRO, PAR PRINCE, BIRDIE BRO — each with its own pot and its own stake,
+// so a group can run a mini-cup on top of whatever else is being played. The
+// ones counting putts or fairways read `raw.stats` ({ putts, fir, gir } keyed
+// by player id, one array per player); a caller with no tracked stats can omit
+// it and those awards report themselves untracked rather than crowning nobody.
+//
 // Depends on HandicapService + CourseService (loaded first).
 
 const MatchEngine = (function () {
@@ -70,11 +77,14 @@ const MatchEngine = (function () {
         players: r.players || null,
         teams: r.teams || null,
         basis: r.basis || 'choice',
+        defaultBasis: r.defaultBasis || null,
         defaultAllowance: r.defaultAllowance !== undefined ? r.defaultAllowance : 100,
         teamEntry: !!r.teamEntry,
         needsInput: r.needsInput || null,
         settlement: r.settlement || 'pot',
         stakeHint: r.stakeHint || null,
+        requiresStats: r.requiresStats || null,
+        options: r.options || null,
         aliasOf: d.aliasOf || null,
       };
     });
@@ -85,7 +95,12 @@ const MatchEngine = (function () {
     match:      { label: 'Head-to-Head',    order: 2 },
     team:       { label: 'Team',            order: 3 },
     points:     { label: 'Points Games',    order: 4 },
+    awards:     { label: 'Awards',          order: 5 },
   };
+
+  // The award set — one stat, one pot, one trophy each. Added together they
+  // make a mini-cup that runs alongside whatever else is being played.
+  const AWARD_FORMAT_IDS = ['flatstick', 'firKing', 'bogeyBro', 'parPrince', 'birdieBro'];
 
   // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -111,7 +126,7 @@ const MatchEngine = (function () {
     const players = allPlayers.filter(p => participantIds.includes(p.id));
     const playersById = Object.fromEntries(players.map(p => [p.id, p]));
 
-    const basis = def.basis === 'choice' ? (cfg.scoringBasis || 'net') : def.basis;
+    const basis = def.basis === 'choice' ? (cfg.scoringBasis || def.defaultBasis || 'net') : def.basis;
     const tee = CS.getTee(course, cfg.teeId);
     const allowance = cfg.allowancePct !== undefined && cfg.allowancePct !== null
       ? cfg.allowancePct
@@ -178,6 +193,24 @@ const MatchEngine = (function () {
       return vals.slice(0, n).reduce((a, b) => a + b, 0);
     };
 
+    // Per-hole tracked stats (putts / FIR / GIR), recorded on the scorecard and
+    // passed straight through. Award formats read them; every other format
+    // ignores them, so a caller that has none can leave `raw.stats` off.
+    //   putts: { pid: number[] }   0 / missing → not recorded on that hole
+    //   fir / gir: { pid: (true|false|null)[] }   null → not recorded
+    const statData = raw.stats || {};
+    const _cell = (bag, pid, i) => (bag && bag[pid] ? bag[pid][i] : undefined);
+    const stats = {
+      putts:   (pid, i) => { const v = _cell(statData.putts, pid, i); return typeof v === 'number' && v > 0 ? v : 0; },
+      fir:     (pid, i) => { const v = _cell(statData.fir, pid, i); return v === true || v === false ? v : null; },
+      gir:     (pid, i) => { const v = _cell(statData.gir, pid, i); return v === true || v === false ? v : null; },
+      // Holes where the stat was actually recorded — an award can't be won on
+      // a stat nobody tracked, so eligibility is checked, never assumed.
+      puttHoles: (pid) => holes.reduce((a, h, i) => a + (stats.putts(pid, i) > 0 ? 1 : 0), 0),
+      firHoles:  (pid) => holes.reduce((a, h, i) => a + (h.par > 3 && stats.fir(pid, i) !== null ? 1 : 0), 0),
+      girHoles:  (pid) => holes.reduce((a, h, i) => a + (stats.gir(pid, i) !== null ? 1 : 0), 0),
+    };
+
     return {
       course, holes, holeCount,
       par: (i) => holes[i] ? holes[i].par : 4,
@@ -188,6 +221,7 @@ const MatchEngine = (function () {
       basis, allowance, relative,
       handicaps: hcp,
       gross, net, score,
+      stats,
       teamEntered, teamBest, teamStrokes,
       gameState: raw.gameState || {},
     };
@@ -437,8 +471,11 @@ const MatchEngine = (function () {
   }
 
   // Losing players each ante `stake`; the pot is split among the winners.
+  // An entry that sat the game out (played 0 — an award nobody tracked the
+  // stat for, say) neither antes nor wins.
   function _potPayouts(result, stake, pay) {
-    const { ids } = _entryPlayers(result);
+    const active = { entries: (result.entries || []).filter(e => e.played === undefined || e.played > 0) };
+    const { ids } = _entryPlayers(active);
     if (!result.complete || !result.winner || ids.length < 2) return pay;
     const winnerIds = [];
     (result.entries || []).forEach(e => {
@@ -519,7 +556,8 @@ const MatchEngine = (function () {
     const def = resolve(formatId);
     if (!def) return {};
     const cfg = {};
-    if (def.basis === 'choice') cfg.scoringBasis = 'net';
+    if (def.basis === 'choice') cfg.scoringBasis = def.defaultBasis || 'net';
+    (def.options || []).forEach(o => { if (o.default !== undefined) cfg[o.key] = o.default; });
     if (def.defaultAllowance !== undefined) cfg.allowancePct = def.defaultAllowance;
     if (def.defaultRelative) cfg.relative = true;
     cfg.stake = 0;                       // no money on a game until a stake is set
@@ -1002,6 +1040,190 @@ const MatchEngine = (function () {
     },
   });
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // AWARDS — one stat, one pot, one trophy each
+  // ════════════════════════════════════════════════════════════════════════════
+  // Each award is a season-style trophy run over a single round: count one stat
+  // over 18 holes, most (or fewest) wins the pot, ties split it. Two rules keep
+  // them honest for any group:
+  //   · a player who never recorded the underlying stat is INELIGIBLE, not a
+  //     zero-winner — you can't take FLATSTICK on putts nobody wrote down;
+  //   · if nobody registers a single one (a birdie-less Friday), the award has
+  //     no winner and no money moves.
+
+  // Counts a per-player stat into the standard leaderboard result.
+  //   spec: { valueOf(pid), lowerIsBetter, unit, noun, eligible(pid), emptyText }
+  function _awardCompute(ctx, spec) {
+    const holesPlayed = (pid) => ctx.holes.reduce((a, h, i) => a + (ctx.gross(pid, i) > 0 ? 1 : 0), 0);
+    const entries = ctx.players.map(p => {
+      const played = holesPlayed(p.id);
+      const eligible = played > 0 && (spec.eligible ? spec.eligible(p.id) : true);
+      const total = eligible ? spec.valueOf(p.id) : 0;
+      return {
+        id: p.id, label: _firstName(p), playerIds: [p.id], color: p.color,
+        total, played: eligible ? played : 0, perHole: null,
+        totalLabel: eligible ? _fmtNum(total) : '—',
+        detail: eligible
+          ? (spec.detailOf ? spec.detailOf(p.id, total) : total + ' ' + spec.unit) + ' · thru ' + played
+          : (played > 0
+              ? (typeof spec.ineligibleText === 'function' ? spec.ineligibleText(p.id, played) : (spec.ineligibleText || 'Not tracked'))
+              : 'No scores'),
+      };
+    });
+    // Completeness follows the scorecard, not eligibility — one player who
+    // never wrote a putt down must not hold the whole award open.
+    const cardPlayed = ctx.players.map(p => holesPlayed(p.id));
+    const complete = cardPlayed.length > 0 && cardPlayed.every(n => n === ctx.holeCount);
+    const thru = cardPlayed.length ? Math.min(...cardPlayed) : 0;
+    const res = finishLeaderboard(entries, {
+      lowerIsBetter: !!spec.lowerIsBetter, complete, thru, unit: spec.unit,
+    });
+    // A trophy nobody earned pays nobody: clearing `winner` also clears the pot,
+    // because every settlement mode requires a winner.
+    const anyScored = res.entries.some(e => e.played > 0);
+    if (!spec.lowerIsBetter && anyScored && res.entries.every(e => e.played === 0 || e.total === 0)) {
+      return { kind: 'leaderboard', ...res, winner: null, awardEmpty: true, status: spec.emptyText || ('No ' + spec.unit + ' — nobody wins') };
+    }
+    if (!anyScored) return { kind: 'leaderboard', ...res, winner: null, status: spec.noDataText || res.status };
+    return { kind: 'leaderboard', ...res };
+  }
+
+  // Holes where the player's basis score beat / matched / missed par by `diff`
+  // (or better, when `orBetter`). Unplayed holes never count.
+  function _toParCount(ctx, diff, orBetter) {
+    return (pid) => ctx.holes.reduce((a, h, i) => {
+      const s = ctx.score(pid, i);
+      if (!s) return a;
+      const d = s - h.par;
+      return a + ((orBetter ? d <= diff : d === diff) ? 1 : 0);
+    }, 0);
+  }
+
+  register({
+    id: 'flatstick', label: 'FLATSTICK', icon: '🥄',
+    settlement: 'pot', stakeHint: 'Fewest putts wins the pot — every other player antes the stake.',
+    desc: 'Fewest putts on the day. Putts have to be tracked to be eligible.',
+    category: 'awards', basis: 'gross', players: { min: 2, max: 8 },
+    requiresStats: ['putts'],
+    options: [{
+      key: 'mode', label: 'COUNT', default: 'total',
+      choices: [
+        { value: 'total',      label: 'TOTAL PUTTS', hint: 'Fewest putts over the round.' },
+        { value: 'threePutts', label: 'FEWEST 3-PUTTS', hint: 'Fewest three-putts — fairer to whoever actually hits greens.' },
+      ],
+    }],
+    compute(ctx) {
+      const threes = ctx.config.mode === 'threePutts';
+      const scored = (pid) => ctx.holes.reduce((a, h, i) => a + (ctx.gross(pid, i) > 0 ? 1 : 0), 0);
+      const missing = (pid) => scored(pid) - ctx.stats.puttHoles(pid);
+      return _awardCompute(ctx, {
+        lowerIsBetter: true,
+        unit: threes ? '3-putts' : 'putts',
+        // Fewest putts is the one award where NOT writing a number down would
+        // improve your score, so a card with gaps sits the award out.
+        eligible: (pid) => ctx.stats.puttHoles(pid) > 0 && missing(pid) === 0,
+        ineligibleText: (pid) => {
+          const m = missing(pid);
+          return ctx.stats.puttHoles(pid) === 0
+            ? 'No putts tracked'
+            : 'Putts missing on ' + m + ' hole' + (m === 1 ? '' : 's');
+        },
+        noDataText: 'Track putts to run this award',
+        valueOf: (pid) => ctx.holes.reduce((a, h, i) => {
+          const p = ctx.stats.putts(pid, i);
+          return a + (threes ? (p >= 3 ? 1 : 0) : p);
+        }, 0),
+        detailOf: (pid, v) => v + (threes ? ' three-putt' + (v === 1 ? '' : 's') : ' putts'),
+      });
+    },
+  });
+
+  register({
+    id: 'firKing', label: 'FIR KING', icon: '🟢',
+    settlement: 'pot', stakeHint: 'Most fairways wins the pot — every other player antes the stake.',
+    desc: 'Most fairways hit off the tee. Par 3s do not count.',
+    category: 'awards', basis: 'gross', players: { min: 2, max: 8 },
+    requiresStats: ['fir'],
+    compute(ctx) {
+      const driving = ctx.holes.filter(h => h.par > 3).length;
+      return _awardCompute(ctx, {
+        lowerIsBetter: false, unit: 'fairways',
+        eligible: (pid) => ctx.stats.firHoles(pid) > 0,
+        ineligibleText: 'No fairways tracked',
+        noDataText: 'Track FIR to run this award',
+        emptyText: 'Nobody found a fairway — no winner',
+        valueOf: (pid) => ctx.holes.reduce((a, h, i) => a + (h.par > 3 && ctx.stats.fir(pid, i) === true ? 1 : 0), 0),
+        detailOf: (pid, v) => v + '/' + driving + ' fairways',
+      });
+    },
+  });
+
+  register({
+    id: 'bogeyBro', label: 'BOGEY BRO', icon: '😤',
+    settlement: 'pot', stakeHint: 'Most bogeys wins the pot — every other player antes the stake.',
+    desc: 'The grinder trophy: most bogeys. Pars are too good and doubles are too bad — this one pays steady.',
+    category: 'awards', basis: 'choice', defaultBasis: 'gross', defaultAllowance: 100,
+    players: { min: 2, max: 8 },
+    options: [{
+      key: 'mode', label: 'COUNT', default: 'exact',
+      choices: [
+        { value: 'exact',    label: 'BOGEYS ONLY', hint: 'Exactly +1. A par is too good to count, a double is too bad.' },
+        { value: 'orBetter', label: 'BOGEY OR BETTER', hint: 'Every hole at +1 or better — the no-blow-up award.' },
+      ],
+    }],
+    compute(ctx) {
+      const orBetter = ctx.config.mode === 'orBetter';
+      return _awardCompute(ctx, {
+        lowerIsBetter: false,
+        unit: orBetter ? 'holes' : 'bogeys',
+        emptyText: orBetter ? 'Nobody made a bogey or better — no winner' : 'No bogeys all day — no winner',
+        valueOf: _toParCount(ctx, 1, orBetter),
+        detailOf: (pid, v) => v + (orBetter ? ' at bogey or better' : ' bogey' + (v === 1 ? '' : 's')),
+      });
+    },
+  });
+
+  register({
+    id: 'parPrince', label: 'PAR PRINCE', icon: '👑',
+    settlement: 'pot', stakeHint: 'Most pars wins the pot — every other player antes the stake.',
+    desc: 'Most pars. Gross by default — switch to net and a popped hole counts too.',
+    category: 'awards', basis: 'choice', defaultBasis: 'gross', defaultAllowance: 100,
+    players: { min: 2, max: 8 },
+    options: [{
+      key: 'mode', label: 'COUNT', default: 'exact',
+      choices: [
+        { value: 'exact',    label: 'PARS ONLY', hint: 'Exactly level par on the hole.' },
+        { value: 'orBetter', label: 'PAR OR BETTER', hint: 'Pars and birdies both count.' },
+      ],
+    }],
+    compute(ctx) {
+      const orBetter = ctx.config.mode === 'orBetter';
+      return _awardCompute(ctx, {
+        lowerIsBetter: false,
+        unit: orBetter ? 'holes' : 'pars',
+        emptyText: orBetter ? 'Nobody got to par — no winner' : 'No pars all day — no winner',
+        valueOf: _toParCount(ctx, 0, orBetter),
+        detailOf: (pid, v) => v + (orBetter ? ' at par or better' : ' par' + (v === 1 ? '' : 's')),
+      });
+    },
+  });
+
+  register({
+    id: 'birdieBro', label: 'BIRDIE BRO', icon: '🐦',
+    settlement: 'pot', stakeHint: 'Most birdies wins the pot — every other player antes the stake.',
+    desc: 'Most birdies or better. Net by default, so the award still lives in a group that rarely makes one gross.',
+    category: 'awards', basis: 'choice', defaultBasis: 'net', defaultAllowance: 100,
+    players: { min: 2, max: 8 },
+    compute(ctx) {
+      return _awardCompute(ctx, {
+        lowerIsBetter: false, unit: 'birdies',
+        emptyText: 'No birdies — nobody wins',
+        valueOf: _toParCount(ctx, -1, true),
+        detailOf: (pid, v) => v + ' birdie' + (v === 1 ? '' : 's') + ' or better',
+      });
+    },
+  });
+
   return {
     register,
     get,
@@ -1013,6 +1235,7 @@ const MatchEngine = (function () {
     stablefordPoints,
     quotaPoints,
     CATEGORY_INFO,
+    AWARD_FORMAT_IDS,
     TEAM_COLORS,
   };
 })();

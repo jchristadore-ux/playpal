@@ -1,5 +1,28 @@
 # TODO — PlayPal
 
+## Done — Round awards / mini cup (v1.17.0, branch claude/golf-awards-setup-fy1s6d)
+- [x] Five awards registered as MatchEngine formats in a new `awards` category:
+      FLATSTICK, FIR KING, BOGEY BRO, PAR PRINCE, BIRDIE BRO.
+- [x] Each carries its own stake and settles as its own pot; a round with all
+      five plus other formats still nets to $0.
+- [x] BIRDIE BRO defaults to net (a group of high handicaps makes almost no
+      gross birdies); PAR PRINCE / BOGEY BRO default to gross; FLATSTICK and
+      BOGEY BRO / PAR PRINCE carry a mode toggle.
+- [x] Empty award (nobody made one) → no winner, no money.
+- [x] Untracked stat → player ineligible, not a zero-winner; FLATSTICK needs
+      putts on every played hole.
+- [x] `raw.stats` plumbed through tracker, summary, email and payouts.
+- [x] Adding an award turns on the per-hole tracking it needs.
+- [x] Mini Cup card adds all five at one stake.
+- [x] 276 tests green (17 new); browser smoke clean; v1.17.0 + CHANGELOG.
+
+### Optional follow-ups for the awards
+- [ ] Carry an unclaimed award's pot into another award (today it simply
+      doesn't pay).
+- [ ] Show award standings in the emailed round report as a dedicated block
+      (they currently appear in the per-game list).
+- [ ] Season/trip rollup of round awards on the Trip dashboard.
+
 ## Done — App Store submission audit (v1.16.0, branch claude/app-store-submission-audit-pqkj74)
 - [x] Full audit written to `APP_STORE_AUDIT.md`; `APP_STORE_READINESS.md` now
       points at it and records why its old "all code-side work is done" verdict

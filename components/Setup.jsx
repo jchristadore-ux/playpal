@@ -72,14 +72,17 @@ const GameTeamAssigner = ({ def, config, players, onChange }) => {
   );
 };
 
-const GameConfigCard = ({ game, players, onChange, onRemove }) => {
+const GameConfigCard = ({ game, players, statsConfig, onChange, onRemove }) => {
   const ME = window.MatchEngine;
   const def = ME.get(game.formatId);
   const [showHcp, setShowHcp] = React.useState(false);
   if (!def) return null;
   const config = game.config || {};
+  // A putts/FIR award can only be settled off stats somebody records, so the
+  // card says plainly when the round isn't set up to record them.
+  const missingStats = (def.requiresStats || []).filter(k => statsConfig && !statsConfig[k]);
   const basisChoice = def.basis === 'choice';
-  const basis = basisChoice ? (config.scoringBasis || 'net') : def.basis;
+  const basis = basisChoice ? (config.scoringBasis || def.defaultBasis || 'net') : def.basis;
   const validation = ME.validateGame(game, players);
 
   const setCfg = (patch) => onChange({ ...game, config: { ...config, ...patch } });
@@ -93,6 +96,12 @@ const GameConfigCard = ({ game, players, onChange, onRemove }) => {
       </div>
       <div style={{padding:'12px 14px', display:'flex', flexDirection:'column', gap:12}}>
         <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', lineHeight:1.5}}>{def.desc}</div>
+
+        {missingStats.length > 0 && (
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#DC2626', lineHeight:1.5}}>
+            ⚠️ Turn on {missingStats.map(k => k.toUpperCase()).join(' & ')} under “Select Stats to Track” — this award is settled off what you record each hole.
+          </div>
+        )}
 
         {/* Money on this game. Zero means it's played for pride only. */}
         <div style={{borderTop:'1px solid #F0EDE4', paddingTop:12}}>
@@ -112,6 +121,31 @@ const GameConfigCard = ({ game, players, onChange, onRemove }) => {
             </div>
           )}
         </div>
+
+        {/* Format-declared choices (an award's counting rule, for one) render
+            generically, so a new option needs no change here. */}
+        {(def.options || []).map(opt => {
+          const cur = config[opt.key] !== undefined ? config[opt.key] : opt.default;
+          const hint = (opt.choices.find(c => c.value === cur) || {}).hint;
+          return (
+            <div key={opt.key}>
+              <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A', width:60}}>{opt.label}</div>
+                {opt.choices.map(c => (
+                  <div key={c.value} onClick={() => setCfg({ [opt.key]: c.value })}
+                    style={{flex:1, textAlign:'center', padding:'7px 4px', borderRadius:9, cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:11,
+                      background: cur === c.value ? '#0E2B20' : '#F0EDE4', color: cur === c.value ? '#F6F4EE' : '#3F5F4A',
+                      border: cur === c.value ? 'none' : '1px solid #E7E3D9', WebkitTapHighlightColor:'transparent'}}>
+                    {c.label}
+                  </div>
+                ))}
+              </div>
+              {hint && (
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#8A9E8A', marginTop:6, marginLeft:68, lineHeight:1.5}}>{hint}</div>
+              )}
+            </div>
+          );
+        })}
 
         {basisChoice && (
           <div style={{display:'flex', gap:8, alignItems:'center'}}>
@@ -195,14 +229,40 @@ const GameConfigCard = ({ game, players, onChange, onRemove }) => {
   );
 };
 
-const GamePickerModal = ({ open, onClose, onPick, playerCount }) => {
+const GamePickerModal = ({ open, onClose, onPick, onPickAwardSet, awardsAdded, playerCount }) => {
   if (!open) return null;
   const ME = window.MatchEngine;
   const all = ME.list().filter(f => !f.needsInput);
   const cats = Object.entries(ME.CATEGORY_INFO).sort((a, b) => a[1].order - b[1].order);
+  const awardCount = (ME.AWARD_FORMAT_IDS || []).length;
+  const allAwardsIn = (awardsAdded || 0) >= awardCount;
   return (
     <Modal open={open} onClose={onClose} title="Add a Game">
       <div style={{display:'flex', flexDirection:'column', gap:14}}>
+        {/* One tap puts the whole trophy case on the round — every award on the
+            same stake, tunable card by card afterwards. */}
+        {onPickAwardSet && !allAwardsIn && (
+          <div style={{background:'rgba(200,161,90,0.07)', border:'1px solid rgba(200,161,90,0.3)', borderRadius:12, padding:'12px 14px'}}>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, color:'#0E2B20'}}>🏆 Mini Cup — all {awardCount} awards</div>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A', lineHeight:1.45, marginTop:3}}>
+              FLATSTICK · FIR KING · BOGEY BRO · PAR PRINCE · BIRDIE BRO. Each is its own pot — pick the stake now, change any of them below.
+            </div>
+            <div style={{display:'flex', gap:8, marginTop:10}}>
+              {[1, 2, 5].map(v => (
+                <div key={v} onClick={() => onPickAwardSet(v)}
+                  style={{flex:1, textAlign:'center', padding:'9px 0', borderRadius:9, cursor:'pointer', background:'#0E2B20', color:'#F6F4EE',
+                    fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13, WebkitTapHighlightColor:'transparent'}}>
+                  ${v} EACH
+                </div>
+              ))}
+              <div onClick={() => onPickAwardSet(0)}
+                style={{flex:1, textAlign:'center', padding:'9px 0', borderRadius:9, cursor:'pointer', background:'#F0EDE4', color:'#3F5F4A', border:'1px solid #E7E3D9',
+                  fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:13, WebkitTapHighlightColor:'transparent'}}>
+                PRIDE
+              </div>
+            </div>
+          </div>
+        )}
         {cats.map(([catId, cat]) => {
           const list = all.filter(f => f.category === catId);
           if (!list.length) return null;
@@ -1018,9 +1078,41 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
 
   // Engine game management
   const roundPlayersForGames = allPlayers.filter(p => selectedPlayers.includes(p.id));
-  const addGame = (formatId) => {
+  const addGame = (formatId, stake) => {
+    const def = window.MatchEngine.get(formatId);
     const cfg = window.MatchEngine.defaultConfig(formatId, roundPlayersForGames);
-    setGames(prev => [...prev, { id: 'g_' + Date.now(), formatId, config: cfg }]);
+    if (stake !== undefined) cfg.stake = stake;
+    setGames(prev => [...prev, { id: 'g_' + Date.now() + '_' + formatId, formatId, config: cfg }]);
+    // An award settled off putts or fairways needs those stats recorded, so
+    // picking it switches the tracking on rather than failing quietly later.
+    const needed = (def && def.requiresStats) || [];
+    if (needed.length) setStatsConfig(prev => {
+      if (needed.every(k => prev[k])) return prev;
+      const next = { ...prev };
+      needed.forEach(k => { next[k] = true; });
+      saveStatsConfigPref(next);
+      return next;
+    });
+    setGamePickerOpen(false);
+  };
+
+  // The mini cup: all five awards at once, on the same stake, keeping any
+  // award already added rather than doubling it up.
+  const addAwardSet = (stake) => {
+    const ids = (window.MatchEngine.AWARD_FORMAT_IDS || []).filter(id => !games.some(g => g.formatId === id));
+    if (!ids.length) { setGamePickerOpen(false); return; }
+    const t = Date.now();
+    setGames(prev => [...prev, ...ids.map((formatId, i) => {
+      const cfg = window.MatchEngine.defaultConfig(formatId, roundPlayersForGames);
+      cfg.stake = stake;
+      return { id: 'g_' + (t + i) + '_' + formatId, formatId, config: cfg };
+    })]);
+    setStatsConfig(prev => {
+      if (prev.putts && prev.fir) return prev;
+      const next = { ...prev, putts: true, fir: true };
+      saveStatsConfigPref(next);
+      return next;
+    });
     setGamePickerOpen(false);
   };
   const updateGame = (id, updated) => setGames(prev => prev.map(g => g.id === id ? updated : g));
@@ -1349,14 +1441,16 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
               {games.length > 0 && (
                 <div style={{display:'flex', flexDirection:'column', gap:10}}>
                   {games.map(g => (
-                    <GameConfigCard key={g.id} game={g} players={roundPlayersForGames}
+                    <GameConfigCard key={g.id} game={g} players={roundPlayersForGames} statsConfig={statsConfig}
                       onChange={updated=>updateGame(g.id, updated)} onRemove={()=>removeGame(g.id)}/>
                   ))}
                 </div>
               )}
             </div>
 
-            <GamePickerModal open={gamePickerOpen} onClose={()=>setGamePickerOpen(false)} onPick={addGame} playerCount={selectedPlayers.length}/>
+            <GamePickerModal open={gamePickerOpen} onClose={()=>setGamePickerOpen(false)} onPick={addGame}
+              onPickAwardSet={addAwardSet} awardsAdded={games.filter(g => (window.MatchEngine.AWARD_FORMAT_IDS || []).includes(g.formatId)).length}
+              playerCount={selectedPlayers.length}/>
 
             {/* No wager, no format — just keep score. The only option that works
                 for a solo practice round. */}
@@ -1430,7 +1524,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
                   {games.map(g => {
                     const def = window.MatchEngine.get(g.formatId);
                     if (!def) return null;
-                    const basis = def.basis === 'choice' ? (g.config?.scoringBasis || 'net') : def.basis;
+                    const basis = def.basis === 'choice' ? (g.config?.scoringBasis || def.defaultBasis || 'net') : def.basis;
                     const teamStr = (g.config?.teams || []).map(t => (t.playerIds||[]).map(id => roundPlayersForGames.find(p=>p.id===id)?.name.split(' ')[0]).filter(Boolean).join(' & ')).filter(Boolean).join(' vs ');
                     const gStake = Number(g.config?.stake) || 0;
                     return <div key={g.id} style={{marginBottom:2}}>{def.icon} {def.label} — <span style={{color:'#C8A15A', fontWeight:700}}>{basis.toUpperCase()}</span>

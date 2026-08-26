@@ -220,6 +220,7 @@ const SharingService = (function () {
     (round.games || []).forEach(g => {
       let res = null, pay = {};
       const raw = { course, players, scores, startingTee: round.startingTee,
+                    stats: { putts: d.putts || {}, fir: d.firData || {}, gir: d.girData || {} },
                     gameState: { wolf: d.wolfData || {}, bbb: d.bbbData || {} } };
       try { res = W.MatchEngine.compute(g, raw); pay = W.MatchEngine.payouts(g, raw, res); }
       catch (e) { return; }
