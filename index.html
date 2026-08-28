@@ -170,15 +170,27 @@ var PLAYPAL_FIREBASE_CONFIG = {
 /* ============================================================
    FIREBASE INIT
    ============================================================ */
-var _fbApp       = null;
-var _fbDb        = null;
-var _fbFs        = null;
-var _fbAuthReady = false;
-var _fbPending   = [];
+var _fbApp     = null;
+var _fbDb      = null;
+var _fbFs      = null;
+var _fbSettled = false;   // sign-in has finished, one way or the other
+var _fbOk      = false;   // …and this is how it went
+var _fbPending = [];
 
 function _fbInit(cb) {
-  if (_fbAuthReady) { cb && cb(true); return; }
+  // Replay the real outcome. Reporting success after a failed sign-in would
+  // send every later caller into a Firebase that rejects it.
+  if (_fbSettled) { cb && cb(_fbOk); return; }
   if (_fbApp) { _fbPending.push(cb); return; }
+
+  function _settle(ok) {
+    _fbSettled = true;
+    _fbOk      = ok;
+    var q = _fbPending.slice(); _fbPending = [];
+    q.forEach(function(fn) { fn && fn(ok); });
+    cb && cb(ok);
+  }
+
   try {
     _fbApp = !window.firebase.apps.length
       ? window.firebase.initializeApp(PLAYPAL_FIREBASE_CONFIG)
@@ -186,22 +198,14 @@ function _fbInit(cb) {
     _fbDb = window.firebase.database();
     _fbFs = window.firebase.firestore();
     window.firebase.auth().signInAnonymously()
-      .then(function() {
-        _fbAuthReady = true;
-        var q = _fbPending.slice(); _fbPending = [];
-        q.forEach(function(fn) { fn && fn(true); });
-        cb && cb(true);
-      })
+      .then(function() { _settle(true); })
       .catch(function(err) {
         console.warn('[PlayPal] Firebase auth failed:', err.message);
-        _fbAuthReady = true;
-        var q = _fbPending.slice(); _fbPending = [];
-        q.forEach(function(fn) { fn && fn(false); });
-        cb && cb(false);
+        _settle(false);
       });
   } catch(e) {
     console.warn('[PlayPal] Firebase init failed:', e.message);
-    cb && cb(false);
+    _settle(false);
   }
 }
 
@@ -349,7 +353,14 @@ var RoundSyncService = (function() {
             cb(d.round || null, null, d);
           }
         })
-        .catch(function(e) { cb(null, 'Fetch error: ' + e.message); });
+        .catch(function(e) {
+          // Separated from a genuine network failure: a rejected read means the
+          // group is wrong or the rules are stale, and telling someone to check
+          // their internet sends them after the wrong problem.
+          console.warn('[RoundSync] fetchRound failed:', e.code, e.message);
+          cb(null, e.code === 'permission-denied' ? 'Permission denied'
+                                                  : 'Fetch error: ' + e.message);
+        });
     });
   }
 
