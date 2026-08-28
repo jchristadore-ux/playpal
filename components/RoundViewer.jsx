@@ -13,6 +13,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
   const [teeBallData, setTeeBallData] = React.useState(null);
   const [firData, setFirData]     = React.useState(null);
   const [girData, setGirData]     = React.useState(null);
+  const [dropouts, setDropouts]   = React.useState(null);
   const [errorMsg, setErrorMsg]   = React.useState('');
 
   React.useEffect(() => {
@@ -36,6 +37,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
             const tb = localStorage.getItem('pp_teeball_' + id);
             const fi = localStorage.getItem('pp_fir_' + id);
             const gi = localStorage.getItem('pp_gir_' + id);
+            const dr = localStorage.getItem('pp_drop_' + id);
             setScores(sc ? JSON.parse(sc) : {});
             setPutts(pt ? JSON.parse(pt) : {});
             setWolfData(wd ? JSON.parse(wd) : {});
@@ -44,6 +46,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
             setTeeBallData(tb ? JSON.parse(tb) : {});
             setFirData(fi ? JSON.parse(fi) : {});
             setGirData(gi ? JSON.parse(gi) : {});
+            setDropouts(dr ? JSON.parse(dr) : (parsed.dropouts || {}));
             setState('loaded');
             return true;
           }
@@ -70,6 +73,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
           let tb = {};
           let fi = {};
           let gi = {};
+          let dr = {};
 
           // fullDoc may have liveScores (written during active round)
           const live = fullDoc && fullDoc.liveScores;
@@ -80,6 +84,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
             pf = live.popFlags  || {};
             bb = live.bbbData   || {};
             tb = live.teeBallData || {};
+            dr = live.dropouts  || {};
           }
 
           // roundObj.holeScores is the canonical completed-round storage format
@@ -90,7 +95,8 @@ const RoundViewer = ({ syncCode, onBack }) => {
               const hs = roundObj.holeScores[p.id];
               if (!hs) return;
               sc[p.id] = hs.map(function(h) { return h ? (h.strokes || null) : null; });
-              pt[p.id] = hs.map(function(h) { return h ? (h.putts || 0) : 0; });
+              // Raw, so a tracked zero (−1 — holed out from off the green) survives.
+              pt[p.id] = hs.map(function(h) { return h && typeof h.putts === 'number' ? h.putts : 0; });
               pf[p.id] = hs.map(function(h) { return h ? !!(h.gettingPop) : false; });
             });
           }
@@ -98,6 +104,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
           // firData / girData may be stored directly on the round
           if (roundObj.firData) fi = roundObj.firData;
           if (roundObj.girData) gi = roundObj.girData;
+          if (roundObj.dropouts) dr = roundObj.dropouts;
 
           setScores(sc);
           setPutts(pt);
@@ -107,6 +114,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
           setTeeBallData(tb);
           setFirData(fi);
           setGirData(gi);
+          setDropouts(dr);
           setState('loaded');
         } else {
           // Cloud fetch failed — try local
@@ -174,6 +182,7 @@ const RoundViewer = ({ syncCode, onBack }) => {
           teeBallData={teeBallData || {}}
           firData={firData || {}}
           girData={girData || {}}
+          dropouts={dropouts || {}}
           onNewRound={onBack}
           readOnly={true}
         />

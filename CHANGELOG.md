@@ -4,6 +4,74 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.18.0] — 2026-08-28 — Zero putts, and the golfer who walks in
+
+Two gaps that only show up on a real Friday: the hole you never putted, and
+the player who leaves after nine.
+
+### Zero putts — a chip-in is a real number
+
+The putts row now starts at **0**. Tap it when the ball never saw the putter:
+a chip-in, a bunker hole-out, an ace. Until now `0` in a putts array meant
+"nobody wrote it down", so a hole holed out from off the green had nowhere to
+live — writing `1` was a lie, and leaving it blank knocked the player out of
+FLATSTICK for a card with a *gap* in it.
+
+- A tracked zero is stored as its own value (`-1`), so it counts as a recorded
+  hole worth no strokes. Rounds saved before this keep their exact meaning —
+  nothing that already exists is reinterpreted.
+- The scorer shows **CHIP-IN** on the hole, the scorecard prints `0`, and the
+  round stats grow a **CHIP-INS** column. Career stats gain a lifetime
+  chip-in count and a "most chip-ins in a round" personal best.
+- **FLATSTICK** gains a third mode next to TOTAL and 3-PUTTS: **CHIP-INS** —
+  most zero-putt holes wins the pot. Nobody chipped in, nobody wins.
+- Pass the Money reads a chip-in as ≤ 2 putts (you keep the money), never as
+  a three-putt.
+
+### Somebody walks in — the round goes on
+
+Heat, a bad back, a work call, dark. Tap a player's score and **"… IS DONE —
+END THEIR ROUND HERE"**: their card closes at that hole, the round carries on
+with whoever is left, and every phone in the group sees it. A **BACK IN**
+button undoes it.
+
+Before this, a walk-off left blank holes that stalled everything: no game ever
+reached `complete`, so **no money settled at all**. Now the money follows what
+golfers already do:
+
+- **Whole-round games** — stroke play, net, stableford, quota, the awards —
+  settle among the players who finished. A part round is shown, marked **WD**,
+  and neither antes nor wins: nine holes of 3s can't take an 18-hole pot.
+- **Match play and Nassau** treat walking in as a **concession**. The side
+  still standing takes the match and any Nassau segment that wasn't played
+  out; a segment already won stays won and a match already closed out stays
+  closed.
+- **Hole-by-hole games** — skins, Wolf, Bingo Bango Bongo, Sixes — carry on
+  with whoever is left. Skins won before leaving are kept; a hole with fewer
+  than two players simply carries; a Wolf hole whose wolf has gone can't be
+  played and holds nothing open.
+- **Team games** play on while the side can still put a ball in play (a
+  four-ball pair with one player left keeps going) and sit the pot out when
+  it can't.
+- Pass the Money moves off a player who walks in — you can't hold the pot from
+  the car park.
+
+Every settlement still nets to $0.
+
+### Under the hood
+
+- `dropouts: { [playerId]: { thru } }` — holes counted in **play order**, so a
+  shotgun start counts from its own first hole. Synced live, saved with the
+  round, and understood by the summary, the round viewer, the CSV, the email
+  report and the broadcast.
+- `MatchEngine` gained `ctx.withdrawn / inPlay / expected / contestedHoles`;
+  formats judge `complete` against the holes each side was due to play, not a
+  flat 18. Entries can be `void` — on the board, out of the pot.
+- Shared putt helpers (`puttCount`, `puttsTracked`, `sumPutts`,
+  `countZeroPutts`, `puttCellText`) so nothing sums a raw cell again.
+- 308 tests green (27 new across `tests/zeroPutts.test.mjs` and
+  `tests/dropouts.test.mjs`); browser smoke clean.
+
 ## [1.17.0] — 2026-08-26 — Round awards: run a mini cup on any Friday
 
 The EGT Cup's season trophies now exist as ordinary formats you can put on a

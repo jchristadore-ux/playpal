@@ -71,7 +71,9 @@ const SharingService = (function () {
   }
 
   // Hole-by-hole CSV: one row per hole, strokes (and putts) per player, totals.
+  // A chip-in exports as a real 0, an untracked hole as an empty cell.
   function scorecardCSV(round, scores, putts) {
+    const W = (typeof window !== 'undefined') ? window : globalThis;
     const holes = round.course.holes || [];
     const players = round.players;
     const head = ['Hole', 'Par', 'Hdcp', 'Yds']
@@ -82,14 +84,14 @@ const SharingService = (function () {
       rows.push(
         [h.num, h.par, h.hdcp, h.yds || '']
           .concat(players.map(p => (scores[p.id] && scores[p.id][i]) || ''))
-          .concat(putts ? players.map(p => (putts[p.id] && putts[p.id][i]) || '') : [])
+          .concat(putts ? players.map(p => W.puttCellText(putts[p.id] && putts[p.id][i], '')) : [])
       );
     });
     const totalPar = holes.reduce((a, h) => a + h.par, 0);
     rows.push(
       ['TOTAL', totalPar, '', '']
         .concat(players.map(p => (scores[p.id] || []).reduce((a, s) => a + (s || 0), 0) || ''))
-        .concat(putts ? players.map(p => (putts[p.id] || []).reduce((a, s) => a + (s || 0), 0) || '') : [])
+        .concat(putts ? players.map(p => W.sumPutts(putts[p.id]) || '') : [])
     );
     return rows.map(r => r.map(_csvCell).join(',')).join('\n');
   }
@@ -180,6 +182,7 @@ const SharingService = (function () {
     const course  = round.course || { holes: [], name: 'Course' };
     const holes   = course.holes || [];
     const scores  = d.scores || {};
+    const dropouts = d.dropouts || round.dropouts || {};
     const money   = (v) => W.fmtMoney(v);
     const signed  = (v) => W.fmtMoney(v, { signed: true });
 
@@ -196,7 +199,7 @@ const SharingService = (function () {
       const arr = scores[p.id] || [];
       let gross = 0, parPlayed = 0, played = 0;
       holes.forEach((h, i) => { const s = arr[i]; if (s) { gross += s; parPlayed += h.par; played++; } });
-      return { p, gross, toPar: gross - parPlayed, played };
+      return { p, gross, toPar: gross - parPlayed, played, wd: W.isDropped(dropouts, p.id) };
     }).sort((a, b) => (a.played === 0) - (b.played === 0) || a.toPar - b.toPar || a.gross - b.gross);
 
     // ── Per-game results (money games + engine games), with money ────────────
@@ -206,9 +209,9 @@ const SharingService = (function () {
       let pay = {};
       try {
         const ptm = f.type === 'passmoney' && players.length
-          ? W.computePTMState(scores, d.putts || {}, players, course, players[0].id) : { holderId:null };
+          ? W.computePTMState(scores, d.putts || {}, players, course, players[0].id, dropouts) : { holderId:null };
         pay = W.calcAllPayouts(scores, d.wolfData || {}, players, course, [f], [], ptm.holderId,
-                               d.popFlags || {}, null, d.bbbData || {}, d.teeBallData || {});
+                               d.popFlags || {}, null, d.bbbData || {}, d.teeBallData || {}, { dropouts });
       } catch (e) { pay = {}; }
       gameLines.push({
         name: info.label,
@@ -221,6 +224,7 @@ const SharingService = (function () {
       let res = null, pay = {};
       const raw = { course, players, scores, startingTee: round.startingTee,
                     stats: { putts: d.putts || {}, fir: d.firData || {}, gir: d.girData || {} },
+                    dropouts,
                     gameState: { wolf: d.wolfData || {}, bbb: d.bbbData || {} } };
       try { res = W.MatchEngine.compute(g, raw); pay = W.MatchEngine.payouts(g, raw, res); }
       catch (e) { return; }
@@ -251,7 +255,8 @@ const SharingService = (function () {
       ranked.forEach((r, i) => {
         if (!r.played) { s.push('  ' + r.p.name + ' — no scores'); return; }
         s.push('  ' + (i + 1) + '. ' + r.p.name + ' — ' + r.gross + ' (' + _toParLabel(r.toPar) + ')'
-               + (r.played < holes.length ? ' thru ' + r.played : ''));
+               + (r.wd ? ' — walked in after ' + r.played
+                       : (r.played < holes.length ? ' thru ' + r.played : '')));
       });
 
       if (o.net !== false && netLines.length) { s.push(''); s.push('NET'); netLines.forEach(l => s.push('  ' + l)); }
@@ -385,12 +390,15 @@ const SharingService = (function () {
   }
 
   function _statLines(players, holes, d) {
+    const W = (typeof window !== 'undefined') ? window : globalThis;
     const putts = d.putts || {}, fir = d.firData || {}, gir = d.girData || {}, extra = d.extraStats || {};
     const lines = [];
     players.forEach(p => {
       const bits = [];
-      const tp = (putts[p.id] || []).reduce((a, v) => a + (v || 0), 0);
+      const tp = W.sumPutts(putts[p.id]);
       if (tp) bits.push(tp + ' putts');
+      const chipIns = W.countZeroPutts(putts[p.id]);
+      if (chipIns) bits.push(chipIns + ' chip-in' + (chipIns === 1 ? '' : 's'));
       const fa = fir[p.id] || [];
       const fElig = fa.filter((v, i) => (holes[i] || {}).par > 3 && v !== null).length;
       if (fElig) bits.push('FIR ' + fa.filter((v, i) => (holes[i] || {}).par > 3 && v === true).length + '/' + fElig);
@@ -429,13 +437,14 @@ const SharingService = (function () {
       });
       out += pad(tot || '—', 6) + pad(tot ? _toParLabel(tot - par) : '—', 6) + '\n';
     });
-    if (putts && players.some(p => (putts[p.id] || []).some(v => v > 0))) {
+    const W = (typeof window !== 'undefined') ? window : globalThis;
+    if (putts && W.hasAnyPutts(putts, players)) {
       players.forEach(p => {
         const arr = putts[p.id] || [];
-        if (!arr.some(v => v > 0)) return;
+        if (!W.countPuttHoles(arr)) return;
         out += lpad(p.name.split(' ')[0] + ' putts', nameW + 2);
-        holes.forEach((_h, i) => { out += pad(arr[i] || '·', 4); });
-        out += pad(arr.reduce((a, v) => a + (v || 0), 0), 6) + pad('', 6) + '\n';
+        holes.forEach((_h, i) => { out += pad(W.puttCellText(arr[i], '·'), 4); });
+        out += pad(W.sumPutts(arr), 6) + pad('', 6) + '\n';
       });
     }
     return out;

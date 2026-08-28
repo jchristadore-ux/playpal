@@ -73,3 +73,67 @@ defaults and normalizes shapes (`migratePlayersV2`, `migrateCoursesV2`).
 `scores`, plus `gameState: { wolf: wolfData, bbb: bbbData }` for input-driven
 formats. Nothing new is written for engine standings — they are derived,
 never stored, so the scorecard stays the single source of truth.
+
+
+---
+
+# Schema & Storage Changes — v1.18.0 (zero putts · mid-round dropouts)
+
+Additive and backward compatible again: one new per-round map, and one new
+*value* inside an existing map. Old clients keep working; a round saved by an
+old client reads exactly as it always did.
+
+## Putts arrays — a tracked zero
+
+`putts[playerId][holeIdx]` gains one value:
+
+| Value | Means |
+|---|---|
+| `> 0` | that many putts (unchanged) |
+| `-1` (`window.ZERO_PUTTS`) | **new** — a tracked zero: holed out from off the green (chip-in, bunker hole-out, ace) |
+| `0` / missing | not recorded (unchanged) |
+
+No migration: nothing that exists today is reinterpreted. Readers must go
+through the `gameUtils` helpers (`puttCount`, `puttsTracked`, `sumPutts`,
+`countZeroPutts`, `countPuttHoles`, `puttCellText`) rather than summing raw
+cells, since `-1` must never be added to a total. An old client shown a `-1`
+treats the hole as untracked — a degraded read, never a wrong total.
+
+## Dropouts — who walked in
+
+| Key | Status | Shape |
+|---|---|---|
+| `pp_drop_<roundId>` | **new** | `{ [playerId]: { thru: n, reason: string\|null, at: epochMs } }` |
+
+`thru` counts holes **in play order**, so a shotgun start counts from its own
+first hole: the player is in the round for play-order positions `0 … thru-1`.
+`thru: 0` is "did not start". Removing the key (or the player's entry) puts
+them back in the round.
+
+The same map rides along everywhere round data travels:
+
+```js
+{
+  // round object (local `pp_round` + Firestore `…/{syncCode}.round`)
+  dropouts: { p3: { thru: 9, reason: null, at: 1787942593791 } },   // NEW
+}
+```
+
+* `pp_round_snap_<CODE>` — snapshot gains `dropouts` next to `extraStats`.
+* Completed rounds gain `dropouts` alongside `putts` / `firData` / `girData`,
+  so a saved round settles identically when it is re-opened.
+* `holeScores[pid][i].putts` is now written raw, so a `-1` survives the round
+  trip (it was previously `|| 0`-ed, which happened to preserve it, but the
+  intent is now explicit).
+
+## Firestore (`playpal_rounds/{syncCode}`)
+
+* `liveScores` payload gains a `dropouts` map, debounce-written like the other
+  live maps, so every phone in the group sees the walk-off immediately.
+* Top-level field count is unchanged (`syncCode`, `round`, `savedAt`,
+  `liveScores`). **No rules changes required.**
+
+## Engine compute inputs (not persisted)
+
+`MatchEngine.compute(game, raw)` accepts `raw.dropouts` in the same shape.
+Standings and money remain derived, never stored.

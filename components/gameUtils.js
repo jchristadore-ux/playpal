@@ -65,6 +65,81 @@ function calcStablefordPoints(gross, par) {
   return 0;
 }
 
+// ─── PUTTS — a tracked zero vs "nobody wrote it down" ────────────────────────
+// A putts array holds one number per hole. `0` has always meant "not recorded",
+// which left a hole HOLED OUT from off the green — a chip-in, a bunker hole-out,
+// an ace — with nowhere to live: writing 1 was a lie and leaving it blank made
+// the card look untracked (and, in FLATSTICK, put the player out of the award).
+// A zero-putt hole now records as the ZERO_PUTTS sentinel:
+//   v > 0        → that many putts
+//   ZERO_PUTTS   → tracked, zero putts (holed out from off the green)
+//   0 / missing  → not recorded
+// Rounds saved before this keep their exact meaning — the sentinel is the only
+// new value — so always read a cell through these helpers, never raw.
+const ZERO_PUTTS = -1;
+
+function isZeroPutt(v)   { return v === ZERO_PUTTS; }
+function puttsTracked(v) { return v === ZERO_PUTTS || (typeof v === 'number' && v > 0); }
+// The stroke count a cell contributes: a chip-in and an untracked hole both add
+// nothing, which is what makes the sentinel safe to sum.
+function puttCount(v)    { return (typeof v === 'number' && v > 0) ? v : 0; }
+
+function sumPutts(arr)        { return (arr || []).reduce((a, v) => a + puttCount(v), 0); }
+function countZeroPutts(arr)  { return (arr || []).reduce((a, v) => a + (isZeroPutt(v) ? 1 : 0), 0); }
+function countPuttHoles(arr)  { return (arr || []).reduce((a, v) => a + (puttsTracked(v) ? 1 : 0), 0); }
+function hasAnyPutts(bag, players) {
+  return (players || []).some(p => countPuttHoles((bag || {})[p.id]) > 0);
+}
+// What a scorecard cell should read: '0' for a chip-in, the count when tracked,
+// and the caller's blank when nothing was recorded.
+function puttCellText(v, blank) {
+  if (isZeroPutt(v)) return '0';
+  return puttCount(v) ? String(puttCount(v)) : (blank === undefined ? '' : blank);
+}
+
+// ─── MID-ROUND DROPOUTS ──────────────────────────────────────────────────────
+// Someone leaves after eleven holes: heat, a bad back, a work call, dark. The
+// round is still a round for everyone else, so the walk-off gets recorded
+// instead of leaving seven blank holes that stall every game and every payout.
+//   dropouts: { [playerId]: { thru: n, reason?: string, at?: epochMs } }
+// `thru` counts holes in PLAY ORDER, not hole numbers, so a shotgun start counts
+// from its own first hole: it is always "how many holes that player played".
+// A player is in play for play-order positions 0 … thru−1.
+function dropoutThru(dropouts, playerId) {
+  const d = dropouts && dropouts[playerId];
+  if (d === null || d === undefined) return null;
+  const n = typeof d === 'object' ? Number(d.thru) : Number(d);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+}
+
+function isDropped(dropouts, playerId) {
+  return dropoutThru(dropouts, playerId) !== null;
+}
+
+// Was this player still in the round for the hole at play-order position `seq`?
+function activeAtSeq(dropouts, playerId, seq) {
+  const thru = dropoutThru(dropouts, playerId);
+  return thru === null || seq < thru;
+}
+
+function activePlayers(players, dropouts, seq) {
+  return (players || []).filter(p => activeAtSeq(dropouts, p.id, seq));
+}
+
+// Records / clears a walk-off. `thru` of null puts the player back in the round.
+function setDropout(dropouts, playerId, thru, reason) {
+  const next = { ...(dropouts || {}) };
+  if (thru === null || thru === undefined) delete next[playerId];
+  else next[playerId] = { thru: Math.max(0, Math.floor(thru)), reason: reason || null, at: Date.now() };
+  return next;
+}
+
+function dropoutLabel(dropouts, playerId) {
+  const thru = dropoutThru(dropouts, playerId);
+  if (thru === null) return null;
+  return thru === 0 ? 'Did not start' : 'Walked in after ' + thru;
+}
+
 // ─── TIEBREAKER ──────────────────────────────────────────────────────────────
 function resolveTiebreaker(tiedPlayers, scores, course) {
   if (tiedPlayers.length <= 1) return tiedPlayers;
@@ -181,19 +256,36 @@ function checkPTMWin18(score, par, putts) {
   return score <= par + 1 && putts <= 2;
 }
 
-function ptmNextPlayer(players, currentId) {
+// The next player in the rotation. `skip` (a predicate) steps over anyone who
+// is out of the round, so the money never lands on a player who has gone home.
+function ptmNextPlayer(players, currentId, skip) {
   const idx = players.findIndex(p => p.id === currentId);
+  for (let n = 1; n <= players.length; n++) {
+    const cand = players[(idx + n) % players.length];
+    if (!skip || !skip(cand)) return cand;
+  }
   return players[(idx + 1) % players.length];
 }
 
-function computePTMState(scores, putts, players, course, initialHolderId) {
+function computePTMState(scores, putts, players, course, initialHolderId, dropouts) {
   let holderId = initialHolderId || players[0].id;
   const log          = [];
   const holderAtStart = []; // who held the money at the START of each hole, before any pass
   // Size off the actual course (9- or 18-hole); the last hole gets the carry-back rules.
   const holeCount = course.holes.length;
   const lastHole  = holeCount - 1;
+  const drops = dropouts || {};
+  const gone  = (p, i) => !activeAtSeq(drops, p.id, i);
   for (let i = 0; i < holeCount; i++) {
+    // You can't hold the money once you've walked in — it moves on to the next
+    // player still out there, at the hole where the holder stopped playing.
+    if (isDropped(drops, holderId) && gone({ id: holderId }, i)) {
+      const next = ptmNextPlayer(players, holderId, p => gone(p, i));
+      if (next && next.id !== holderId) {
+        log.push({ holeIdx: i, fromId: holderId, toId: next.id, reason: 'Walked in' });
+        holderId = next.id;
+      }
+    }
     holderAtStart[i] = holderId;
     const par = course.holes[i].par;
     if (i < lastHole) {
@@ -201,7 +293,7 @@ function computePTMState(scores, putts, players, course, initialHolderId) {
       const putt  = (putts[holderId]?.[i]) || 0;
       if (!score) continue;
       if (checkPTMPass(score, par, putt)) {
-        const next   = ptmNextPlayer(players, holderId);
+        const next   = ptmNextPlayer(players, holderId, p => gone(p, i));
         const reason = score >= par + 2 ? 'Double+' : '3-Putt';
         log.push({ holeIdx: i, fromId: holderId, toId: next.id, reason });
         holderId = next.id;
@@ -220,7 +312,7 @@ function computePTMState(scores, putts, players, course, initialHolderId) {
           holderId = hole18StartHolder;
           break;
         }
-        const next   = ptmNextPlayer(players, holderId);
+        const next   = ptmNextPlayer(players, holderId, p => gone(p, i));
         const reason = score >= par + 2 ? 'Double+' : '3-Putt';
         log.push({ holeIdx: i, fromId: holderId, toId: next.id, reason });
         holderId = next.id;
@@ -467,16 +559,20 @@ function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
 }
 
 // ─── SKINS (pop-aware) ───────────────────────────────────────────────────────
-function calcSkins(scores, players, course, stakes, popFlags) {
+function calcSkins(scores, players, course, stakes, popFlags, dropouts) {
   const skins = Object.fromEntries(players.map(p => [p.id, 0]));
   const holeCount = course?.holes?.length || 18;
   let carryover = 0;
   for (let i = 0; i < holeCount; i++) {
-    const raw = players.map(p => {
+    // Whoever is still out there contests the hole; a player who walked in
+    // isn't holding the game up for everyone behind them. Fewer than two left
+    // and there is no skin to win — the pot carries.
+    const field = activePlayers(players, dropouts, i);
+    const raw = field.map(p => {
       const g = getAdjustedHoleScore(scores, popFlags, p.id, i);
       return g ? { id: p.id, strokes: g } : null;
     }).filter(Boolean);
-    if (raw.length < players.length) { carryover++; continue; }
+    if (field.length < 2 || raw.length < field.length) { carryover++; continue; }
     raw.sort((a, b) => a.strokes - b.strokes);
     const low     = raw[0].strokes;
     const winners = raw.filter(n => n.strokes === low);
@@ -735,6 +831,7 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
   bbbData    = bbbData    || {};
   teeBallData = teeBallData || {};
   const o = opts || {};
+  const dropouts = o.dropouts || {};
   const totals = Object.fromEntries(players.map(p => [p.id, 0]));
   (formats || []).forEach(f => {
     let pay = {};
@@ -754,7 +851,7 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
       const holder = ptmHolderId || players[0].id;
       pay = calcPTMPayouts(holder, players, f.stakes);
     } else if (f.type === 'skins') {
-      pay = calcSkins(scores, players, course, f.stakes, popFlags).payouts;
+      pay = calcSkins(scores, players, course, f.stakes, popFlags, dropouts).payouts;
     } else if (f.type === 'bingobangobongo') {
       const standings = calcBBBStandings(bbbData, players);
       pay = calcBBBPayouts(standings, players, f.stakes);
@@ -768,22 +865,27 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
         pay = calcMarkeyMatchPayouts(matchStates, cfg.stake || f.stakes || 0, cfg.team1, cfg.team2);
       }
     } else if (f.type === 'stableford') {
-      const playerPts = players.map(p => ({
-        p,
-        pts: course.holes.reduce((a, h, i) =>
-          a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags, p.id, i), h.par), 0),
-      }));
-      const maxPts = Math.max(...playerPts.map(x => x.pts));
-      const tiedPlayers = playerPts.filter(x => x.pts === maxPts).map(x => x.p);
-      const winners = tiedPlayers.length > 1
-        ? resolveTiebreaker(tiedPlayers, scores, course)
-        : tiedPlayers;
-      players.forEach(p => {
-        const isWinner = winners.some(w => w.id === p.id);
-        pay[p.id] = isWinner
-          ? (f.stakes * (players.length - winners.length)) / winners.length
-          : -f.stakes;
-      });
+      // A points total is a whole-round total: whoever walked in sits the pot
+      // out rather than losing it on the holes they never played.
+      const field = players.filter(p => !isDropped(dropouts, p.id));
+      if (field.length > 1) {
+        const playerPts = field.map(p => ({
+          p,
+          pts: course.holes.reduce((a, h, i) =>
+            a + calcStablefordPoints(getAdjustedHoleScore(scores, popFlags, p.id, i), h.par), 0),
+        }));
+        const maxPts = Math.max(...playerPts.map(x => x.pts));
+        const tiedPlayers = playerPts.filter(x => x.pts === maxPts).map(x => x.p);
+        const winners = tiedPlayers.length > 1
+          ? resolveTiebreaker(tiedPlayers, scores, course)
+          : tiedPlayers;
+        field.forEach(p => {
+          const isWinner = winners.some(w => w.id === p.id);
+          pay[p.id] = isWinner
+            ? (f.stakes * (field.length - winners.length)) / winners.length
+            : -f.stakes;
+        });
+      }
     }
     players.forEach(p => { totals[p.id] += (pay[p.id] || 0); });
   });
@@ -800,6 +902,7 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
         course, players, scores,
         startingTee: o.startingTee,
         stats: o.stats || {},
+        dropouts,
         gameState: { wolf: wolfData || {}, bbb: bbbData },
       });
     } catch (e) { pay = {}; }
@@ -840,20 +943,22 @@ function roundMoneyMap(map) {
 
 // One call that settles an entire round — every money game and every engine
 // game — so the summary, the trip dashboard and the email can't disagree.
-//   round: { players, course, formats, games, startingTee, teeId }
-//   data:  { scores, wolfData, putts, popFlags, bbbData, teeBallData }
+//   round: { players, course, formats, games, startingTee, teeId, dropouts }
+//   data:  { scores, wolfData, putts, popFlags, bbbData, teeBallData, dropouts }
 function calcRoundPayouts(round, data) {
   const d = data || {};
   const players = round.players || [];
   const course  = round.course;
   const scores  = d.scores || {};
+  const dropouts = d.dropouts || round.dropouts || {};
   const ptm = (round.formats || []).some(f => f.type === 'passmoney') && players.length
-    ? computePTMState(scores, d.putts || {}, players, course, players[0].id)
+    ? computePTMState(scores, d.putts || {}, players, course, players[0].id, dropouts)
     : { holderId: null };
   const raw = calcAllPayouts(
     scores, d.wolfData || {}, players, course, round.formats || [], [],
     ptm.holderId, d.popFlags || {}, null, d.bbbData || {}, d.teeBallData || {},
     { games: round.games || [], startingTee: round.startingTee, teeId: round.teeId,
+      dropouts,
       stats: { putts: d.putts || {}, fir: d.firData || {}, gir: d.girData || {} } }
   );
   return roundMoneyMap(raw);
@@ -958,6 +1063,9 @@ if (typeof window !== 'undefined') {
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
     nassauSegments, calcRoundPayouts, roundMoneyMap, fmtMoney,
     popStrokesAt, autoPopStrokes,
+    ZERO_PUTTS, isZeroPutt, puttsTracked, puttCount, sumPutts, countZeroPutts,
+    countPuttHoles, hasAnyPutts, puttCellText,
+    dropoutThru, isDropped, activeAtSeq, activePlayers, setDropout, dropoutLabel,
     calcBBBStandings, calcBBBPayouts, calcTeeBallStandings, calcTeeBallPayouts,
     getPlayOrder, getMarkeyAdjustedScore, calcMarkeyMatchPops, calcMarkeyMatchState, calcMarkeyMatchPayouts,
     runPlayPalTests,

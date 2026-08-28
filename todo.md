@@ -1,5 +1,34 @@
 # TODO — PlayPal
 
+## Done — Zero putts + mid-round dropouts (v1.18.0, branch claude/zero-putts-mid-round-dropout-poo3hu)
+- [x] Zero putts: `ZERO_PUTTS = -1` sentinel — a tracked zero (chip-in) is a
+      recorded hole worth no strokes; `0` still means "not recorded", so old
+      rounds are untouched.
+- [x] Shared putt helpers in gameUtils; every raw `(v || 0)` putt sum in the
+      app, CSV, email grid and scorecards now goes through them.
+- [x] Scorer: `0` button + CHIP-IN flag; PTM reads a chip-in as ≤ 2 putts.
+- [x] FLATSTICK third mode — CHIP-INS (most zero-putt holes wins the pot).
+- [x] Stats: round `putts.zeroPutts`, CHIP-INS column, career total + best.
+- [x] Dropouts: `{ pid: { thru } }` in play order, set from the score keypad,
+      undone with BACK IN, persisted + synced + saved with the round.
+- [x] Engine: `void` entries, `expected`-based completion, `ballsNeeded` for
+      team units, concession for match play + Nassau, contested-hole
+      completion for skins/Wolf/BBB/Sixes; PTM pot moves off a walk-off.
+- [x] The round now settles when somebody leaves — it previously paid nothing.
+- [x] 308 tests green (27 new); browser smoke scorer + summary clean;
+      v1.18.0 + CHANGELOG + guides + SCHEMA_CHANGES.
+
+### Optional follow-ups
+- [ ] Reason picker on the walk-off (injury / work / dark) — the field is
+      already carried on the record, nothing writes it yet.
+- [ ] Settle skins hole by hole so a player who leaves stops paying for skins
+      won after they go (today the whole field settles the pot).
+- [ ] Trip/season rollup of chip-ins next to the other award races.
+- [ ] EGT Cup rounds don't carry dropouts yet — the bridge hands the tournament
+      engine scores/putts/events only, so a Cup round with a walk-off still
+      settles on holes played. Chip-ins do flow through (they ride the putts
+      array).
+
 ## Done — Round awards / mini cup (v1.17.0, branch claude/golf-awards-setup-fy1s6d)
 - [x] Five awards registered as MatchEngine formats in a new `awards` category:
       FLATSTICK, FIR KING, BOGEY BRO, PAR PRINCE, BIRDIE BRO.

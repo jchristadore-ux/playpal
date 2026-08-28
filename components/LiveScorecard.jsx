@@ -2,7 +2,7 @@
 
 const LiveScorecardModal = ({
   onClose,
-  players, course, scores, putts, popFlags, wolfData, nassauMatches, holeIdx,
+  players, course, scores, putts, popFlags, wolfData, dropouts, nassauMatches, holeIdx,
   hasWolf, hasPTM, hasNassau, hasStable, hasSkins, hasBBB, hasTeeBall, hasMarkey,
   wolfFmt, ptmFmt, skinsFmt, nassauFmtObj, bbbFmt, teeBallFmt, markeyFmt,
   bbbData, teeBallData,
@@ -58,8 +58,8 @@ const LiveScorecardModal = ({
   // ── Skins ─────────────────────────────────────────────────────────────────
   const skinsData = React.useMemo(() => {
     if (!hasSkins) return { skins: {} };
-    return calcSkins(scores, players, course, skinsFmt?.stakes || 1, popFlags || {});
-  }, [JSON.stringify(scores), JSON.stringify(popFlags)]);
+    return calcSkins(scores, players, course, skinsFmt?.stakes || 1, popFlags || {}, dropouts || {});
+  }, [JSON.stringify(scores), JSON.stringify(popFlags), JSON.stringify(dropouts)]);
 
   // ── Bingo Bango Bongo standings ────────────────────────────────────────────
   const bbbStandings = React.useMemo(() => {
@@ -76,8 +76,8 @@ const LiveScorecardModal = ({
   // ── PTM state ─────────────────────────────────────────────────────────────
   const ptmState = React.useMemo(() => {
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
-    return computePTMState(scores, putts || {}, players, course, players[0]?.id);
-  }, [JSON.stringify(scores), JSON.stringify(putts)]);
+    return computePTMState(scores, putts || {}, players, course, players[0]?.id, dropouts || {});
+  }, [JSON.stringify(scores), JSON.stringify(putts), JSON.stringify(dropouts)]);
 
   // ── Markey Match state ────────────────────────────────────────────────────
   const markeyMatchStates = React.useMemo(() => {
@@ -238,6 +238,10 @@ const LiveScorecardModal = ({
                           <div style={{display:'flex', alignItems:'center', gap:5}}>
                             <div style={{width:7, height:7, borderRadius:'50%', background:p.color, flexShrink:0}}/>
                             <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:12, color:'#0E2B20', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
+                            {window.isDropped(dropouts, p.id) && (
+                              <span title={window.dropoutLabel(dropouts, p.id)}
+                                style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, letterSpacing:0.5, color:'#8A9E8A', border:'1px solid #E7E3D9', borderRadius:4, padding:'0 3px'}}>WD</span>
+                            )}
                           </div>
                         </td>
                         {course.holes.slice(0, 9).map((h, i) => {
@@ -279,7 +283,7 @@ const LiveScorecardModal = ({
                     <tr>
                       <td style={{...td, textAlign:'left', color:'#8A9E8A', fontSize:10, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, letterSpacing:1, position:'sticky', left:0, background:'#F6F4EE', zIndex:2}}>PUTTS</td>
                       {course.holes.slice(0, 9).map((_, i) => {
-                        const tot = players.reduce((a, p) => a + (putts[p.id]?.[i] || 0), 0);
+                        const tot = players.reduce((a, p) => a + window.puttCount(putts[p.id]?.[i]), 0);
                         return (
                           <td key={i} style={{...td, color:'#8A9E8A', fontSize:11,
                             background: i===holeIdx ? 'rgba(200,161,90,0.12)' : undefined}}>
@@ -288,11 +292,11 @@ const LiveScorecardModal = ({
                         );
                       })}
                       <td style={{...tdMid, color:'#8A9E8A', fontWeight:600}}>
-                        {players.reduce((a, p) => a + (putts[p.id]||[]).slice(0,9).reduce((b,v) => b+(v||0), 0), 0) || '·'}
+                        {players.reduce((a, p) => a + window.sumPutts((putts[p.id]||[]).slice(0,9)), 0) || '·'}
                       </td>
                       {course.holes.slice(9, 18).map((_, i) => {
                         const ri = i + 9;
-                        const tot = players.reduce((a, p) => a + (putts[p.id]?.[ri] || 0), 0);
+                        const tot = players.reduce((a, p) => a + window.puttCount(putts[p.id]?.[ri]), 0);
                         return (
                           <td key={ri} style={{...td, color:'#8A9E8A', fontSize:11,
                             background: ri===holeIdx ? 'rgba(200,161,90,0.12)' : undefined}}>
@@ -301,10 +305,10 @@ const LiveScorecardModal = ({
                         );
                       })}
                       <td style={{...tdMid, color:'#8A9E8A', fontWeight:600}}>
-                        {players.reduce((a, p) => a + (putts[p.id]||[]).slice(9,18).reduce((b,v) => b+(v||0), 0), 0) || '·'}
+                        {players.reduce((a, p) => a + window.sumPutts((putts[p.id]||[]).slice(9,18)), 0) || '·'}
                       </td>
                       <td style={{...td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
-                        {players.reduce((a, p) => a + (putts[p.id]||[]).reduce((b,v) => b+(v||0), 0), 0)}
+                        {players.reduce((a, p) => a + window.sumPutts(putts[p.id]||[]), 0)}
                       </td>
                       <td style={td}/>
                     </tr>

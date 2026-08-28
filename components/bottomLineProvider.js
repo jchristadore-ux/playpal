@@ -94,7 +94,8 @@ const BottomLineProvider = (function () {
       scores = {}; putts = {};
       Object.keys(round.holeScores).forEach(pid => {
         scores[pid] = round.holeScores[pid].map(h => (h && h.strokes) || null);
-        putts[pid]  = round.holeScores[pid].map(h => (h && h.putts) || 0);
+        // Raw, so a tracked zero (−1 — holed out from off the green) survives.
+        putts[pid]  = round.holeScores[pid].map(h => (h && typeof h.putts === 'number' ? h.putts : 0));
       });
       if (round.putts) putts = round.putts;
     } else { scores = {}; putts = {}; }
@@ -111,6 +112,7 @@ const BottomLineProvider = (function () {
       tripId: round.tripId || null,
       name: round.name || round.course.name,
       scores, putts,
+      dropouts: src.dropouts || round.dropouts || {},
       firData: src.firData || {}, girData: src.girData || {},
       extraStats: src.extraStats || {},
       wolfData: src.wolfData || {}, bbbData: src.bbbData || {},
@@ -186,6 +188,7 @@ const BottomLineProvider = (function () {
       const data = {
         course: r.course, players: r.players, scores: r.scores, putts: r.putts,
         firData: r.firData, girData: r.girData, extraStats: r.extraStats,
+        dropouts: r.dropouts,
       };
       r.players.forEach(p => {
         if (r.thru[p.id] > 0) {
@@ -201,11 +204,12 @@ const BottomLineProvider = (function () {
       if (r.payouts && r.complete) r.money = r.payouts;
       else if (calcAllPayouts && r.hasScores && r.formats.length) {
         const ptm = computePTMState
-          ? computePTMState(r.scores, r.putts || {}, r.players, r.course, r.players[0].id)
+          ? computePTMState(r.scores, r.putts || {}, r.players, r.course, r.players[0].id, r.dropouts)
           : { holderId: null };
         r.ptmState = ptm;
         r.money = calcAllPayouts(r.scores, r.wolfData || {}, r.players, r.course, r.formats,
-          [], ptm.holderId, r.popFlags || {}, null, r.bbbData || {}, r.teeBallData || {});
+          [], ptm.holderId, r.popFlags || {}, null, r.bbbData || {}, r.teeBallData || {},
+          { dropouts: r.dropouts });
       }
     } catch (e) {}
 

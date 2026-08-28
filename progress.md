@@ -1,5 +1,84 @@
 # PlayPal — Progress
 
+## v1.18.0 — Zero putts + mid-round dropouts (28 Aug 2026)
+
+**Branch:** `claude/zero-putts-mid-round-dropout-poo3hu`
+**Status:** complete. 308 tests green (27 new across `tests/zeroPutts.test.mjs`
+and `tests/dropouts.test.mjs`), `dist/` rebuilt, browser smoke through the
+scorer (chip-in button, walk-in, BACK IN) and the summary (WD marks, chip-in
+column, payouts) with zero page errors.
+
+### What was built
+
+**1. Zero putts.** A putts cell had two meanings and needed three: `> 0`
+putts, `0` "not recorded" — and no way to say *holed out from off the green*.
+A tracked zero is now its own value, `ZERO_PUTTS = -1`:
+
+| Value | Means |
+|---|---|
+| `> 0` | that many putts |
+| `-1` | tracked zero — chip-in / bunker hole-out / ace |
+| `0`, missing | not recorded |
+
+Nothing that already exists is reinterpreted, so old rounds read exactly as
+before. Everything that touches putts goes through shared helpers in
+`gameUtils.js` (`puttCount`, `puttsTracked`, `isZeroPutt`, `sumPutts`,
+`countZeroPutts`, `countPuttHoles`, `hasAnyPutts`, `puttCellText`) — a raw
+`(v || 0)` sum would have subtracted a stroke per chip-in.
+
+Surfaces: a `0` button on the scorer's putts row + CHIP-IN flag; FLATSTICK's
+third mode (**CHIP-INS**, most wins, higher-is-better); a CHIP-INS column in
+the round stats; lifetime chip-ins + "most in a round" in career stats; `0` in
+the CSV / text grid and "N chip-ins" in the emailed report; PTM treats a
+chip-in as ≤ 2 putts.
+
+**2. Mid-round dropouts.** `dropouts: { [playerId]: { thru, reason, at } }`,
+`thru` counted in **play order** (shotgun-safe): the player is in the round
+for play-order positions `0 … thru-1`. Set from the score keypad ("… IS DONE —
+END THEIR ROUND HERE"), undone with BACK IN, persisted at `pp_drop_<roundId>`,
+synced in the live payload, saved on the completed round.
+
+The bug this fixes: before, a walk-off left blank holes, no game ever reached
+`complete`, and **no money settled at all**.
+
+Rules, all zero-sum:
+
+| Kind of game | What a walk-off does |
+|---|---|
+| Whole-round (stroke, net, stableford, quota, awards) | entry is `void`: shown with its part round, out of the standings and out of the pot; `complete` is judged against `ctx.expected(pid)` |
+| Match play / four ball | a side whose players have all left **concedes**; a closed-out match stays closed; a four-ball pair plays on with one player |
+| Nassau | unfinished segments are conceded to the side still standing; a segment already played out stands |
+| Skins / Wolf / BBB / Sixes | contested by whoever is in play, complete at `ctx.contestedHoles(n)`; skins carry when fewer than two remain; a Wolf hole whose wolf has gone is unplayable |
+| Team totals | a side that can't field `ballsNeeded` balls is `void` |
+| Pass the Money | the pot moves to the next player still in the round |
+
+### Files modified
+
+- `components/gameUtils.js` — putt + dropout helpers; dropout-aware
+  `calcSkins`, `computePTMState`, legacy stableford pot; `dropouts` threaded
+  through `calcAllPayouts` / `calcRoundPayouts` into the engine.
+- `components/matchEngine.js` — `ctx.stats.puttTracked/zeroPutts`;
+  `ctx.withdrawn/inPlay/expected/contestedHoles`; `void` entries in
+  `finishLeaderboard` / `_potPayouts`; `_strokeLeaderboard(…, {ballsNeeded})`;
+  concession in `_matchCompute` + Nassau; FLATSTICK chip-in mode.
+- `components/statsService.js` — `putts.zeroPutts`, `walkedInAfter`, career
+  totals + best; snapshot carries `dropouts`.
+- `components/ScoreEntry.jsx` — 0-putt button, CHIP-IN flag, dropout state +
+  sync + persistence, `WalkedInCard`, walk-in control in the keypad, advance /
+  finish / hole dots gated on active players.
+- `components/Summary.jsx`, `LiveScorecard.jsx`, `GameTrackers.jsx`,
+  `Trackers.jsx`, `RoundViewer.jsx`, `App.jsx`, `StatsScreen.jsx`,
+  `sharingService.js`, `bottomLineProvider.js` — display + plumbing.
+- `tests/zeroPutts.test.mjs`, `tests/dropouts.test.mjs` — 27 new tests.
+- Docs: USER_GUIDE, DEVELOPER_GUIDE, SCHEMA_CHANGES, CHANGELOG; v1.18.0 in
+  `package.json`, `index.html`, `sw.js`.
+
+### Remaining / next action
+
+Nothing outstanding for this feature. Optional follow-ups are listed in
+`todo.md` (a reason picker for the walk-off, per-hole skins settlement for a
+player who leaves, trip-level chip-in leaderboard).
+
 ## v1.17.0 — Round awards / mini cup (26 Aug 2026)
 
 **Branch:** `claude/golf-awards-setup-fy1s6d`

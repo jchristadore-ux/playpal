@@ -106,6 +106,7 @@ const App = () => {
   const [finalFirData,     setFinalFirData]     = React.useState(null);
   const [finalGirData,     setFinalGirData]     = React.useState(null);
   const [finalExtraStats,  setFinalExtraStats]  = React.useState(null);
+  const [finalDropouts,    setFinalDropouts]    = React.useState(null);
   const [statsPlayerId,    setStatsPlayerId]    = React.useState(null);
 
   const [viewedRoundData, setViewedRoundData] = React.useState(null);
@@ -392,7 +393,7 @@ const App = () => {
     setScreen('egt');
   };
 
-  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}, extraStats = {}) => {
+  const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}, extraStats = {}, dropouts = {}) => {
     // EGT rounds bridge into the tournament engine and skip the native summary.
     if (round && round.egtRoundId) {
       _finishEgtRound(round, { scores, putts, firData, girData, extraStats, wolfData, bbbData }, true);
@@ -409,6 +410,7 @@ const App = () => {
     setFinalFirData(firData);
     setFinalGirData(girData);
     setFinalExtraStats(extraStats);
+    setFinalDropouts(dropouts);
 
     RoundSyncService.unsubscribeRound();
 
@@ -417,7 +419,9 @@ const App = () => {
       holeScores[player.id] = round.course.holes.map(function(_, i) {
         return {
           strokes:    scores[player.id]?.[i] || null,
-          putts:      (putts[player.id]?.[i]) || 0,
+          // Kept raw so a tracked zero (−1, holed out from off the green)
+          // survives the round of saving and reloading.
+          putts:      (typeof putts[player.id]?.[i] === 'number' ? putts[player.id][i] : 0),
           gettingPop: !!(popFlags[player.id]?.[i]),
         };
       });
@@ -427,7 +431,7 @@ const App = () => {
     // re-running format logic. calcRoundPayouts settles the money games AND the
     // MatchEngine games, so the stored figure is the whole round's money.
     const _computedPayouts = window.calcRoundPayouts
-      ? window.calcRoundPayouts(round, { scores, wolfData, putts, popFlags, bbbData, teeBallData, firData, girData })
+      ? window.calcRoundPayouts(round, { scores, wolfData, putts, popFlags, bbbData, teeBallData, firData, girData, dropouts })
       : {};
 
     const completedRound = {
@@ -438,6 +442,7 @@ const App = () => {
       firData:  firData || {},
       girData:  girData || {},
       extraStats: extraStats || {},
+      dropouts: dropouts || {},
       tripId:  round.tripId || null,
       date: new Date().toLocaleDateString('en-US', {
         weekday:'long', month:'long', day:'numeric', year:'numeric',
@@ -459,6 +464,7 @@ const App = () => {
         firData,
         girData,
         extraStats,
+        dropouts,
         savedAt:       Date.now(),
       };
       try {
@@ -681,6 +687,7 @@ const App = () => {
                   firData={viewedRoundData.firData || {}}
                   girData={viewedRoundData.girData || {}}
                   extraStats={viewedRoundData.extraStats || {}}
+                  dropouts={viewedRoundData.dropouts || viewedRoundData.round?.dropouts || {}}
                   onNewRound={null}
                   readOnly={true}
                 />
@@ -725,6 +732,7 @@ const App = () => {
             firData={finalFirData || {}}
             girData={finalGirData || {}}
             extraStats={finalExtraStats || {}}
+            dropouts={finalDropouts || {}}
             onNewRound={handleNewRound}
             readOnly={false}
           />

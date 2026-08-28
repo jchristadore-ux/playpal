@@ -41,6 +41,8 @@ const result = MatchEngine.compute(game, {
   scores,            // { [playerId]: (number|null)[] }
   startingTee,       // 1 | 10 (optional)
   stats: { putts, fir, gir },                    // tracked stats — award formats
+  dropouts: { p3: { thru: 9 } },                 // who walked in, and after how
+                                                 // many holes (in play order)
   gameState: { wolf: wolfData, bbb: bbbData },   // input-driven formats only
 });
 // → { kind, entries[], leaderIds, thru, complete, status, winner }
@@ -48,7 +50,60 @@ const result = MatchEngine.compute(game, {
 
 `entries` are sorted best-first and every entry carries `total`,
 `totalLabel`, `detail`, and `perHole` — `GameStandingsCard` renders any of
-them without format-specific code.
+them without format-specific code. An entry may also carry `void`/`wd`: it
+still shows its numbers but is out of the standings and out of the pot
+(see **Mid-round dropouts**).
+
+### Tracked putts, including zero
+
+A putts cell is a number per hole with three meanings: `> 0` putts, `0` "not
+recorded", and `−1` (`window.ZERO_PUTTS`) a **tracked zero** — holed out from
+off the green. Never read a cell raw; the helpers in `gameUtils.js` are the
+contract:
+
+```js
+puttCount(v)        // strokes this cell adds: 0 for both a chip-in and a blank
+puttsTracked(v)     // was a number written down at all?
+isZeroPutt(v)       // a chip-in
+sumPutts(arr) · countZeroPutts(arr) · countPuttHoles(arr) · hasAnyPutts(bag, players)
+puttCellText(v, blank)   // '0' for a chip-in, the count, or the caller's blank
+```
+
+Inside the engine the same distinction is `ctx.stats.putts(pid, i)` (strokes),
+`ctx.stats.puttTracked(pid, i)` and `ctx.stats.zeroPutts(pid)`.
+
+### Mid-round dropouts
+
+`raw.dropouts` = `{ [playerId]: { thru: n, reason?, at? } }`, where `n` counts
+holes **in play order** (so a shotgun start counts from its own first hole). A
+player is in play for play-order positions `0 … n−1`. `buildCtx` turns that
+into four questions every format can ask:
+
+```js
+ctx.withdrawn(pid)        // did they walk in?
+ctx.inPlay(pid, holeIdx)  // were they there for this hole?
+ctx.expected(pid)         // how many holes they were ever going to play
+ctx.contestedHoles(min)   // holes with at least `min` participants in play
+```
+
+The rules the built-in formats implement with them:
+
+* **whole-round games** (`_strokeLeaderboard`, `_pointsLeaderboard`,
+  `_awardCompute`) mark a short card `void` — kept on the board, out of the
+  standings and skipped by `_potPayouts` — and judge `complete` against
+  `expected`, not `holeCount`, so nobody's blank back nine holds a game open.
+  A side unit's expected holes come from `opts.ballsNeeded(unit)`: a best-ball
+  pair plays on with one player, a team-total side can't.
+* **match play / Nassau** treat a side whose players have all left as a
+  **concession** (`result.conceded`, `segment.conceded`); a match already
+  closed out or a segment already played out keeps its result.
+* **hole-by-hole games** (skins, Wolf, BBB, sixes) contest each hole among the
+  players still in play and finish at `ctx.contestedHoles(n)`.
+
+`gameUtils` carries the same helpers for the legacy money games —
+`dropoutThru`, `isDropped`, `activeAtSeq`, `activePlayers`, `setDropout`,
+`dropoutLabel` — plus dropout-aware `calcSkins`, `computePTMState` (the pot
+moves off a player who walks in) and the legacy stableford pot.
 
 ### Adding a format (the whole point)
 
@@ -102,6 +157,9 @@ per-player count into the standard leaderboard result and enforces two rules:
 * **the empty award** — when every eligible player counts zero on a
   "most X" award, the result carries `awardEmpty` with `winner: null`, so no
   money moves.
+
+A player who walked in is `void` for every award: an 11-hole card can't win an
+18-hole trophy, and it doesn't hold one open either.
 
 Completeness follows the scorecard, not eligibility, so one untracked card
 can't hold an award open forever.
@@ -188,7 +246,9 @@ SharingService.share({ title, text }, cb)   // share → clipboard → cb('faile
 
 `roundData` is the normalized record produced by
 `StatsService.roundDataFromSnapshot()` — it accepts both live shapes and
-completed-round `holeScores`.
+completed-round `holeScores`, and carries `dropouts` alongside the stats.
+A round stat line adds `putts.zeroPutts` (chip-ins) and `walkedInAfter`
+(`null` unless they left early — a part round is never `complete`).
 
 ## Migrations
 
