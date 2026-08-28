@@ -196,9 +196,16 @@ const App = () => {
 
     window.RoundSyncService.fetchRound(code, function(fetchedRound, err) {
       if (!fetchedRound) {
-        const msg = err === 'Round not found'
-          ? 'Round "' + code + '" not found or no longer active.\nAsk the host to share their code again.'
-          : 'Connection error. Check your internet and try again.';
+        let msg;
+        if (err === 'Round not found') {
+          msg = 'Round "' + code + '" not found or no longer active.\nAsk the host to share their code again.';
+        } else if (err === 'Permission denied') {
+          // The link named a group this device could not read — almost always a
+          // link that lost its &g= on the way here.
+          msg = 'This invite is missing the group it belongs to.\nAsk the host to re-share the QR code.';
+        } else {
+          msg = 'Connection error. Check your internet and try again.';
+        }
         _updateJoinOverlay(null, msg);
         return;
       }

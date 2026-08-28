@@ -27,14 +27,29 @@ the app uses.
    **Realtime Database → Rules** show the contents of `firestore.rules` and
    `database.rules.json`.
 
+   **A failed deploy is not loud.** If `deploy` reports a rules compile error,
+   nothing changes server-side: the previously deployed rules stay live and the
+   app keeps running against them. That is how joining a round broke — the
+   group-scoped rules never compiled, so every group-scoped read came back
+   PERMISSION_DENIED and the joiner was told to check their internet. Read the
+   deploy output, and confirm step 3.
+
 ## What the rules allow
 
 | Path | Who | Notes |
 |---|---|---|
-| Firestore `playpal_rounds/{CODE}` | any signed-in app client | code must be 4–12 chars A–Z/0–9 |
-| Firestore `golf_trips/{trip_*}` | any signed-in app client | |
-| RTDB `players`, `courses`, `saved_rounds` | any signed-in app client | |
+| Firestore `g_<GROUPID>_rounds/{CODE}` | any signed-in client that knows the group id | code must be 4–12 chars A–Z/0–9 |
+| Firestore `g_<GROUPID>_trips/{trip_*}` | any signed-in client that knows the group id | |
+| RTDB `groups/<GROUPID>/{players,courses,saved_rounds}` | any signed-in client that knows the group id | |
+| Firestore `playpal_rounds/{CODE}`, `golf_trips/{trip_*}` | any signed-in app client | legacy, pre-group installs |
+| RTDB `players`, `courses`, `saved_rounds` | any signed-in app client | legacy, pre-group installs |
 | Anything else | **nobody** | |
+
+A group id never appears as its own path segment in Firestore — the app folds it
+into the collection name (`g_<GROUPID>_rounds`), and a Firestore wildcard must
+stand for a *whole* segment. So the rules match `/{collection}/{docId}` and
+check the collection name's shape with `.matches()`. `tests/firebaseRules.test.mjs`
+fails the build if a wildcard is ever spliced into a literal segment again.
 
 ## Honest limitation
 

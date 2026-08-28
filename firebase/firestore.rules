@@ -22,25 +22,33 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn()  { return request.auth != null; }
-    function isGroup(id) { return id.matches('^[0-9A-Z]{8,40}$'); }
+    function signedIn() { return request.auth != null; }
 
     // ── Group-scoped data (current clients) ────────────────────────────────
     // Collections are named g_<GROUPID>_rounds / g_<GROUPID>_trips.
+    //
+    // A wildcard has to stand for a WHOLE path segment: `/g_{groupId}_rounds`
+    // does not compile, so the group id cannot be spliced into a literal
+    // collection name. Match any collection instead and check the name's shape
+    // — that pins it to exactly the two group-scoped collections the app uses,
+    // and the group id inside it, just the same.
 
-    match /g_{groupId}_rounds/{syncCode} {
-      allow read:   if signedIn() && isGroup(groupId);
-      allow write:  if signedIn() && isGroup(groupId)
-                    && syncCode.matches('^[A-Z0-9]{4,12}$')
-                    && request.resource.size() < 50;
-      allow delete: if signedIn() && isGroup(groupId);
-    }
+    function isGroupRounds(c) { return c.matches('^g_[0-9A-Z]{8,40}_rounds$'); }
+    function isGroupTrips(c)  { return c.matches('^g_[0-9A-Z]{8,40}_trips$'); }
 
-    match /g_{groupId}_trips/{tripId} {
-      allow read:   if signedIn() && isGroup(groupId);
-      allow write:  if signedIn() && isGroup(groupId)
-                    && tripId.matches('^trip_[0-9]+$');
-      allow delete: if signedIn() && isGroup(groupId);
+    match /{collection}/{docId} {
+      allow read:   if signedIn()
+                    && (isGroupRounds(collection) || isGroupTrips(collection));
+      allow write:  if signedIn() && (
+                      (isGroupRounds(collection)
+                        && docId.matches('^[A-Z0-9]{4,12}$')
+                        && request.resource.size() < 50)
+                      ||
+                      (isGroupTrips(collection)
+                        && docId.matches('^trip_[0-9]+$'))
+                    );
+      allow delete: if signedIn()
+                    && (isGroupRounds(collection) || isGroupTrips(collection));
     }
 
     // ── Legacy unscoped data (installs that predate groups) ────────────────
