@@ -30,7 +30,7 @@ const GameStandingsCard = ({ result, stake, final: isFinal }) => {
 
       <div style={gtS.row}>
         {entries.map(e => {
-          const isLeader = (result.leaderIds || []).includes(e.id) && e.played > 0;
+          const isLeader = (result.leaderIds || []).includes(e.id) && e.played > 0 && !e.void;
           return (
             <div key={e.id} style={{
               ...gtS.card,
@@ -56,6 +56,9 @@ const GameStandingsCard = ({ result, stake, final: isFinal }) => {
               {isLeader && !isFinal && (
                 <div style={{ fontSize: 8, fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 700, color: '#C8A15A', marginTop: 2 }}>★ LEAD</div>
               )}
+              {e.wd && (
+                <div style={{ fontSize: 8, fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 700, color: '#8A9E8A', marginTop: 2 }}>👋 WALKED IN</div>
+              )}
               {isFinal && result.winner && result.winner.ids.includes(e.id) && (
                 <div style={{ fontSize: 8, fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 700, color: '#C8A15A', marginTop: 2 }}>🏆 WINNER</div>
               )}
@@ -74,12 +77,12 @@ const GameStandingsCard = ({ result, stake, final: isFinal }) => {
 
 // Computes every configured engine game against live scores and renders a card
 // per game. `gameState` carries input-driven data (wolf picks, BBB awards).
-const EngineGamesTracker = ({ games, players, course, scores, startingTee, stats, gameState, final: isFinal }) => {
+const EngineGamesTracker = ({ games, players, course, scores, startingTee, stats, gameState, dropouts, final: isFinal }) => {
   const ME = window.MatchEngine;
   if (!ME || !games || games.length === 0) return null;
   const results = games.map(g => {
     try {
-      return { game: g, result: ME.compute(g, { course, players, scores, startingTee, stats: stats || {}, gameState: gameState || {} }) };
+      return { game: g, result: ME.compute(g, { course, players, scores, startingTee, stats: stats || {}, dropouts: dropouts || {}, gameState: gameState || {} }) };
     } catch (e) {
       console.warn('[PlayPal] game compute failed:', g.formatId, e);
       return null;

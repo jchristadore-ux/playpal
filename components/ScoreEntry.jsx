@@ -96,6 +96,30 @@ const BBBPill = ({ playerId, holeIdx, bbbData, players, onSetBBB }) => {
 // spacing, high-contrast for bright sunlight, and one-handed operation. Every
 // per-hole interaction lives here; read-only match/bet status is tucked into a
 // collapsible footer so it never competes with score entry.
+// A player who has walked in keeps a card — a quiet one, with the way back.
+const WalkedInCard = ({ p, label, onBackIn }) => {
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  return (
+    <article style={{background:'#F0EDE4', border:'1px dashed #D8D3C6', borderRadius:22,
+      padding:'14px 16px', display:'flex', alignItems:'center', gap:12}}>
+      <div style={{opacity:0.5, flexShrink:0}}><Avatar player={p} size={38}/></div>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontFamily:F, fontWeight:800, fontSize:18, color:'#6C7A6C', letterSpacing:0.2,
+          whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{p.name}</div>
+        <div style={{fontFamily:F, fontSize:12, fontWeight:700, color:'#8A9E8A', letterSpacing:0.5, marginTop:2}}>
+          👋 {(label || 'Out of the round').toUpperCase()}
+        </div>
+      </div>
+      <button onClick={onBackIn} aria-label={`Put ${p.name} back in the round`}
+        style={{borderRadius:999, padding:'10px 16px', minHeight:44, border:'1.5px solid #E4E0D5',
+          background:'#FFFFFF', color:'#3F5F4A', fontFamily:F, fontWeight:800, fontSize:12,
+          letterSpacing:0.8, cursor:'pointer', WebkitTapHighlightColor:'transparent', flexShrink:0}}>
+        BACK IN
+      </button>
+    </article>
+  );
+};
+
 const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, showPopToggle = true, compact = false }) => {
   const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
   // Landscape on a phone leaves ~230px of scroll room: the card shrinks so a
@@ -115,7 +139,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
   const showPutts = !!stats.putts;
   const showFIR   = !!stats.fir && hole.par !== 3;
   const showGIR   = !!stats.gir;
-  const puttRequired = isPTMHolder && puttVal === 0;
+  const puttRequired = isPTMHolder && !window.puttsTracked(puttVal);
 
   const ex  = (extraStats && extraStats[p.id] && extraStats[p.id][holeIdx]) || {};
   const pen = ex.pen || 0;
@@ -316,23 +340,31 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
         {showPutts && (
           <div style={rowStyle}>
             <span style={labelStyle}>{puttRequired ? '💰' : ''}PUTTS</span>
-            <div style={{display:'flex', gap:10, flex:1}}>
-              {[1,2,3,4].map(n=>(
-                <button key={n}
-                  onClick={()=>onPutt(p.id, puttVal===n ? 0 : n)}
-                  aria-label={`${p.name}: ${n} putt${n>1?'s':''}`} aria-pressed={puttVal===n}
-                  style={{flex:1, height:rowH, borderRadius:14,
-                    border: puttVal===n ? 'none' : '1.5px solid #E4E0D5',
-                    background: puttVal===n ? p.color : '#F0EDE4',
-                    color: puttVal===n ? '#FFFFFF' : '#3F5F4A',
-                    fontFamily:F, fontWeight:800, fontSize:22,
-                    cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
-                    display:'flex', alignItems:'center', justifyContent:'center'}}>
-                  {n}
-                </button>
-              ))}
+            <div style={{display:'flex', gap:8, flex:1}}>
+              {/* 0 records a hole holed out from off the green — a chip-in is a
+                  real zero, not a blank cell, and FLATSTICK counts it as one. */}
+              {[window.ZERO_PUTTS, 1, 2, 3, 4].map(n=>{
+                const isZero = n === window.ZERO_PUTTS;
+                const on = puttVal === n;
+                return (
+                  <button key={n}
+                    onClick={()=>onPutt(p.id, on ? 0 : n)}
+                    aria-label={isZero ? `${p.name}: no putts, holed out from off the green` : `${p.name}: ${n} putt${n>1?'s':''}`}
+                    aria-pressed={on}
+                    style={{flex:1, height:rowH, borderRadius:14,
+                      border: on ? 'none' : `1.5px ${isZero ? 'dashed' : 'solid'} #E4E0D5`,
+                      background: on ? (isZero ? '#15803D' : p.color) : '#F0EDE4',
+                      color: on ? '#FFFFFF' : '#3F5F4A',
+                      fontFamily:F, fontWeight:800, fontSize:22,
+                      cursor:'pointer', WebkitTapHighlightColor:'transparent', userSelect:'none',
+                      display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    {isZero ? '0' : n}
+                  </button>
+                );
+              })}
             </div>
             {puttVal >= 3 && <span style={{fontFamily:F, fontWeight:800, fontSize:12, color:'#DC2626', letterSpacing:0.5, flexShrink:0}}>3-PUTT</span>}
+            {window.isZeroPutt(puttVal) && <span style={{fontFamily:F, fontWeight:800, fontSize:12, color:'#15803D', letterSpacing:0.5, flexShrink:0}}>CHIP-IN</span>}
           </div>
         )}
         {showFIR && HitMissRow('FIR', firData?.[p.id]?.[holeIdx], onFIR, 'HIT', 'MISS', 'fairway')}
@@ -378,7 +410,7 @@ const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPop
 };
 
 // ── Score Name Grid Modal ─────────────────────────────────────────────────────
-const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
+const ScoreKeypad = ({ player, hole, current, onConfirm, onClose, onWalkIn }) => {
   const scoreName = (strokes, par) => {
     const d = strokes - par;
     if (strokes === 1)  return { label:'ACE',    color:'#C8A15A' };
@@ -428,6 +460,18 @@ const ScoreKeypad = ({ player, hole, current, onConfirm, onClose }) => {
             );
           })}
         </div>
+        {/* The walk-off lives here: you're already on the card of the player who
+            is packing up, at the hole they stopped on. */}
+        {onWalkIn && (
+          <button onClick={()=>{ onWalkIn(player.id); onClose(); }}
+            aria-label={`End ${player.name}'s round after this hole`}
+            style={{marginTop:14, width:'100%', minHeight:48, borderRadius:14, cursor:'pointer',
+              border:'1px dashed #D8D3C6', background:'#F6F4EE', color:'#3F5F4A',
+              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800,
+              fontSize:12, letterSpacing:1, WebkitTapHighlightColor:'transparent'}}>
+            👋 {player.name.split(' ')[0].toUpperCase()} IS DONE — END THEIR ROUND HERE
+          </button>
+        )}
       </div>
     </div>
   );
@@ -633,8 +677,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   const _initGIR     = () => { try { const s = localStorage.getItem('pp_gir_'+round.id);     return s ? JSON.parse(s) : Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } catch(e) { return Object.fromEntries(players.map(p=>[p.id,Array(holeCount).fill(null)])); } };
   const _initExtra   = () => { try { const s = localStorage.getItem('pp_extra_'+round.id);   return s ? JSON.parse(s) : {}; } catch(e) { return {}; } };
 
+  const _initDropouts = () => { try { const s = localStorage.getItem('pp_drop_'+round.id); return s ? JSON.parse(s) : (round.dropouts || {}); } catch(e) { return {}; } };
+
   const [scores,      setScores]      = React.useState(_initScores);
   const [putts,       setPutts]       = React.useState(_initPutts);
+  const [dropouts,    setDropouts]    = React.useState(_initDropouts);
   const [popFlags,    setPopFlags]    = React.useState(_initPop);
   const [wolfData,    setWolfData]    = React.useState(_initWolf);
   const [bbbData,     setBBBData]     = React.useState(_initBBB);
@@ -691,6 +738,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // ── Live refs for sync reads (avoid stale closures) ───────────────────────
   const scoresRef    = React.useRef(scores);
   const puttsRef     = React.useRef(putts);
+  const dropRef      = React.useRef(dropouts);
   const popRef       = React.useRef(popFlags);
   const wolfRef      = React.useRef(wolfData);
   const bbbRef       = React.useRef(bbbData);
@@ -702,6 +750,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   React.useEffect(() => { scoresRef.current   = scores;      }, [scores]);
   React.useEffect(() => { puttsRef.current    = putts;       }, [putts]);
+  React.useEffect(() => { dropRef.current     = dropouts;    }, [dropouts]);
   React.useEffect(() => { popRef.current      = popFlags;    }, [popFlags]);
   React.useEffect(() => { wolfRef.current     = wolfData;    }, [wolfData]);
   React.useEffect(() => { bbbRef.current      = bbbData;     }, [bbbData]);
@@ -714,6 +763,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // ── Persist to localStorage ───────────────────────────────────────────────
   React.useEffect(() => { localStorage.setItem('pp_scores_'+round.id,   JSON.stringify(scores));      }, [scores]);
   React.useEffect(() => { localStorage.setItem('pp_putts_'+round.id,    JSON.stringify(putts));       }, [putts]);
+  React.useEffect(() => { localStorage.setItem('pp_drop_'+round.id,     JSON.stringify(dropouts));    }, [dropouts]);
   React.useEffect(() => { localStorage.setItem('pp_pop_'+round.id,      JSON.stringify(popFlags));    }, [popFlags]);
   React.useEffect(() => { localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(wolfData));    }, [wolfData]);
   React.useEffect(() => { localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(bbbData));     }, [bbbData]);
@@ -723,7 +773,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   React.useEffect(() => { localStorage.setItem('pp_extra_'+round.id,    JSON.stringify(extraStats));  }, [extraStats]);
 
   // ── Write to Firestore (debounced 400ms) ──────────────────────────────────
-  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall, nextFIR, nextGIR, nextExtra) => {
+  const scheduleCloudWrite = React.useCallback((nextScores, nextPutts, nextPop, nextWolf, nextBBB, nextTeeBall, nextFIR, nextGIR, nextExtra, nextDrop) => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
       if (!window.RoundSyncService || !syncCode) return;
@@ -737,6 +787,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         firData:        nextFIR      || firRef.current,
         girData:        nextGIR      || girRef.current,
         extraStats:     nextExtra    || extraRef.current,
+        dropouts:       nextDrop     || dropRef.current,
         currentHoleIdx: holeIdxRef.current,
         roundId: round.id,
         _writtenBy: deviceId,
@@ -773,6 +824,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (livePayload.firData)     { setFIRData(livePayload.firData);         localStorage.setItem('pp_fir_'+round.id,     JSON.stringify(livePayload.firData)); }
       if (livePayload.girData)     { setGIRData(livePayload.girData);         localStorage.setItem('pp_gir_'+round.id,     JSON.stringify(livePayload.girData)); }
       if (livePayload.extraStats)  { setExtraStats(livePayload.extraStats);   localStorage.setItem('pp_extra_'+round.id,   JSON.stringify(livePayload.extraStats)); }
+      if (livePayload.dropouts)    { setDropouts(livePayload.dropouts);       localStorage.setItem('pp_drop_'+round.id,    JSON.stringify(livePayload.dropouts)); }
       if (livePayload.currentHoleIdx !== undefined) { holeIdxRef.current = livePayload.currentHoleIdx; setHoleIdx(livePayload.currentHoleIdx); }
       // Small delay before clearing flag to let React batch the state updates
       setTimeout(() => { applyingRemoteRef.current = false; }, 50);
@@ -788,8 +840,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // ── PTM state ─────────────────────────────────────────────────────────────
   const ptmState = React.useMemo(() => {
     if (!hasPTM) return { holderId: players[0]?.id, log: [] };
-    return computePTMState(scores, putts, players, course, players[0]?.id);
-  }, [JSON.stringify(scores), JSON.stringify(putts)]);
+    return computePTMState(scores, putts, players, course, players[0]?.id, dropouts);
+  }, [JSON.stringify(scores), JSON.stringify(putts), JSON.stringify(dropouts)]);
   // Who held the money at the START of the current hole (before any pass this hole)
   const ptmHoleHolder = ptmState.holderAtStart?.[holeIdx] ?? ptmState.holderId;
 
@@ -814,7 +866,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       if (hasStable) { const pts = course.holes.reduce((acc,h,i) => { const g=scores[p.id]?.[i]; return acc+(g?calcStablefordPoints(getAdjustedHoleScore(scores,popFlags,p.id,i),h.par):0); }, 0); stats.push({ icon:'⭐', label:'STBL PTS', value:String(pts), color:pts>=2?'#C8A15A':'#3F5F4A' }); }
       if (hasPTM && ptmHoleHolder===p.id) stats.push({ icon:'💰', label:'HOLDS', value:'', color:'#C8A15A' });
       if (holesPlayed>0) { const total=(scores[p.id]||[]).reduce((acc,s)=>acc+(s||0),0); stats.push({ icon:'⛳', label:'STROKES', value:String(total), color:'#3F5F4A' }); }
-      if (hasSkins) { const {skins}=calcSkins(scores,players,course,skinsFmt?.stakes||1,popFlags); const won=skins[p.id]||0; stats.push({ icon:'🎯', label:'SKINS', value:String(won), color:won>0?'#C8A15A':'#3F5F4A' }); }
+      if (hasSkins) { const {skins}=calcSkins(scores,players,course,skinsFmt?.stakes||1,popFlags,dropouts); const won=skins[p.id]||0; stats.push({ icon:'🎯', label:'SKINS', value:String(won), color:won>0?'#C8A15A':'#3F5F4A' }); }
       if (hasNassau) {
         matchLiveStatuses.forEach((ms) => {
           if (!ms.playersInMatch.includes(p.id)) return;
@@ -860,7 +912,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       result[p.id] = stats;
     });
     return result;
-  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), JSON.stringify(bbbData), JSON.stringify(teeBallData), holeIdx, JSON.stringify(matchLiveStatuses)]);
+  }, [JSON.stringify(scores), JSON.stringify(wolfData), JSON.stringify(popFlags), JSON.stringify(bbbData), JSON.stringify(teeBallData), JSON.stringify(dropouts), holeIdx, JSON.stringify(matchLiveStatuses)]);
 
   // ── Score / putt / pop setters ────────────────────────────────────────────
   const setScore = (playerId, val) => {
@@ -983,6 +1035,31 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
   // Current position within the play order (0–17), independent of which tee we started on.
   const seqPos = playOrder.indexOf(holeIdx);
 
+  // ── Mid-round dropouts ────────────────────────────────────────────────────
+  // Someone walks in: their card closes at the hole they stopped on and every
+  // game settles around them instead of waiting for holes that never come.
+  const isOut = React.useCallback(
+    (pid) => !window.activeAtSeq(dropouts, pid, playOrder.indexOf(holeIdx)),
+    [dropouts, holeIdx, playOrder]);
+  const activeHere = players.filter(p => !isOut(p.id));
+
+  // Ends a player's round after the holes they've already played (this hole
+  // counts if it's scored), or puts them back in.
+  const toggleDropout = (playerId) => {
+    window.ppHaptic && window.ppHaptic();
+    setDropouts(prev => {
+      const already = window.dropoutThru(prev, playerId) !== null;
+      // Their last hole is this one if it's already scored, otherwise the one
+      // before it — you mark someone out standing on the hole they quit.
+      const thru = seqPos + (scores[playerId]?.[holeIdx] ? 1 : 0);
+      const next = already
+        ? window.setDropout(prev, playerId, null)
+        : window.setDropout(prev, playerId, thru);
+      scheduleCloudWrite(null, null, null, null, null, null, null, null, null, next);
+      return next;
+    });
+  };
+
   const prevHole = () => {
     if (seqPos > 0) {
       const newIdx = playOrder[seqPos - 1];
@@ -992,11 +1069,19 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     }
   };
 
-  const allScored = players.every(p => (scores[p.id]||[]).filter(Boolean).length === holeCount);
-  const currentHoleScored = players.every(p => scores[p.id]?.[holeIdx]);
+  // Only the players still out there can hold the round up.
+  const allScored = players.every(p => {
+    const thru = window.dropoutThru(dropouts, p.id);
+    const need = thru === null ? holeCount : thru;
+    return (scores[p.id]||[]).filter(Boolean).length >= need;
+  });
+  const currentHoleScored = activeHere.length > 0 && activeHere.every(p => scores[p.id]?.[holeIdx]);
 
-  const ptmPuttRequired = hasPTM && !!ptmHoleHolder && !(putts[ptmHoleHolder]?.[holeIdx] > 0);
-  const wolfPickRequired = hasWolf && !wolfHoleData.confirmed;
+  const ptmPuttRequired = hasPTM && !!ptmHoleHolder && !isOut(ptmHoleHolder)
+    && !window.puttsTracked(putts[ptmHoleHolder]?.[holeIdx]);
+  // A wolf who has gone home can't pick a partner — the hole simply doesn't
+  // count for wolf, so it must not block the group from moving on either.
+  const wolfPickRequired = hasWolf && !wolfHoleData.confirmed && !!wolfPlayer && !isOut(wolfPlayer.id) && activeHere.length >= 3;
   const canAdvance = currentHoleScored && !ptmPuttRequired && !wolfPickRequired;
 
   const nextHole = () => {
@@ -1017,7 +1102,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
     return () => window.removeEventListener('online', onOnline);
   }, [scheduleCloudWrite]);
 
-  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData, extraStats); };
+  const handleFinish = () => { onSaveRound(scores, wolfData, putts, [], {}, popFlags, bbbData, teeBallData, firData, girData, extraStats, dropouts); };
 
   const parColor = hole.par === 3 ? '#2563EB' : hole.par === 5 ? '#C8A15A' : '#3F5F4A';
   const hasGames = games.length > 0;
@@ -1092,8 +1177,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
         {/* Hole dots */}
         <div style={{display:'flex', justifyContent:'center', gap:4, marginTop:shortHeader?6:8, flexWrap:'wrap'}}>
-          {playOrder.map((i) => {
-            const allIn = players.every(p => scores[p.id]?.[i]);
+          {playOrder.map((i, k) => {
+            const due   = players.filter(p => window.activeAtSeq(dropouts, p.id, k));
+            const allIn = due.length > 0 && due.every(p => scores[p.id]?.[i]);
             const some  = players.some(p => scores[p.id]?.[i]);
             return (
               <button key={i} onClick={()=>{ holeIdxRef.current=i; setHoleIdx(i); scheduleCloudWrite(null,null,null,null); }}
@@ -1125,6 +1211,10 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
             const markeyPopCount = hasMarkey && markeyFmt?.markeyMatchConfig
               ? (markeyFmt.markeyMatchConfig.markeyPopStrokes?.[p.id]?.[holeIdx] || 0)
               : undefined;
+            if (isOut(p.id)) {
+              return <WalkedInCard key={p.id} p={p} label={window.dropoutLabel(dropouts, p.id)}
+                onBackIn={()=>toggleDropout(p.id)}/>;
+            }
             return (
               <PlayerScoreCard
                 key={p.id}
@@ -1163,9 +1253,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       <TrackersSheet open={trackersOpen} onClose={() => setTrackersOpen(false)} formats={formats}>
         <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
         {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee}
-                          stats={{ putts, fir: firData, gir: girData }} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
+                          stats={{ putts, fir: firData, gir: girData }} dropouts={dropouts} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
         {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
-        {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} format={ptmFmt}/>}
+        {hasPTM     && <PTMTracker       players={players} scores={scores} putts={putts}           course={course} holeIdx={holeIdx} ptmInitialHolder={players[0]?.id} dropouts={dropouts} format={ptmFmt}/>}
         {hasNassau  && <MultiNassauTracker players={players} scores={scores} nassauMatches={nassauMatches} course={course} holeIdx={holeIdx} nassauFmt={nassauFmtObj}/>}
         {hasBBB     && <BBBTracker          players={players} scores={scores} course={course} holeIdx={holeIdx} bbbData={bbbData}         format={bbbFmt}/>}
         {hasTeeBall && <TeeBallTracker      players={players} scores={scores} course={course} holeIdx={holeIdx} teeBallData={teeBallData} onSetTeeBall={handleSetTeeBall} format={teeBallFmt}/>}
@@ -1174,7 +1264,8 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
       {keypad && (
         <ScoreKeypad player={players.find(p=>p.id===keypad)} hole={hole} current={scores[keypad]?.[holeIdx]}
-          onConfirm={setScore} onClose={()=>setKeypad(null)}/>
+          onConfirm={setScore} onClose={()=>setKeypad(null)}
+          onWalkIn={players.length > 1 ? toggleDropout : null}/>
       )}
 
       {wolfPicker && wolfPlayer && (
@@ -1208,7 +1299,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         <LiveScorecardModal
           onClose={() => setShowScorecard(false)}
           players={players} course={course}
-          scores={scores} putts={putts} popFlags={popFlags} wolfData={wolfData}
+          scores={scores} putts={putts} popFlags={popFlags} wolfData={wolfData} dropouts={dropouts}
           nassauMatches={nassauMatches} holeIdx={holeIdx}
           hasWolf={hasWolf} hasPTM={hasPTM} hasNassau={hasNassau}
           hasStable={hasStable} hasSkins={hasSkins}

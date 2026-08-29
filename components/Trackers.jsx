@@ -133,13 +133,13 @@ const WolfTracker = ({ players, scores, wolfData, course, holeIdx, onSetPartner,
   );
 };
 
-const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder, format }) => {
+const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder, dropouts, format }) => {
   const { computePTMState, checkPTMPass, checkPTMWin18, ptmNextPlayer } = window;
   const stake = format?.stakes || 5;
 
   const { holderId: currentHolder, log, holderAtStart } = React.useMemo(() =>
-    computePTMState(scores, putts, players, course, ptmInitialHolder),
-    [JSON.stringify(scores), JSON.stringify(putts)]
+    computePTMState(scores, putts, players, course, ptmInitialHolder, dropouts),
+    [JSON.stringify(scores), JSON.stringify(putts), JSON.stringify(dropouts)]
   );
 
   const isHole18 = holeIdx === 17;
@@ -148,6 +148,8 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
   const par      = course.holes[holeIdx]?.par;
   const hole18Passes = log.filter(l => l.holeIdx === 17).length;
   const curScore = scores[displayHolderId]?.[holeIdx];
+  // The raw cell, sentinel and all: a chip-in is ≤ 2 putts, so the holder keeps
+  // the money on it.
   const curPutts = (putts[displayHolderId]?.[holeIdx]) || 0;
 
   let preview = null;
@@ -158,7 +160,7 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
       if (wins) {
         preview = { outcome:'win', label:`${holder.name.split(' ')[0].toUpperCase()} WINS THE POT`, detail:`Bogey or better · ≤2 putts`, color:'#15803D', icon:'🏆' };
       } else if (passes) {
-        const nextP = ptmNextPlayer(players, displayHolderId);
+        const nextP = ptmNextPlayer(players, displayHolderId, p => !window.activeAtSeq(dropouts, p.id, holeIdx));
         const final = hole18Passes >= 3;
         const toName = final ? (players.find(p=>p.id===log.find(l=>l.holeIdx===17)?.fromId)?.name||holder.name) : nextP.name;
         preview = { outcome:'pass', label:final?`RETURNS TO ${toName.split(' ')[0].toUpperCase()}`:`PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail:curScore>=par+2?`Double bogey (${curScore})`:'3-putt or worse', color:'#DC2626', icon:'➡️' };
@@ -167,7 +169,7 @@ const PTMTracker = ({ players, scores, putts, course, holeIdx, ptmInitialHolder,
       if (!passes) {
         preview = { outcome:'keep', label:`${holder.name.split(' ')[0].toUpperCase()} KEEPS THE MONEY`, detail:`Bogey or better · ≤2 putts`, color:'#15803D', icon:'✅' };
       } else {
-        const nextP = ptmNextPlayer(players, displayHolderId);
+        const nextP = ptmNextPlayer(players, displayHolderId, p => !window.activeAtSeq(dropouts, p.id, holeIdx));
         preview = { outcome:'pass', label:`PASS TO ${nextP.name.split(' ')[0].toUpperCase()}`, detail:curScore>=par+2?`Double bogey (${curScore})`:'3-putt or worse', color:'#DC2626', icon:'➡️' };
       }
     }

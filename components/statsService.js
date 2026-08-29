@@ -2,13 +2,27 @@
 //
 // Works on two data shapes:
 //   • Live round data   — scores {pid:[gross]}, putts {pid:[n]}, firData/girData
-//                         {pid:[true|false|null]}, extraStats {pid:{holeIdx:{pen,sand,ud,drv,lp}}}
+//                         {pid:[true|false|null]}, extraStats {pid:{holeIdx:{pen,sand,ud,drv,lp}}},
+//                         dropouts {pid:{thru:n}} for anyone who left mid-round
+//     A putts cell of −1 is a tracked zero — holed out from off the green — so
+//     it counts as a recorded hole worth no strokes; 0 still means "not
+//     recorded". Read cells through window.puttCount / window.puttsTracked.
 //   • Saved snapshots   — { round, scores, putts, firData, girData, extraStats, savedAt }
 //     or completed round objects carrying holeScores.
 //
 // All functions are pure (no storage access) so they run in Node tests as-is.
 
 const StatsService = (function () {
+
+  // The tracked-zero putts sentinel and the dropout reader, kept local so the
+  // module stays self-contained (gameUtils owns the canonical versions).
+  const ZERO_PUTTS = -1;
+  function dropoutThruOf(dropouts, pid) {
+    const d = dropouts && dropouts[pid];
+    if (d === null || d === undefined) return null;
+    const n = typeof d === 'object' ? Number(d.thru) : Number(d);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+  }
 
   // Normalizes any saved shape into one flat round-data record.
   function roundDataFromSnapshot(snap) {
@@ -23,7 +37,7 @@ const StatsService = (function () {
       putts = putts || {};
       Object.keys(round.holeScores).forEach(pid => {
         scores[pid] = round.holeScores[pid].map(h => h && h.strokes ? h.strokes : null);
-        if (!putts[pid]) putts[pid] = round.holeScores[pid].map(h => (h && h.putts) || 0);
+        if (!putts[pid]) putts[pid] = round.holeScores[pid].map(h => (h && typeof h.putts === 'number' ? h.putts : 0));
       });
     }
     return {
@@ -35,6 +49,7 @@ const StatsService = (function () {
       firData:    snap.firData || round.firData || {},
       girData:    snap.girData || round.girData || {},
       extraStats: snap.extraStats || round.extraStats || {},
+      dropouts:   snap.dropouts   || round.dropouts   || {},
       date:       round.date || null,
       savedAt:    snap.savedAt || round.savedAt || null,
       games:      round.games || [],
@@ -67,7 +82,7 @@ const StatsService = (function () {
     const extra  = (data.extraStats && data.extraStats[pid]) || {};
 
     let gross = 0, par = 0, played = 0, front = 0, back = 0;
-    let puttsTotal = 0, puttsHoles = 0, threePutts = 0, onePutts = 0;
+    let puttsTotal = 0, puttsHoles = 0, threePutts = 0, onePutts = 0, zeroPutts = 0;
     let firHit = 0, firEligible = 0, girHit = 0, girEligible = 0;
     let penalties = 0, sandAtt = 0, sandMade = 0, udAtt = 0, udMade = 0;
     let longestDrive = 0, longestPutt = 0;
@@ -83,8 +98,12 @@ const StatsService = (function () {
         diffs.push({ gross: g, par: h.par });
         if (parBuckets[h.par]) { parBuckets[h.par].n++; parBuckets[h.par].total += g; }
       }
+      // A tracked zero (chip-in) counts as a putted hole worth no strokes —
+      // that is the whole point of the sentinel; an untracked hole counts as
+      // nothing at all.
       const p = putts[i];
-      if (p > 0) {
+      if (p === ZERO_PUTTS) { puttsHoles++; zeroPutts++; }
+      else if (p > 0) {
         puttsTotal += p; puttsHoles++;
         if (p >= 3) threePutts++;
         if (p === 1) onePutts++;
@@ -115,15 +134,20 @@ const StatsService = (function () {
       if (candidates.length) bestNine = candidates.sort((a, b) => a.toPar - b.toPar)[0];
     }
 
+    // How many holes this player was ever going to play: a walk-off's round is
+    // finished at their exit hole, so it is never counted as a complete round.
+    const walkedInAfter = dropoutThruOf(data.dropouts, pid);
+
     return {
       playerId: pid,
       holesPlayed: played,
       holeCount: holes.length,
-      complete: played === holes.length && played > 0,
+      walkedInAfter,
+      complete: played === holes.length && played > 0 && walkedInAfter === null,
       gross, par, toPar: gross - par,
       front, back,
       counts: _scoreCounts(diffs),
-      putts: { total: puttsTotal, holes: puttsHoles, perHole: puttsHoles ? puttsTotal / puttsHoles : 0, threePutts, onePutts },
+      putts: { total: puttsTotal, holes: puttsHoles, perHole: puttsHoles ? puttsTotal / puttsHoles : 0, threePutts, onePutts, zeroPutts },
       fir: { hit: firHit, eligible: firEligible, pct: firEligible ? Math.round(100 * firHit / firEligible) : null },
       gir: { hit: girHit, eligible: girEligible, pct: girEligible ? Math.round(100 * girHit / girEligible) : null },
       penalties,
@@ -169,6 +193,7 @@ const StatsService = (function () {
       doubles: sum(s => s.counts.doubles),
       triplePlus: sum(s => s.counts.triplePlus),
       penalties:  sum(s => s.penalties),
+      zeroPutts:  sum(s => s.putts.zeroPutts || 0),
     };
     const firHit = sum(s => s.fir.hit), firEl = sum(s => s.fir.eligible);
     const girHit = sum(s => s.gir.hit), girEl = sum(s => s.gir.eligible);
@@ -208,6 +233,7 @@ const StatsService = (function () {
         toPar:  best(rounds.filter(r => r.stats.complete), s => s.toPar, true),
         birdiesInRound: best(rounds, s => s.counts.birdies, false),
         fewestPutts: best(puttRounds, s => s.putts.total, true),
+        chipInsInRound: best(rounds, s => s.putts.zeroPutts || null, false),
         bestNine: (() => {
           let out = null;
           rounds.forEach(r => {

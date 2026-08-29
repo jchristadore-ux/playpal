@@ -44,7 +44,7 @@ any round, each with its own pot and its own stake:
 
 | Award | What wins it |
 |---|---|
-| 🥄 **FLATSTICK** | Fewest putts — or switch it to fewest three-putts, which is fairer to whoever actually hits greens |
+| 🥄 **FLATSTICK** | Fewest putts — or switch it to fewest three-putts, which is fairer to whoever actually hits greens, or to **chip-ins**, where most zero-putt holes wins |
 | 🟢 **FIR KING** | Most fairways off the tee (par 3s don't count, so it's out of 14) |
 | 😤 **BOGEY BRO** | Most bogeys exactly — a par is too good, a double too bad. "Bogey or better" turns it into the no-blow-up award |
 | 👑 **PAR PRINCE** | Most pars |
@@ -80,6 +80,15 @@ your group via the room code/QR.
 
 New on the score screen:
 
+* **Zero putts**: the putts row starts at **0**. Tap it when the ball never
+  saw the putter — a chip-in, a bunker hole-out, an ace. It's a real zero, not
+  a blank: your putting total counts it, FLATSTICK counts it, and the card
+  reads CHIP-IN. Leaving the row untouched still means "nobody wrote it down".
+* **Somebody walks in**: tap a player's score, then **"… IS DONE — END THEIR
+  ROUND HERE"**. Their card closes at that hole and the round carries on with
+  whoever is left — no more blank back nine holding up every game. Their card
+  shows a **BACK IN** button if they change their mind, and the whole group's
+  phones see it.
 * **Scramble-style games**: enter the *team* score on any one teammate's
   card — PlayPal figures out the rest.
 * **Stat tracking rounds** add FIR / GIR buttons plus **PEN** (penalty
@@ -103,11 +112,31 @@ New on the score screen:
 * **⬇️ EXPORT CSV** — the full hole-by-hole card for spreadsheets.
 * Payouts and Venmo settlement for money games, exactly as before.
 
+### When somebody walked in
+
+A part round is shown, not hidden: their holes stay on the card, marked
+**WD**, and they're listed after the players who finished. The money follows
+what golfers already do:
+
+* **Whole-round games** — stroke play, net, stableford, quota, the awards —
+  are settled among the players who finished. Whoever walked in neither antes
+  nor wins; nine holes of 3s can't take an 18-hole pot.
+* **Match play and Nassau** treat walking in as a **concession**: the side
+  still standing takes the match, and any Nassau segment that hadn't been
+  played out. A segment already won stays won, and a match already closed out
+  stays closed.
+* **Hole-by-hole games** — skins, Wolf, Bingo Bango Bongo — just carry on with
+  whoever is left. Skins won before leaving are kept; holes with fewer than
+  two players simply carry.
+* **Team games** keep playing if the side can still put a ball in play (a
+  four-ball pair plays on with one), and sit the pot out if it can't.
+
 ## Stats & trends (📈 STATS tab)
 
 Pick a player to see their story across every saved round on this device:
 
-* Scoring average, best round, fairways %, greens %, putts per round.
+* Scoring average, best round, fairways %, greens %, putts per round, and
+  lifetime **chip-ins** (holes you never putted).
 * A scoring **trend chart** of the last 12 full rounds.
 * **Score distribution** (eagles → triples), par-3/4/5 averages, sand save
   and up-and-down rates, lifetime penalties.

@@ -1,6 +1,6 @@
 // Summary.jsx — updated design system
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, extraStats, onNewRound, readOnly }) => {
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, extraStats, dropouts, onNewRound, readOnly }) => {
   const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus, calcBBBStandings, calcTeeBallStandings } = window;
   const { players, course, formats, syncCode } = round;
 
@@ -14,6 +14,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const _firData     = firData     || {};
   const _girData     = girData     || {};
   const _extraStats  = extraStats  || {};
+  const _dropouts    = dropouts    || round.dropouts || {};
   const _presses     = nassauPresses || [];
   const roundGames   = round.games || [];
 
@@ -28,14 +29,14 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const ptmState = React.useMemo(() => {
     try {
       return formats.some(f => f.type === 'passmoney')
-        ? computePTMState(_scores, _putts, players, course, players[0].id)
+        ? computePTMState(_scores, _putts, players, course, players[0].id, _dropouts)
         : { holderId: null, log: [] };
     } catch(e) {
       return { holderId: null, log: [] };
     }
   }, []);
 
-  const roundData = { scores:_scores, wolfData:_wolfData, putts:_putts, popFlags:_popFlags, bbbData:_bbbData, teeBallData:_teeBallData, firData:_firData, girData:_girData };
+  const roundData = { scores:_scores, wolfData:_wolfData, putts:_putts, popFlags:_popFlags, bbbData:_bbbData, teeBallData:_teeBallData, firData:_firData, girData:_girData, dropouts:_dropouts };
 
   // Tracked stats in the shape MatchEngine award formats read them.
   const _statsData = { putts:_putts, fir:_firData, gir:_girData };
@@ -54,7 +55,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   const payoutsByFormat = React.useMemo(() => {
     return formats.map(f => {
       try {
-        return calcAllPayouts(_scores, _wolfData, players, course, [f], _presses, ptmState.holderId, _popFlags, null, _bbbData, _teeBallData);
+        return calcAllPayouts(_scores, _wolfData, players, course, [f], _presses, ptmState.holderId, _popFlags, null, _bbbData, _teeBallData, { dropouts: _dropouts });
       } catch(e) {
         return Object.fromEntries(players.map(p => [p.id, 0]));
       }
@@ -68,7 +69,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         return window.MatchEngine.payouts(g, {
           course, players, scores: _scores,
           startingTee: round.startingTee,
-          stats: _statsData,
+          stats: _statsData, dropouts: _dropouts,
           gameState: { wolf: _wolfData, bbb: _bbbData },
         });
       } catch(e) {
@@ -118,7 +119,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         return window.MatchEngine.compute(g, {
           course, players, scores: _scores,
           startingTee: round.startingTee,
-          stats: _statsData,
+          stats: _statsData, dropouts: _dropouts,
           gameState: { wolf: _wolfData, bbb: _bbbData },
         });
       } catch(e) { console.warn('[Summary] game compute failed:', e); return null; }
@@ -162,13 +163,16 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     showToast(ok ? 'Scorecard CSV downloaded' : 'Export not available here', ok ? 'success' : 'error');
   };
 
+  // A part round never tops the board: whoever walked in is listed after the
+  // players who finished, however good their nine holes were.
   const leaderboard = [...players].map(p=>({
     ...p,
     gross:  totalScore(_scores, p.id),
     vsPar:  totalVsPar(_scores, p.id, course.holes),
     payout: payouts[p.id]||0,
     stPts:  stablefordPts[p.id]||0,
-  })).sort((a,b)=> (a.gross===0)-(b.gross===0) || a.vsPar-b.vsPar || a.gross-b.gross);
+    wd:     window.isDropped(_dropouts, p.id),
+  })).sort((a,b)=> (a.wd?1:0)-(b.wd?1:0) || (a.gross===0)-(b.gross===0) || a.vsPar-b.vsPar || a.gross-b.gross);
 
   // One report drives the screen, the email and the share sheet.
   const report = React.useMemo(() => {
@@ -298,18 +302,21 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         <div style={{display:'flex', gap:8, marginTop:12, flexWrap:'wrap', justifyContent:'center'}}>
           {leaderboard.map((p,i)=>(
             <div key={p.id} style={{display:'flex', alignItems:'center', gap:8, background:'#FFFFFF',
-              border:`1px solid ${i===0?'#C8A15A':'#E7E3D9'}`, borderRadius:22, padding:'5px 12px 5px 7px'}}>
+              border:`1px solid ${i===0 && !p.wd ?'#C8A15A':'#E7E3D9'}`, borderRadius:22, padding:'5px 12px 5px 7px'}}>
               <Avatar player={p} size={26}/>
               <div>
-                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:i===0?'#C8A15A':'#0E2B20', lineHeight:1}}>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:i===0 && !p.wd ?'#C8A15A':'#0E2B20', lineHeight:1}}>
                   {p.name.split(' ')[0]}
                 </div>
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:p.vsPar<0?'#15803D':p.vsPar===0?'#6B7280':'#DC2626'}}>
                   {p.vsPar===0?'E':p.vsPar>0?`+${p.vsPar}`:p.vsPar} · {p.gross||'—'}
                   {p.stPts>0 && <span style={{color:'#C8A15A', marginLeft:4}}>★{p.stPts}</span>}
+                  {window.isDropped(_dropouts, p.id) && (
+                    <span style={{color:'#8A9E8A', marginLeft:4}}>· 👋 {window.dropoutThru(_dropouts, p.id)} holes</span>
+                  )}
                 </div>
               </div>
-              {i===0 && <span style={{fontSize:14}}>🏆</span>}
+              {i===0 && !p.wd && <span style={{fontSize:14}}>🏆</span>}
             </div>
           ))}
         </div>
@@ -367,6 +374,10 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                         <div style={{display:'flex', alignItems:'center', gap:6}}>
                           <div style={{width:7, height:7, borderRadius:'50%', background:p.color, flexShrink:0}}/>
                           <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:'#0E2B20', whiteSpace:'nowrap'}}>{p.name.split(' ')[0]}</span>
+                          {window.isDropped(_dropouts, p.id) && (
+                            <span title={window.dropoutLabel(_dropouts, p.id)}
+                              style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, letterSpacing:0.5, color:'#8A9E8A', border:'1px solid #E7E3D9', borderRadius:4, padding:'0 3px'}}>WD</span>
+                          )}
                         </div>
                       </td>
                       {course.holes.slice(0,9).map((h,i)=>{
@@ -401,20 +412,20 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 {_putts && Object.keys(_putts).length > 0 && <tr>
                   <td style={{...sumS.td, color:'#8A9E8A', fontSize:11, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, letterSpacing:1}}>PUTTS</td>
                   {course.holes.slice(0,9).map((_,i)=>{
-                    const tot = players.reduce((a,p)=>a+(_putts[p.id]?.[i]||0),0);
+                    const tot = players.reduce((a,p)=>a+window.puttCount(_putts[p.id]?.[i]),0);
                     return <td key={i} style={{...sumS.td, color:'#8A9E8A', fontSize:12, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{tot||'·'}</td>;
                   })}
                   <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>
-                    {players.reduce((a,p)=>a+(_putts[p.id]||[]).slice(0,9).reduce((b,v)=>b+(v||0),0),0)||'·'}
+                    {players.reduce((a,p)=>a+window.sumPutts((_putts[p.id]||[]).slice(0,9)),0)||'·'}
                   </td>
                   {course.holes.slice(9,18).map((_,i)=>{
-                    const ri=i+9; const tot = players.reduce((a,p)=>a+(_putts[p.id]?.[ri]||0),0);
+                    const ri=i+9; const tot = players.reduce((a,p)=>a+window.puttCount(_putts[p.id]?.[ri]),0);
                     return <td key={ri} style={{...sumS.td, color:'#8A9E8A', fontSize:12, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{tot||'·'}</td>;
                   })}
                   <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, background:'#F0EDE4', borderLeft:'2px solid #E7E3D9'}}>
-                    {players.reduce((a,p)=>a+(_putts[p.id]||[]).slice(9,18).reduce((b,v)=>b+(v||0),0),0)||'·'}
+                    {players.reduce((a,p)=>a+window.sumPutts((_putts[p.id]||[]).slice(9,18)),0)||'·'}
                   </td>
-                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{players.reduce((a,p)=>a+(_putts[p.id]||[]).reduce((b,v)=>b+(v||0),0),0)}</td>
+                  <td style={{...sumS.td, color:'#8A9E8A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>{players.reduce((a,p)=>a+window.sumPutts(_putts[p.id]||[]),0)}</td>
                   <td style={{...sumS.td}}/>
                 </tr>}
               </tbody>
@@ -438,7 +449,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
             {/* Round Stats: Putts / FIR / GIR */}
             {(() => {
-              const hasPutts = _putts && players.some(p => (_putts[p.id]||[]).some(v=>v>0));
+              const hasPutts = window.hasAnyPutts(_putts, players);
+              const hasChipIns = players.some(p => window.countZeroPutts(_putts[p.id]) > 0);
               const hasFir   = _firData && players.some(p => (_firData[p.id]||[]).some(v=>v!==null));
               const hasGir   = _girData && players.some(p => (_girData[p.id]||[]).some(v=>v!==null));
               if (!hasPutts && !hasFir && !hasGir) return null;
@@ -455,13 +467,15 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                         <tr>
                           <th style={{...sumS.th, textAlign:'left', paddingLeft:14}}>PLAYER</th>
                           {hasPutts && <th style={sumS.th}>PUTTS</th>}
+                          {hasChipIns && <th style={sumS.th}>CHIP-INS</th>}
                           {hasFir   && <th style={sumS.th}>FIR</th>}
                           {hasGir   && <th style={sumS.th}>GIR</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {players.map(p => {
-                          const totalPutts = hasPutts ? (_putts[p.id]||[]).reduce((a,v)=>a+(v||0),0) : null;
+                          const totalPutts = hasPutts ? window.sumPutts(_putts[p.id]) : null;
+                          const chipIns    = window.countZeroPutts(_putts[p.id]);
                           const firArr  = _firData?.[p.id] || [];
                           const firHit  = firArr.filter((v,i)=>(course.holes[i]?.par||4)>3 && v===true).length;
                           const firElig = firArr.filter((v,i)=>(course.holes[i]?.par||4)>3 && v!==null).length || firEligHoles;
@@ -477,6 +491,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                                 </div>
                               </td>
                               {hasPutts && <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{totalPutts||'—'}</td>}
+                              {hasChipIns && <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:chipIns?'#15803D':'#8A9E8A'}}>{chipIns||'—'}</td>}
                               {hasFir   && <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A'}}>{firArr.some(v=>v!==null)?`${firHit}/${firElig}`:'—'}</td>}
                               {hasGir   && <td style={{...sumS.td, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A'}}>{girArr.some(v=>v!==null)?`${girHit}/${girPlyd}`:'—'}</td>}
                             </tr>

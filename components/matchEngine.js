@@ -39,6 +39,17 @@
 // ones counting putts or fairways read `raw.stats` ({ putts, fir, gir } keyed
 // by player id, one array per player); a caller with no tracked stats can omit
 // it and those awards report themselves untracked rather than crowning nobody.
+// A putts cell of −1 is a tracked ZERO — holed out from off the green — which
+// counts as 0 strokes and as a recorded hole; 0 still means "not recorded".
+//
+// Mid-round dropouts: `raw.dropouts` = { playerId: { thru: n } }, n holes played
+// in play order. Nobody's blank back nine holds a game open any more:
+//   · whole-round games (stroke play, points games, awards) show the walk-off's
+//     part round but leave them out of the standings and out of the pot;
+//   · match play and Nassau treat walking in as a concession — the side still
+//     standing takes whatever wasn't already decided;
+//   · hole-by-hole games (skins, Wolf, BBB) simply play on with whoever is left
+//     and finish when the last contestable hole is done.
 //
 // Depends on HandicapService + CourseService (loaded first).
 
@@ -196,25 +207,58 @@ const MatchEngine = (function () {
     // Per-hole tracked stats (putts / FIR / GIR), recorded on the scorecard and
     // passed straight through. Award formats read them; every other format
     // ignores them, so a caller that has none can leave `raw.stats` off.
-    //   putts: { pid: number[] }   0 / missing → not recorded on that hole
+    //   putts: { pid: number[] }   0 / missing → not recorded; −1 → a tracked
+    //                              zero (holed out from off the green)
     //   fir / gir: { pid: (true|false|null)[] }   null → not recorded
+    const ZERO_PUTTS = -1;
     const statData = raw.stats || {};
     const _cell = (bag, pid, i) => (bag && bag[pid] ? bag[pid][i] : undefined);
     const stats = {
+      // The stroke count: a chip-in and an untracked hole both add nothing, so
+      // sums stay honest — `puttTracked` is what tells the two apart.
       putts:   (pid, i) => { const v = _cell(statData.putts, pid, i); return typeof v === 'number' && v > 0 ? v : 0; },
+      puttTracked: (pid, i) => { const v = _cell(statData.putts, pid, i); return v === ZERO_PUTTS || (typeof v === 'number' && v > 0); },
+      zeroPutt: (pid, i) => _cell(statData.putts, pid, i) === ZERO_PUTTS,
       fir:     (pid, i) => { const v = _cell(statData.fir, pid, i); return v === true || v === false ? v : null; },
       gir:     (pid, i) => { const v = _cell(statData.gir, pid, i); return v === true || v === false ? v : null; },
       // Holes where the stat was actually recorded — an award can't be won on
       // a stat nobody tracked, so eligibility is checked, never assumed.
-      puttHoles: (pid) => holes.reduce((a, h, i) => a + (stats.putts(pid, i) > 0 ? 1 : 0), 0),
+      puttHoles: (pid) => holes.reduce((a, h, i) => a + (stats.puttTracked(pid, i) ? 1 : 0), 0),
+      zeroPutts: (pid) => holes.reduce((a, h, i) => a + (stats.zeroPutt(pid, i) ? 1 : 0), 0),
       firHoles:  (pid) => holes.reduce((a, h, i) => a + (h.par > 3 && stats.fir(pid, i) !== null ? 1 : 0), 0),
       girHoles:  (pid) => holes.reduce((a, h, i) => a + (stats.gir(pid, i) !== null ? 1 : 0), 0),
     };
 
+    // Mid-round dropouts: { pid: { thru: n } } — n holes played, counted in play
+    // order. Everything downstream asks two questions: was this player in the
+    // round on that hole (`inPlay`), and how many holes were they ever going to
+    // play (`expected`)? A game is finished when every side has played the holes
+    // it was due to play, not always all 18.
+    const playOrder = raw.playOrder || _playOrder(holeCount, raw.startingTee);
+    const seqOf = {};
+    playOrder.forEach((h, k) => { seqOf[h] = k; });
+    const dropouts = raw.dropouts || {};
+    const outAfter = (pid) => {
+      const d = dropouts[pid];
+      if (d === null || d === undefined) return null;
+      const n = typeof d === 'object' ? Number(d.thru) : Number(d);
+      return Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), holeCount) : null;
+    };
+    const withdrawn = (pid) => outAfter(pid) !== null;
+    const inPlay = (pid, i) => {
+      const n = outAfter(pid);
+      return n === null || (seqOf[i] !== undefined && seqOf[i] < n);
+    };
+    const expected = (pid) => { const n = outAfter(pid); return n === null ? holeCount : n; };
+    // Holes still contested by at least `min` of this game's participants — what
+    // "all 18" means for a field game once somebody walks in.
+    const contestedHoles = (min) => playOrder.reduce(
+      (a, i) => a + (players.filter(p => inPlay(p.id, i)).length >= (min || 2) ? 1 : 0), 0);
+
     return {
       course, holes, holeCount,
       par: (i) => holes[i] ? holes[i].par : 4,
-      playOrder: raw.playOrder || _playOrder(holeCount, raw.startingTee),
+      playOrder,
       players, playersById,
       teams,
       config: cfg,
@@ -222,6 +266,8 @@ const MatchEngine = (function () {
       handicaps: hcp,
       gross, net, score,
       stats,
+      dropouts, withdrawn, inPlay, expected, contestedHoles,
+      inPlayIds: (i) => players.filter(p => inPlay(p.id, i)).map(p => p.id),
       teamEntered, teamBest, teamStrokes,
       gameState: raw.gameState || {},
     };
@@ -239,11 +285,16 @@ const MatchEngine = (function () {
   }
 
   // Finalizes a leaderboard-style result: sorts, finds leaders, builds status.
+  // An entry flagged `void` still shows its numbers but is out of the running —
+  // a part-round total (someone walked in) can't win a whole-round game, and
+  // `_potPayouts` keeps that player out of the pot too.
   function finishLeaderboard(entries, opts) {
     const o = opts || {};
     const lower = !!o.lowerIsBetter;
-    const scored = entries.filter(e => e.played > 0);
+    const live = (e) => e.played > 0 && !e.void;
+    const scored = entries.filter(live);
     const sorted = entries.slice().sort((a, b) => {
+      if (live(a) !== live(b)) return live(a) ? -1 : 1;
       if ((a.played > 0) !== (b.played > 0)) return a.played > 0 ? -1 : 1;
       return lower ? a.total - b.total : b.total - a.total;
     });
@@ -265,7 +316,7 @@ const MatchEngine = (function () {
         if (leaderIds.length > 1) {
           winText = label + ' tie' + (o.unit ? ' on ' + o.unit : '');
         } else {
-          const runnerUp = sorted.find(e => !leaderIds.includes(e.id) && e.played > 0);
+          const runnerUp = sorted.find(e => !leaderIds.includes(e.id) && live(e));
           const margin = runnerUp ? Math.abs(runnerUp.total - sorted[0].total) : 0;
           winText = label + ' wins' + (margin ? ' by ' + _fmtNum(margin) : '');
         }
@@ -274,7 +325,7 @@ const MatchEngine = (function () {
       } else if (leaderIds.length === scored.length && scored.length > 1) {
         status = 'All square thru ' + thru;
       } else {
-        const runnerUp = sorted.find(e => !leaderIds.includes(e.id) && e.played > 0);
+        const runnerUp = sorted.find(e => !leaderIds.includes(e.id) && live(e));
         const margin = runnerUp ? Math.abs(runnerUp.total - sorted[0].total) : 0;
         status = label + ' leads' + (margin ? ' by ' + _fmtNum(margin) : '') + ' thru ' + thru;
       }
@@ -291,8 +342,23 @@ const MatchEngine = (function () {
     return diff > 0 ? '+' + diff : String(diff);
   }
 
+  // How many holes a unit was ever going to post a score on. One player is
+  // simply their own round; a side needs `ballsNeeded` of its members still out
+  // there, so a best-ball pair plays on when a partner walks in, while a
+  // team-total side stops the moment it can't field enough balls.
+  function _unitExpected(ctx, u, ballsNeeded) {
+    const need = Math.max(1, ballsNeeded || 1);
+    const ids = u.playerIds || [];
+    if (!ids.length) return ctx.holeCount;
+    return ctx.playOrder.reduce(
+      (a, i) => a + (ids.filter(pid => ctx.inPlay(pid, i)).length >= need ? 1 : 0), 0);
+  }
+
   // ── Individual stroke-total compute (stroke play / net / team aggregates) ──
-  function _strokeLeaderboard(ctx, scoreOf, units) {
+  //   opts.ballsNeeded(unit) → how many members must still be in the round for
+  //   the unit to post a score (default 1).
+  function _strokeLeaderboard(ctx, scoreOf, units, opts) {
+    const o = opts || {};
     const entries = units.map(u => {
       let total = 0, par = 0, played = 0;
       const perHole = ctx.holes.map((h, i) => {
@@ -300,15 +366,22 @@ const MatchEngine = (function () {
         if (s > 0) { total += s; par += h.par; played++; return s; }
         return null;
       });
+      const expected = _unitExpected(ctx, u, o.ballsNeeded ? o.ballsNeeded(u) : 1);
+      const short = expected < ctx.holeCount;
       return {
         id: u.id, label: u.label, playerIds: u.playerIds, color: u.color,
-        total, played, perHole,
+        total, played, perHole, expected,
+        // A short card is out of the money but keeps its numbers on the board.
+        void: short, wd: short,
         totalLabel: played ? String(total) : '—',
-        detail: played ? _toParLabel(total - par) + ' · thru ' + played : 'No scores',
+        detail: !played ? 'No scores'
+          : short ? _toParLabel(total - par) + ' · walked in after ' + played
+          : _toParLabel(total - par) + ' · thru ' + played,
       };
     });
-    const complete = entries.every(e => e.played === ctx.holeCount);
-    const thru = Math.min(...entries.map(e => e.played));
+    const complete = entries.length > 0 && entries.every(e => e.played === e.expected);
+    const full = entries.filter(e => !e.void);
+    const thru = Math.min(...(full.length ? full : entries).map(e => e.played));
     return finishLeaderboard(entries, { lowerIsBetter: true, complete, thru });
   }
 
@@ -325,7 +398,11 @@ const MatchEngine = (function () {
   }
 
   // ── Match-play core (singles or team best-ball) ────────────────────────────
+  // Walking in concedes the match (Rule 3.2 in everything but name): a side
+  // whose players have all left loses whatever wasn't already decided. A
+  // four-ball side that still has one player carries on with the one ball.
   function _matchCompute(ctx, sideScore, sides) {
+    const retired = sides.map(s => (s.playerIds || []).length > 0 && s.playerIds.every(pid => ctx.withdrawn(pid)));
     let upA = 0, played = 0, closed = null;
     const perHole = ctx.holes.map(() => null);
     for (let k = 0; k < ctx.playOrder.length; k++) {
@@ -343,7 +420,11 @@ const MatchEngine = (function () {
         break;
       }
     }
-    const complete = !!closed || played === ctx.holeCount;
+    // Concession: not already closed out, and one side has gone home.
+    const conceded = (!closed && (retired[0] || retired[1]))
+      ? (retired[0] && retired[1] ? 'both' : (retired[0] ? 1 : 0))
+      : null;
+    const complete = !!closed || played === ctx.holeCount || conceded !== null;
     const lead = upA === 0 ? null : (upA > 0 ? 0 : 1);
     const margin = Math.abs(upA);
 
@@ -352,11 +433,31 @@ const MatchEngine = (function () {
       total: idx === lead ? margin : 0,
       played,
       totalLabel: lead === null ? 'AS' : (idx === lead ? margin + ' UP' : margin + ' DN'),
-      detail: closed && closed.winnerIdx === idx ? 'Won ' + closed.result : 'thru ' + played,
+      detail: closed && closed.winnerIdx === idx ? 'Won ' + closed.result
+        : conceded === 'both' ? 'Walked in thru ' + played
+        : conceded !== null ? (conceded === idx ? 'Won by concession' : 'Walked in thru ' + played)
+        : 'thru ' + played,
       perHole,
     }));
 
     let status, winner = null;
+    if (conceded === 'both') {
+      status = 'Match abandoned — both sides walked in';
+      return {
+        kind: 'match', entries,
+        leaderIds: lead === null ? entries.map(e => e.id) : [sides[lead].id],
+        thru: played, complete: true, status, winner: null, conceded: true,
+      };
+    }
+    if (conceded !== null) {
+      const w = sides[conceded], l = sides[1 - conceded];
+      winner = { ids: [w.id], label: w.label, text: w.label + ' wins — ' + l.label + ' walked in thru ' + played };
+      const ord = conceded === 1 ? [entries[1], entries[0]] : entries;
+      return {
+        kind: 'match', entries: ord, leaderIds: [w.id],
+        thru: played, complete: true, status: winner.text, winner, conceded: true,
+      };
+    }
     if (!played) status = 'No scores yet';
     else if (closed) {
       winner = { ids: [sides[closed.winnerIdx].id], label: sides[closed.winnerIdx].label, text: sides[closed.winnerIdx].label + ' wins ' + closed.result };
@@ -405,17 +506,22 @@ const MatchEngine = (function () {
         return v;
       });
       const base = o.baseline ? o.baseline(p) : 0;
+      const expected = ctx.expected(p.id);
+      const short = expected < ctx.holeCount;
       return {
         id: p.id, label: _firstName(p), playerIds: [p.id], color: p.color,
-        total: pts - base, played, perHole,
+        total: pts - base, played, perHole, expected,
+        // A points total counts the whole round: whoever walked in sits it out.
+        void: short, wd: short,
         totalLabel: played ? (o.signed ? (pts - base > 0 ? '+' : '') + (pts - base) : String(pts)) : '—',
-        detail: played
-          ? (o.baseline ? pts + ' pts vs quota ' + base : played + ' holes')
-          : 'No scores',
+        detail: !played ? 'No scores'
+          : short ? 'walked in after ' + played
+          : (o.baseline ? pts + ' pts vs quota ' + base : played + ' holes'),
       };
     });
-    const complete = entries.every(e => e.played === ctx.holeCount);
-    const thru = Math.min(...entries.map(e => e.played));
+    const complete = entries.length > 0 && entries.every(e => e.played === e.expected);
+    const full = entries.filter(e => !e.void);
+    const thru = Math.min(...(full.length ? full : entries).map(e => e.played));
     return finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'points' });
   }
 
@@ -472,9 +578,10 @@ const MatchEngine = (function () {
 
   // Losing players each ante `stake`; the pot is split among the winners.
   // An entry that sat the game out (played 0 — an award nobody tracked the
-  // stat for, say) neither antes nor wins.
+  // stat for, say) neither antes nor wins, and neither does a `void` entry: a
+  // player who walked in never had a whole-round score to win or lose with.
   function _potPayouts(result, stake, pay) {
-    const active = { entries: (result.entries || []).filter(e => e.played === undefined || e.played > 0) };
+    const active = { entries: (result.entries || []).filter(e => !e.void && (e.played === undefined || e.played > 0)) };
     const { ids } = _entryPlayers(active);
     if (!result.complete || !result.winner || ids.length < 2) return pay;
     const winnerIds = [];
@@ -710,6 +817,13 @@ const MatchEngine = (function () {
           ]
         : [{ key: 'Match', holes: Array.from({ length: ctx.holeCount }, (_, i) => i) }];
 
+      // Walking in concedes the bets still on the table: any segment that
+      // wasn't already played out goes to the side still standing. Segments
+      // already finished keep the result they were won on.
+      const retired = sides.map(s => (s.playerIds || []).length > 0 && s.playerIds.every(pid => ctx.withdrawn(pid)));
+      const concededTo = (retired[0] !== retired[1]) ? (retired[0] ? 1 : 0) : null;
+      const abandoned = retired[0] && retired[1];
+
       const segWins = [0, 0];
       const segDetail = [[], []];
       const segments = [];
@@ -724,16 +838,24 @@ const MatchEngine = (function () {
           if (a < b) up++; else if (b < a) up--;
         });
         if (seg.key === '18' || seg.key === 'Match') thru = played;
-        const segDone = played === seg.holes.length;
+        let segDone = played === seg.holes.length;
+        let ceded = false;
+        if (!segDone && concededTo !== null) {
+          up = concededTo === 0 ? Math.max(1, up) : Math.min(-1, up);
+          segDone = true;
+          ceded = true;
+        }
         const tag = up === 0 ? 'AS' : (up > 0 ? '+' + up : String(up));
-        segDetail[0].push(seg.key + ' ' + tag);
-        segDetail[1].push(seg.key + ' ' + (up === 0 ? 'AS' : (up < 0 ? '+' + (-up) : String(-up))));
+        const mark = ceded ? ' (conceded)' : '';
+        segDetail[0].push(seg.key + ' ' + tag + mark);
+        segDetail[1].push(seg.key + ' ' + (up === 0 ? 'AS' : (up < 0 ? '+' + (-up) : String(-up))) + mark);
         if (segDone && up !== 0) segWins[up > 0 ? 0 : 1]++;
         // The overall bet is traditionally worth double the two nine bets.
-        segments.push({ key: seg.key, up, played, complete: segDone, weight: seg.key === '18' ? 2 : 1 });
+        segments.push({ key: seg.key, up, played, complete: segDone, conceded: ceded, weight: seg.key === '18' ? 2 : 1 });
       });
 
-      const complete = segs.every(seg => seg.holes.every(i => sideScore(sides[0], i) > 0 && sideScore(sides[1], i) > 0));
+      const complete = (concededTo !== null) || abandoned
+        || segs.every(seg => seg.holes.every(i => sideScore(sides[0], i) > 0 && sideScore(sides[1], i) > 0));
       const entries = sides.map((s, idx) => ({
         id: s.id, label: s.label, playerIds: s.playerIds, color: s.color,
         total: segWins[idx], played: thru,
@@ -750,13 +872,16 @@ const MatchEngine = (function () {
         leaderIds = [sides[lead].id];
         status = sides[lead].label + ' up ' + segWins[lead] + '–' + segWins[1 - lead] + ' in segments thru ' + thru;
       }
-      if (complete) {
+      if (abandoned) {
+        status = 'Nassau abandoned — both sides walked in';
+      } else if (complete) {
         if (segWins[0] === segWins[1]) winner = { ids: entries.map(e => e.id), label: 'Split', text: 'Nassau splits ' + segWins[0] + '–' + segWins[1] };
         else {
           const lead = segWins[0] > segWins[1] ? 0 : 1;
-          winner = { ids: [sides[lead].id], label: sides[lead].label, text: sides[lead].label + ' takes the Nassau ' + segWins[lead] + '–' + segWins[1 - lead] };
+          const how = concededTo !== null ? ' (' + sides[1 - concededTo].label + ' walked in thru ' + thru + ')' : '';
+          winner = { ids: [sides[lead].id], label: sides[lead].label, text: sides[lead].label + ' takes the Nassau ' + segWins[lead] + '–' + segWins[1 - lead] + how };
         }
-        status = winner.text;
+        status = winner ? winner.text : status;
       }
       const ordered = segWins[1] > segWins[0] ? [entries[1], entries[0]] : entries;
       return { kind: 'segments', entries: ordered, sideIds: sides.map(s => s.id), segments, leaderIds, thru, complete, status, winner };
@@ -777,7 +902,11 @@ const MatchEngine = (function () {
       let thru = 0;
       const perHoleWinner = ctx.holes.map(() => null);
       for (const i of ctx.playOrder) {
-        const entered = ctx.players.map(p => ({ id: p.id, s: ctx.score(p.id, i) }));
+        // Whoever is still out there contests the hole. Fewer than two players
+        // left and there is no skin to win — the pot just carries.
+        const field = ctx.players.filter(p => ctx.inPlay(p.id, i));
+        if (field.length < 2) continue;
+        const entered = field.map(p => ({ id: p.id, s: ctx.score(p.id, i) }));
         if (entered.some(e => !e.s)) { continue; }
         thru++;
         entered.sort((a, b) => a.s - b.s);
@@ -798,7 +927,7 @@ const MatchEngine = (function () {
         detail: holesWon[p.id].length ? 'Holes ' + holesWon[p.id].join(', ') : 'No skins yet',
         perHole: perHoleWinner,
       }));
-      const complete = thru === ctx.holeCount;
+      const complete = thru === ctx.contestedHoles(2);
       const res = finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'skins' });
       if (!complete && carried > 0 && thru > 0) res.status += ' · ' + carried + ' carrying';
       return { kind: 'leaderboard', ...res };
@@ -844,7 +973,7 @@ const MatchEngine = (function () {
         detail: thru ? 'thru ' + thru : 'No scores',
         perHole: null,
       }));
-      const complete = thru === ctx.holeCount;
+      const complete = thru === ctx.contestedHoles(4);
       return { kind: 'leaderboard', ...finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'points' }) };
     },
   });
@@ -860,7 +989,7 @@ const MatchEngine = (function () {
     compute(ctx) {
       const count = Math.max(1, ctx.config.countBalls || 1);
       const units = _teamUnits(ctx);
-      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, count), units) };
+      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, count), units, { ballsNeeded: () => count }) };
     },
   });
 
@@ -879,7 +1008,7 @@ const MatchEngine = (function () {
     compute(ctx) {
       const count = Math.max(1, ctx.config.countBalls || 1);
       const units = _teamUnits(ctx);
-      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, count), units) };
+      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, count), units, { ballsNeeded: () => count }) };
     },
   });
 
@@ -891,7 +1020,7 @@ const MatchEngine = (function () {
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
     compute(ctx) {
       const units = _teamUnits(ctx);
-      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, u.team.playerIds.length), units) };
+      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, u.team.playerIds.length), units, { ballsNeeded: (u) => u.team.playerIds.length }) };
     },
   });
 
@@ -903,7 +1032,7 @@ const MatchEngine = (function () {
     players: { min: 2, max: 8 }, teams: { count: 2, size: [1, 4] },
     compute(ctx) {
       const units = _teamUnits(ctx);
-      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, u.team.playerIds.length), units) };
+      return { kind: 'leaderboard', ..._strokeLeaderboard(ctx, (u, i) => ctx.teamBest(u.team, i, u.team.playerIds.length), units, { ballsNeeded: (u) => u.team.playerIds.length }) };
     },
   });
 
@@ -977,14 +1106,22 @@ const MatchEngine = (function () {
     compute(ctx) {
       const wolfData = ctx.gameState.wolf || {};
       const pts = Object.fromEntries(ctx.players.map(p => [p.id, 0]));
-      let thru = 0;
+      let thru = 0, playable = 0;
       for (const i of ctx.playOrder) {
+        // Wolf needs a field of three and a wolf who is still out there: a hole
+        // whose wolf has walked in can't be played, so it counts for nobody and
+        // doesn't hold the game open either.
+        const field = ctx.players.filter(p => ctx.inPlay(p.id, i));
+        if (field.length < 3) continue;
         const wd = wolfData[i];
+        if (wd && wd.confirmed && !ctx.inPlay(wd.wolfId, i)) continue;
+        playable++;
         if (!wd || !wd.confirmed) continue;
         const wolfTeam = wd.lone ? [wd.wolfId] : [wd.wolfId, wd.partnerId].filter(Boolean);
-        const others = ctx.players.map(p => p.id).filter(id => !wolfTeam.includes(id));
-        const sAll = Object.fromEntries(ctx.players.map(p => [p.id, ctx.score(p.id, i)]));
-        if (ctx.players.some(p => !sAll[p.id])) continue;
+        const others = field.map(p => p.id).filter(id => !wolfTeam.includes(id));
+        const sAll = Object.fromEntries(field.map(p => [p.id, ctx.score(p.id, i)]));
+        if (field.some(p => !sAll[p.id])) continue;
+        if (wolfTeam.some(id => !sAll[id])) continue;
         thru++;
         if (wd.lone) {
           const otherBest = others.map(id => sAll[id]).sort((a, b) => a - b);
@@ -1007,7 +1144,7 @@ const MatchEngine = (function () {
         total: pts[p.id], played: thru,
         totalLabel: String(pts[p.id]), detail: thru ? 'thru ' + thru : 'No holes decided', perHole: null,
       }));
-      const complete = thru === ctx.holeCount;
+      const complete = thru === playable;
       return { kind: 'leaderboard', ...finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'points' }) };
     },
   });
@@ -1035,7 +1172,7 @@ const MatchEngine = (function () {
         total: pts[p.id], played: thru,
         totalLabel: String(pts[p.id]), detail: thru ? thru + ' holes awarded' : 'No points yet', perHole: null,
       }));
-      const complete = thru === ctx.holeCount;
+      const complete = thru === ctx.contestedHoles(2);
       return { kind: 'leaderboard', ...finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'points' }) };
     },
   });
@@ -1057,24 +1194,33 @@ const MatchEngine = (function () {
     const holesPlayed = (pid) => ctx.holes.reduce((a, h, i) => a + (ctx.gross(pid, i) > 0 ? 1 : 0), 0);
     const entries = ctx.players.map(p => {
       const played = holesPlayed(p.id);
-      const eligible = played > 0 && (spec.eligible ? spec.eligible(p.id) : true);
+      // An award counts a whole round: a player who walked in keeps their
+      // numbers on the card but is out of the trophy and out of the pot.
+      const short = ctx.withdrawn(p.id);
+      const eligible = played > 0 && !short && (spec.eligible ? spec.eligible(p.id) : true);
       const total = eligible ? spec.valueOf(p.id) : 0;
       return {
         id: p.id, label: _firstName(p), playerIds: [p.id], color: p.color,
         total, played: eligible ? played : 0, perHole: null,
+        void: short, wd: short,
         totalLabel: eligible ? _fmtNum(total) : '—',
         detail: eligible
           ? (spec.detailOf ? spec.detailOf(p.id, total) : total + ' ' + spec.unit) + ' · thru ' + played
-          : (played > 0
+          : short
+            ? 'Walked in after ' + played
+            : (played > 0
               ? (typeof spec.ineligibleText === 'function' ? spec.ineligibleText(p.id, played) : (spec.ineligibleText || 'Not tracked'))
               : 'No scores'),
       };
     });
     // Completeness follows the scorecard, not eligibility — one player who
-    // never wrote a putt down must not hold the whole award open.
+    // never wrote a putt down must not hold the whole award open, and neither
+    // does one who went home after eleven.
     const cardPlayed = ctx.players.map(p => holesPlayed(p.id));
-    const complete = cardPlayed.length > 0 && cardPlayed.every(n => n === ctx.holeCount);
-    const thru = cardPlayed.length ? Math.min(...cardPlayed) : 0;
+    const complete = cardPlayed.length > 0
+      && ctx.players.every((p, k) => cardPlayed[k] === ctx.expected(p.id));
+    const full = ctx.players.filter(p => !ctx.withdrawn(p.id)).map(p => holesPlayed(p.id));
+    const thru = full.length ? Math.min(...full) : (cardPlayed.length ? Math.min(...cardPlayed) : 0);
     const res = finishLeaderboard(entries, {
       lowerIsBetter: !!spec.lowerIsBetter, complete, thru, unit: spec.unit,
     });
@@ -1102,26 +1248,31 @@ const MatchEngine = (function () {
   register({
     id: 'flatstick', label: 'FLATSTICK', icon: '🥄',
     settlement: 'pot', stakeHint: 'Fewest putts wins the pot — every other player antes the stake.',
-    desc: 'Fewest putts on the day. Putts have to be tracked to be eligible.',
+    desc: 'Fewest putts on the day — or most holes holed out without one. Putts have to be tracked to be eligible.',
     category: 'awards', basis: 'gross', players: { min: 2, max: 8 },
     requiresStats: ['putts'],
     options: [{
       key: 'mode', label: 'COUNT', default: 'total',
       choices: [
-        { value: 'total',      label: 'TOTAL PUTTS', hint: 'Fewest putts over the round.' },
-        { value: 'threePutts', label: 'FEWEST 3-PUTTS', hint: 'Fewest three-putts — fairer to whoever actually hits greens.' },
+        { value: 'total',      label: 'TOTAL',    hint: 'Fewest putts over the round.' },
+        { value: 'threePutts', label: '3-PUTTS',  hint: 'Fewest three-putts — fairer to whoever actually hits greens.' },
+        { value: 'zeroPutts',  label: 'CHIP-INS', hint: 'Most zero-putt holes — holed out from off the green. Most wins.' },
       ],
     }],
     compute(ctx) {
-      const threes = ctx.config.mode === 'threePutts';
+      const mode   = ctx.config.mode;
+      const threes = mode === 'threePutts';
+      const zeros  = mode === 'zeroPutts';
       const scored = (pid) => ctx.holes.reduce((a, h, i) => a + (ctx.gross(pid, i) > 0 ? 1 : 0), 0);
       const missing = (pid) => scored(pid) - ctx.stats.puttHoles(pid);
       return _awardCompute(ctx, {
-        lowerIsBetter: true,
-        unit: threes ? '3-putts' : 'putts',
+        lowerIsBetter: !zeros,
+        unit: zeros ? 'chip-ins' : threes ? '3-putts' : 'putts',
         // Fewest putts is the one award where NOT writing a number down would
-        // improve your score, so a card with gaps sits the award out.
-        eligible: (pid) => ctx.stats.puttHoles(pid) > 0 && missing(pid) === 0,
+        // improve your score, so a card with gaps sits it out. Counting chip-ins
+        // works the other way — a blank hole can only cost you one — so there
+        // it's enough to have tracked putts at all.
+        eligible: (pid) => ctx.stats.puttHoles(pid) > 0 && (zeros || missing(pid) === 0),
         ineligibleText: (pid) => {
           const m = missing(pid);
           return ctx.stats.puttHoles(pid) === 0
@@ -1129,11 +1280,16 @@ const MatchEngine = (function () {
             : 'Putts missing on ' + m + ' hole' + (m === 1 ? '' : 's');
         },
         noDataText: 'Track putts to run this award',
-        valueOf: (pid) => ctx.holes.reduce((a, h, i) => {
-          const p = ctx.stats.putts(pid, i);
-          return a + (threes ? (p >= 3 ? 1 : 0) : p);
-        }, 0),
-        detailOf: (pid, v) => v + (threes ? ' three-putt' + (v === 1 ? '' : 's') : ' putts'),
+        emptyText: 'Nobody holed out from off the green — no winner',
+        valueOf: (pid) => zeros
+          ? ctx.stats.zeroPutts(pid)
+          : ctx.holes.reduce((a, h, i) => {
+              const p = ctx.stats.putts(pid, i);
+              return a + (threes ? (p >= 3 ? 1 : 0) : p);
+            }, 0),
+        detailOf: (pid, v) => zeros
+          ? v + ' chip-in' + (v === 1 ? '' : 's')
+          : v + (threes ? ' three-putt' + (v === 1 ? '' : 's') : ' putts'),
       });
     },
   });

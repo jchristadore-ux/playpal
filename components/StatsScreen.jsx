@@ -200,6 +200,7 @@ const StatsScreen = ({ players, initialPlayerId }) => {
             <StatCard label="PAR 5 AVG" value={fmt1(career.parAverages[5])} />
             <StatCard label="UP & DOWNS" value={pct(career.upDownPct)} sub="when tracked" />
             <StatCard label="PENALTIES" value={career.totals.penalties} sub="lifetime" />
+            <StatCard label="CHIP-INS" value={career.totals.zeroPutts || 0} sub="zero-putt holes" accent={career.totals.zeroPutts ? '#15803D' : undefined} />
           </div>
 
           {/* Personal bests */}
@@ -212,6 +213,7 @@ const StatsScreen = ({ players, initialPlayerId }) => {
                 ['🐦 Most birdies', career.bests.birdiesInRound && career.bests.birdiesInRound.value > 0 ? `${career.bests.birdiesInRound.value} at ${career.bests.birdiesInRound.courseName}` : null],
                 ['⛳ Best nine', career.bests.bestNine ? `${career.bests.bestNine.gross} (${career.bests.bestNine.label}) at ${career.bests.bestNine.courseName}` : null],
                 ['🥄 Fewest putts', career.bests.fewestPutts ? `${career.bests.fewestPutts.value} at ${career.bests.fewestPutts.courseName}` : null],
+                ['🪄 Most chip-ins', career.bests.chipInsInRound && career.bests.chipInsInRound.value > 0 ? `${career.bests.chipInsInRound.value} at ${career.bests.chipInsInRound.courseName}` : null],
                 ['🚀 Longest drive', career.longestDrive ? `${career.longestDrive.value} yds at ${career.longestDrive.courseName}` : null],
                 ['🎱 Longest putt', career.longestPutt ? `${career.longestPutt.value} ft at ${career.longestPutt.courseName}` : null],
                 ['🗺️ Most played', career.mostPlayedCourse ? `${career.mostPlayedCourse.name} (${career.mostPlayedCourse.count}×)` : null],
