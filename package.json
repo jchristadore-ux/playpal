@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1"
+    "@capacitor/ios": "^8.5.0"
   },
   "overrides": {
     "brace-expansion": "^5.0.9"
