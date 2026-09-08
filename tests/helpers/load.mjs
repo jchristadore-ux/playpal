@@ -40,6 +40,9 @@ export function loadPlayPal(opts = {}) {
     'components/profileService.js',
     'components/roundHistoryService.js',
     'components/groupService.js',
+    'components/entitlementHelpers.js',
+    'components/authService.js',
+    'components/proService.js',
     'components/sharingService.js',
     'components/scorecardImport.js',
     'components/migrations.js',
@@ -72,6 +75,9 @@ export function loadPlayPal(opts = {}) {
     'window.ProfileService = ProfileService; window.RoundHistoryService = RoundHistoryService; ' +
     'window.SharingService = SharingService; window.ScorecardImport = ScorecardImport; '
     + 'window.GroupService = GroupService; '
++ 'window.EntitlementHelpers = EntitlementHelpers; '
++ 'window.AuthService = AuthService; '
++ 'window.ProService = ProService; '
     + 'window.PP_SCHEMA_VERSION = PP_SCHEMA_VERSION; ' +
     'window.migratePlayersV2 = migratePlayersV2; window.migrateCoursesV2 = migrateCoursesV2; ' +
     'window.runMigrations = runMigrations;',
