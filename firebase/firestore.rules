@@ -1,38 +1,66 @@
 rules_version = '2';
 
-// PlayPal Firestore rules.
+// PlayPal Firestore rules (live auth + group-scoped sync).
 //
-// Every client signs in with Firebase Anonymous Auth, so `request.auth != null`
-// shuts out the open internet. On its own that is not enough for a public app:
-// anonymous auth is free to anyone who downloads it, so authentication alone
-// would put every user of PlayPal in one shared bucket.
-//
-// Data is therefore namespaced by GROUP. A group id is 26 characters of a
-// 32-symbol alphabet (~130 bits) generated on the device and shared with your
-// playing partners as a code or a join link. Rules never allow listing groups,
-// only addressing one you already hold the id for, so knowing the id is what
-// grants access — the same model the round sync codes already use.
+// Auth: Email/Password, Google, and optional Anonymous guest.
+//   - users/{uid}: each signed-in user can read/write ONLY their own doc.
+//     Pro entitlement (pro:true) is written by the Stripe webhook via Admin
+//     SDK (bypasses rules). Clients may update profile fields but cannot
+//     self-grant pro:true (see validates below).
+//   - Group-scoped rounds/trips: still code-scoped so foursome sync works
+//     for guests and signed-in users alike. Knowing the group id grants access.
 //
 // Deploy with:
 //   npx firebase-tools deploy --only firestore:rules
-//
-// Anonymous Auth must be enabled in Firebase Console → Authentication →
-// Sign-in method → Anonymous, or the app cannot write.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // ── Per-user profile + Pro entitlement ─────────────────────────────────
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+
+      // Create / update own doc, but never self-grant Pro or overwrite Stripe refs
+      // once they exist. Admin SDK (webhook) bypasses these rules.
+      allow create: if isSelf(uid)
+                    && (!('pro' in request.resource.data) || request.resource.data.pro == false)
+                    && !('stripeCheckoutSessionId' in request.resource.data)
+                    && !('stripePaymentIntentId' in request.resource.data)
+                    && !('entitlementKey' in request.resource.data);
+
+      allow update: if isSelf(uid)
+                    && request.resource.data.pro == resource.data.get('pro', false)
+                    && request.resource.data.get('stripeCustomerId', null)
+                         == resource.data.get('stripeCustomerId', null)
+                    && request.resource.data.get('stripeCheckoutSessionId', null)
+                         == resource.data.get('stripeCheckoutSessionId', null)
+                    && request.resource.data.get('stripePaymentIntentId', null)
+                         == resource.data.get('stripePaymentIntentId', null)
+                    && request.resource.data.get('entitlementKey', null)
+                         == resource.data.get('entitlementKey', null)
+                    && request.resource.data.get('proGrantedAt', null)
+                         == resource.data.get('proGrantedAt', null);
+
+      allow delete: if false;
+    }
+
+    // ── Optional group ownership metadata (does not gate foursome sync) ────
+    match /group_meta/{groupId} {
+      allow read: if signedIn()
+                  && groupId.matches('^[0-9A-Z]{8,40}$');
+      allow create: if signedIn()
+                    && groupId.matches('^[0-9A-Z]{8,40}$')
+                    && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn()
+                    && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if false;
+    }
 
     // ── Group-scoped data (current clients) ────────────────────────────────
-    // Collections are named g_<GROUPID>_rounds / g_<GROUPID>_trips.
-    //
-    // A wildcard has to stand for a WHOLE path segment: `/g_{groupId}_rounds`
-    // does not compile, so the group id cannot be spliced into a literal
-    // collection name. Match any collection instead and check the name's shape
-    // — that pins it to exactly the two group-scoped collections the app uses,
-    // and the group id inside it, just the same.
-
     function isGroupRounds(c) { return c.matches('^g_[0-9A-Z]{8,40}_rounds$'); }
     function isGroupTrips(c)  { return c.matches('^g_[0-9A-Z]{8,40}_trips$'); }
 
@@ -52,10 +80,6 @@ service cloud.firestore {
     }
 
     // ── Legacy unscoped data (installs that predate groups) ────────────────
-    // Kept so the original group's phones keep working through the upgrade.
-    // Once every device in that group has moved, delete these two blocks and
-    // the collections behind them.
-
     match /playpal_rounds/{syncCode} {
       allow read:  if signedIn();
       allow write: if signedIn()

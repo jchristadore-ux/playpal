@@ -59,3 +59,9 @@ rules therefore stop *outsiders* (no auth token), but anyone who runs the app
 is inside the trust boundary. That matches how the app is designed to be used.
 If you ever open the app to strangers, per-user auth and ownership rules would
 be the next step.
+
+
+## Live auth + Pro
+
+Email/Password + Google are required for public launch.
+Per-user entitlement lives at users/{uid}. Full checklist: docs/LIVE_LAUNCH.md.
