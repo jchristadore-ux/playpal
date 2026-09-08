@@ -161,7 +161,7 @@ const AuthService = (function () {
     // Prefer popup; fall back to redirect on browsers that block it.
     return auth.signInWithPopup(_googleProvider)
       .then(async (cred) => {
-      await ensureUserDoc(cred.user);
+        await ensureUserDoc(cred.user);
         _cache(cred.user);
         return cred.user;
       })
