@@ -79,6 +79,23 @@ const ProService = (function () {
       _set(_resolve(null, cached, false));
       return _state;
     }
+
+    // Prefer Auth custom claims (set by webhook via Admin SDK). Survives
+    // undeployed Firestore rules that block users/{uid} client reads.
+    try {
+      if (auth.getIdTokenResult) {
+        const result = await auth.getIdTokenResult(true);
+        const claims = (result && result.claims) || {};
+        if (claims.pro === true) {
+          const remote = { pro: true, source: 'claims', proGrantedAt: claims.proGrantedAt || null };
+          _set(_resolve(remote, cached, false));
+          return _state;
+        }
+      }
+    } catch (e) {
+      console.warn('[ProService] claims refresh failed:', e && e.message);
+    }
+
     if (!window.firebase || !window.firebase.firestore) {
       _set(_resolve(null, cached, true));
       return _state;
@@ -90,6 +107,18 @@ const ProService = (function () {
     } catch (e) {
       console.warn('[ProService] refresh failed, fail-open if cached:', e && e.message);
       _set(_resolve(null, cached, true));
+    }
+    return _state;
+  }
+
+  /** Poll refresh a few times after Checkout return while the webhook lands. */
+  async function refreshUntilPro(opts) {
+    const attempts = (opts && opts.attempts) || 8;
+    const delayMs = (opts && opts.delayMs) || 1500;
+    for (let i = 0; i < attempts; i++) {
+      await refresh();
+      if (_state.pro) return _state;
+      await new Promise(r => setTimeout(r, delayMs));
     }
     return _state;
   }
@@ -142,7 +171,8 @@ const ProService = (function () {
       url.searchParams.delete('pro');
       window.history.replaceState({}, '', url.toString());
       if (flag === 'success') {
-        refresh();
+        // Kick off polling; Home awaits refreshUntilPro for the banner.
+        refreshUntilPro();
         return 'success';
       }
       if (flag === 'cancel') return 'cancel';
@@ -162,6 +192,7 @@ const ProService = (function () {
   return {
     bootFromCache,
     refresh,
+    refreshUntilPro,
     isPro,
     state,
     onChange,
