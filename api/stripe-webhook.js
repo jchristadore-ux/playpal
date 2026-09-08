@@ -4,7 +4,7 @@
  * checkout.session.completed by writing users/{uid} via Admin SDK.
  */
 import { getStripe, constructWebhookEvent } from '../lib/stripeClient.mjs';
-import { getFirestore } from '../lib/firebaseAdmin.mjs';
+import { getFirestore, getFirebaseAdmin } from '../lib/firebaseAdmin.mjs';
 import {
   evaluateCheckoutCompleted,
   buildProGrant,
@@ -56,6 +56,18 @@ async function grantProIdempotent(decision) {
 
     tx.set(userRef, patch, { merge: true });
   });
+
+  // Also set Auth custom claim so the client can unlock Pro without needing
+  // Firestore rules that allow users/{uid} reads (claim lands on next token refresh).
+  try {
+    const auth = getFirebaseAdmin().auth();
+    const user = await auth.getUser(decision.uid);
+    const claims = { ...(user.customClaims || {}), pro: true };
+    await auth.setCustomUserClaims(decision.uid, claims);
+  } catch (err) {
+    console.error('[stripe-webhook] setCustomUserClaims failed:', err && err.message);
+    // Firestore grant already succeeded; client may still unlock after rules deploy.
+  }
 }
 
 export default async function handler(req, res) {
