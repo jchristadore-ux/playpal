@@ -185,6 +185,13 @@ const AuthService = (function () {
     catch (e) { return null; }
   }
 
+  /** Force-refresh ID token and return claims (includes custom claims like pro). */
+  async function getIdTokenResult(forceRefresh) {
+    if (!_user) return null;
+    try { return await _user.getIdTokenResult(forceRefresh !== false); }
+    catch (e) { return null; }
+  }
+
   function friendlyError(err) {
     const code = (err && err.code) || '';
     const map = {
@@ -215,6 +222,7 @@ const AuthService = (function () {
     signInGoogle,
     signOut,
     getIdToken,
+    getIdTokenResult,
     ensureUserDoc,
     friendlyError,
   };
