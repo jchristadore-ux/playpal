@@ -18,7 +18,7 @@
     "ios:sync:public": "npm run build:www:public && npx cap sync ios"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.1",
+    "@capacitor/cli": "^8.5.0",
     "esbuild": "^0.28.1",
     "sharp": "^0.35.0"
   },
