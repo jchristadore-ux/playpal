@@ -17,7 +17,37 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const [groupInput,  setGroupInput]    = React.useState('');
   const [groupError,  setGroupError]    = React.useState('');
   const [groupCopied, setGroupCopied]   = React.useState(false);
+  const [showAuth,    setShowAuth]      = React.useState(false);
+  const [authMode,    setAuthMode]      = React.useState('signin');
+  const [authSnap,    setAuthSnap]      = React.useState(() => window.AuthService ? window.AuthService.snapshot() : null);
+  const [proState,    setProState]      = React.useState(() => window.ProService ? window.ProService.state() : { pro: false });
+  const [proBanner,   setProBanner]     = React.useState('');
   const groupId = window.GroupService ? window.GroupService.current() : 'LEGACY';
+
+  React.useEffect(() => {
+    const offs = [];
+    if (window.AuthService && window.AuthService.onAuth) {
+      offs.push(window.AuthService.onAuth(() => setAuthSnap(window.AuthService.snapshot())));
+    }
+    if (window.ProService && window.ProService.onChange) {
+      offs.push(window.ProService.onChange(s => setProState(s)));
+    }
+    if (window.ProService && window.ProService.handleReturnParams) {
+      const r = window.ProService.handleReturnParams();
+      if (r === 'success') {
+        setProBanner('Payment received — unlocking PlayPal Pro…');
+        const wait = window.ProService.refreshUntilPro
+          ? window.ProService.refreshUntilPro({ attempts: 8, delayMs: 1500 })
+          : window.ProService.refresh();
+        wait.then(() => {
+          setProBanner(window.ProService.isPro() ? 'PlayPal Pro unlocked. Thank you!' : 'Payment received — Pro will appear once the webhook lands (a few seconds).');
+        });
+      } else if (r === 'cancel') {
+        setProBanner('Checkout cancelled — you can upgrade anytime.');
+      }
+    }
+    return () => offs.forEach(off => { try { off && off(); } catch(e) {} });
+  }, []);
 
   const courses = customCourses || [];
 
@@ -358,6 +388,45 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
         </div>
       </div>
 
+      {/* Account + PlayPal Pro */}
+      <div style={homeS.section}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
+          <Label>Account</Label>
+          <button onClick={()=>{
+              const signed = window.AuthService && window.AuthService.isSignedIn && window.AuthService.isSignedIn();
+              setAuthMode(signed ? 'account' : 'signin');
+              setShowAuth(true);
+            }}
+            style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:10, padding:'6px 14px', cursor:'pointer',
+              fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:11, letterSpacing:0.3, color:'#0E2B20',
+              WebkitTapHighlightColor:'transparent'}}>
+            {authSnap && !authSnap.isAnonymous ? 'MANAGE' : 'SIGN IN'}
+          </button>
+        </div>
+        <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:14, padding:'14px 16px'}}>
+          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', lineHeight:1.5}}>
+            {authSnap && !authSnap.isAnonymous
+              ? (<>Signed in as <strong style={{color:'#0E2B20'}}>{authSnap.email || authSnap.displayName || 'member'}</strong>
+                  {proState.pro ? ' · ★ PlayPal Pro' : ' · Free plan'}</>)
+              : (<>Sign in to own your group across devices and unlock <strong style={{color:'#0E2B20'}}>PlayPal Pro</strong> ({window.ProService ? window.ProService.priceDisplay() : '$9.99'} once).</>)}
+          </div>
+          {proBanner && (
+            <div role="status" style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#15803D', marginTop:10, lineHeight:1.5}}>{proBanner}</div>
+          )}
+          {!proState.pro && (
+            <Btn onClick={()=>{
+                if (window.AuthService && window.AuthService.isSignedIn && window.AuthService.isSignedIn()) {
+                  setAuthMode('account'); setShowAuth(true);
+                } else {
+                  setAuthMode('signin'); setShowAuth(true);
+                }
+              }} variant="surface" style={{width:'100%', marginTop:12, fontSize:13}}>
+              {authSnap && !authSnap.isAnonymous ? 'UNLOCK PLAYPAL PRO' : 'SIGN IN / UNLOCK PRO'}
+            </Btn>
+          )}
+        </div>
+      </div>
+
       {/* Your group — who these profiles, courses and rounds are shared with */}
       <div style={homeS.section}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
@@ -408,7 +477,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           }}
           onKeyDown={e=>{ if (e.key === 'Enter') e.currentTarget.click(); }}
           style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5, cursor:'default', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
-          PlayPal v1.16.0
+          PlayPal v1.19.0
         </div>
         {egtNote && (
           <div role="status" style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D', marginTop:6}}>{egtNote}</div>
@@ -419,9 +488,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
       <Modal open={showGroup} onClose={()=>setShowGroup(false)} title="Your Group">
         <div style={{display:'flex', flexDirection:'column', gap:16}}>
           <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.7}}>
-            A group is how PlayPal keeps your data yours. There is no account and no password —
-            everyone who holds the code below sees the same player profiles, courses and rounds,
-            and nobody else can. Send it to the people you play with.
+            A group is how PlayPal keeps your foursome in sync. Everyone who holds the code below
+            sees the same player profiles, courses and rounds. Sign in to link ownership to your
+            account; guests can still join with the code alone.
           </div>
 
           <div>
@@ -463,6 +532,10 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           </div>
         </div>
       </Modal>
+
+      {typeof AuthScreen !== 'undefined' && (
+        <AuthScreen open={showAuth} onClose={()=>setShowAuth(false)} initialMode={authMode} />
+      )}
 
       {/* Join Round Modal */}
       <Modal open={showJoin} onClose={()=>{ setShowJoin(false); setJoinError(''); setJoining(false); }} title="Join a Round">

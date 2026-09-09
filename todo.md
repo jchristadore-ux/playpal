@@ -1,5 +1,24 @@
 # TODO — PlayPal
 
+## Done — Live auth + Stripe Pro (v1.19.0, branch feat/live-auth-stripe)
+- [x] AuthService (email/password, Google, optional anonymous guest)
+- [x] AuthScreen + Home Account / Pro upgrade UI
+- [x] ProService (cache, refresh, fail-open, Checkout redirect)
+- [x] Vercel api create-checkout-session + stripe-webhook (Admin grant)
+- [x] Firestore users/{uid} rules (no client self-grant of pro)
+- [x] GroupService ownerUid link; foursome code-scoped sync preserved
+- [x] .env.example + docs/LIVE_LAUNCH.md
+- [x] Entitlement + webhook signature tests
+
+## Next — human console / deploy (outside repo)
+- [ ] Firebase: enable Email/Password + Google; keep Anonymous; authorized domains
+- [ ] Deploy firebase rules (firestore + database)
+- [ ] Stripe: PlayPal Pro product, price id, webhook to /api/stripe-webhook
+- [ ] Vercel: set STRIPE_* + FIREBASE_SERVICE_ACCOUNT_JSON; deploy
+- [ ] Google OAuth consent screen
+- [ ] Optional: set PLAYPAL_CONFIG.enforceProGates true after launch
+
+
 ## Done — Zero putts + mid-round dropouts (v1.18.0, branch claude/zero-putts-mid-round-dropout-poo3hu)
 - [x] Zero putts: `ZERO_PUTTS = -1` sentinel — a tracked zero (chip-in) is a
       recorded hole worth no strokes; `0` still means "not recorded", so old

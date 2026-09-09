@@ -23,6 +23,7 @@ const GroupService = (function () {
   const KEY        = 'pp_group_id';
   const LEGACY_KEY = 'pp_players';          // proof this device predates groups
   const LEGACY_ID  = 'LEGACY';
+  const OWNER_KEY  = 'pp_group_owner_uid';
 
   // Crockford-ish base32: no I/L/O/U, so a code read aloud in a clubhouse or
   // typed by someone who has had a beer still resolves.
@@ -98,7 +99,26 @@ const GroupService = (function () {
     const id = newGroupId();
     const store = _store();
     if (store) store.setItem(KEY, id);
+    try {
+      if (typeof window !== 'undefined' && window.AuthService &&
+          window.AuthService.isSignedIn && window.AuthService.isSignedIn()) {
+        setOwnerUid(window.AuthService.uid());
+      }
+    } catch (e) {}
     return id;
+  }
+
+  function setOwnerUid(uid) {
+    const store = _store();
+    if (!store) return;
+    if (uid) store.setItem(OWNER_KEY, String(uid));
+    else store.removeItem(OWNER_KEY);
+  }
+
+  function ownerUid() {
+    const store = _store();
+    if (!store) return null;
+    return store.getItem(OWNER_KEY) || null;
   }
 
   // Grouped into blocks so it is readable off a screen and typable by hand.
@@ -117,6 +137,8 @@ const GroupService = (function () {
     join,
     reset,
     displayCode,
+    setOwnerUid,
+    ownerUid,
   };
 })();
 
