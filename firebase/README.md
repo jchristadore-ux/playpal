@@ -65,3 +65,10 @@ be the next step.
 
 Email/Password + Google are required for public launch.
 Per-user entitlement lives at users/{uid}. Full checklist: docs/LIVE_LAUNCH.md.
+
+## CI deploy + tests (WS1)
+
+- Emulator unit tests: `npm run test:rules` (see `tests/firestoreRules.emulator.test.mjs`).
+- GitHub Action deploys rules on push to `main`: `.github/workflows/deploy-firestore-rules.yml`.
+- Operator secrets + runbook: repo-root `OPERATOR_ACTIONS.md`.
+
