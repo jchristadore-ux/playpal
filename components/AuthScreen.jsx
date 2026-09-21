@@ -9,6 +9,9 @@ const AuthScreen = ({ open, onClose, initialMode }) => {
   const [note, setNote] = React.useState('');
   const [snap, setSnap] = React.useState(() => window.AuthService ? window.AuthService.snapshot() : null);
   const [pro, setPro] = React.useState(() => window.ProService ? window.ProService.state() : { pro: false });
+  const [paymentsOff, setPaymentsOff] = React.useState(() =>
+    !!(window.ProService && window.ProService.paymentsUnavailable && window.ProService.paymentsUnavailable())
+  );
 
   React.useEffect(() => {
     if (!open) return;
@@ -27,7 +30,15 @@ const AuthScreen = ({ open, onClose, initialMode }) => {
 
   React.useEffect(() => {
     if (!window.ProService) return;
-    return window.ProService.onChange(s => setPro(s));
+    if (window.ProService.checkPaymentsHealth) {
+      window.ProService.checkPaymentsHealth().then(() => {
+        setPaymentsOff(!!(window.ProService.paymentsUnavailable && window.ProService.paymentsUnavailable()));
+      }).catch(() => {});
+    }
+    return window.ProService.onChange(s => {
+      setPro(s);
+      setPaymentsOff(!!(s.payments && s.payments.paymentsConfigured === false));
+    });
   }, []);
 
   const run = async (fn) => {
@@ -51,6 +62,8 @@ const AuthScreen = ({ open, onClose, initialMode }) => {
       if (e && e.code === 'auth_required') {
         setMode('signin');
         setError('Sign in with email or Google before unlocking Pro.');
+      } else if (e && e.code === 'payments_unconfigured') {
+        setError('Checkout is not available yet — payments are not configured on the server.');
       } else {
         setError((e && e.message) || 'Could not start checkout.');
       }
@@ -90,9 +103,15 @@ const AuthScreen = ({ open, onClose, initialMode }) => {
                 <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 12, color: '#3F5F4A', lineHeight: 1.6, marginTop: 6 }}>
                   Multi-round trips, season standings, career stats & export. Never gates scoring during a round.
                 </div>
-                <Btn onClick={upgrade} variant="green" disabled={busy} style={{ width: '100%', marginTop: 12, fontSize: 14 }}>
-                  {busy ? 'STARTING CHECKOUT…' : 'UNLOCK PRO'}
-                </Btn>
+                {paymentsOff ? (
+                  <div role="status" style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 12, color: '#92400E', lineHeight: 1.55, marginTop: 12, background: 'rgba(146,64,14,0.08)', border: '1px solid rgba(146,64,14,0.25)', borderRadius: 10, padding: '10px 12px' }}>
+                    Checkout is not available yet. Payments are not configured on the server — Pro unlock will enable once Stripe + Firebase Admin env vars are set (see OPERATOR_ACTIONS.md).
+                  </div>
+                ) : (
+                  <Btn onClick={upgrade} variant="green" disabled={busy} style={{ width: '100%', marginTop: 12, fontSize: 14 }}>
+                    {busy ? 'STARTING CHECKOUT…' : 'UNLOCK PRO'}
+                  </Btn>
+                )}
               </div>
             ) : (
               <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 12, color: '#15803D', lineHeight: 1.5 }}>

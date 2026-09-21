@@ -129,3 +129,46 @@ test('constructWebhookEvent is exported from stripeClient module shape', async (
   assert.equal(typeof mod.constructWebhookEvent, 'function');
   assert.equal(typeof mod.getStripe, 'function');
 });
+
+
+test('canUse is free for everyone when enforceProGates is off', () => {
+  const w = loadPlayPal();
+  w.PLAYPAL_CONFIG = { enforceProGates: false };
+  assert.equal(w.ProService.canUse('trips'), true);
+  assert.equal(w.ProService.canUse('statsHistory'), true);
+  assert.equal(w.ProService.canUse('export'), true);
+  assert.equal(w.ProService.gatesEnforced(), false);
+});
+
+test('canUse requires Pro when enforceProGates is on', () => {
+  const w = loadPlayPal();
+  w.PLAYPAL_CONFIG = { enforceProGates: true };
+  assert.equal(w.ProService.gatesEnforced(), true);
+  assert.equal(w.ProService.isPro(), false);
+  assert.equal(w.ProService.canUse('trips'), false);
+  assert.equal(w.ProService.canUse('statsHistory'), false);
+  assert.equal(w.ProService.canUse('export'), false);
+  assert.equal(w.ProService.canUse('scoring'), true); // not a Pro feature key
+});
+
+test('startCheckout refuses when paymentsConfigured is false', async () => {
+  const w = loadPlayPal();
+  w.PLAYPAL_CONFIG = { apiBaseUrl: 'https://playpal.test', enforceProGates: false };
+  w.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      paymentsConfigured: false,
+      stripeSecretKey: false,
+      stripePriceId: false,
+      stripeWebhookSecret: false,
+      firebaseAdmin: false,
+    }),
+  });
+  await w.ProService.checkPaymentsHealth();
+  assert.equal(w.ProService.paymentsUnavailable(), true);
+  await assert.rejects(
+    () => w.ProService.startCheckout(),
+    (err) => err && err.code === 'payments_unconfigured'
+  );
+});

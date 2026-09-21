@@ -2,11 +2,21 @@
 //
 // Cache locally, verify against users/{uid} on launch, fail OPEN if the
 // network is down and the cache says the user already paid (APP_STORE_AUDIT §5.4).
+//
+// WS2: /api/health-backed payments degrade + enforceProGates soft locks.
 
 const ProService = (function () {
   const CACHE_KEY = 'pp_pro_entitlement';
   const PRICE_DISPLAY = '$9.99';
   let _state = { pro: false, source: 'default', doc: null };
+  let _payments = {
+    checked: false,
+    paymentsConfigured: null, // null = unknown, true/false after /api/health
+    stripeSecretKey: null,
+    stripePriceId: null,
+    stripeWebhookSecret: null,
+    firebaseAdmin: null,
+  };
   let _listeners = [];
 
   function _cfg() {
@@ -35,8 +45,9 @@ const ProService = (function () {
   }
 
   function _emit() {
-    _listeners.forEach(fn => { try { fn(_state); } catch (e) {} });
-    try { window.dispatchEvent(new CustomEvent('pp:pro', { detail: { ..._state } })); } catch (e) {}
+    const detail = { ..._state, payments: { ..._payments } };
+    _listeners.forEach(fn => { try { fn(detail); } catch (e) {} });
+    try { window.dispatchEvent(new CustomEvent('pp:pro', { detail })); } catch (e) {}
   }
 
   function _set(next) {
@@ -45,7 +56,6 @@ const ProService = (function () {
     _emit();
   }
 
-  // Resolve using the pure helper when available (tests + browser after build).
   function _resolve(remote, cached, networkError) {
     if (window.EntitlementHelpers && window.EntitlementHelpers.resolveEntitlement) {
       return window.EntitlementHelpers.resolveEntitlement({ remote, cached, networkError });
@@ -57,18 +67,71 @@ const ProService = (function () {
   }
 
   function isPro() { return !!_state.pro; }
-  function state() { return { ..._state }; }
+  function state() { return { ..._state, payments: { ..._payments } }; }
   function priceDisplay() { return PRICE_DISPLAY; }
+
+  function gatesEnforced() {
+    return _cfg().enforceProGates === true;
+  }
+
+  /** True when /api/health says the Stripe + Admin path is fully configured. */
+  function paymentsConfigured() {
+    return _payments.paymentsConfigured === true;
+  }
+
+  /** True when health says payments are off (explicit false, not unknown). */
+  function paymentsUnavailable() {
+    return _payments.checked && _payments.paymentsConfigured === false;
+  }
+
+  function paymentsState() {
+    return { ..._payments };
+  }
 
   function onChange(fn) {
     _listeners.push(fn);
-    try { fn(_state); } catch (e) {}
+    try { fn(state()); } catch (e) {}
     return () => { _listeners = _listeners.filter(f => f !== fn); };
   }
 
   function bootFromCache() {
     const cached = _readCache();
     _set(_resolve(null, cached, false));
+  }
+
+  /**
+   * GET /api/health — boolean flags only. Safe to call unauthenticated.
+   * On network failure, leaves paymentsConfigured as null (unknown) so the UI
+   * does not falsely claim Checkout is dead when the health route is unreachable.
+   */
+  async function checkPaymentsHealth() {
+    const base = _apiBase();
+    if (!base) {
+      _payments = { ..._payments, checked: true, paymentsConfigured: null };
+      _emit();
+      return paymentsState();
+    }
+    try {
+      const res = await fetch(base + '/api/health', { method: 'GET', credentials: 'omit' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        _payments = { ..._payments, checked: true, paymentsConfigured: null };
+      } else {
+        _payments = {
+          checked: true,
+          paymentsConfigured: data.paymentsConfigured === true,
+          stripeSecretKey: data.stripeSecretKey === true,
+          stripePriceId: data.stripePriceId === true,
+          stripeWebhookSecret: data.stripeWebhookSecret === true,
+          firebaseAdmin: data.firebaseAdmin === true,
+        };
+      }
+    } catch (e) {
+      console.warn('[ProService] /api/health failed:', e && e.message);
+      _payments = { ..._payments, checked: true, paymentsConfigured: null };
+    }
+    _emit();
+    return paymentsState();
   }
 
   async function refresh() {
@@ -126,8 +189,18 @@ const ProService = (function () {
   /**
    * Create a Stripe Checkout Session via the Vercel API and redirect.
    * Requires a non-anonymous signed-in Firebase user.
+   * Honest degrade: refuses when /api/health says payments are not configured.
    */
   async function startCheckout() {
+    if (!_payments.checked) {
+      try { await checkPaymentsHealth(); } catch (e) {}
+    }
+    if (_payments.paymentsConfigured === false) {
+      const err = new Error('Checkout is not available yet — payments are not configured on the server.');
+      err.code = 'payments_unconfigured';
+      throw err;
+    }
+
     const auth = window.AuthService;
     if (!auth || !auth.isSignedIn || !auth.isSignedIn()) {
       const err = new Error('Sign in before upgrading to Pro.');
@@ -180,8 +253,13 @@ const ProService = (function () {
     } catch (e) { return null; }
   }
 
-  /** Soft gate: Pro features stay usable when fail-open says pro. */
+  /**
+   * Soft gate for Pro features.
+   * - enforceProGates false (default): keep current free access.
+   * - enforceProGates true: require Pro for known Pro feature keys.
+   */
   function canUse(featureKey) {
+    if (!gatesEnforced()) return true;
     if (!featureKey) return isPro();
     if (window.EntitlementHelpers && window.EntitlementHelpers.featureRequiresPro) {
       if (!window.EntitlementHelpers.featureRequiresPro(featureKey)) return true;
@@ -193,12 +271,17 @@ const ProService = (function () {
     bootFromCache,
     refresh,
     refreshUntilPro,
+    checkPaymentsHealth,
     isPro,
     state,
     onChange,
     startCheckout,
     handleReturnParams,
     canUse,
+    gatesEnforced,
+    paymentsConfigured,
+    paymentsUnavailable,
+    paymentsState,
     priceDisplay,
   };
 })();

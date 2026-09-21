@@ -158,6 +158,18 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
   };
 
   const exportCSV = () => {
+    if (window.ProService && window.ProService.canUse && !window.ProService.canUse('export')) {
+      try {
+        window.dispatchEvent(new CustomEvent('pp:pro-gate', { detail: { feature: 'export' } }));
+      } catch (e) {}
+      if (window.Toast) {
+        try { window.Toast('Export is a Pro feature — unlock PlayPal Pro to download CSV / printable recaps.'); } catch (e) {}
+      } else {
+        alert('Export is a Pro feature. Unlock PlayPal Pro to download CSV / printable recaps.');
+      }
+      return;
+    }
+
     const fname = 'playpal-' + (course.name || 'round').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.csv';
     const ok = window.SharingService.downloadCSV(fname, window.SharingService.scorecardCSV(round, _scores, _putts));
     showToast(ok ? 'Scorecard CSV downloaded' : 'Export not available here', ok ? 'success' : 'error');
