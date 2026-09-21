@@ -1,5 +1,9 @@
 # PlayPal — Live launch guide (Auth + Stripe Pro)
 
+> **Operator runbook:** Stripe + Vercel click-paths, verified live state, and
+> `/api/health` now live in **`OPERATOR_ACTIONS.md`** (repo root). Prefer that
+> file for Dashboard work; this page remains a short architecture / env map.
+
 Operator checklist for public users with real accounts and a $9.99 one-time PlayPal Pro unlock (APP_STORE_AUDIT.md section 5).
 
 ## Architecture (in-repo)

@@ -32,6 +32,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
     if (window.ProService && window.ProService.onChange) {
       offs.push(window.ProService.onChange(s => setProState(s)));
     }
+    if (window.ProService && window.ProService.checkPaymentsHealth) {
+      window.ProService.checkPaymentsHealth().catch(function () {});
+    }
     if (window.ProService && window.ProService.handleReturnParams) {
       const r = window.ProService.handleReturnParams();
       if (r === 'success') {

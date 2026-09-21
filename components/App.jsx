@@ -52,6 +52,11 @@ class ErrorBoundary extends React.Component {
 const App = () => {
   const deviceId = React.useMemo(() => window.__PP_DEVICE_ID, []);
 
+  // WS2: soft Pro gate modal (only when PLAYPAL_CONFIG.enforceProGates).
+  const [proGateFeature, setProGateFeature] = React.useState(null);
+  const [showAuth, setShowAuth] = React.useState(false);
+
+
   const [screen, setScreen] = React.useState(() => {
     if (window.__pp_pending_join_code) return 'home';
     const ss = sessionStorage.getItem('pp_screen');
@@ -506,7 +511,7 @@ const App = () => {
 
   const handleOpenStats = (playerId) => {
     setStatsPlayerId(playerId || null);
-    setScreen('stats');
+    requestScreen('stats');
   };
 
   const handleViewRound = (syncCode) => {
@@ -592,6 +597,27 @@ const App = () => {
     '--bg':    tweaks.bgColor,
     '--card':  tweaks.cardBg,
   };
+
+
+  React.useEffect(() => {
+    const onGate = (e) => {
+      const feature = e && e.detail && e.detail.feature;
+      if (feature) setProGateFeature(feature);
+    };
+    window.addEventListener('pp:pro-gate', onGate);
+    return () => window.removeEventListener('pp:pro-gate', onGate);
+  }, []);
+
+  const requestScreen = (id) => {
+    const gated = { trips: 'trips', stats: 'statsHistory' };
+    const feature = gated[id];
+    if (feature && window.ProService && window.ProService.canUse && !window.ProService.canUse(feature)) {
+      setProGateFeature(feature);
+      return;
+    }
+    setScreen(id);
+  };
+
 
   return (
     <div style={{ height:'100%', display:'flex', flexDirection:'column', background:tweaks.bgColor, ...cssVars }}>
@@ -756,7 +782,7 @@ const App = () => {
             ...(round       ? [{ id:'__exit',  icon:'🚪', label:'EXIT'    }] : []),
           ].map(tab =>
             <button key={tab.id}
-              onClick={() => tab.id === '__exit' ? handleExitRound() : setScreen(tab.id)}
+              onClick={() => tab.id === '__exit' ? handleExitRound() : requestScreen(tab.id)}
               aria-label={tab.label}
               aria-current={screen === tab.id ? 'page' : undefined}
               style={{
@@ -778,6 +804,28 @@ const App = () => {
           )}
         </nav>
       }
+
+      
+      {proGateFeature && (
+        <Modal open={true} onClose={() => setProGateFeature(null)} title="PlayPal Pro">
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, color:'#3F5F4A', lineHeight:1.55 }}>
+              {(window.EntitlementHelpers && window.EntitlementHelpers.PRO_FEATURES && window.EntitlementHelpers.PRO_FEATURES[proGateFeature])
+                || 'This feature is part of PlayPal Pro.'}
+              {' '}Scoring during a round is always free.
+            </div>
+            <Btn onClick={() => { setProGateFeature(null); setShowAuth(true); }} variant="green" style={{ width:'100%', fontSize:14 }}>
+              UNLOCK PRO — {window.ProService ? window.ProService.priceDisplay() : '$9.99'}
+            </Btn>
+            <Btn onClick={() => setProGateFeature(null)} variant="ghost" style={{ width:'100%', fontSize:13 }}>
+              NOT NOW
+            </Btn>
+          </div>
+        </Modal>
+      )}
+      {showAuth && (
+        <AuthScreen open={true} onClose={() => setShowAuth(false)} initialMode="account" />
+      )}
 
       {tweaksOpen && (
         <div style={{
