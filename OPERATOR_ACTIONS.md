@@ -118,3 +118,103 @@ See `.env.example` for env var **names** only.
 | `SECURITY.md` | Vulnerability reporting |
 | `GITHUB_PRODUCTION_SETUP.md` | Broader GitHub Actions / Pages / release setup |
 | `.env.example` | Names of server env vars (no values) |
+
+---
+
+## Appendix: workflow YAML (paste if CI cannot write `.github/workflows/`)
+
+GitHub App tokens without the `workflow` scope cannot create files under
+`.github/workflows/`. If this PR is missing
+`.github/workflows/deploy-firestore-rules.yml`, create it on `main` (or this
+branch) with the following contents:
+
+```yaml
+name: Deploy Firestore rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/deploy-firestore-rules.yml'
+      - 'tests/firestoreRules.emulator.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/deploy-firestore-rules.yml'
+      - 'tests/firestoreRules.emulator.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Java (Firestore emulator)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq openjdk-21-jre-headless
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static rules syntax tests
+        run: node --test tests/firebaseRules.test.mjs
+
+      - name: Emulator rules unit tests
+        run: npm run test:rules
+
+  deploy-rules:
+    needs: validate-rules
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Require Firebase deploy credentials
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ] && [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::Missing GitHub secret FIREBASE_SERVICE_ACCOUNT (preferred) or FIREBASE_TOKEN. See OPERATOR_ACTIONS.md — cannot deploy Firestore rules to playpal-sync."
+            exit 1
+          fi
+          echo "Deploy credentials present."
+
+      - name: Authenticate to Google Cloud (service account)
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Firestore rules (ADC / service account)
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        working-directory: firebase
+        run: npx firebase-tools deploy --only firestore:rules --project playpal-sync --non-interactive
+
+      - name: Deploy Firestore rules (FIREBASE_TOKEN fallback)
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT == '' && env.FIREBASE_TOKEN != '' }}
+        working-directory: firebase
+        run: npx firebase-tools deploy --only firestore:rules --project playpal-sync --non-interactive --token "$FIREBASE_TOKEN"
+```

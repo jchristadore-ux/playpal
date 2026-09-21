@@ -4,6 +4,22 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.19.1] — 2026-09-21 — WS1: Firestore rules CI, emulator tests, operator docs
+
+Security workstream (docs + CI only; live rules unchanged since ~2026-09-08).
+
+- Emulator unit tests (`tests/firestoreRules.emulator.test.mjs`) via
+  `@firebase/rules-unit-testing`: users/{uid} isolation, `pro` self-grant
+  blocked, group path isolation, signed-in + group id access. Skips cleanly
+  when `FIRESTORE_EMULATOR_HOST` is unset; `npm run test:rules` runs them
+  under `firebase emulators:exec`.
+- GitHub Action `.github/workflows/deploy-firestore-rules.yml`: validate on
+  PRs, deploy `firestore:rules` on `main` (requires `FIREBASE_SERVICE_ACCOUNT`
+  or `FIREBASE_TOKEN` — see `OPERATOR_ACTIONS.md`).
+- New root `OPERATOR_ACTIONS.md` (deploy rules CLI + GHA, required secrets,
+  pointer to live app / Stripe on Vercel; folds useful bits from
+  `docs/LIVE_LAUNCH.md` without removing that file).
+
 ## [1.18.0] — 2026-08-28 — Zero putts, and the golfer who walks in
 
 Two gaps that only show up on a real Friday: the hole you never putted, and
