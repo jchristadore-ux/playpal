@@ -1,8 +1,8 @@
 {
   "name": "playpal",
-  "version": "1.19.2",
+  "version": "1.19.1",
   "private": true,
-  "description": "PlayPal \u2014 golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
+  "description": "PlayPal — golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -15,11 +15,16 @@
     "build:www": "npm run build && node scripts/build-www.mjs",
     "ios:sync": "npm run build:www && npx cap sync ios",
     "build:www:public": "npm run build && node scripts/build-www.mjs --public",
-    "ios:sync:public": "npm run build:www:public && npx cap sync ios"
+    "ios:sync:public": "npm run build:www:public && npx cap sync ios",
+    "test:rules": "npx firebase-tools emulators:exec --project demo-playpal-rules --config firebase/firebase.json --only firestore \"node --test tests/firestoreRules.emulator.test.mjs\"",
+    "test:all": "npm test && npm run test:rules"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "esbuild": "^0.28.1",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.30.2",
     "sharp": "^0.35.0"
   },
   "dependencies": {

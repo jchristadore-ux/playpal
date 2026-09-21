@@ -4,19 +4,21 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
-## [1.19.2] — 2026-09-21 — WS2 Revenue: health, degrade, Pro gates
+## [1.19.1] — 2026-09-21 — WS1: Firestore rules CI, emulator tests, operator docs
 
-### Added
-- `GET /api/health` — boolean flags for Stripe + Firebase Admin env presence (never echoes secrets).
-- Client payments degrade via `ProService.checkPaymentsHealth()` — Unlock Pro UI stays honest when Checkout is not configured.
-- Soft Pro gates behind `window.PLAYPAL_CONFIG.enforceProGates` for Trips, Stats, and CSV/export (default `false` keeps free access).
-- `OPERATOR_ACTIONS.md` — Stripe + Vercel click-path runbook with honesty about what was already live ~2026-09-08.
+Security workstream (docs + CI only; live rules unchanged since ~2026-09-08).
 
-### Changed
-- `docs/LIVE_LAUNCH.md` points operators at `OPERATOR_ACTIONS.md` for Dashboard work.
-- `index.html` loads auth/pro scripts (previously present in `sw.js` / build but missing from the page) and defines `PLAYPAL_CONFIG`.
-- Service worker precache bumped to `playpal-v1.19.2`.
-
+- Emulator unit tests (`tests/firestoreRules.emulator.test.mjs`) via
+  `@firebase/rules-unit-testing`: users/{uid} isolation, `pro` self-grant
+  blocked, group path isolation, signed-in + group id access. Skips cleanly
+  when `FIRESTORE_EMULATOR_HOST` is unset; `npm run test:rules` runs them
+  under `firebase emulators:exec`.
+- GitHub Action `.github/workflows/deploy-firestore-rules.yml`: validate on
+  PRs, deploy `firestore:rules` on `main` (requires `FIREBASE_SERVICE_ACCOUNT`
+  or `FIREBASE_TOKEN` — see `OPERATOR_ACTIONS.md`).
+- New root `OPERATOR_ACTIONS.md` (deploy rules CLI + GHA, required secrets,
+  pointer to live app / Stripe on Vercel; folds useful bits from
+  `docs/LIVE_LAUNCH.md` without removing that file).
 
 ## [1.18.0] — 2026-08-28 — Zero putts, and the golfer who walks in
 

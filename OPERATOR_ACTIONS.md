@@ -1,14 +1,14 @@
 # PlayPal — Operator actions
 
 Human-only steps that cannot live entirely in git: Firebase / Stripe / Vercel
-console clicks, GitHub secrets, and how to deploy Firestore rules.
+console clicks, GitHub secrets, and how to deploy Firestore rules. Code + CI for
+rules live in this repo (WS1). Stripe / webhook expansion continues in later
+workstreams.
 
 | | |
 |---|---|
 | Live app | https://playpal-nine.vercel.app |
-| Health check | https://playpal-nine.vercel.app/api/health |
 | Firebase project | `playpal-sync` |
-| Webhook URL | `https://playpal-nine.vercel.app/api/stripe-webhook` |
 
 > Never commit secrets. `.env*`, `.secrets/`, and box-secrets stay local /
 > gitignored. Stripe keys and the Firebase service account live in **Vercel
@@ -16,181 +16,205 @@ console clicks, GitHub secrets, and how to deploy Firestore rules.
 
 ---
 
-## Honesty — what is already live (~2026-09-08)
-
-This is **not** a greenfield Stripe setup. Around **2026-09-08** the live
-PlayPal deployment already had:
-
-| Item | Status (as of WS2 docs) |
-|---|---|
-| Stripe product **PlayPal Pro** (one-time **$9.99**) | **Already created** in Stripe Dashboard |
-| Stripe Price id | **Already created** — value lives in Vercel `STRIPE_PRICE_ID` (never in git) |
-| Stripe webhook endpoint → `/api/stripe-webhook` (`checkout.session.completed`) | **Already pointed** at `https://playpal-nine.vercel.app/api/stripe-webhook` |
-| Vercel env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON` | **Already set** on the production project (verify, do not blindly recreate) |
-| Client Checkout + webhook grant of `users/{uid}.pro` + Auth claim | **Already in repo** since the live-auth/Stripe PR |
-
-**What WS2 adds in git (no Dashboard required to merge):**
-
-1. `GET /api/health` — boolean config flags only (never echoes secrets)
-2. Client **honest degrade** when health says payments are unset
-3. Soft **Pro gates** behind `window.PLAYPAL_CONFIG.enforceProGates` (default `false`)
-4. This runbook (Stripe + Vercel click-paths + verified-vs-remaining)
-
-**What may still need a human click (verify in Dashboards):**
-
-- Confirm webhook signing secret in Vercel still matches Stripe’s endpoint
-- Confirm live vs test keys are the ones you intend
-- Flip `enforceProGates` to `true` in `index.html` when you want Trips / Stats / export soft-locked
-- Optional: rotate keys if anything was ever pasted into chat/logs
-
----
-
-## 1. Stripe Dashboard — product / price / webhook
-
-### 1a. Product + price (already done ~2026-09-08 — verify)
-
-1. Open [Stripe Dashboard → Products](https://dashboard.stripe.com/products).
-2. Confirm product **PlayPal Pro** exists (one-time, **$9.99** USD).
-3. Open the price → copy **Price ID** (`price_…`).
-4. Vercel → Project → Settings → Environment Variables → `STRIPE_PRICE_ID` should match.
-
-If you ever need to recreate (only if missing):
-
-1. Products → Add product → name `PlayPal Pro`.
-2. Pricing: One-time, `$9.99` USD → Save.
-3. Copy Price ID into Vercel `STRIPE_PRICE_ID` (Production + Preview as needed).
-4. Redeploy so serverless functions pick up the env.
-
-### 1b. Webhook (already done ~2026-09-08 — verify)
-
-1. [Stripe → Developers → Webhooks](https://dashboard.stripe.com/webhooks).
-2. Endpoint URL must be:
-
-   `https://playpal-nine.vercel.app/api/stripe-webhook`
-
-3. Event: `checkout.session.completed` (minimum).
-4. Reveal **Signing secret** (`whsec_…`) → Vercel env `STRIPE_WEBHOOK_SECRET`.
-5. API keys: [Developers → API keys](https://dashboard.stripe.com/apikeys) →
-   Secret key → Vercel `STRIPE_SECRET_KEY` (`sk_live_…` for production).
-
-### 1c. Quick live test
-
-1. Sign in on https://playpal-nine.vercel.app (email/Google, not anonymous).
-2. Account → Unlock Pro → complete Checkout (or use Stripe test mode + test keys).
-3. Webhook should write `users/{uid}.pro = true` and set Auth custom claim `pro: true`.
-4. `GET /api/health` should show `"paymentsConfigured": true` when all four server envs are present.
-
----
-
-## 2. Vercel — environment variables
-
-Project that serves `playpal-nine.vercel.app`:
-
-| Env var | Where it comes from | Notes |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | Stripe → API keys | `sk_test_…` / `sk_live_…` |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | `whsec_…` |
-| `STRIPE_PRICE_ID` | Stripe Price for PlayPal Pro | `price_…` |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase → Project settings → Service accounts → Generate new private key | **Single-line JSON string** |
-
-Steps:
-
-1. Vercel Dashboard → Project → **Settings → Environment Variables**.
-2. Confirm all four exist for **Production** (and Preview if you test Preview deploys).
-3. Values are **never** committed — see `.env.example` for **names only**.
-4. After any change: **Deployments → … → Redeploy** (env changes do not hot-reload serverless).
-
-### Health check
-
-```text
-https://playpal-nine.vercel.app/api/health
-```
-
-Expected shape (booleans only — no secret material):
-
-```json
-{
-  "ok": true,
-  "service": "playpal",
-  "paymentsConfigured": true,
-  "stripeSecretKey": true,
-  "stripePriceId": true,
-  "stripeWebhookSecret": true,
-  "firebaseAdmin": true,
-  "checkedAt": "…"
-}
-```
-
-If `paymentsConfigured` is `false`, the client **must not** pretend Checkout works
-(WS2 honest degrade).
-
----
-
-## 3. Client flag — `enforceProGates`
-
-In `index.html`:
-
-```js
-window.PLAYPAL_CONFIG = {
-  apiBaseUrl: '',
-  stripePublishableKey: '',
-  enforceProGates: false   // set true to soft-block Trips / Stats / export
-};
-```
-
-| Value | Behavior |
-|---|---|
-| `false` (default) | Current free access — gates are no-ops |
-| `true` | Trips, Stats (season/career), and CSV/printable export require Pro |
-
-Scoring during a round is **never** gated.
-
----
-
-## 4. Deploy Firestore rules (from WS1 runbook)
+## 1. Deploy Firestore rules
 
 Rules source: `firebase/firestore.rules` (RTDB: `firebase/database.rules.json`).
 
-**Already live** (~2026-09-08): `users/{uid}` with no client self-grant of `pro`,
-plus group-scoped `g_{GROUP}_rounds` / `g_{GROUP}_trips`.
+**Already live** (deployed ~2026-09-08): `users/{uid}` with no client self-grant
+of `pro`, plus group-scoped `g_{GROUP}_rounds` / `g_{GROUP}_trips`. This repo’s
+WS1 work adds **CI deploy**, **emulator unit tests**, and this runbook — it does
+not re-invent those rules.
 
-### CLI
+### Option A — CLI (manual)
 
 ```bash
 cd firebase
-npx firebase-tools login
+npx firebase-tools login          # once
 npx firebase-tools use playpal-sync
 npx firebase-tools deploy --only firestore:rules
+# optional, same trust model for RTDB:
+# npx firebase-tools deploy --only firestore:rules,database
 ```
 
-### GitHub Action (when WS1 workflow lands on main)
+Confirm in Firebase Console → Firestore → Rules that the file matches git.
+A failed compile leaves the **previous** rules live — always read the CLI output.
+
+### Option B — GitHub Action (preferred after secrets are set)
 
 Workflow: `.github/workflows/deploy-firestore-rules.yml`
 
+| Event | Behavior |
+|---|---|
+| Pull request touching `firebase/**` or the workflow | **Validate only** (static syntax + emulator unit tests) |
+| Push to `main` | **Deploy** rules to `playpal-sync` |
+
+#### Required GitHub secrets (Settings → Secrets and variables → Actions)
+
+Set **one** of these auth methods (prefer the service-account JSON):
+
 | Secret | Purpose |
 |---|---|
-| `FIREBASE_SERVICE_ACCOUNT` | Preferred — JSON for Rules Admin on `playpal-sync` |
-| `FIREBASE_TOKEN` | Fallback from `firebase-tools login:ci` |
+| `FIREBASE_SERVICE_ACCOUNT` | Full JSON of a Firebase/GCP service account with Firebase Rules Admin (or Editor) on `playpal-sync`. Used with `google-github-actions/auth`. |
+| `FIREBASE_TOKEN` | Fallback: CI token from `npx firebase-tools login:ci`. Used only if `FIREBASE_SERVICE_ACCOUNT` is unset. |
+
+Project id `playpal-sync` is hard-coded in the workflow.
+
+If the **main** deploy job runs without either secret, it **fails clearly** with
+an error naming the missing secret — it will not silently skip deploy.
 
 ---
 
-## 5. Related docs
+## 2. Rules tests (emulator)
+
+Static syntax guards (always in `npm test`): `tests/firebaseRules.test.mjs`.
+
+Emulator unit tests: `tests/firestoreRules.emulator.test.mjs` via:
+
+```bash
+npm run test:rules
+```
+
+That script runs `firebase emulators:exec` (needs **Java** for the Firestore
+emulator). If `FIRESTORE_EMULATOR_HOST` is unset, those tests **skip** so
+`npm test` stays green offline; CI’s rules job installs Java and runs them for real.
+
+Coverage locked by the emulator suite:
+
+1. User A cannot read user B’s `users/{uid}`
+2. Signed-in user cannot create/update with `pro: true` (or forge Stripe entitlement fields)
+3. Group collections are path-isolated by group id; unauthenticated denied; bad shapes denied
+4. Knowing the group id + signed-in allows read/write on that group’s rounds/trips
+
+**Trust model:** group id in the collection name is the capability. Auth UID is
+not bound to one group (foursome sync). See `firebase/README.md`.
+
+---
+
+## 3. Live Auth + Stripe Pro (pointer)
+
+Full checklist: **`docs/LIVE_LAUNCH.md`** (kept; later WS folds more of it here).
+
+Short version:
+
+| Where | What |
+|---|---|
+| Firebase Console (`playpal-sync`) | Enable Email/Password + Google (+ Anonymous for guests); authorized domains; service account JSON for Admin SDK |
+| Stripe | Product “PlayPal Pro” one-time $9.99; webhook `checkout.session.completed` → `/api/stripe-webhook` |
+| Vercel (`playpal-nine.vercel.app`) | Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON` — **values never in git** |
+| Client | Public Stripe publishable key / API base via `window.PLAYPAL_CONFIG` in `index.html` |
+
+Webhook writes `users/{uid}.pro` via Admin SDK (bypasses rules). Clients cannot self-grant.
+
+See `.env.example` for env var **names** only.
+
+---
+
+## 4. Related docs
 
 | Doc | Role |
 |---|---|
-| `docs/LIVE_LAUNCH.md` | Shorter Auth + Stripe checklist — **prefer this file for Stripe/Vercel clicks** |
-| `firebase/README.md` | Rules semantics + manual deploy |
+| `docs/LIVE_LAUNCH.md` | Auth + Stripe + Vercel launch checklist |
+| `firebase/README.md` | Rules semantics + manual deploy notes |
 | `SECURITY.md` | Vulnerability reporting |
+| `GITHUB_PRODUCTION_SETUP.md` | Broader GitHub Actions / Pages / release setup |
 | `.env.example` | Names of server env vars (no values) |
 
 ---
 
-## Remaining operator clicks (checklist)
+## Appendix: workflow YAML (paste if CI cannot write `.github/workflows/`)
 
-- [ ] Stripe → Products: confirm PlayPal Pro + $9.99 price still exists
-- [ ] Stripe → Webhooks: confirm URL `https://playpal-nine.vercel.app/api/stripe-webhook`
-- [ ] Stripe → Webhooks: signing secret matches Vercel `STRIPE_WEBHOOK_SECRET`
-- [ ] Vercel → Env: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `FIREBASE_SERVICE_ACCOUNT_JSON`
-- [ ] Hit `/api/health` → all flags `true`
-- [ ] Optional: set `enforceProGates: true` when ready to soft-lock Pro features
-- [ ] Optional: one live Checkout smoke test on a real (or test-mode) account
+GitHub App tokens without the `workflow` scope cannot create files under
+`.github/workflows/`. If this PR is missing
+`.github/workflows/deploy-firestore-rules.yml`, create it on `main` (or this
+branch) with the following contents:
+
+```yaml
+name: Deploy Firestore rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/deploy-firestore-rules.yml'
+      - 'tests/firestoreRules.emulator.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/deploy-firestore-rules.yml'
+      - 'tests/firestoreRules.emulator.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Java (Firestore emulator)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq openjdk-21-jre-headless
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static rules syntax tests
+        run: node --test tests/firebaseRules.test.mjs
+
+      - name: Emulator rules unit tests
+        run: npm run test:rules
+
+  deploy-rules:
+    needs: validate-rules
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Require Firebase deploy credentials
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ] && [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::Missing GitHub secret FIREBASE_SERVICE_ACCOUNT (preferred) or FIREBASE_TOKEN. See OPERATOR_ACTIONS.md — cannot deploy Firestore rules to playpal-sync."
+            exit 1
+          fi
+          echo "Deploy credentials present."
+
+      - name: Authenticate to Google Cloud (service account)
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Firestore rules (ADC / service account)
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        working-directory: firebase
+        run: npx firebase-tools deploy --only firestore:rules --project playpal-sync --non-interactive
+
+      - name: Deploy Firestore rules (FIREBASE_TOKEN fallback)
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT == '' && env.FIREBASE_TOKEN != '' }}
+        working-directory: firebase
+        run: npx firebase-tools deploy --only firestore:rules --project playpal-sync --non-interactive --token "$FIREBASE_TOKEN"
+```
