@@ -85,10 +85,11 @@ New on the score screen:
   a blank: your putting total counts it, FLATSTICK counts it, and the card
   reads CHIP-IN. Leaving the row untouched still means "nobody wrote it down".
 * **Somebody walks in**: tap a player's score, then **"… IS DONE — END THEIR
-  ROUND HERE"**. Their card closes at that hole and the round carries on with
-  whoever is left — no more blank back nine holding up every game. Their card
-  shows a **BACK IN** button if they change their mind, and the whole group's
-  phones see it.
+  ROUND HERE"**. Pick a reason if you want (**Injury** / **Work** / **Dark** /
+  **Other**, or skip) — it sticks on the walk-off record and shows on their
+  card. Their card closes at that hole and the round carries on with whoever
+  is left — no more blank back nine holding up every game. **BACK IN** undoes
+  it, and the whole group's phones see it.
 * **Scramble-style games**: enter the *team* score on any one teammate's
   card — PlayPal figures out the rest.
 * **Stat tracking rounds** add FIR / GIR buttons plus **PEN** (penalty

@@ -4,6 +4,35 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.19.4] — 2026-09-21 — WS4: correctness (skins, dropouts, awards, chip-ins)
+
+Five gaps left open after the 1.18 walk-off / zero-putt work, now closed.
+
+### Skins settle hole by hole
+A player who walks in keeps skins they already won, but stops paying (and
+collecting) once they leave. Both `calcSkins` and MatchEngine skins now settle
+each won skin against whoever was still in the field on that hole — the old
+whole-field formula was billing walk-offs for skins won after they packed up.
+
+### EGT Cup honors dropouts
+The native scorer's `dropouts` map bridges into `state.dropouts[roundId]`. Cup
+skins / nines contest only the field still in play; match play / four-ball /
+singles treat a walked-in side as a concession. Chip-ins no longer subtract a
+stroke from Flat Stick season putts.
+
+### Award pot carryover
+An empty award (nobody birdied, etc.) rolls its stake into the next award in
+`AWARD_FORMAT_IDS` order when settling a round — mini-cup money lands on the
+trophies that actually fired. A lone empty award still pays nobody.
+
+### Walk-off reason picker
+Tapping **… IS DONE** opens Injury / Work / Dark / Other (or skip). The reason
+is stored on `dropouts[pid].reason` and shown on the walked-in card / WD label.
+
+### Trip chip-in rollup
+Trip leaderboards count chip-ins (via putt helpers, so `-1` never subtracts),
+and **Most Chip-Ins** joins the trip awards board.
+
 ## [1.19.3] — 2026-09-21 — WS3: migrate legacy Firestore into group collections
 
 Operator script to move pre-group Firestore data into the group-scoped

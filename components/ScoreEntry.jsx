@@ -120,6 +120,54 @@ const WalkedInCard = ({ p, label, onBackIn }) => {
   );
 };
 
+// Reason picker shown after tapping "… IS DONE" — injury / work / dark / other / skip.
+const WalkOffReasonPicker = ({ player, onPick, onClose }) => {
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  const reasons = (window.DROPOUT_REASONS || [
+    { id: 'injury', label: 'Injury' },
+    { id: 'work', label: 'Work' },
+    { id: 'dark', label: 'Dark' },
+    { id: 'other', label: 'Other' },
+  ]);
+  const first = (player.name || '').split(' ')[0].toUpperCase();
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(14,43,32,0.8)',zIndex:2100,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
+      onClick={e=>{ if (e.target===e.currentTarget) onClose(); }}>
+      <div style={{background:'#FFFFFF',borderRadius:'20px 20px 0 0',padding:'20px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+        width:'100%',maxWidth:420, border:'1px solid #E7E3D9', borderBottom:'none',
+        animation:'ppSheetUp 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)'}}>
+        <div style={{fontFamily:F,fontWeight:800,fontSize:18,color:'#0E2B20',marginBottom:4}}>
+          👋 Why is {first} done?
+        </div>
+        <div style={{fontFamily:F,fontSize:13,color:'#3F5F4A',marginBottom:16}}>
+          Optional — kept on the walk-off record and shown on the card.
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:12}}>
+          {reasons.map(r => (
+            <button key={r.id} onClick={()=>onPick(r.id)}
+              style={{width:'100%',padding:'14px 16px',borderRadius:14,border:'1px solid #E7E3D9',
+                background:'#F6F4EE',color:'#0E2B20',fontFamily:F,fontWeight:800,fontSize:15,
+                cursor:'pointer',WebkitTapHighlightColor:'transparent',textAlign:'left'}}>
+              {r.label}
+            </button>
+          ))}
+          <button onClick={()=>onPick(null)}
+            style={{width:'100%',padding:'14px 16px',borderRadius:14,border:'1px dashed #D8D3C6',
+              background:'#FFFFFF',color:'#3F5F4A',fontFamily:F,fontWeight:700,fontSize:14,
+              cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+            Skip — no reason
+          </button>
+        </div>
+        <button onClick={onClose}
+          style={{width:'100%',height:48,borderRadius:12,border:'1px solid #E7E3D9',background:'transparent',
+            color:'#3F5F4A',fontFamily:F,fontWeight:700,fontSize:14,cursor:'pointer',letterSpacing:0.5}}>
+          CANCEL
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const PlayerScoreCard = ({ p, score, hole, holeIdx, putts, gettingPop, nassauPopActive, isNassauPlayer, markeyPopCount, isWolf, isPartner, isPTMHolder, hasWolf, wolfData, formatStats, onScore, onPutt, onWolfTap, onScoreTap, onPopToggle, hasBBB, bbbData, players, onSetBBB, stats, firData, girData, onFIR, onGIR, extraStats, onExtraStat, showPopToggle = true, compact = false }) => {
   const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
   // Landscape on a phone leaves ~230px of scroll room: the card shrinks so a
@@ -1045,7 +1093,9 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
   // Ends a player's round after the holes they've already played (this hole
   // counts if it's scored), or puts them back in.
-  const toggleDropout = (playerId) => {
+  const [walkOffPick, setWalkOffPick] = React.useState(null); // { playerId } while picking a reason
+
+  const applyDropout = (playerId, reason) => {
     window.ppHaptic && window.ppHaptic();
     setDropouts(prev => {
       const already = window.dropoutThru(prev, playerId) !== null;
@@ -1054,10 +1104,21 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       const thru = seqPos + (scores[playerId]?.[holeIdx] ? 1 : 0);
       const next = already
         ? window.setDropout(prev, playerId, null)
-        : window.setDropout(prev, playerId, thru);
+        : window.setDropout(prev, playerId, thru, reason || null);
       scheduleCloudWrite(null, null, null, null, null, null, null, null, null, next);
       return next;
     });
+  };
+
+  const toggleDropout = (playerId) => {
+    const already = window.dropoutThru(dropouts, playerId) !== null;
+    if (already) {
+      applyDropout(playerId, null); // BACK IN clears the record
+      return;
+    }
+    // New walk-off — open the reason picker (injury / work / dark / other / skip).
+    const p = players.find(x => x.id === playerId);
+    setWalkOffPick({ playerId, player: p || { id: playerId, name: 'Player' } });
   };
 
   const prevHole = () => {
@@ -1266,6 +1327,18 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
         <ScoreKeypad player={players.find(p=>p.id===keypad)} hole={hole} current={scores[keypad]?.[holeIdx]}
           onConfirm={setScore} onClose={()=>setKeypad(null)}
           onWalkIn={players.length > 1 ? toggleDropout : null}/>
+      )}
+
+      {walkOffPick && (
+        <WalkOffReasonPicker
+          player={walkOffPick.player}
+          onPick={(reason) => {
+            const pid = walkOffPick.playerId;
+            setWalkOffPick(null);
+            applyDropout(pid, reason);
+          }}
+          onClose={() => setWalkOffPick(null)}
+        />
       )}
 
       {wolfPicker && wolfPlayer && (
