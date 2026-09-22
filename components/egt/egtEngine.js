@@ -26,7 +26,8 @@ const EgtEngine = (function () {
       wolf: state.events.wolf?.[roundId] || [],
     };
     const config = model.formatConfigs[roundId];
-    const ctx = { round, course, players, teams: round.teams, alloc, scores, config, events };
+    const dropouts = (state.dropouts && state.dropouts[roundId]) || {};
+    const ctx = { round, course, players, teams: round.teams, alloc, scores, config, events, dropouts };
 
     // Overlay individual-Nassau matches, available on EVERY round (side bets, or
     // the round's primary format for R5). The UI stores them under

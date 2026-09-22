@@ -119,10 +119,83 @@ See `.env.example` for env var **names** only.
 | `SECURITY.md` | Vulnerability reporting |
 | `GITHUB_PRODUCTION_SETUP.md` | Broader GitHub Actions / Pages / release setup |
 | `.env.example` | Names of server env vars (no values) |
+| `scripts/migrate-legacy-group.mjs` | WS3 legacy → group-scoped Firestore copy |
 
 ---
 
-## 5. GitHub Pages (legal / support URLs for App Store)
+## 5. Migration — legacy Firestore → group-scoped (WS3)
+
+Pre-group installs wrote rounds/trips to unscoped collections. Current clients
+namespace by group id via `_col()` in `index.html` / `GroupService`:
+
+| Leaf | LEGACY (unscoped) | Group-scoped |
+|---|---|---|
+| rounds | `playpal_rounds/{syncCode}` | `g_{GROUPID}_rounds/{syncCode}` |
+| trips | `golf_trips/{tripId}` | `g_{GROUPID}_trips/{tripId}` |
+
+Script: `scripts/migrate-legacy-group.mjs`
+
+### Auth for the script
+
+Use **one** of (never paste keys into git or chat logs):
+
+1. `FIREBASE_SERVICE_ACCOUNT_JSON` — stringified service-account JSON (same as Vercel)
+2. `FIREBASE_SERVICE_ACCOUNT_PATH` — path to a downloaded JSON key file
+3. `GOOGLE_APPLICATION_CREDENTIALS` — standard Google ADC path
+4. `--credentials /path/to/sa.json` — CLI override
+
+Firebase Console → Project settings → Service accounts → Generate new private
+key. The key needs Firestore read/write on `playpal-sync`.
+
+### Dry-run (default — safe)
+
+```bash
+# From repo root; prints would-copy / would-delete counts; writes nothing
+FIREBASE_SERVICE_ACCOUNT_PATH=./path-to-sa.json \
+  node scripts/migrate-legacy-group.mjs --group-id YOURGROUPIDHERE
+```
+
+`--group-id` must be a real group id (8–40 chars, Crockford-ish alphabet; not
+`LEGACY`). Devices that should see the migrated data must already be joined to
+that group (`GroupService.join` / join link).
+
+Useful flags for staged dry-runs:
+
+- `--rounds-only` / `--trips-only`
+- `--limit N` — only first N docs per collection
+- `--doc-id CODE` — single doc (repeatable)
+
+### Confirm (mutates)
+
+```bash
+FIREBASE_SERVICE_ACCOUNT_PATH=./path-to-sa.json \
+  node scripts/migrate-legacy-group.mjs --group-id YOURGROUPIDHERE --confirm
+```
+
+Sequence per doc: **copy → verify dest exists → delete legacy**. Existing
+destination docs are skipped (idempotent; no overwrite). Add `--keep-legacy`
+to copy without deleting sources.
+
+### Honesty / risk notes
+
+- Devices still on the **LEGACY** group keep reading `playpal_rounds` /
+  `golf_trips`. Deleting legacy after migrate will make those devices lose
+  server-side rounds/trips until they join the destination group.
+- This script does **not** migrate RTDB paths (`players`, `courses`, etc.) —
+  only the Firestore collections above.
+- Re-running with `--confirm` is safe: already-migrated docs are skipped.
+
+Unit tests (no live Firebase): `tests/migrateLegacyGroup.test.mjs` (arg parsing
++ in-memory dry-run / confirm paths).
+
+> **Note (WS1 carry-over):** `.github/workflows/deploy-firestore-rules.yml` may
+> still be missing on `main` if the merge could not write workflow files
+> (GitHub App `workflow` scope). See the Appendix below — do not block WS3 on
+> that file.
+
+---
+
+## 6. GitHub Pages (legal / support URLs for App Store)
 
 Public HTTPS pages used in App Store Connect and the listing pack
 (`appstore/APP_STORE_LISTING.md`):
