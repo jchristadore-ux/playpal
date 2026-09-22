@@ -9,18 +9,18 @@
 //
 // The wagers, as agreed at the tee:
 //   R1 Minerals   — front-9 BBB and back-9 Nines, $5 to each winner from the
-//                   other two. Brian wasn't there. Nines runs on 9-hole
-//                   handicaps off John (the low ball plays scratch).
-//   R2 Ballyowen  — 18-hole four-ball, John+TJ v Brian+Mike, $5 to each winner
+//                   other two. Blake wasn't there. Nines runs on 9-hole
+//                   handicaps off Jake (the low ball plays scratch).
+//   R2 Ballyowen  — 18-hole four-ball, Jake+Troy v Blake+Miles, $5 to each winner
 //                   from each opponent.
 //   R3 Wild Turkey— Wolf, $5 to the unit leader from each player, plus a
-//                   TJ v John $2 Nassau.
+//                   Troy v Jake $2 Nassau.
 //   R4 Crystal Sp.— 2v2 aggregate Stableford over all 18 (no segment matches),
 //                   $5 to each winner from each opponent.
 //   R5 Cascades   — full-18 BBB ($5 from each) plus the six-match round robin
 //                   at $1 front / $1 back / $2 overall.
 //   R6 Black Bear — individual Stableford ($5 from each) plus two $2 Nassaus:
-//                   TJ v John and Mike v Brian.
+//                   Troy v Jake and Miles v Blake.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -76,26 +76,26 @@ test('the replayed scorecards match what everyone shot', () => {
   assert.deepEqual(totals('R6'), { brian: 106, mike: 113, john: 99, tj: 109 });
 });
 
-test('R1 Minerals — TJ takes the BBB, John takes the Nines', () => {
+test('R1 Minerals — Troy takes the BBB, Jake takes the Nines', () => {
   const m = money();
   const r = m.live.resultsByRound.R1;
   eq(r.bbb.totals, { john: 8, tj: 11, mike: 8 }, 'R1 BBB');
   eqList(r.bbb.champions, ['tj'], 'R1 BBB winner');
   eq(r.nines.totals, { john: 30, tj: 23, mike: 28 }, 'R1 Nines');
   eqList(r.nines.champions, ['john'], 'R1 Nines winner');
-  // Each game pays its winner $5 off the other two, so the two cancel for TJ
-  // and John and Mike carries the round.
+  // Each game pays its winner $5 off the other two, so the two cancel for Troy
+  // and Jake and Miles carries the round.
   vec(round(m, 'R1'), { john: 5, brian: 0, tj: 5, mike: -10 }, 'R1');
 });
 
-test('R1 Nines runs off the low ball — only TJ and Mike get strokes', () => {
+test('R1 Nines runs off the low ball — only Troy and Miles get strokes', () => {
   const alloc = money().model.derived.R1.allocations;
-  assert.equal(alloc.john.games.nines.strokes, 0, 'John is the low ball');
+  assert.equal(alloc.john.games.nines.strokes, 0, 'Jake is the low ball');
   assert.equal(alloc.tj.games.nines.strokes, 4);
   eqList(alloc.mike.games.nines.holes.map(h => h.hole), [12, 13, 15, 16], 'Nines pop holes');
 });
 
-test('R2 Ballyowen — John+TJ win the four-ball 6 up', () => {
+test('R2 Ballyowen — Jake+Troy win the four-ball 6 up', () => {
   const m = money();
   const ov = m.live.resultsByRound.R2.fourBall.segments.overall;
   assert.equal(ov.winnerTeam, 'Team 1');
@@ -103,16 +103,16 @@ test('R2 Ballyowen — John+TJ win the four-ball 6 up', () => {
   vec(round(m, 'R2'), { john: 10, tj: 10, brian: -10, mike: -10 }, 'R2');
 });
 
-test('R3 Wild Turkey — Mike runs away with the Wolf, TJ wins the side Nassau', () => {
+test('R3 Wild Turkey — Miles runs away with the Wolf, Troy wins the side Nassau', () => {
   const m = money();
   const units = m.live.resultsByRound.R3.wolf.units;
   eq(units, { john: -2, brian: -4, tj: -4, mike: 10 }, 'Wolf units');
-  // Wolf pays Mike $15. The $2 Nassau went TJ (front, 5 up) · John (back, 1 up)
-  // · TJ (overall, 4 up) = TJ +$4, so TJ leaves the round only $1 down.
+  // Wolf pays Miles $15. The $2 Nassau went Troy (front, 5 up) · Jake (back, 1 up)
+  // · Troy (overall, 4 up) = Troy +$4, so Troy leaves the round only $1 down.
   vec(round(m, 'R3'), { john: -9, brian: -5, tj: -1, mike: 15 }, 'R3');
 });
 
-test('R4 Crystal Springs — Stableford off the low ball, Brian+Mike by 26 to 18', () => {
+test('R4 Crystal Springs — Stableford off the low ball, Blake+Miles by 26 to 18', () => {
   const m = money();
   const ts = m.live.resultsByRound.R4.teamStableford;
   eq(ts.playerPoints, { john: 7, tj: 11, brian: 10, mike: 16 }, 'R4 Stableford points');
@@ -122,7 +122,7 @@ test('R4 Crystal Springs — Stableford off the low ball, Brian+Mike by 26 to 18
   vec(round(m, 'R4'), { brian: 10, mike: 10, john: -10, tj: -10 }, 'R4');
 });
 
-test('R4 gives John no strokes — the low course handicap plays scratch', () => {
+test('R4 gives Jake no strokes — the low course handicap plays scratch', () => {
   const alloc = money().model.derived.R4.allocations;
   assert.equal(alloc.john.games.teamStableford.strokes, 0);
   assert.equal(alloc.brian.games.teamStableford.strokes, 5);
@@ -130,21 +130,21 @@ test('R4 gives John no strokes — the low course handicap plays scratch', () =>
   assert.equal(alloc.mike.games.teamStableford.strokes, 11);
 });
 
-test('R5 Cascades — John takes the BBB, TJ takes the round robin', () => {
+test('R5 Cascades — Jake takes the BBB, Troy takes the round robin', () => {
   const m = money();
   eq(m.live.resultsByRound.R5.bbb.totals, { john: 17, brian: 14, tj: 9, mike: 14 }, 'R5 BBB');
   eqList(m.live.resultsByRound.R5.bbb.champions, ['john'], 'R5 BBB winner');
   // All six 1v1s play, at $1 a segment.
   assert.equal(m.live.resultsByRound.R5.matchPlay.matches.length, 6);
-  // BBB pays John $15; the round robin nets John +2, Brian -2, TJ +6, Mike -6.
+  // BBB pays Jake $15; the round robin nets Jake +2, Blake -2, Troy +6, Miles -6.
   vec(round(m, 'R5'), { john: 17, brian: -7, tj: 1, mike: -11 }, 'R5');
 });
 
-test('R6 Black Bear — TJ sweeps his Nassau and the Stableford', () => {
+test('R6 Black Bear — Troy sweeps his Nassau and the Stableford', () => {
   const m = money();
   const st = m.live.resultsByRound.R6.stableford.totals;
   eq(st, { john: 25, brian: 25, tj: 27, mike: 26 }, 'R6 Stableford');
-  // TJ beats John 3&…/1 up/4 up for the full $8, and Mike v Brian splits the
+  // Troy beats Jake 3&…/1 up/4 up for the full $8, and Miles v Blake splits the
   // front and back with a halved overall, so that Nassau pays nothing.
   vec(round(m, 'R6'), { john: -13, brian: -5, tj: 23, mike: -5 }, 'R6');
 });
@@ -171,11 +171,11 @@ test('off-course costs settle on the same ledger', () => {
   vec(byId.jerseys, { brian: 90, john: -30, tj: -30, mike: -30 }, 'jerseys');
   vec(byId.dinner, { tj: 63.75, john: -21.25, brian: -21.25, mike: -21.25 }, 'steak dinner');
   vec(byId.trays, { mike: 30, john: -10, brian: -10, tj: -10 }, 'food trays');
-  // $120 in, $84 to Mike and $36 to TJ back out.
+  // $120 in, $84 to Miles and $36 to Troy back out.
   vec(byId.poker, { john: -40, brian: -40, tj: 16, mike: 64 }, 'poker');
   vec(extras.total, { john: 48.75, brian: -31.25, tj: -10.25, mike: -7.25 }, 'extras');
   assert.ok(extras.netsToZero);
-  eq(extras.prepaid, { brian: 40 }, "Brian's buy-in already in the pot");
+  eq(extras.prepaid, { brian: 40 }, "Blake's buy-in already in the pot");
 });
 
 test('a stated total splits evenly across everyone who shared it', () => {
@@ -183,14 +183,14 @@ test('a stated total splits evenly across everyone who shared it', () => {
   const dinner = items.find(i => i.id === 'dinner');
   assert.equal(dinner.total, 85, 'the seed records the real bill, not the share');
   assert.equal(dinner.perPlayer, undefined, 'the share is derived, not hand-computed');
-  // $85 over four men is $21.25 each; TJ fronted it, so he collects three shares.
+  // $85 over four men is $21.25 each; Troy fronted it, so he collects three shares.
   const t = money().live.money.extras.items.find(i => i.id === 'dinner').total;
-  near(t.tj, 63.75, 'TJ collects');
+  near(t.tj, 63.75, 'Troy collects');
   near(t.john, -21.25, 'each share');
   near(Object.values(t).reduce((a, b) => a + b, 0), 0, 'zero-sum');
 });
 
-test('the final settlement: John +48.75, Brian -48.25, TJ +17.75, Mike -18.25', () => {
+test('the final settlement: Jake +48.75, Blake -48.25, Troy +17.75, Miles -18.25', () => {
   const m = money();
   vec(m.live.money.total, { john: 48.75, brian: -48.25, tj: 17.75, mike: -18.25 }, 'final');
   assert.ok(m.live.money.netsToZero, 'the whole trip still nets to zero');
@@ -199,12 +199,12 @@ test('the final settlement: John +48.75, Brian -48.25, TJ +17.75, Mike -18.25', 
 test('who pays whom, netted per matchup', () => {
   const s = money().live.money.settlements;
   const paid = (from, to) => (s.find(x => x.from === from && x.to === to) || {}).amount ?? 0;
-  near(paid('brian', 'john'), 25, 'Brian → John');
-  near(paid('brian', 'tj'), 6.25, 'Brian → TJ');
-  near(paid('brian', 'mike'), 17, 'Brian → Mike');
-  near(paid('tj', 'john'), 8.75, 'TJ → John');
-  near(paid('mike', 'john'), 15, 'Mike → John');
-  near(paid('mike', 'tj'), 20.25, 'Mike → TJ');
+  near(paid('brian', 'john'), 25, 'Blake → Jake');
+  near(paid('brian', 'tj'), 6.25, 'Blake → Troy');
+  near(paid('brian', 'mike'), 17, 'Blake → Miles');
+  near(paid('tj', 'john'), 8.75, 'Troy → Jake');
+  near(paid('mike', 'john'), 15, 'Miles → Jake');
+  near(paid('mike', 'tj'), 20.25, 'Miles → Troy');
   // Every transfer runs one way per matchup — six pairings, six entries.
   assert.equal(s.length, 6);
   const net = {};
@@ -218,11 +218,11 @@ test('the money summary describes the trip the ledger settled', () => {
   const m = money();
   const sum = W.EgtMoneySummary.build(m.model, m.live);
   // Ordered by who is up the most.
-  eqList(sum.standings.map(s => s.name), ['John', 'TJ', 'Mike', 'Brian'], 'standing order');
+  eqList(sum.standings.map(s => s.name), ['Jake', 'Troy', 'Miles', 'Blake'], 'standing order');
   const john = sum.standings[0];
-  near(john.total, 48.75, 'John total');
-  near(john.golf, 0, 'John golf');
-  near(john.extras, 48.75, 'John off-course');
+  near(john.total, 48.75, 'Jake total');
+  near(john.golf, 0, 'Jake golf');
+  near(john.extras, 48.75, 'Jake off-course');
   assert.equal(john.verdict, 'collects');
   assert.equal(sum.standings[3].verdict, 'pays out');
   // Six rounds, in the order they were played, plus the off-course items.
@@ -236,15 +236,15 @@ test('the money summary describes the trip the ledger settled', () => {
 test('the settle-up spends cash already in the pot before asking for more', () => {
   const sum = W.EgtMoneySummary.build(money().model, money().live);
   const find = (from, to) => sum.settle.find(s => s.from === from && s.to === to) || {};
-  // Brian's $40 buy-in clears the poker winners first — he owes TJ $6.25 and
-  // Mike $17, both covered outright — and the $16.75 left over goes against
-  // what he owes John, because cash already handed over settles any bill.
-  near(find('brian', 'tj').credit, 6.25, 'TJ paid from the pot');
-  near(find('brian', 'tj').due, 0, 'nothing more to TJ');
-  near(find('brian', 'mike').credit, 17, 'Mike paid from the pot');
-  near(find('brian', 'mike').due, 0, 'nothing more to Mike');
+  // Blake's $40 buy-in clears the poker winners first — he owes Troy $6.25 and
+  // Miles $17, both covered outright — and the $16.75 left over goes against
+  // what he owes Jake, because cash already handed over settles any bill.
+  near(find('brian', 'tj').credit, 6.25, 'Troy paid from the pot');
+  near(find('brian', 'tj').due, 0, 'nothing more to Troy');
+  near(find('brian', 'mike').credit, 17, 'Miles paid from the pot');
+  near(find('brian', 'mike').due, 0, 'nothing more to Miles');
   near(find('brian', 'john').credit, 16.75, 'the remainder of the float');
-  near(find('brian', 'john').due, 8.25, 'Brian → John');
+  near(find('brian', 'john').due, 8.25, 'Blake → Jake');
   // Every dollar of the float is spent, and none of it more than once.
   const credited = sum.settle.reduce((a, s) => a + s.credit, 0);
   near(credited, 40, 'total credited equals the cash in the pot');
@@ -258,15 +258,15 @@ test('the settle-up spends cash already in the pot before asking for more', () =
 test('the summary explains where each round\'s money came from', () => {
   const sum = W.EgtMoneySummary.build(money().model, money().live);
   const work = rid => sum.rounds.find(r => r.id === rid).work.join('\n');
-  assert.match(work('R1'), /Bingo Bango Bongo — TJ 11 .* → TJ takes the stake/);
-  assert.match(work('R1'), /The Nines — John 30 .* → John takes the stake/);
-  assert.match(work('R2'), /Four-ball — John \+ TJ by 6/);
-  assert.match(work('R3'), /Wolf units — Mike \+10 .* → Mike takes the stake/);
-  assert.match(work('R3'), /TJ v John — front TJ by 5 · back John by 1 · overall TJ by 4 → TJ \+\$4/);
-  assert.match(work('R4'), /Teams — John \+ TJ 18 v Brian \+ Mike 26 → Brian \+ Mike take it/);
-  assert.match(work('R5'), /TJ v Mike — .* → TJ \+\$4/);
-  assert.match(work('R6'), /TJ v John — .* → TJ \+\$8/);
-  assert.match(work('R6'), /Mike v Brian — .* overall halved → no money/);
+  assert.match(work('R1'), /Bingo Bango Bongo — Troy 11 .* → Troy takes the stake/);
+  assert.match(work('R1'), /The Nines — Jake 30 .* → Jake takes the stake/);
+  assert.match(work('R2'), /Four-ball — Jake \+ Troy by 6/);
+  assert.match(work('R3'), /Wolf units — Miles \+10 .* → Miles takes the stake/);
+  assert.match(work('R3'), /Troy v Jake — front Troy by 5 · back Jake by 1 · overall Troy by 4 → Troy \+\$4/);
+  assert.match(work('R4'), /Teams — Jake \+ Troy 18 v Blake \+ Miles 26 → Blake \+ Miles take it/);
+  assert.match(work('R5'), /Troy v Miles — .* → Troy \+\$4/);
+  assert.match(work('R6'), /Troy v Jake — .* → Troy \+\$8/);
+  assert.match(work('R6'), /Miles v Blake — .* overall halved → no money/);
 });
 
 test('the summary degrades to golf-only partway through the trip', () => {
@@ -286,7 +286,7 @@ test('the summary degrades to golf-only partway through the trip', () => {
   eqList(sum.rounds.map(r => r.id), ['R1', 'R2'], 'only the finalized rounds');
   assert.equal(sum.hasExtras, false, 'no off-course ledger before the trip closes');
   assert.equal(sum.complete, false);
-  // R1 + R2 only: John +15, Brian -10, TJ +15, Mike -20.
+  // R1 + R2 only: Jake +15, Blake -10, Troy +15, Miles -20.
   vec(sum.total, { john: 15, brian: -10, tj: 15, mike: -20 }, 'partial total');
 });
 
@@ -303,8 +303,8 @@ test('an unscored trip yields an empty summary rather than throwing', () => {
 
 test('a pot credit never reverses a bill — the excess comes back instead', () => {
   const m = money();
-  // Same trip, but pretend Brian floated $200 into the poker pot. His share of
-  // the credit ($40 to TJ, $160 to Mike) now dwarfs what he owes them, so the
+  // Same trip, but pretend Blake floated $200 into the poker pot. His share of
+  // the credit ($40 to Troy, $160 to Miles) now dwarfs what he owes them, so the
   // settle-up must clamp at zero rather than invent transfers running backwards.
   const live = JSON.parse(JSON.stringify({
     money: {

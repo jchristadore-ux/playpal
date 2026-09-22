@@ -42,6 +42,7 @@
             doubles:       0,
             roundScores:   [],
             totalPutts:    0,
+            chipIns:       0,
             firHit:        0,
             firEligible:   0,
             girHit:        0,
@@ -71,8 +72,17 @@
           else if (diff ===  1) s.bogeys++;
           else                  s.doubles++;
 
-          // Older completed rounds only stored putts inside holeScores entries
-          s.totalPutts += (puttsMap[i] || h.putts || 0);
+          // Prefer the round-level putts array; fall back to holeScores.putts.
+          // Use putt helpers so a chip-in (ZERO_PUTTS = -1) never subtracts a stroke.
+          var rawPutt = (puttsMap[i] !== undefined && puttsMap[i] !== null) ? puttsMap[i] : h.putts;
+          if (typeof window !== 'undefined' && window.puttCount) {
+            s.totalPutts += window.puttCount(rawPutt);
+            if (window.isZeroPutt && window.isZeroPutt(rawPutt)) s.chipIns++;
+          } else {
+            var Z = -1;
+            if (rawPutt === Z) s.chipIns++;
+            else if (typeof rawPutt === 'number' && rawPutt > 0) s.totalPutts += rawPutt;
+          }
 
           if (par > 3) {
             if (firMap[i] !== null && firMap[i] !== undefined) {
@@ -125,6 +135,7 @@
           roundScores:   s.roundScores,
           totalPutts:    s.totalPutts,
           avgPutts:      s.rounds > 0 ? s.totalPutts / s.rounds : 0,
+          chipIns:       s.chipIns,
           firHit:        s.firHit,
           firEligible:   s.firEligible,
           firPct:        s.firEligible > 0 ? s.firHit / s.firEligible : null,
@@ -183,6 +194,15 @@
         id: 'bogeys', emoji: '🙏', title: 'Bogey God',
         winner: byBogeys[0],
         detail: byBogeys[0].bogeys + ' bogey' + (byBogeys[0].bogeys !== 1 ? 's' : ''),
+      });
+    }
+
+    var byChips = lb.slice().sort(function (a, b) { return (b.chipIns || 0) - (a.chipIns || 0); });
+    if (byChips[0] && (byChips[0].chipIns || 0) > 0) {
+      awards.push({
+        id: 'chipins', emoji: '🪄', title: 'Most Chip-Ins',
+        winner: byChips[0],
+        detail: byChips[0].chipIns + ' chip-in' + (byChips[0].chipIns !== 1 ? 's' : ''),
       });
     }
 

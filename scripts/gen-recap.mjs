@@ -77,12 +77,12 @@ const plainAmt = n => Math.abs(Math.round((n || 0) * 100) / 100).toFixed(2).repl
 const cash = n => `<span class="amt">${(n || 0) < 0 ? '−' : '+'}$${plainAmt(n)}</span>`;
 const tone = n => ((n || 0) > 0 ? 'up' : (n || 0) < 0 ? 'down' : 'flat');
 // The same protection for money figures that arrive inside prose the engine
-// wrote ("… → TJ +$4"), where cash() never touched them. Run it on already
+// wrote ("… → Troy +$4"), where cash() never touched them. Run it on already
 // escaped text — it adds the only markup those lines carry.
 const nbMoney = escaped => escaped.replace(/([−+]\$[\d.,]+)/g, '<span class="amt">$1</span>');
 const cashCell = n => (Math.round((n || 0) * 100) === 0 ? '<td class="flat">—</td>' : `<td class="${tone(n)}">${cash(n)}</td>`);
 const ord = i => ['1st', '2nd', '3rd', '4th'][i] || `${i + 1}th`;
-// "John", "John & TJ", "John, Brian & TJ" — a shared award should read like one.
+// "Jake", "Jake & Troy", "Jake, Blake & Troy" — a shared award should read like one.
 const listOf = names => (names.length < 3 ? names.join(' & ')
   : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`);
 
@@ -91,8 +91,8 @@ const listOf = names => (names.length < 3 ? names.join(' & ')
 const DAY = { R1: 'Tue', R2: 'Wed AM', R3: 'Wed PM', R4: 'Thu AM', R5: 'Thu PM', R6: 'Fri' };
 const FORMAT = {
   R1: 'Bingo Bango Bongo (front) + The Nines (back)',
-  R2: '18-hole four-ball · John + TJ v Brian + Mike',
-  R3: 'Wolf + a TJ v John $2 Nassau',
+  R2: '18-hole four-ball · Jake + Troy v Blake + Miles',
+  R3: 'Wolf + a Troy v Jake $2 Nassau',
   R4: '2v2 aggregate Stableford over all 18',
   R5: 'Full-18 Bingo Bango Bongo + six-match round robin',
   R6: 'Individual Stableford + two $2 Nassaus',
@@ -957,7 +957,7 @@ function titlesFor(rid) {
   return out;
 }
 
-// "Wolf — Mike (+10 units)", "Bronze singles — halved". A halved match has no
+// "Wolf — Miles (+10 units)", "Bronze singles — halved". A halved match has no
 // winner and no margin, so it says so once rather than twice.
 const titleLine = t => {
   const who = t.winners.length ? listOf(t.winners.map(NAME)) : 'halved';

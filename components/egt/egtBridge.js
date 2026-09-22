@@ -181,6 +181,17 @@ const EgtBridge = (function () {
     });
 
     bridgeEvents(state, roundId, p);
+
+    // Mid-round walk-offs from the native scorer. Shape matches native
+    // dropouts ({ pid: { thru, reason?, at? } }, thru in play order). Without
+    // this the Cup treats blank holes as "still playing" and skins/nines stall.
+    state.dropouts = state.dropouts || {};
+    if (p.dropouts && typeof p.dropouts === 'object') {
+      state.dropouts[roundId] = { ...p.dropouts };
+    } else if (p.dropouts === null) {
+      delete state.dropouts[roundId];
+    }
+
     return state;
   }
 
@@ -334,6 +345,7 @@ const EgtBridge = (function () {
       extraStats: get('pp_extra') || {},
       wolfData: get('pp_wolf') || {},
       bbbData: get('pp_bbb') || {},
+      dropouts: get('pp_drop') || {},
     };
   }
 

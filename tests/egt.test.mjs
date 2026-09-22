@@ -394,7 +394,7 @@ test('leaderboard ranks by points then tiebreakers; R6 reseeds 1v2 / 3v4', () =>
 test('withDeltas flags movement vs the prior snapshot', () => {
   const m = freshModel();
   const prev = { standings: [{ player: 'john', rank: 1 }, { player: 'tj', rank: 2 }] };
-  const cur = [{ player: 'tj', name: 'TJ', rank: 1 }, { player: 'john', name: 'John', rank: 2 }];
+  const cur = [{ player: 'tj', name: 'Troy', rank: 1 }, { player: 'john', name: 'Jake', rank: 2 }];
   const withD = EgtStandings.withDeltas(cur, prev);
   assert.equal(withD[0].direction, 'up');
   assert.equal(withD[0].move, 1);
@@ -1019,4 +1019,67 @@ test('EgtSync gracefully no-ops when the sync service is unavailable', () => {
   EgtSync.pull(st, changed => { pulled = changed; }); // no RoundSyncService in scope
   assert.equal(pulled, false);
   assert.equal(typeof EgtSync.subscribe(st, () => {}), 'function', 'returns a safe unsubscribe');
+});
+
+
+// ── WS4: EGT dropouts ───────────────────────────────────────────────────────
+
+test('EGT bridge persists native dropouts onto tournament state', () => {
+  const m = freshModel();
+  const state = EgtStore.emptyState(m.trip.id); state.model = m;
+  EgtBridge.bridge(m, state, 'R2', {
+    scores: {},
+    dropouts: { tj: { thru: 9, reason: 'injury', at: 1 } },
+  });
+  assert.equal(state.dropouts.R2.tj.thru, 9);
+  assert.equal(state.dropouts.R2.tj.reason, 'injury');
+});
+
+test('EGT skins keep paying among whoever is still in play after a walk-off', () => {
+  const players = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  const scores = { a: {}, b: {}, c: {} };
+  for (let h = 1; h <= 18; h++) {
+    scores.a[h] = { gross: 4 };
+    scores.b[h] = { gross: 5 };
+    scores.c[h] = { gross: h <= 9 ? 3 : null }; // c leads front, blank back
+  }
+  // Without dropouts the back nine is incomplete (c's nulls stall every hole).
+  const stalled = EgtScoring.skins({ players, scores, alloc: {}, dropouts: {} });
+  assert.ok(stalled.gross.perHole.filter(x => x.hole > 9).every(x => x.incomplete),
+    'blank card without a dropout record stalls the back nine');
+
+  // With c dropped after 9, a wins the back against b.
+  const live = EgtScoring.skins({
+    players, scores, alloc: {},
+    dropouts: { c: { thru: 9 } },
+  });
+  assert.equal(live.gross.won.c, 9, 'c keeps the front nine skins');
+  assert.equal(live.gross.won.a, 9, 'a takes the back nine against b');
+  assert.ok(live.gross.perHole.filter(x => x.hole > 9).every(x => !x.incomplete),
+    'back nine is contested by the remaining field');
+});
+
+test('EGT match play concedes when a side walks in', () => {
+  const holes = Array.from({ length: 18 }, (_, i) => i + 1);
+  const a = { name: 'A', ballNet: () => 4, out: h => h > 9 };
+  const b = { name: 'B', ballNet: () => 5, out: () => false };
+  const r = EgtScoring.playMatch(holes, a, b);
+  assert.equal(r.conceded, 'A');
+  assert.equal(r.winner, 'B');
+});
+
+test('EGT trackedStats counts a chip-in as a putted hole with zero strokes', () => {
+  const m = freshModel();
+  const roundId = 'R2';
+  const scores = {};
+  m.rounds.find(r => r.id === roundId).players.forEach(pid => { scores[pid] = {}; });
+  const course = m.courses[m.rounds.find(r => r.id === roundId).courseId];
+  const Z = W.ZERO_PUTTS;
+  course.holes.slice(0, 18).forEach(h => {
+    scores.john[h.hole] = { gross: h.par, putts: h.hole === 1 ? Z : 2 };
+  });
+  const st = EgtSideGames.trackedStats(m, roundId, scores);
+  assert.equal(st.john.chipIns, 1);
+  assert.equal(st.john.puttHoles, 18);
+  assert.equal(st.john.putts, 17 * 2, 'chip-in adds no putt strokes');
 });

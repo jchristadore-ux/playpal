@@ -973,11 +973,13 @@ const BottomLineProvider = (function () {
 
   // Player identities — logo, alias, and brand colors. Keyed by EGT player id;
   // also resolvable by display name.
+  // Fictional broadcast identities (ids stay stable for the EGT engine/seed).
+  // Real person names/aliases scrubbed for App Store / public listing polish.
   const PLAYERS = {
-    brian: { id: 'brian', name: 'Brian', alias: 'Birdman',    logo: 'icons/players/brian.png', color: '#D2232A', accent: '#E0A32E' },
-    john:  { id: 'john',  name: 'John',  alias: 'Gadget',     logo: 'icons/players/john.png',  color: '#C39A3B', accent: '#E4C56B' },
-    tj:    { id: 'tj',    name: 'TJ',    alias: 'Straight T',  logo: 'icons/players/tj.png',    color: '#C8CDD4', accent: '#EEF1F4' },
-    mike:  { id: 'mike',  name: 'Mike',  alias: 'H7',          logo: 'icons/players/mike.png',  color: '#2E5BB8', accent: '#D2232A' },
+    brian: { id: 'brian', name: 'Blake', alias: 'Redbird',  logo: 'icons/players/brian.png', color: '#D2232A', accent: '#E0A32E' },
+    john:  { id: 'john',  name: 'Jake',  alias: 'Wrench',   logo: 'icons/players/john.png',  color: '#C39A3B', accent: '#E4C56B' },
+    tj:    { id: 'tj',    name: 'Troy',  alias: 'True T',   logo: 'icons/players/tj.png',    color: '#C8CDD4', accent: '#EEF1F4' },
+    mike:  { id: 'mike',  name: 'Miles', alias: 'Seven',    logo: 'icons/players/mike.png',  color: '#2E5BB8', accent: '#D2232A' },
   };
   const _playerByName = {};
   Object.values(PLAYERS).forEach(p => { _playerByName[p.name.toLowerCase()] = p; });

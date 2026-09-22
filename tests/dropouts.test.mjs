@@ -52,7 +52,7 @@ test('dropout helpers read a walk-off in play-order terms', () => {
   assert.equal(W.activeAtSeq(drops, 'c', 8), true,  'still in for the ninth hole');
   assert.equal(W.activeAtSeq(drops, 'c', 9), false, 'gone for the tenth');
   assert.equal(W.activeAtSeq(drops, 'a', 17), true);
-  assert.equal(W.dropoutLabel(drops, 'c'), 'Walked in after 9');
+  assert.equal(W.dropoutLabel(drops, 'c'), 'Walked in after 9 · work call');
   assert.equal(W.dropoutThru(W.setDropout(drops, 'c', null), 'c'), null, 'back in the round');
 });
 
@@ -286,4 +286,43 @@ test('a round nobody left scores exactly as it did before', () => {
   assert.equal(res.complete, true);
   assert.ok(res.segments.every(s => !s.conceded));
   assert.deepEqual(winnerIds(res), ['a']);
+});
+
+
+// ── Skins money: hole-by-hole vs the field still in play (WS4) ───────────────
+
+test('skins money: a walk-off stops paying for skins won after they leave', () => {
+  // Cy wins every front-nine hole (all four play), then walks. Al wins every
+  // back-nine hole against the three still out. Cy must not be billed for the
+  // back nine.
+  const scores = { a: flat(4), b: flat(5), c: upTo(3, 9), d: flat(5) };
+  const drops = { c: { thru: 9 } };
+  const g = game('skins', { stake: 1 });
+  const r = raw(scores, drops);
+  const res = ME.compute(g, r);
+  assert.equal(res.entries.find(e => e.id === 'c').total, 9);
+  assert.equal(res.entries.find(e => e.id === 'a').total, 9);
+  const pay = ME.payouts(g, r, res);
+  // Front: Cy collects $1 × 3 opponents × 9 = +27; A/B/D each −9.
+  // Back:  Al collects $1 × 2 opponents × 9 = +18; B/D each −9; Cy untouched.
+  assert.equal(pay.c, 27, 'Cy keeps the front and owes nothing on the back');
+  assert.equal(pay.a, -9 + 18, 'Al pays front, collects back');
+  assert.equal(pay.b, -9 - 9);
+  assert.equal(pay.d, -9 - 9);
+  assert.equal(sum(pay), 0);
+});
+
+test('legacy calcSkins settles hole-by-hole the same way', () => {
+  const scores = { a: flat(4), b: flat(5), c: upTo(3, 9), d: flat(5) };
+  const { payouts } = W.calcSkins(scores, players, course, 1, {}, { c: { thru: 9 } });
+  assert.equal(payouts.c, 27);
+  assert.equal(payouts.a, 9);
+  assert.equal(sum(payouts), 0);
+});
+
+test('dropout reason is stored and shown on the label', () => {
+  const drops = W.setDropout({}, 'c', 9, 'injury');
+  assert.equal(W.dropoutReason(drops, 'c'), 'injury');
+  assert.match(W.dropoutLabel(drops, 'c'), /injury/i);
+  assert.ok(W.DROPOUT_REASONS.some(r => r.id === 'work'));
 });

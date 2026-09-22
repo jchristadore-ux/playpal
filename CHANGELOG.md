@@ -24,6 +24,74 @@ app shell moves to `app.html` so bookmarks and share previews stay honest.
 - `manifest.webmanifest` `start_url` → `./dist/app.html`; SW cache
   `playpal-v1.19.6` precaches marketing + `dist/app.html`.
 
+## [1.19.5] — 2026-09-21 — WS5: App Store listing, bottomLine scrub, legal URLs
+
+App Store listing / legal polish (no Apple enrollment, no screenshots, no analytics).
+
+- Rewrote `appstore/APP_STORE_LISTING.md` for Apple field limits: name, subtitle,
+  promotional text, keywords, description, What's New — with live GitHub Pages
+  privacy / terms / support URLs. No private EGT player names in listing copy.
+- Scrubbed broadcast identities in `components/bottomLineProvider.js` (and seed
+  display names / lodging) to fictional placeholders; regenerated
+  `components/egt/egtSeedData.js`; tests updated.
+- Verified GitHub Pages serves `privacy.html`, `terms.html`, `support.html`.
+  Honest privacy/terms updates for optional Auth + Stripe PlayPal Pro.
+  Documented URLs in `OPERATOR_ACTIONS.md` and `docs/IOS_APP_STORE_PATH.md`.
+
+## [1.19.4] — 2026-09-21 — WS4: correctness (skins, dropouts, awards, chip-ins)
+
+Five gaps left open after the 1.18 walk-off / zero-putt work, now closed.
+
+### Skins settle hole by hole
+A player who walks in keeps skins they already won, but stops paying (and
+collecting) once they leave. Both `calcSkins` and MatchEngine skins now settle
+each won skin against whoever was still in the field on that hole — the old
+whole-field formula was billing walk-offs for skins won after they packed up.
+
+### EGT Cup honors dropouts
+The native scorer's `dropouts` map bridges into `state.dropouts[roundId]`. Cup
+skins / nines contest only the field still in play; match play / four-ball /
+singles treat a walked-in side as a concession. Chip-ins no longer subtract a
+stroke from Flat Stick season putts.
+
+### Award pot carryover
+An empty award (nobody birdied, etc.) rolls its stake into the next award in
+`AWARD_FORMAT_IDS` order when settling a round — mini-cup money lands on the
+trophies that actually fired. A lone empty award still pays nobody.
+
+### Walk-off reason picker
+Tapping **… IS DONE** opens Injury / Work / Dark / Other (or skip). The reason
+is stored on `dropouts[pid].reason` and shown on the walked-in card / WD label.
+
+### Trip chip-in rollup
+Trip leaderboards count chip-ins (via putt helpers, so `-1` never subtracts),
+and **Most Chip-Ins** joins the trip awards board.
+
+## [1.19.3] — 2026-09-21 — WS3: migrate legacy Firestore into group collections
+
+Operator script to move pre-group Firestore data into the group-scoped
+collections current clients already use (`_col()` / GroupService).
+
+### Added
+
+- `scripts/migrate-legacy-group.mjs` — copies `playpal_rounds` →
+  `g_{GROUPID}_rounds` and `golf_trips` → `g_{GROUPID}_trips` (doc ids and
+  bodies preserved). **Dry-run by default**; `--confirm` required to write
+  (copy, verify dest, then delete legacy). `--keep-legacy` for copy-only.
+  Credentials via env / `--credentials` only — never hardcoded.
+- `tests/migrateLegacyGroup.test.mjs` — arg parsing + in-memory dry-run /
+  confirm / idempotency smoke tests (no live Firebase).
+- `OPERATOR_ACTIONS.md` §5 — Migration runbook (dry-run vs `--confirm`, auth
+  env vars, LEGACY-device honesty notes).
+
+### Notes
+
+- Based on `main` after WS1 (#119) / WS2 (#120). Package bump 1.19.1 → 1.19.3
+  (1.19.2 was the WS2 intended patch; main package stayed at 1.19.1 after merge).
+- Does not migrate RTDB `players` / `courses` paths.
+- Does not add `.github/workflows/deploy-firestore-rules.yml` (WS1 appendix /
+  workflow-scope limitation) — left for a separate ops fix.
+
 ## [1.19.1] — 2026-09-21 — WS1: Firestore rules CI, emulator tests, operator docs
 
 Security workstream (docs + CI only; live rules unchanged since ~2026-09-08).

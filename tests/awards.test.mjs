@@ -278,3 +278,39 @@ test('FLATSTICK sits out a card with putts missing — a gap can only help you',
   assert.equal(pay.a, 4);
   assert.equal(sum(pay), 0);
 });
+
+
+// ── Mini-cup pot carryover (WS4) ─────────────────────────────────────────────
+
+test('an empty award pot carries its stake into the next award that pays', () => {
+  // BIRDIE BRO (gross) empty — nobody birdied. PAR PRINCE has a clear winner.
+  // With both at $2, the empty birdie stake should roll into the par pot so
+  // Al collects $2+$2 = $4 from each of the three losers ($12), not just $6.
+  const scores = { a: flat(0), b: flat(1), c: flat(1), d: flat(2) }; // Al: 18 pars
+  const round = {
+    players, course, teeId: null, startingTee: 1,
+    formats: [],
+    games: [
+      game('birdieBro', { stake: 2, scoringBasis: 'gross' }),
+      game('parPrince', { stake: 2 }),
+    ],
+  };
+  const pay = W.calcRoundPayouts(round, { scores, putts: {}, popFlags: {}, wolfData: {}, bbbData: {}, teeBallData: {} });
+  assert.equal(pay.a, 12, 'empty birdie stake rolled into par pot ($4 × 3 losers)');
+  assert.equal(pay.b, -4);
+  assert.equal(pay.c, -4);
+  assert.equal(pay.d, -4);
+  assert.equal(sum(pay), 0);
+});
+
+test('a lone empty award still pays nobody (carry evaporates with no next trophy)', () => {
+  const scores = { a: flat(1), b: flat(1), c: flat(2), d: flat(2) };
+  const round = {
+    players, course, teeId: null, startingTee: 1,
+    formats: [],
+    games: [game('birdieBro', { stake: 5, scoringBasis: 'gross' })],
+  };
+  const pay = W.calcRoundPayouts(round, { scores, putts: {}, popFlags: {} });
+  assert.equal(sum(pay), 0);
+  assert.ok(Object.values(pay).every(v => v === 0), 'empty lone award moves no money');
+});

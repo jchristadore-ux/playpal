@@ -137,3 +137,16 @@ The same map rides along everywhere round data travels:
 
 `MatchEngine.compute(game, raw)` accepts `raw.dropouts` in the same shape.
 Standings and money remain derived, never stored.
+
+
+---
+
+# Schema & Storage Changes — v1.19.4 (correctness)
+
+No new keys. Existing shapes now filled in / honored:
+
+* `dropouts[pid].reason` — UI writes `injury` | `work` | `dark` | `other` | `null`
+  via the walk-off reason picker (field existed since 1.18.0).
+* EGT `state.dropouts[roundId]` — same native dropout map, bridged on finalize
+  so Cup skins / nines / matches no longer stall on blank holes after a walk-off.
+* Trip leaderboard / awards gain `chipIns` (rolled from putts / holeScores).

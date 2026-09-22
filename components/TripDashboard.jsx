@@ -345,6 +345,24 @@ const TripDashboard = ({ trip, rounds, onBack, onViewRound }) => {
               </div>
             )}
 
+            {/* Chip-ins sub-board */}
+            {leaderboard.some(p => (p.chipIns || 0) > 0) && (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E7E3D9', borderRadius: 16, overflow: 'hidden', marginTop: 2 }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #E7E3D9', background: 'rgba(21,128,61,0.03)' }}>
+                  <div style={{ fontFamily: FF, fontSize: 9, letterSpacing: 2, fontWeight: 700, color: '#15803D' }}>CHIP-INS</div>
+                </div>
+                {leaderboard.slice().sort((a, b) => (b.chipIns || 0) - (a.chipIns || 0)).map((p, i) => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderTop: i === 0 ? 'none' : '1px solid #F6F4EE' }}>
+                    <Avatar player={p} size={26}/>
+                    <div style={{ flex: 1, fontFamily: FF, fontWeight: 700, fontSize: 14, color: '#0E2B20' }}>{p.name}</div>
+                    <div style={{ fontFamily: FF, fontWeight: 800, fontSize: 16, color: (p.chipIns || 0) > 0 ? '#15803D' : '#8A9E8A' }}>
+                      🪄 {p.chipIns || 0}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Putting & Approach sub-board */}
             {leaderboard.some(p => p.totalPutts > 0 || p.firEligible > 0 || p.girEligible > 0) && (
               <div style={{ background: '#FFFFFF', border: '1px solid #E7E3D9', borderRadius: 16, overflow: 'hidden', marginTop: 2 }}>

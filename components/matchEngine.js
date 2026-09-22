@@ -597,6 +597,8 @@ const MatchEngine = (function () {
   }
 
   // Per skin / per point: each player settles the difference with every other.
+  // Used for Wolf / Sixes / BBB-style unit totals. Skins with a skinLedger use
+  // _skinsPayouts instead so a walk-off stops paying once they leave.
   function _unitPayouts(result, stake, pay) {
     const { ids, totalFor } = _entryPlayers(result);
     if (ids.length < 2) return pay;
@@ -604,6 +606,29 @@ const MatchEngine = (function () {
       ids.forEach(b => {
         if (a === b) return;
         pay[a] += stake * ((totalFor[a] || 0) - (totalFor[b] || 0));
+      });
+    });
+    return pay;
+  }
+
+  // Skins money is hole-by-hole: each won skin (with its carry value) is paid
+  // only by whoever was still in the field on the hole it was won. Players who
+  // already walked in keep skins they took earlier but neither pay nor collect
+  // after they leave.
+  function _skinsPayouts(result, stake, pay) {
+    const ledger = result.skinLedger;
+    if (!ledger || !ledger.length) return _unitPayouts(result, stake, pay);
+    ledger.forEach(row => {
+      const field = row.field || [];
+      const wid = row.winner;
+      const value = Number(row.value) || 1;
+      if (!wid || field.length < 2 || value <= 0) return;
+      if (pay[wid] === undefined) pay[wid] = 0;
+      field.forEach(pid => {
+        if (pid === wid) return;
+        if (pay[pid] === undefined) pay[pid] = 0;
+        pay[pid] -= stake * value;
+        pay[wid] += stake * value;
       });
     });
     return pay;
@@ -651,6 +676,7 @@ const MatchEngine = (function () {
     const pay = Object.fromEntries(ids.map(id => [id, 0]));
     if (!def || !result || stake <= 0) return pay;
     const mode = def.settlement || 'pot';
+    if (mode === 'unit' && result.skinLedger) return _skinsPayouts(result, stake, pay);
     if (mode === 'unit')   return _unitPayouts(result, stake, pay);
     if (mode === 'match')  return _matchPayouts(result, stake, pay);
     if (mode === 'nassau') return _nassauPayouts(result, stake, pay);
@@ -901,6 +927,7 @@ const MatchEngine = (function () {
       let carried = 0;
       let thru = 0;
       const perHoleWinner = ctx.holes.map(() => null);
+      const skinLedger = [];
       for (const i of ctx.playOrder) {
         // Whoever is still out there contests the hole. Fewer than two players
         // left and there is no skin to win — the pot just carries.
@@ -916,9 +943,11 @@ const MatchEngine = (function () {
         }
         const value = 1 + carried;
         carried = 0;
-        counts[entered[0].id] += value;
-        holesWon[entered[0].id].push(String(ctx.holes[i].num) + (value > 1 ? ' (×' + value + ')' : ''));
-        perHoleWinner[i] = entered[0].id;
+        const wid = entered[0].id;
+        counts[wid] += value;
+        holesWon[wid].push(String(ctx.holes[i].num) + (value > 1 ? ' (×' + value + ')' : ''));
+        perHoleWinner[i] = wid;
+        skinLedger.push({ holeIdx: i, winner: wid, value, field: field.map(p => p.id) });
       }
       const entries = ctx.players.map(p => ({
         id: p.id, label: _firstName(p), playerIds: [p.id], color: p.color,
@@ -930,7 +959,7 @@ const MatchEngine = (function () {
       const complete = thru === ctx.contestedHoles(2);
       const res = finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'skins' });
       if (!complete && carried > 0 && thru > 0) res.status += ' · ' + carried + ' carrying';
-      return { kind: 'leaderboard', ...res };
+      return { kind: 'leaderboard', ...res, skinLedger };
     },
   });
 
