@@ -1,8 +1,8 @@
 {
   "name": "playpal",
-  "version": "1.19.1",
+  "version": "1.19.3",
   "private": true,
-  "description": "PlayPal — golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
+  "description": "PlayPal \u2014 golf scoring & side-game companion. Live scorecards, Wolf/Nassau/Skins payouts, trip dashboards, and cross-device sync.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
