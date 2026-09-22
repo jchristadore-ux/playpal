@@ -33,6 +33,30 @@ is stored on `dropouts[pid].reason` and shown on the walked-in card / WD label.
 Trip leaderboards count chip-ins (via putt helpers, so `-1` never subtracts),
 and **Most Chip-Ins** joins the trip awards board.
 
+## [1.19.3] — 2026-09-21 — WS3: migrate legacy Firestore into group collections
+
+Operator script to move pre-group Firestore data into the group-scoped
+collections current clients already use (`_col()` / GroupService).
+
+### Added
+
+- `scripts/migrate-legacy-group.mjs` — copies `playpal_rounds` →
+  `g_{GROUPID}_rounds` and `golf_trips` → `g_{GROUPID}_trips` (doc ids and
+  bodies preserved). **Dry-run by default**; `--confirm` required to write
+  (copy, verify dest, then delete legacy). `--keep-legacy` for copy-only.
+  Credentials via env / `--credentials` only — never hardcoded.
+- `tests/migrateLegacyGroup.test.mjs` — arg parsing + in-memory dry-run /
+  confirm / idempotency smoke tests (no live Firebase).
+- `OPERATOR_ACTIONS.md` §5 — Migration runbook (dry-run vs `--confirm`, auth
+  env vars, LEGACY-device honesty notes).
+
+### Notes
+
+- Based on `main` after WS1 (#119) / WS2 (#120). Package bump 1.19.1 → 1.19.3
+  (1.19.2 was the WS2 intended patch; main package stayed at 1.19.1 after merge).
+- Does not migrate RTDB `players` / `courses` paths.
+- Does not add `.github/workflows/deploy-firestore-rules.yml` (WS1 appendix /
+  workflow-scope limitation) — left for a separate ops fix.
 
 ## [1.19.1] — 2026-09-21 — WS1: Firestore rules CI, emulator tests, operator docs
 
