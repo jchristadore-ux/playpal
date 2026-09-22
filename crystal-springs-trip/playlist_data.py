@@ -1,6 +1,6 @@
 """Crystal Springs Golf Trip — curated playlist data.
 
-Nine playlists for a 4-day golf trip. Four guys, early 40s, drinks,
+Ten playlists for a 4-day golf trip. Four guys, early 40s, drinks,
 gambling, Airbnb nights. ~40% rap / 30% country / 20% rock / 10% classic
 rock overall preference, explicit versions preferred.
 
@@ -11,7 +11,9 @@ tagged Rock.
 
 Hard rules enforced by generate_playlists.py:
   - Zero duplicate songs across ALL playlists (including Trip Anthem).
-  - No primary artist more than 3x within a single playlist.
+  - No primary artist more than 3x within a single playlist, unless the
+    playlist sets its own "max_artist" (The Ride Up runs Eminem-heavy
+    on purpose).
 """
 
 PLAYLISTS = [
@@ -696,6 +698,94 @@ PLAYLISTS = [
             ("Eagles", "Take It Easy", "3:31", "Classic Rock"),
             ("Journey", "Don't Stop Believin'", "4:10", "Classic Rock"),
             ("Semisonic", "Closing Time", "4:34", "Rock"),
+        ],
+    },
+    {
+        "name": "The Ride Up",
+        "theme": "Pedal Down",
+        "target_minutes": 280,
+        "max_artist": 10,  # Eminem-heavy by request (default cap is 3)
+        "description": (
+            "The drive up. Wall-to-wall amped-up sing-along rap — every "
+            "chorus is a group shout and every verse somebody in the car "
+            "knows word-for-word. Eminem-heavy on purpose: ten Shady-family "
+            "cuts plus five more tracks he guests on. Opens full-send, "
+            "detours through the old-school belt-it-out block, and pulls "
+            "into the resort on Not Afraid."
+        ),
+        "songs": [
+            # — Phase 1: Pulling out of the driveway (full send) —
+            ("Meek Mill", "Dreams and Nightmares", "3:56", "Rap"),
+            ("Eminem feat. Juice WRLD", "Godzilla", "3:31", "Rap"),
+            ("Jay-Z & Kanye West", "Ni**as in Paris", "3:39", "Rap"),
+            ("Eminem", "Business", "4:11", "Rap"),
+            ("Wiz Khalifa", "Black and Yellow", "3:37", "Rap"),
+            ("Kanye West", "Stronger", "5:12", "Rap"),
+            ("50 Cent feat. Eminem & Tony Yayo", "Patiently Waiting", "4:48", "Rap"),
+            ("M.O.P.", "Ante Up", "3:56", "Rap"),
+            ("Lil Wayne feat. Cory Gunz", "6 Foot 7 Foot", "4:09", "Rap"),
+            ("Bad Meets Evil", "Fast Lane", "4:10", "Rap"),
+            # — Phase 2: Windows down, everyone rapping —
+            ("Macklemore & Ryan Lewis feat. Ray Dalton", "Can't Hold Us", "4:18", "Rap"),
+            ("Eminem feat. Rihanna", "The Monster", "4:10", "Rap"),
+            ("Flo Rida feat. T-Pain", "Low", "3:50", "Rap"),
+            ("J-Kwon", "Tipsy", "4:04", "Rap"),
+            ("D12", "Purple Pills", "5:00", "Rap"),
+            ("The Game feat. 50 Cent", "Hate It or Love It", "3:26", "Rap"),
+            ("Nelly feat. P. Diddy & Murphy Lee", "Shake Ya Tailfeather", "4:53", "Rap"),
+            ("Eminem", "Just Lose It", "4:08", "Rap"),
+            ("Ludacris", "Get Back", "4:30", "Rap"),
+            ("Clipse", "Grindin'", "4:30", "Rap"),
+            ("P. Diddy feat. Black Rob & Mark Curry", "Bad Boy for Life", "3:42", "Rap"),
+            ("Eminem feat. Dr. Dre", "Guilty Conscience", "3:19", "Rap"),
+            ("Cam'ron feat. Juelz Santana", "Oh Boy", "3:34", "Rap"),
+            ("50 Cent feat. Justin Timberlake & Timbaland", "Ayo Technology", "4:07", "Rap"),
+            ("Akon feat. Eminem", "Smack That", "3:33", "Rap"),
+            ("Jim Jones", "We Fly High", "4:01", "Rap"),
+            ("G-Unit", "Stunt 101", "4:04", "Rap"),
+            # — Phase 3: The nostalgia belt (word-for-word) —
+            ("Sir Mix-a-Lot", "Baby Got Back", "4:22", "Rap"),
+            ("Vanilla Ice", "Ice Ice Baby", "4:31", "Rap"),
+            ("MC Hammer", "U Can't Touch This", "4:17", "Rap"),
+            ("Kris Kross", "Jump", "3:16", "Rap"),
+            ("Naughty by Nature", "Hip Hop Hooray", "4:26", "Rap"),
+            ("Run-DMC", "It's Tricky", "3:03", "Rap"),
+            ("Beastie Boys", "Brass Monkey", "2:37", "Rap"),
+            ("Rob Base & DJ E-Z Rock", "It Takes Two", "4:57", "Rap"),
+            ("Luniz feat. Michael Marshall", "I Got 5 on It", "4:14", "Rap"),
+            ("Eminem feat. Dido", "Stan", "6:44", "Rap"),
+            ("Xzibit", "X", "3:47", "Rap"),
+            ("Fat Joe & Remy Ma feat. French Montana & Infared", "All the Way Up", "3:36", "Rap"),
+            ("Rick Ross feat. Styles P", "B.M.F. (Blowin' Money Fast)", "4:15", "Rap"),
+            ("Eminem", "Like Toy Soldiers", "4:56", "Rap"),
+            ("Asher Roth", "I Love College", "4:01", "Rap"),
+            ("Soulja Boy", "Crank That (Soulja Boy)", "3:42", "Rap"),
+            ("Macklemore & Ryan Lewis feat. Wanz", "Thrift Shop", "3:55", "Rap"),
+            ("Jay-Z feat. Eminem", "Renegade", "5:38", "Rap"),
+            # — Phase 4: Modern bangers —
+            ("Travis Scott", "SICKO MODE", "5:12", "Rap"),
+            ("Post Malone feat. Quavo", "Congratulations", "3:40", "Rap"),
+            ("Drake feat. Lil Wayne", "The Motto", "3:01", "Rap"),
+            ("Kanye West feat. Rihanna & Kid Cudi", "All of the Lights", "4:59", "Rap"),
+            ("Big Sean feat. E-40", "I Don't Fuck with You", "4:44", "Rap"),
+            ("Kanye West", "Heartless", "3:31", "Rap"),
+            ("Eminem feat. Lil Wayne", "No Love", "5:00", "Rap"),
+            ("Kid Cudi", "Day 'N' Nite", "3:42", "Rap"),
+            ("Drake", "Started From the Bottom", "2:53", "Rap"),
+            ("DJ Khaled feat. Drake, Rick Ross & Lil Wayne", "I'm On One", "4:56", "Rap"),
+            ("B.o.B feat. Hayley Williams & Eminem", "Airplanes, Pt. II", "4:20", "Rap"),
+            ("Jay-Z feat. Rihanna & Kanye West", "Run This Town", "4:27", "Rap"),
+            ("Nelly", "E.I.", "4:47", "Rap"),
+            ("Juvenile feat. Soulja Slim", "Slow Motion", "4:10", "Rap"),
+            ("Outkast", "Roses", "6:09", "Rap"),
+            # — Phase 5: Final ascent & Shady landing —
+            ("Linkin Park & Jay-Z", "Numb / Encore", "3:25", "Rap"),
+            ("Papa Roach", "Last Resort", "3:20", "Rock"),
+            ("Too $hort", "Blow the Whistle", "2:46", "Rap"),
+            ("Bad Meets Evil feat. Bruno Mars", "Lighters", "5:04", "Rap"),
+            ("Drake feat. Kanye West, Lil Wayne & Eminem", "Forever", "5:57", "Rap"),
+            ("Eminem feat. Rihanna", "Love the Way You Lie", "4:23", "Rap"),
+            ("Eminem", "Not Afraid", "4:08", "Rap"),
         ],
     },
 ]

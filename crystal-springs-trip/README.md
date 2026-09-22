@@ -1,14 +1,14 @@
 # Crystal Springs Golf Trip — Playlist Generator
 
-The complete soundtrack for a 4-day golf trip: **9 playlists, 553 unique
-songs, 36 hours of music, zero repeats.**
+The complete soundtrack for a 4-day golf trip: **10 playlists, 620 unique
+songs, 40 hours of music, zero repeats.**
 
 Four guys, early 40s, golf, drinks, gambling, Airbnb nights. Roughly
 rap-forward with country, rock, and classic rock; explicit versions
 preferred; no Taylor Swift, no EDM. Heavy rotation for the foundation five:
 O.A.R., Stick Figure, Eminem, Jay-Z, Zach Bryan.
 
-## The nine playlists
+## The ten playlists
 
 | # | Playlist | Theme | Runtime |
 |---|----------|-------|---------|
@@ -21,11 +21,12 @@ O.A.R., Stick Figure, Eminem, Jay-Z, Zach Bryan.
 | 7 | Airbnb Morning | Coffee & breakfast, acoustic, relaxed | 2h 56m |
 | 8 | Airbnb Evening | Fire pit, cards, drinks, everyone singing | 4h 58m |
 | 9 | Trip Anthem | The highlight-reel soundtrack of the entire trip | 1h 57m |
+| 10 | The Ride Up | Pedal Down — the drive up, amped sing-along rap, Eminem-heavy | 4h 41m |
 
 ## What's in here
 
 ```
-playlist_data.py            all 553 curated tracks (the single source of truth)
+playlist_data.py            all 620 curated tracks (the single source of truth)
 generate_playlists.py       validates rules + writes every deliverable
 output/
   master_playlist.xlsx      spreadsheet: summary tab, master tab, tab per playlist
@@ -49,7 +50,9 @@ python3 generate_playlists.py
 ```
 
 The generator **fails the build** if any song appears twice across any of
-the nine playlists, or any artist appears more than 3× inside one playlist —
+the ten playlists, or any artist appears more than 3× inside one playlist
+(unless the playlist sets its own `max_artist` — The Ride Up is
+deliberately Eminem-heavy) —
 so the "zero duplicates" guarantee is enforced, not just claimed. It also
 prints per-playlist runtime drift against the brief's targets (everything
 lands within ±5 minutes) and the genre mix.
@@ -62,6 +65,6 @@ differ by a few seconds per track.
 See [`automation/README.md`](automation/README.md). Short version: the
 official Amazon Music API is approval-only, so the recommended path is the
 included Playwright script — you log into music.amazon.com in the browser
-window it opens, press ENTER, and it creates all nine playlists and adds
-all 553 songs itself, with a per-track report and replacement suggestions
+window it opens, press ENTER, and it creates all ten playlists and adds
+all 620 songs itself, with a per-track report and replacement suggestions
 for anything unavailable.
