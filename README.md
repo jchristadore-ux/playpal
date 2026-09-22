@@ -13,8 +13,10 @@ leaderboards — synced across every phone in the group.
 
 ## Using it
 
-- **Web/PWA (recommended):** open the deployed site, then on iPhone use
-  Safari → Share → **Add to Home Screen**. Works offline on the course.
+- **Web/PWA (recommended):** open the deployed site
+  (`https://jchristadore-ux.github.io/playpal/` — marketing landing). Tap
+  **Open PlayPal** for the app (`dist/app.html`), then on iPhone use Safari →
+  Share → **Add to Home Screen**. Works offline on the course.
 - **App Store:** see `docs/IOS_APP_STORE_PATH.md` (requires a Mac + Apple
   Developer membership).
 
@@ -35,7 +37,9 @@ commit the updated `dist/` (CI fails otherwise).
 
 | Path | What |
 |---|---|
-| `index.html` | App shell: Firebase config, sync services, script loading |
+| `index.html` | Marketing landing (GitHub Pages root) + OG/Twitter cards |
+| `app.html` | PWA/app shell source (Capacitor www/index.html); Pages serves `dist/app.html` |
+| `icons/og-card.png` | Open Graph / Twitter share image (1200×630) |
 | `components/` | Source of truth — React components (JSX) + game engines |
 | `components/matchEngine.js` | Registry-based scoring engine (27 formats incl. the 5 awards; add formats without touching existing code) |
 | `components/*Service.js` | Handicap (WHS), course (tees/favorites/providers), stats, profile, history, sharing services |
