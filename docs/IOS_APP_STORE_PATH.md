@@ -88,9 +88,11 @@ In Xcode (one-time setup):
 3. In the app record, paste from `appstore/APP_STORE_LISTING.md`:
    subtitle, promotional text, keywords, description, support URL,
    marketing URL, and the privacy policy URL (your deployed
-   `privacy.html`, e.g. `https://<user>.github.io/playpal/privacy.html` —
-   enable GitHub Pages first: repo Settings → Pages → Source: GitHub
-   Actions).
+   `privacy.html` — already published at
+   `https://jchristadore-ux.github.io/playpal/privacy.html`.
+   Support: `https://jchristadore-ux.github.io/playpal/support.html`.
+   Terms: `https://jchristadore-ux.github.io/playpal/terms.html`.
+   Full paste pack: `appstore/APP_STORE_LISTING.md`).
 4. **App Privacy** section → answer using
    `appstore/PRIVACY_NUTRITION_LABELS.md` (short version: Data collected —
    Name and Other User Content, for App Functionality, not linked to

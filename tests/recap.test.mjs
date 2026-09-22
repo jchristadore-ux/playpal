@@ -55,7 +55,7 @@ test('every page is a self-contained document with nothing to fetch', () => {
 
 test('the standings page states the engine’s champion and totals', () => {
   const html = byPath.get('standings.html');
-  assert.match(html, /John takes the 2026 Cup/);
+  assert.match(html, /Jake takes the 2026 Cup/);
   // 18.75 / 15.75 / 12.75 / 8.75 out of 33 — the audited final board.
   for (const total of ['18.75', '15.75', '12.75', '8.75']) {
     assert.ok(html.includes(total), `standings missing ${total}`);
@@ -81,7 +81,7 @@ test('the awards page reports the awards the engine granted, and the ones it did
   // page must say so rather than crown a 0-putt champion.
   assert.match(html, /Flat Stick[\s\S]{0,220}Not awarded/);
   // Fairways and greens went untracked too: a four-way tie at zero, split.
-  assert.match(html, /Iron Man[\s\S]{0,260}John, Brian, TJ &amp; Mike/);
+  assert.match(html, /Iron Man[\s\S]{0,260}Jake, Blake, Troy &amp; Miles/);
   // The Rock was never called, so its ledger is shown but not settled.
   assert.match(html, /stays off the ledger/);
 });
@@ -94,22 +94,22 @@ test('a round page carries the whole round: card, games, pops, points, money', (
   assert.match(html, /<h2>Handicaps and pops<\/h2>/);
   assert.match(html, /<h2>Cup points<\/h2>/);
   assert.match(html, /<h2>The money<\/h2>/);
-  // Mike's +10 units won Wolf and the flat $5 a man that came with it.
-  assert.match(html, /Wolf — <b>Mike<\/b> <span class="note">\(\+10 units\)/);
+  // Miles's +10 units won Wolf and the flat $5 a man that came with it.
+  assert.match(html, /Wolf — <b>Miles<\/b> <span class="note">\(\+10 units\)/);
   assert.ok(html.includes('+$15'));
   // Side-match money is named for the players, not the ledger's two-letter keys.
-  assert.ok(html.includes('TJ v John — the 18'));
+  assert.ok(html.includes('Troy v Jake — the 18'));
   assert.ok(!html.includes('Match tj v jo'));
 });
 
 test('a match page walks all 18 holes and settles', () => {
   const html = byPath.get('matches/r6-championship-john-tj.html');
-  assert.match(html, /TJ won 4&amp;1/);
+  assert.match(html, /Troy won 4&amp;1/);
   assert.match(html, /11-stroke course-handicap difference/);
   // Hole rows 1..18 are all present in the overall progression.
   const rows = html.match(/<td>(\d+)<\/td><td>\d+<\/td><td>/g) || [];
   assert.ok(rows.length >= 18, `expected at least 18 hole rows, saw ${rows.length}`);
-  // $2 Nassau: $2 front, $2 back, $4 on the 18 — all three to TJ.
+  // $2 Nassau: $2 front, $2 back, $4 on the 18 — all three to Troy.
   assert.ok(html.includes('+$8'));
   assert.match(html, /Singles win/);
 });

@@ -394,7 +394,7 @@ test('leaderboard ranks by points then tiebreakers; R6 reseeds 1v2 / 3v4', () =>
 test('withDeltas flags movement vs the prior snapshot', () => {
   const m = freshModel();
   const prev = { standings: [{ player: 'john', rank: 1 }, { player: 'tj', rank: 2 }] };
-  const cur = [{ player: 'tj', name: 'TJ', rank: 1 }, { player: 'john', name: 'John', rank: 2 }];
+  const cur = [{ player: 'tj', name: 'Troy', rank: 1 }, { player: 'john', name: 'Jake', rank: 2 }];
   const withD = EgtStandings.withDeltas(cur, prev);
   assert.equal(withD[0].direction, 'up');
   assert.equal(withD[0].move, 1);
