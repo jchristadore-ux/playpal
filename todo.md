@@ -37,16 +37,13 @@
 - [x] 308 tests green (27 new); browser smoke scorer + summary clean;
       v1.18.0 + CHANGELOG + guides + SCHEMA_CHANGES.
 
-### Optional follow-ups
-- [ ] Reason picker on the walk-off (injury / work / dark) — the field is
-      already carried on the record, nothing writes it yet.
-- [ ] Settle skins hole by hole so a player who leaves stops paying for skins
-      won after they go (today the whole field settles the pot).
-- [ ] Trip/season rollup of chip-ins next to the other award races.
-- [ ] EGT Cup rounds don't carry dropouts yet — the bridge hands the tournament
-      engine scores/putts/events only, so a Cup round with a walk-off still
-      settles on holes played. Chip-ins do flow through (they ride the putts
-      array).
+### Optional follow-ups — done in WS4 (v1.19.4)
+- [x] Reason picker on the walk-off (injury / work / dark / other).
+- [x] Settle skins hole by hole so a player who leaves stops paying for skins
+      won after they go.
+- [x] Trip/season rollup of chip-ins next to the other award races.
+- [x] EGT Cup rounds carry dropouts through the bridge; skins/nines/matches
+      honor the field still in play.
 
 ## Done — Round awards / mini cup (v1.17.0, branch claude/golf-awards-setup-fy1s6d)
 - [x] Five awards registered as MatchEngine formats in a new `awards` category:
@@ -65,8 +62,8 @@
 - [x] 276 tests green (17 new); browser smoke clean; v1.17.0 + CHANGELOG.
 
 ### Optional follow-ups for the awards
-- [ ] Carry an unclaimed award's pot into another award (today it simply
-      doesn't pay).
+- [x] Carry an unclaimed award's pot into the next award in AWARD_FORMAT_IDS
+      order (mini-cup carryover via calcAllPayouts) — v1.19.4.
 - [ ] Show award standings in the emailed round report as a dedicated block
       (they currently appear in the per-game list).
 - [ ] Season/trip rollup of round awards on the Trip dashboard.

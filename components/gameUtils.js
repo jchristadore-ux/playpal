@@ -127,6 +127,14 @@ function activePlayers(players, dropouts, seq) {
 }
 
 // Records / clears a walk-off. `thru` of null puts the player back in the round.
+// Canonical walk-off reasons — the picker writes one of these (or null).
+const DROPOUT_REASONS = [
+  { id: 'injury', label: 'Injury' },
+  { id: 'work',   label: 'Work' },
+  { id: 'dark',   label: 'Dark' },
+  { id: 'other',  label: 'Other' },
+];
+
 function setDropout(dropouts, playerId, thru, reason) {
   const next = { ...(dropouts || {}) };
   if (thru === null || thru === undefined) delete next[playerId];
@@ -134,10 +142,24 @@ function setDropout(dropouts, playerId, thru, reason) {
   return next;
 }
 
+function dropoutReason(dropouts, playerId) {
+  const d = dropouts && dropouts[playerId];
+  if (!d || typeof d !== 'object') return null;
+  return d.reason || null;
+}
+
+function dropoutReasonLabel(reason) {
+  if (!reason) return null;
+  const hit = DROPOUT_REASONS.find(r => r.id === reason);
+  return hit ? hit.label : String(reason);
+}
+
 function dropoutLabel(dropouts, playerId) {
   const thru = dropoutThru(dropouts, playerId);
   if (thru === null) return null;
-  return thru === 0 ? 'Did not start' : 'Walked in after ' + thru;
+  const base = thru === 0 ? 'Did not start' : 'Walked in after ' + thru;
+  const why = dropoutReasonLabel(dropoutReason(dropouts, playerId));
+  return why ? base + ' · ' + why : base;
 }
 
 // ─── TIEBREAKER ──────────────────────────────────────────────────────────────
@@ -561,12 +583,14 @@ function calcNassauUnits(scores, p1, p2, course, holesRange, popFlags) {
 // ─── SKINS (pop-aware) ───────────────────────────────────────────────────────
 function calcSkins(scores, players, course, stakes, popFlags, dropouts) {
   const skins = Object.fromEntries(players.map(p => [p.id, 0]));
+  const pay   = Object.fromEntries(players.map(p => [p.id, 0]));
   const holeCount = course?.holes?.length || 18;
   let carryover = 0;
+  // Settle hole by hole against whoever was still in the field when the skin
+  // was won. A player who walked in keeps skins they already took, but stops
+  // paying (and collecting) once they are gone — the whole-field formula used
+  // to bill them for skins won after they left.
   for (let i = 0; i < holeCount; i++) {
-    // Whoever is still out there contests the hole; a player who walked in
-    // isn't holding the game up for everyone behind them. Fewer than two left
-    // and there is no skin to win — the pot carries.
     const field = activePlayers(players, dropouts, i);
     const raw = field.map(p => {
       const g = getAdjustedHoleScore(scores, popFlags, p.id, i);
@@ -576,11 +600,20 @@ function calcSkins(scores, players, course, stakes, popFlags, dropouts) {
     raw.sort((a, b) => a.strokes - b.strokes);
     const low     = raw[0].strokes;
     const winners = raw.filter(n => n.strokes === low);
-    if (winners.length === 1) { skins[winners[0].id] += 1 + carryover; carryover = 0; }
-    else carryover++;
+    if (winners.length === 1) {
+      const value = 1 + carryover;
+      carryover = 0;
+      const wid = winners[0].id;
+      skins[wid] += value;
+      field.forEach(p => {
+        if (p.id === wid) return;
+        pay[p.id] -= stakes * value;
+        pay[wid]  += stakes * value;
+      });
+    } else {
+      carryover++;
+    }
   }
-  const total = Object.values(skins).reduce((a, b) => a + b, 0);
-  const pay   = Object.fromEntries(players.map(p => [p.id, total > 0 ? stakes * (skins[p.id] * players.length - total) : 0]));
   return { skins, payouts: pay };
 }
 
@@ -891,23 +924,52 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
   });
 
   // MatchEngine games (stroke play, match play, scrambles, quota, …) settle
-  // through the engine's own per-format rules.
+  // through the engine's own per-format rules. Award pots that nobody claims
+  // carry their stake into the next award in AWARD_FORMAT_IDS order (mini-cup
+  // carryover) so a birdie-less Friday still puts money on the trophies that did fire.
   const ME = (typeof window !== 'undefined' && window.MatchEngine) || null;
+  const awardSet = new Set((ME && ME.AWARD_FORMAT_IDS) ? Array.from(ME.AWARD_FORMAT_IDS) : []);
+  const rawCtx = {
+    course, players, scores,
+    startingTee: o.startingTee,
+    stats: o.stats || {},
+    dropouts,
+    gameState: { wolf: wolfData || {}, bbb: bbbData },
+  };
+  let awardCarry = 0;
+  const settleOne = (g, stakeOverride) => {
+    if (!ME || !g) return {};
+    const stake = stakeOverride != null ? stakeOverride : Number(g.config && g.config.stake);
+    if (!(stake > 0)) return {};
+    const cfg = { ...(g.config || {}), stake };
+    try {
+      return ME.payouts({ ...g, config: cfg }, rawCtx);
+    } catch (e) { return {}; }
+  };
+  // Walk games in the order they were added. Non-awards settle at face stake;
+  // an empty award rolls its (effective) stake into the next award in the list
+  // so a mini-cup still puts money on the trophies that fired.
   (o.games || []).forEach(g => {
     if (!ME || !g) return;
-    if (!(Number(g.config && g.config.stake) > 0)) return;
-    let pay = {};
-    try {
-      pay = ME.payouts(g, {
-        course, players, scores,
-        startingTee: o.startingTee,
-        stats: o.stats || {},
-        dropouts,
-        gameState: { wolf: wolfData || {}, bbb: bbbData },
-      });
-    } catch (e) { pay = {}; }
+    if (!awardSet.has(g.formatId)) {
+      const pay = settleOne(g);
+      players.forEach(p => { totals[p.id] += (pay[p.id] || 0); });
+      return;
+    }
+    const base = Number(g.config && g.config.stake) || 0;
+    if (!(base > 0) && !(awardCarry > 0)) return;
+    const effective = base + awardCarry;
+    let result = null;
+    try { result = ME.compute(g, rawCtx); } catch (e) { result = null; }
+    if (result && result.awardEmpty) {
+      awardCarry = effective;
+      return;
+    }
+    const pay = settleOne(g, effective);
+    awardCarry = 0;
     players.forEach(p => { totals[p.id] += (pay[p.id] || 0); });
   });
+  // A carry with nowhere left to go evaporates (same as today's empty award).
 
   return totals;
 }
@@ -1066,6 +1128,7 @@ if (typeof window !== 'undefined') {
     ZERO_PUTTS, isZeroPutt, puttsTracked, puttCount, sumPutts, countZeroPutts,
     countPuttHoles, hasAnyPutts, puttCellText,
     dropoutThru, isDropped, activeAtSeq, activePlayers, setDropout, dropoutLabel,
+    DROPOUT_REASONS, dropoutReason, dropoutReasonLabel,
     calcBBBStandings, calcBBBPayouts, calcTeeBallStandings, calcTeeBallPayouts,
     getPlayOrder, getMarkeyAdjustedScore, calcMarkeyMatchPops, calcMarkeyMatchState, calcMarkeyMatchPayouts,
     runPlayPalTests,

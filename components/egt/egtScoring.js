@@ -36,6 +36,25 @@ const EgtScoring = (function () {
     const out = []; for (let h = a; h <= b; h++) out.push(h); return out;
   }
 
+  // Native dropouts use play-order `thru`. EGT holes are 1..18 starting at the
+  // first tee unless a playOrder is supplied on ctx. A missing record means in.
+  function dropoutThru(dropouts, pid) {
+    const d = dropouts && dropouts[pid];
+    if (d === null || d === undefined) return null;
+    const n = typeof d === 'object' ? Number(d.thru) : Number(d);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+  }
+  function inPlayOnHole(ctx, pid, hole) {
+    const thru = dropoutThru(ctx.dropouts, pid);
+    if (thru === null) return true;
+    const order = ctx.playOrder || holesRange(1, 18);
+    const seq = order.indexOf(hole);
+    return seq >= 0 && seq < thru;
+  }
+  function fieldOnHole(ctx, players, hole) {
+    return (players || []).filter(p => inPlayOnHole(ctx, p.id, hole));
+  }
+
   // ── 1. Bingo Bango Bongo (R1 loop 1, gross) ──────────────────────────────
   // Three points a hole, one each: bingo (first on green), bango (closest once
   // all are on), bongo (first in the hole). Strict order of play — supplied as
@@ -71,7 +90,9 @@ const EgtScoring = (function () {
     const perHole = [];
     let pending = false;
     loopHoles.forEach(hole => {
-      const nets = players.map(p => {
+      const field = fieldOnHole(ctx, players, hole);
+      if (field.length < 2) { perHole.push({ hole, points: {}, incomplete: true, dropout: true }); return; }
+      const nets = field.map(p => {
         if (isPending(alloc, p.id, 'nines')) pending = true;
         return { player: p.id, net: net(scores, alloc, p.id, hole, 'nines') };
       });
@@ -105,7 +126,29 @@ const EgtScoring = (function () {
     let up = 0; // + => A ahead
     const perHole = [];
     let decidedAt = null;
+    let conceded = null; // 'A' or 'B' when a side walks in mid-match
     holes.forEach((hole, i) => {
+      if (decidedAt != null && conceded) {
+        perHole.push({ hole, a: null, b: null, winner: 'halve', up, skipped: true });
+        return;
+      }
+      const aOut = typeof sideA.out === 'function' ? !!sideA.out(hole) : false;
+      const bOut = typeof sideB.out === 'function' ? !!sideB.out(hole) : false;
+      // Walking in concedes the rest of the match (native MatchEngine rule).
+      if (aOut && !bOut) {
+        conceded = 'A'; decidedAt = hole; up = -Math.max(1, holes.length - i);
+        perHole.push({ hole, a: null, b: null, winner: 'B', up, conceded: true });
+        return;
+      }
+      if (bOut && !aOut) {
+        conceded = 'B'; decidedAt = hole; up = Math.max(1, holes.length - i);
+        perHole.push({ hole, a: null, b: null, winner: 'A', up, conceded: true });
+        return;
+      }
+      if (aOut && bOut) {
+        perHole.push({ hole, a: null, b: null, winner: 'halve', up });
+        return;
+      }
       const a = sideA.ballNet(hole), b = sideB.ballNet(hole);
       let res = 0;
       if (a != null && b != null) { if (a < b) res = 1; else if (b < a) res = -1; }
@@ -118,13 +161,14 @@ const EgtScoring = (function () {
     const absUp = Math.abs(up);
     let label;
     if (winner === 'halve') label = 'AS';
+    else if (conceded) label = 'conceded';
     else {
       // closed-out margin like "3&2" if decided early, else "N up"
       const closeIdx = perHole.findIndex(p => p.hole === decidedAt);
       const holesLeft = decidedAt != null ? holes.length - 1 - closeIdx : 0;
       label = decidedAt != null && holesLeft > 0 ? `${absUp}&${holesLeft}` : `${absUp} up`;
     }
-    return { winner, up, label, perHole, decidedAt };
+    return { winner, up, label, perHole, decidedAt, conceded };
   }
 
   // ── 3. Four-ball best-ball match play + Nassau (R2) ──────────────────────
@@ -133,11 +177,13 @@ const EgtScoring = (function () {
     const t1 = teams[0], t2 = teams[1];
     const game = 'fourBallMatch';
     const teamBall = team => hole => {
-      const nets = team.players.map(pid => net(scores, alloc, pid, hole, game)).filter(n => n != null);
+      const active = team.players.filter(pid => inPlayOnHole(ctx, pid, hole));
+      const nets = active.map(pid => net(scores, alloc, pid, hole, game)).filter(n => n != null);
       return nets.length ? Math.min(...nets) : null;
     };
-    const sideA = { name: t1.name, ballNet: teamBall(t1) };
-    const sideB = { name: t2.name, ballNet: teamBall(t2) };
+    const teamOut = team => hole => team.players.every(pid => !inPlayOnHole(ctx, pid, hole));
+    const sideA = { name: t1.name, ballNet: teamBall(t1), out: teamOut(t1) };
+    const sideB = { name: t2.name, ballNet: teamBall(t2), out: teamOut(t2) };
     const nassau = ctx.config?.nassau || { front: 1, back: 1, overall: 2 };
     const front = playMatch(holesRange(1, 9), sideA, sideB);
     const back = playMatch(holesRange(10, 18), sideA, sideB);
@@ -309,12 +355,14 @@ const EgtScoring = (function () {
         return g - (popFlags[pid]?.[hole - 1] ? 1 : 0);
       };
       const ballNet = side => hole => {
-        const nets = side.map(pid => netOf(pid, hole)).filter(n => n != null);
+        const active = side.filter(pid => inPlayOnHole(ctx, pid, hole));
+        const nets = active.map(pid => netOf(pid, hole)).filter(n => n != null);
         return nets.length ? Math.min(...nets) : null;
       };
+      const sideOut = side => hole => side.every(pid => !inPlayOnHole(ctx, pid, hole));
       const label = side => side.join('+');
-      const sideA = { name: label(sides[0]), ballNet: ballNet(sides[0]) };
-      const sideB = { name: label(sides[1]), ballNet: ballNet(sides[1]) };
+      const sideA = { name: label(sides[0]), ballNet: ballNet(sides[0]), out: sideOut(sides[0]) };
+      const sideB = { name: label(sides[1]), ballNet: ballNet(sides[1]), out: sideOut(sides[1]) };
       const front = playMatch(holesRange(1, 9), sideA, sideB);
       const back = playMatch(holesRange(10, 18), sideA, sideB);
       const overall = playMatch(holesRange(1, 18), sideA, sideB);
@@ -352,11 +400,12 @@ const EgtScoring = (function () {
       const popsArr = higher ? H.allocatePops(diff, holes18) : [];
       const popAt = (pid, hole) => (pid === higher && popsArr ? H.popsOnHole(popsArr, hole) : 0);
       const ballNet = pid => hole => {
+        if (!inPlayOnHole(ctx, pid, hole)) return null;
         const g = gross(scores, pid, hole);
         return g == null ? null : g - popAt(pid, hole);
       };
-      const sideA = { name: pr.a, ballNet: ballNet(pr.a) };
-      const sideB = { name: pr.b, ballNet: ballNet(pr.b) };
+      const sideA = { name: pr.a, ballNet: ballNet(pr.a), out: hole => !inPlayOnHole(ctx, pr.a, hole) };
+      const sideB = { name: pr.b, ballNet: ballNet(pr.b), out: hole => !inPlayOnHole(ctx, pr.b, hole) };
       // Overall (Cup + tiebreaker) plus front/back segments so the singles
       // match can settle Nassau-style money (front · back · overall).
       const match = playMatch(holesRange(1, 18), sideA, sideB);
@@ -377,7 +426,14 @@ const EgtScoring = (function () {
     function run(kind) {
       const perHole = []; let carry = 0; const won = {}; players.forEach(p => { won[p.id] = 0; });
       holesRange(1, 18).forEach(hole => {
-        const vals = players.map(p => {
+        const field = fieldOnHole(ctx, players, hole);
+        // Fewer than two still out → nothing to win; carry continues.
+        if (field.length < 2) {
+          carry += 1;
+          perHole.push({ hole, winner: null, carried: true, value: 0, carry, dropout: true });
+          return;
+        }
+        const vals = field.map(p => {
           const g = gross(scores, p.id, hole);
           const v = g == null ? null : (kind === 'net' ? g - pops(alloc, p.id, 'skinsNet', hole) : g);
           return { player: p.id, v };
@@ -388,7 +444,7 @@ const EgtScoring = (function () {
         const value = 1 + carry;
         if (lowest.length === 1) {
           won[lowest[0].player] += value; carry = 0;
-          perHole.push({ hole, winner: lowest[0].player, value, skinValue: low });
+          perHole.push({ hole, winner: lowest[0].player, value, skinValue: low, field: field.map(p => p.id) });
         } else {
           carry += 1;
           perHole.push({ hole, winner: null, carried: true, value: 0, carry });

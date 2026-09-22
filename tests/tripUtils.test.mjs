@@ -61,3 +61,38 @@ test('calculateTripAwards returns awards without throwing on minimal data', () =
   const awards = W.calculateTripAwards([doc]);
   assert.ok(Array.isArray(awards));
 });
+
+
+test('trip leaderboard rolls up chip-ins and awards Most Chip-Ins', () => {
+  const Z = W.ZERO_PUTTS;
+  const holes = Array.from({ length: 18 }, (_, i) => ({ num: i + 1, par: 4, hdcp: i + 1 }));
+  const players = [
+    { id: 'a', name: 'Alice', color: '#15803D', initials: 'AL' },
+    { id: 'b', name: 'Bob', color: '#DC2626', initials: 'BO' },
+  ];
+  const putts = {
+    a: Array.from({ length: 18 }, (_, i) => (i < 3 ? Z : 2)),
+    b: Array(18).fill(2),
+  };
+  const holeScores = {};
+  for (const p of players) {
+    holeScores[p.id] = holes.map((_, i) => ({ strokes: 4, putts: putts[p.id][i], gettingPop: false }));
+  }
+  const doc = {
+    syncCode: 'CHIP01', savedAt: Date.now(),
+    round: {
+      players, course: { name: 'Chip Course', holes },
+      formats: [], holeScores, putts, payouts: {}, date: 'Tuesday, June 2, 2026',
+    },
+  };
+  const board = W.buildTripLeaderboard([doc]);
+  const alice = board.find(r => r.id === 'a');
+  const bob = board.find(r => r.id === 'b');
+  assert.equal(alice.chipIns, 3, 'three chip-ins counted');
+  assert.equal(bob.chipIns, 0);
+  assert.equal(alice.totalPutts, 15 * 2, 'chip-ins add no putt strokes');
+  const awards = W.calculateTripAwards([doc]);
+  const chip = awards.find(a => a.id === 'chipins');
+  assert.ok(chip, 'Most Chip-Ins award present');
+  assert.equal(chip.winner.id, 'a');
+});

@@ -65,7 +65,7 @@ const EgtSideGames = (function () {
     const netGame = o.netGame || 'skinsNet';
     const out = {};
     round.players.forEach(pid => {
-      const st = { putts: 0, puttHoles: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, bogeys: 0, sandSaves: 0, holesEntered: 0 };
+      const st = { putts: 0, puttHoles: 0, chipIns: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, bogeys: 0, sandSaves: 0, holesEntered: 0 };
       for (let hole = 1; hole <= 18; hole++) {
         const s = scores?.[pid]?.[hole];
         if (!s || s.gross == null) continue;
@@ -73,7 +73,12 @@ const EgtSideGames = (function () {
         const par = parOf(course, hole);
         // puttHoles counts holes with a putt total recorded, so "fewest putts"
         // can require actual tracking (0 putts over a trip means untracked).
-        if (typeof s.putts === 'number') { st.putts += s.putts; st.puttHoles++; }
+        // Chip-ins ride as ZERO_PUTTS (-1): count the hole, add no strokes.
+        if (typeof s.putts === 'number') {
+          const Z = (typeof window !== 'undefined' && window.ZERO_PUTTS) || -1;
+          if (s.putts === Z) { st.puttHoles++; st.chipIns = (st.chipIns || 0) + 1; }
+          else if (s.putts > 0) { st.putts += s.putts; st.puttHoles++; }
+        }
         if (s.fir) st.fairwaysHit++;
         if (s.gir) st.greensInReg++;
         if (s.sand) st.sandSaves++;
@@ -94,7 +99,7 @@ const EgtSideGames = (function () {
   // Season-wide stat rollup across every finalized round (for season awards).
   function seasonStats(model, allRoundScores, opts) {
     const totals = {};
-    model.players.forEach(p => { totals[p.id] = { putts: 0, puttHoles: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, bogeys: 0, sandSaves: 0, rounds: 0 }; });
+    model.players.forEach(p => { totals[p.id] = { putts: 0, puttHoles: 0, chipIns: 0, fairwaysHit: 0, greensInReg: 0, grossBirdies: 0, netBirdies: 0, pars: 0, bogeys: 0, sandSaves: 0, rounds: 0 }; });
     model.rounds.forEach(round => {
       const scores = allRoundScores?.[round.id];
       if (!scores) return;
@@ -102,7 +107,7 @@ const EgtSideGames = (function () {
       Object.entries(st).forEach(([pid, s]) => {
         if (!totals[pid]) return;
         if (s.holesEntered > 0) totals[pid].rounds++;
-        ['putts', 'puttHoles', 'fairwaysHit', 'greensInReg', 'grossBirdies', 'netBirdies', 'pars', 'bogeys', 'sandSaves'].forEach(k => { totals[pid][k] += (s[k] || 0); });
+        ['putts', 'puttHoles', 'chipIns', 'fairwaysHit', 'greensInReg', 'grossBirdies', 'netBirdies', 'pars', 'bogeys', 'sandSaves'].forEach(k => { totals[pid][k] += (s[k] || 0); });
       });
     });
     return totals;
