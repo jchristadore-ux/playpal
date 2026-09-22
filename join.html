@@ -13,7 +13,7 @@
 </head>
 <body>
 <div class="pill">
-  <noscript>JavaScript is required to join. <a href="./app.html">Open PlayPal</a></noscript>
+  <noscript>JavaScript is required to join. <a href="./dist/app.html">Open PlayPal</a></noscript>
   <span id="msg">Joining round…</span>
 </div>
 <script>
@@ -31,7 +31,7 @@
     var qs = [];
     if (code) qs.push('code=' + encodeURIComponent(code));
     if (grp)  qs.push('g='    + encodeURIComponent(grp));
-    location.replace(dir + 'app.html' + (qs.length ? '?' + qs.join('&') : ''));
+    location.replace(dir + 'dist/app.html' + (qs.length ? '?' + qs.join('&') : ''));
   })();
 </script>
 </body>

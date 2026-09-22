@@ -5,7 +5,7 @@
 // (no bundling) and never rename identifiers — whitespace minification only.
 
 import { build } from 'esbuild';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 
 const SOURCES = [
   'components/gameData.js',
@@ -74,4 +74,33 @@ await build({
   logLevel: 'info',
 });
 
+
+// GitHub Pages assemble step (deploy-pages.yml) copies dist/ but not root
+// app.html until the workflow list is updated. Publish a path-rewritten shell
+// at dist/app.html so the marketing CTA / PWA start_url work on Pages today.
+{
+  const raw = readFileSync('app.html', 'utf8');
+  const rewritten = raw
+    .replaceAll('src="dist/', 'src="')
+    .replaceAll('href="dist/', 'href="')
+    .replaceAll('src="vendor/', 'src="../vendor/')
+    .replaceAll('href="vendor/', 'href="../vendor/')
+    .replaceAll('href="icons/', 'href="../icons/')
+    .replaceAll('src="icons/', 'src="../icons/')
+    .replaceAll('href="manifest.webmanifest"', 'href="../manifest.webmanifest"')
+    .replaceAll('src="playpal-logo.png"', 'src="../playpal-logo.png"')
+    .replaceAll("register('sw.js')", "register('../sw.js')")
+    .replaceAll(
+      'content="https://jchristadore-ux.github.io/playpal/app.html"',
+      'content="https://jchristadore-ux.github.io/playpal/dist/app.html"',
+    )
+    .replaceAll(
+      'content="https://jchristadore-ux.github.io/playpal/assets/og-card.png"',
+      'content="https://jchristadore-ux.github.io/playpal/icons/og-card.png"',
+    );
+  writeFileSync('dist/app.html', rewritten);
+  console.log('Pages app shell → dist/app.html');
+}
+
 console.log('Build complete → dist/');
+

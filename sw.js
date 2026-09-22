@@ -12,7 +12,7 @@ const CACHE_VERSION = 'playpal-v1.19.6';
 const PRECACHE = [
   './',
   './index.html',
-  './app.html',
+  './dist/app.html',
   './bottomline.html',
   './packlist.html',
   './settlement.html',
@@ -128,7 +128,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_VERSION).then((c) => c.put(event.request, copy));
         }
         return resp;
-      }).catch(() => caches.match(event.request).then((hit) => hit || caches.match('./app.html')))
+      }).catch(() => caches.match(event.request).then((hit) => hit || caches.match('./dist/app.html')))
     );
   }
 });

@@ -13,14 +13,14 @@
 <meta property="og:title" content="PlayPal — Golf Companion"/>
 <meta property="og:description" content="Golf scoring and side-game companion. Live scorecards, Wolf, Nassau, Skins and more — automatic payouts, cross-device sync, no ads or trackers."/>
 <meta property="og:url" content="https://jchristadore-ux.github.io/playpal/"/>
-<meta property="og:image" content="https://jchristadore-ux.github.io/playpal/assets/og-card.png"/>
+<meta property="og:image" content="https://jchristadore-ux.github.io/playpal/icons/og-card.png"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
 <meta property="og:image:alt" content="PlayPal — golf scoring and side-game companion"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="PlayPal — Golf Companion"/>
 <meta name="twitter:description" content="Golf scoring and side-game companion. Live scorecards, Wolf, Nassau, Skins and more — automatic payouts, cross-device sync, no ads or trackers."/>
-<meta name="twitter:image" content="https://jchristadore-ux.github.io/playpal/assets/og-card.png"/>
+<meta name="twitter:image" content="https://jchristadore-ux.github.io/playpal/icons/og-card.png"/>
 <meta name="twitter:image:alt" content="PlayPal — golf scoring and side-game companion"/>
 
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
@@ -33,7 +33,7 @@
   try {
     var p = new URLSearchParams(location.search);
     if (p.get('code') || p.get('join') || p.get('g')) {
-      location.replace('app.html' + location.search + location.hash);
+      location.replace('dist/app.html' + location.search + location.hash);
     }
   } catch (e) { /* ignore */ }
 })();
@@ -171,7 +171,7 @@
     <img src="playpal-logo.png" width="40" height="40" alt=""/>
     <span>PLAYPAL</span>
   </a>
-  <a class="top-cta" href="app.html">Open PlayPal</a>
+  <a class="top-cta" href="dist/app.html">Open PlayPal</a>
 </header>
 
 <main>
@@ -184,7 +184,7 @@
         and cross-device sync. Built for the people you actually play with.
       </p>
       <div class="actions">
-        <a class="btn btn-primary" href="app.html">Open PlayPal</a>
+        <a class="btn btn-primary" href="dist/app.html">Open PlayPal</a>
         <a class="btn btn-ghost" href="#features">See what is included</a>
       </div>
       <p class="note">Works in the browser. Install as a PWA from the app if you want it on your home screen.</p>
@@ -229,7 +229,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="terms.html">Terms</a>
     <a href="support.html">Support</a>
-    <a href="app.html">Open app</a>
+    <a href="dist/app.html">Open app</a>
   </nav>
 </footer>
 </body>

@@ -46,7 +46,7 @@ for (const f of FILES) cpSync(join(root, f), join(out, f));
 writeFileSync(
   join(out, 'manifest.webmanifest'),
   readFileSync(join(out, 'manifest.webmanifest'), 'utf8').replace(
-    '"start_url": "./app.html"',
+    '"start_url": "./dist/app.html"',
     '"start_url": "./index.html"',
   ),
 );

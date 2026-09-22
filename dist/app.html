@@ -12,7 +12,7 @@
 <meta property="og:site_name" content="PlayPal"/>
 <meta property="og:title" content="PlayPal — Golf Companion"/>
 <meta property="og:description" content="Golf scoring and side-game companion. Live scorecards, Wolf, Nassau, Skins and more — automatic payouts, cross-device sync, no ads or trackers."/>
-<meta property="og:url" content="https://jchristadore-ux.github.io/playpal/app.html"/>
+<meta property="og:url" content="https://jchristadore-ux.github.io/playpal/dist/app.html"/>
 <meta property="og:image" content="https://jchristadore-ux.github.io/playpal/icons/og-card.png"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
@@ -24,9 +24,9 @@
 <meta name="twitter:image:alt" content="PlayPal — golf scoring and side-game companion"/>
 
 <!-- PWA / iOS install -->
-<link rel="manifest" href="manifest.webmanifest"/>
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
+<link rel="manifest" href="../manifest.webmanifest"/>
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png"/>
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -37,45 +37,45 @@
      bundle ships inside the iOS (Capacitor) binary.
      Sources: react/react-dom 18.3.1, firebase 11.9.0 compat, qrcodejs
      1.0.0 (qrcodejs2 npm), @fontsource/plus-jakarta-sans 5.2.8 (latin). -->
-<link href="vendor/fonts.css" rel="stylesheet"/>
-<script src="vendor/react.production.min.js"></script>
-<script src="vendor/react-dom.production.min.js"></script>
-<script src="vendor/qrcode.min.js"></script>
-<script src="vendor/firebase-app-compat.js"></script>
-<script src="vendor/firebase-auth-compat.js"></script>
-<script src="vendor/firebase-database-compat.js"></script>
-<script src="vendor/firebase-firestore-compat.js"></script>
+<link href="../vendor/fonts.css" rel="stylesheet"/>
+<script src="../vendor/react.production.min.js"></script>
+<script src="../vendor/react-dom.production.min.js"></script>
+<script src="../vendor/qrcode.min.js"></script>
+<script src="../vendor/firebase-app-compat.js"></script>
+<script src="../vendor/firebase-auth-compat.js"></script>
+<script src="../vendor/firebase-database-compat.js"></script>
+<script src="../vendor/firebase-firestore-compat.js"></script>
 
-<script src="dist/gameData.js?v=1.19.6"></script>
-<script src="dist/gameUtils.js?v=1.19.6"></script>
-<script src="dist/handicapService.js?v=1.19.6"></script>
-<script src="dist/courseService.js?v=1.19.6"></script>
-<script src="dist/matchEngine.js?v=1.19.6"></script>
-<script src="dist/statsService.js?v=1.19.6"></script>
-<script src="dist/profileService.js?v=1.19.6"></script>
-<script src="dist/roundHistoryService.js?v=1.19.6"></script>
-<script src="dist/groupService.js?v=1.19.6"></script>
-<script src="dist/entitlementHelpers.js?v=1.19.6"></script>
-<script src="dist/authService.js?v=1.19.6"></script>
-<script src="dist/proService.js?v=1.19.6"></script>
-<script src="dist/sharingService.js?v=1.19.6"></script>
-<script src="dist/scorecardImport.js?v=1.19.6"></script>
-<script src="dist/migrations.js?v=1.19.6"></script>
+<script src="gameData.js?v=1.19.6"></script>
+<script src="gameUtils.js?v=1.19.6"></script>
+<script src="handicapService.js?v=1.19.6"></script>
+<script src="courseService.js?v=1.19.6"></script>
+<script src="matchEngine.js?v=1.19.6"></script>
+<script src="statsService.js?v=1.19.6"></script>
+<script src="profileService.js?v=1.19.6"></script>
+<script src="roundHistoryService.js?v=1.19.6"></script>
+<script src="groupService.js?v=1.19.6"></script>
+<script src="entitlementHelpers.js?v=1.19.6"></script>
+<script src="authService.js?v=1.19.6"></script>
+<script src="proService.js?v=1.19.6"></script>
+<script src="sharingService.js?v=1.19.6"></script>
+<script src="scorecardImport.js?v=1.19.6"></script>
+<script src="migrations.js?v=1.19.6"></script>
 <!-- EGT Cup tournament engine -->
-<script src="dist/egt/egtSeedData.js?v=1.19.6"></script>
-<script src="dist/egt/egtHandicap.js?v=1.19.6"></script>
-<script src="dist/egt/egtImporter.js?v=1.19.6"></script>
-<script src="dist/egt/egtScoring.js?v=1.19.6"></script>
-<script src="dist/egt/egtSideGames.js?v=1.19.6"></script>
-<script src="dist/egt/egtPoints.js?v=1.19.6"></script>
-<script src="dist/egt/egtMoney.js?v=1.19.6"></script>
-<script src="dist/egt/egtMoneySummary.js?v=1.19.6"></script>
-<script src="dist/egt/egtStandings.js?v=1.19.6"></script>
-<script src="dist/egt/egtStore.js?v=1.19.6"></script>
-<script src="dist/egt/egtPrintable.js?v=1.19.6"></script>
-<script src="dist/egt/egtEngine.js?v=1.19.6"></script>
-<script src="dist/egt/egtBridge.js?v=1.19.6"></script>
-<script src="dist/egt/egtSync.js?v=1.19.6"></script>
+<script src="egt/egtSeedData.js?v=1.19.6"></script>
+<script src="egt/egtHandicap.js?v=1.19.6"></script>
+<script src="egt/egtImporter.js?v=1.19.6"></script>
+<script src="egt/egtScoring.js?v=1.19.6"></script>
+<script src="egt/egtSideGames.js?v=1.19.6"></script>
+<script src="egt/egtPoints.js?v=1.19.6"></script>
+<script src="egt/egtMoney.js?v=1.19.6"></script>
+<script src="egt/egtMoneySummary.js?v=1.19.6"></script>
+<script src="egt/egtStandings.js?v=1.19.6"></script>
+<script src="egt/egtStore.js?v=1.19.6"></script>
+<script src="egt/egtPrintable.js?v=1.19.6"></script>
+<script src="egt/egtEngine.js?v=1.19.6"></script>
+<script src="egt/egtBridge.js?v=1.19.6"></script>
+<script src="egt/egtSync.js?v=1.19.6"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #F6F4EE; color: #0E2B20; font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -135,7 +135,7 @@
 
 <!-- Deep-link join overlay — visual only, React does the actual Firebase fetch -->
 <div id="pp-join-overlay" style="display:none;">
-  <img src="playpal-logo.png" alt="PlayPal" class="pp-join-logo" />
+  <img src="../playpal-logo.png" alt="PlayPal" class="pp-join-logo" />
   <div class="pp-join-title">JOINING ROUND</div>
   <div class="pp-join-code" id="pp-join-code-display">------</div>
   <div class="pp-join-spinner" id="pp-join-spinner"></div>
@@ -146,20 +146,20 @@
 
 <div id="root"></div>
 
-<script src="dist/Shared.js?v=1.19.6"></script>
-<script src="dist/Home.js?v=1.19.6"></script>
-<script src="dist/AuthScreen.js?v=1.19.6"></script>
-<script src="dist/Setup.js?v=1.19.6"></script>
-<script src="dist/Trackers.js?v=1.19.6"></script>
-<script src="dist/GameTrackers.js?v=1.19.6"></script>
-<script src="dist/LiveScorecard.js?v=1.19.6"></script>
-<script src="dist/ScoreEntry.js?v=1.19.6"></script>
-<script src="dist/Summary.js?v=1.19.6"></script>
-<script src="dist/RoundViewer.js?v=1.19.6"></script>
-<script src="dist/tripUtils.js?v=1.19.6"></script>
-<script src="dist/TripDashboard.js?v=1.19.6"></script>
-<script src="dist/StatsScreen.js?v=1.19.6"></script>
-<script src="dist/EgtTournament.js?v=1.19.6"></script>
+<script src="Shared.js?v=1.19.6"></script>
+<script src="Home.js?v=1.19.6"></script>
+<script src="AuthScreen.js?v=1.19.6"></script>
+<script src="Setup.js?v=1.19.6"></script>
+<script src="Trackers.js?v=1.19.6"></script>
+<script src="GameTrackers.js?v=1.19.6"></script>
+<script src="LiveScorecard.js?v=1.19.6"></script>
+<script src="ScoreEntry.js?v=1.19.6"></script>
+<script src="Summary.js?v=1.19.6"></script>
+<script src="RoundViewer.js?v=1.19.6"></script>
+<script src="tripUtils.js?v=1.19.6"></script>
+<script src="TripDashboard.js?v=1.19.6"></script>
+<script src="StatsScreen.js?v=1.19.6"></script>
+<script src="EgtTournament.js?v=1.19.6"></script>
 
 <script>
 /* ============================================================
@@ -654,13 +654,13 @@ function _updateJoinOverlay(status, error) {
 }
 </script>
 
-<script src="dist/App.js?v=1.19.6"></script>
+<script src="App.js?v=1.19.6"></script>
 
 <script>
 /* Service worker — offline shell + cached assets (PWA install support) */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').catch(function (err) {
+    navigator.serviceWorker.register('../sw.js').catch(function (err) {
       console.warn('[PlayPal] Service worker registration failed:', err);
     });
   });
