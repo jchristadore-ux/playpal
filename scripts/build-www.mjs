@@ -13,7 +13,7 @@
 // and their profile photos. The Cup engine is generic code and stays; without
 // a seed there is simply no tournament to show, which is what a stranger who
 // downloads a golf scorer should get. Everything else is identical.
-import { cpSync, mkdirSync, rmSync, existsSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,8 +21,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'www');
 const isPublic = process.argv.includes('--public');
 
+// App shell lives at app.html on GitHub Pages (marketing owns index.html).
+// Capacitor still expects www/index.html — copy the SPA there.
 const FILES = [
-  'index.html', 'join.html', 'privacy.html', 'terms.html', 'support.html',
+  'join.html', 'privacy.html', 'terms.html', 'support.html',
   'manifest.webmanifest', 'playpal-logo.png',
 ];
 const DIRS = ['dist', 'icons', 'vendor'];
@@ -31,10 +33,23 @@ if (!existsSync(join(root, 'dist'))) {
   console.error('dist/ missing — run `npm run build` first.');
   process.exit(1);
 }
+if (!existsSync(join(root, 'app.html'))) {
+  console.error('app.html missing — SPA entry required for native www/.');
+  process.exit(1);
+}
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
+cpSync(join(root, 'app.html'), join(out, 'index.html'));
 for (const f of FILES) cpSync(join(root, f), join(out, f));
+// Pages PWA start_url is app.html; Capacitor entry is www/index.html.
+writeFileSync(
+  join(out, 'manifest.webmanifest'),
+  readFileSync(join(out, 'manifest.webmanifest'), 'utf8').replace(
+    '"start_url": "./app.html"',
+    '"start_url": "./index.html"',
+  ),
+);
 for (const d of DIRS) {
   cpSync(join(root, d), join(out, d), {
     recursive: true,

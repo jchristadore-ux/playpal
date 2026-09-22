@@ -4,6 +4,27 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.19.6] — 2026-09-21 — WS6: marketing landing page + OG/Twitter cards
+
+Public face of GitHub Pages is now a static marketing landing page; the PWA
+app shell moves to `app.html` so bookmarks and share previews stay honest.
+
+- New root `index.html` marketing page (hero, features, privacy band) with
+  CTA **Open PlayPal** → `app.html`. Footer links Privacy / Terms / Support.
+  No analytics, ads, or trackers.
+- Deep-link safety: root `?code=` / `?join=` / `?g=` redirects to `app.html`;
+  `join.html` now lands on `app.html` as well.
+- OG + Twitter Card meta on the landing page and app shell
+  (`og:title`, `og:description`, `og:image`, `twitter:card`, etc.).
+- Branded share image at `assets/og-card.png` (1200×630, logo + copy — no
+  real faces).
+- `manifest.webmanifest` `start_url` → `./app.html`; service worker cache
+  `playpal-v1.19.6` precaches marketing + app shell; offline fallback is
+  `app.html`.
+- `deploy-pages.yml` ships `app.html` + `assets/`. `build-www.mjs` still
+  copies the SPA to Capacitor `www/index.html` and rewrites the native
+  manifest `start_url` accordingly.
+
 ## [1.19.1] — 2026-09-21 — WS1: Firestore rules CI, emulator tests, operator docs
 
 Security workstream (docs + CI only; live rules unchanged since ~2026-09-08).

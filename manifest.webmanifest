@@ -3,7 +3,7 @@
   "short_name": "PlayPal",
   "description": "Golf scoring and side-game companion. Live scorecards, Wolf, Nassau, Skins and more, with automatic payouts and cross-device sync.",
   "id": "/",
-  "start_url": "./index.html",
+  "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
