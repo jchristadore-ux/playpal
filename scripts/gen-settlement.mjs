@@ -15,7 +15,7 @@ const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const W = loadPlayPal();
 const { EgtImporter, EgtStore, EgtBridge, EgtEngine } = W;
 const IDS = ['john', 'brian', 'tj', 'mike'];
-const NAME = { john: 'John', brian: 'Brian', tj: 'TJ', mike: 'Mike' };
+const NAME = { john: 'Jake', brian: 'Blake', tj: 'Troy', mike: 'Miles' };
 
 // ── replay the trip ─────────────────────────────────────────────────────────
 const model = EgtImporter.importSeed(JSON.parse(JSON.stringify(SEED)));
@@ -43,8 +43,8 @@ const settle = summary.settle;
 const DAY = { R1: 'Tue', R2: 'Wed AM', R3: 'Wed PM', R4: 'Thu AM', R5: 'Thu PM', R6: 'Fri' };
 const FORMAT = {
   R1: 'Bingo Bango Bongo (front) + The Nines (back)',
-  R2: '18-hole four-ball · John + TJ v Brian + Mike',
-  R3: 'Wolf + a TJ v John $2 Nassau',
+  R2: '18-hole four-ball · Jake + Troy v Blake + Miles',
+  R3: 'Wolf + a Troy v Jake $2 Nassau',
   R4: '2v2 aggregate Stableford over all 18',
   R5: 'Full-18 Bingo Bango Bongo + six-match round robin',
   R6: 'Individual Stableford + two $2 Nassaus',
@@ -285,7 +285,7 @@ ${cards}
 ${payList}
     </ul>
     <p class="note"><b>Read it as:</b> each pairing is netted, so nobody hands money
-      both ways. The poker pot already holds Brian's $40 buy-in — that cash goes
+      both ways. The poker pot already holds Blake's $40 buy-in — that cash goes
       straight to the winners, which is why his bill lands at
       $${plainAmt(settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.due, 0))}
       rather than $${plainAmt(settle.filter(s => s.from === 'brian').reduce((a, s) => a + s.amount, 0))}.</p>
@@ -317,20 +317,20 @@ ${work}
 </main>
 
 <footer>
-  <p><b>Handicaps.</b> Every net game runs off the low ball on that course — John
+  <p><b>Handicaps.</b> Every net game runs off the low ball on that course — Jake
     plays scratch in all of them. Course handicaps come from the White tees:
     Minerals 14/23/23, Ballyowen 13/18/23/23, Wild Turkey 19/24/30/30,
     Crystal Springs 17/22/28/28, Cascades 17/22/28/28, Black Bear 16/22/27/27.
     The four-ball at Ballyowen uses the standard 90% allowance; at 100% the
     result is the same match.</p>
   <p><b>Shared costs.</b> Anything one man fronted is split evenly four ways —
-    the banner and the gas (John), the custom jerseys at $30 a piece, $120 all in
-    (Brian), the steak night at $85 (TJ), and the three trays at $40 (Mike). The
+    the banner and the gas (Jake), the custom jerseys at $30 a piece, $120 all in
+    (Blake), the steak night at $85 (Troy), and the three trays at $40 (Miles). The
     man who paid carries his own quarter and collects the other three.
-    <b>Poker</b> was a $120 pot paid 70/30 — Mike $84, TJ $36 — on buy-ins of
-    John $40, Brian $40, TJ $20, Mike $20, and Brian's is already in the pot.
+    <b>Poker</b> was a $120 pot paid 70/30 — Miles $84, Troy $36 — on buy-ins of
+    Jake $40, Blake $40, Troy $20, Miles $20, and Blake's is already in the pot.
     <b>The Rock</b> (Pass the Money) is <em>not</em> settled here: nobody called
-    it, so it stays off the ledger. Turning it on would move $129 to John.</p>
+    it, so it stays off the ledger. Turning it on would move $129 to Jake.</p>
   <p><b>Provenance.</b> Every figure is recomputed by the tournament engine from
     the scores the app synced during the trip, not typed in by hand. The ledger
     nets to $0 to the cent. Regenerate with

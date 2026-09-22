@@ -26,4 +26,4 @@ App Store Connect → App Privacy → Get Started. Answer exactly as below.
   processor only. No advertising SDKs, no analytics SDKs.
 
 ## Privacy policy URL
-`https://<your-pages-domain>/privacy.html`
+`https://jchristadore-ux.github.io/playpal/privacy.html`

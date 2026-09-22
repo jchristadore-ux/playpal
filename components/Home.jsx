@@ -480,7 +480,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           }}
           onKeyDown={e=>{ if (e.key === 'Enter') e.currentTarget.click(); }}
           style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5, cursor:'default', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
-          PlayPal v1.19.0
+          PlayPal v1.19.5
         </div>
         {egtNote && (
           <div role="status" style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D', marginTop:6}}>{egtNote}</div>

@@ -109,6 +109,7 @@ See `.env.example` for env var **names** only.
 
 ---
 
+
 ## 4. Related docs
 
 | Doc | Role |
@@ -118,6 +119,27 @@ See `.env.example` for env var **names** only.
 | `SECURITY.md` | Vulnerability reporting |
 | `GITHUB_PRODUCTION_SETUP.md` | Broader GitHub Actions / Pages / release setup |
 | `.env.example` | Names of server env vars (no values) |
+
+---
+
+## 5. GitHub Pages (legal / support URLs for App Store)
+
+Public HTTPS pages used in App Store Connect and the listing pack
+(`appstore/APP_STORE_LISTING.md`):
+
+| Page | URL |
+|---|---|
+| Home | https://jchristadore-ux.github.io/playpal/ |
+| Privacy | https://jchristadore-ux.github.io/playpal/privacy.html |
+| Terms | https://jchristadore-ux.github.io/playpal/terms.html |
+| Support | https://jchristadore-ux.github.io/playpal/support.html |
+
+Source files live at the repo root (`privacy.html`, `terms.html`, `support.html`).
+After merging changes to those files on `main`, confirm Pages has rebuilt
+(Settings → Pages) before submitting a new App Store version.
+
+In-app footer links remain relative (`privacy.html` etc.) so they work on
+Vercel, Pages, and the Capacitor bundle alike.
 
 ---
 

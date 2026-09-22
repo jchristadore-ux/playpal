@@ -4,6 +4,21 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.19.5] — 2026-09-21 — WS5: App Store listing, bottomLine scrub, legal URLs
+
+App Store listing / legal polish (no Apple enrollment, no screenshots, no analytics).
+
+- Rewrote `appstore/APP_STORE_LISTING.md` for Apple field limits: name, subtitle,
+  promotional text, keywords, description, What's New — with live GitHub Pages
+  privacy / terms / support URLs. No private EGT player names in listing copy.
+- Scrubbed broadcast identities in `components/bottomLineProvider.js` (and seed
+  display names / lodging) to fictional placeholders; regenerated
+  `components/egt/egtSeedData.js`; tests updated.
+- Verified GitHub Pages serves `privacy.html`, `terms.html`, `support.html`.
+  Honest privacy/terms updates for optional Auth + Stripe PlayPal Pro.
+  Documented URLs in `OPERATOR_ACTIONS.md` and `docs/IOS_APP_STORE_PATH.md`.
+
+
 ## [1.19.1] — 2026-09-21 — WS1: Firestore rules CI, emulator tests, operator docs
 
 Security workstream (docs + CI only; live rules unchanged since ~2026-09-08).

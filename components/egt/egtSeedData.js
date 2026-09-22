@@ -31,28 +31,28 @@ const EGT_SEED = {
       "end": "2026-07-24"
     },
     "venue": "Crystal Springs Resort \u2014 Hamburg / Vernon / Hardyston / Franklin, NJ",
-    "lodging": "Airbnb \u2014 5 Magnum Trail, Warwick, NY",
+    "lodging": "Private lodging near the resort",
     "holes": 108
   },
   "players": [
     {
       "id": "john",
-      "name": "John",
+      "name": "Jake",
       "handicapIndex": 18
     },
     {
       "id": "brian",
-      "name": "Brian",
+      "name": "Blake",
       "handicapIndex": 23
     },
     {
       "id": "tj",
-      "name": "TJ",
+      "name": "Troy",
       "handicapIndex": 28
     },
     {
       "id": "mike",
-      "name": "Mike",
+      "name": "Miles",
       "handicapIndex": 28
     }
   ],
@@ -963,7 +963,7 @@ const EGT_SEED = {
             "mike"
           ]
         ],
-        "rationale": "Opening threesome \u2014 Brian arrives for R2. R1 is flat / stakes-only (no Cup points), so carts are set purely for pace of play. John (14) rides with TJ (23) to spread the field across carts; Mike (23) rides solo in the two-loop rotation."
+        "rationale": "Opening threesome \u2014 Blake arrives for R2. R1 is flat / stakes-only (no Cup points), so carts are set purely for pace of play. Jake (14) rides with Troy (23) to spread the field across carts; Miles (23) rides solo in the two-loop rotation."
       },
       "courseHandicaps": {
         "john": 14,
@@ -1019,7 +1019,7 @@ const EGT_SEED = {
             "mike"
           ]
         ],
-        "rationale": "First team round. John and TJ are paired here by request \u2014 they ride and partner together at Ballyowen (and again at Crystal Springs in R4). The split stays balanced despite the fixed pairing: John (13, low) + TJ (23, high) at 36 combined face Brian (18) + Mike (23) at 41 \u2014 a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Carts follow the teams so partners can strategize between shots."
+        "rationale": "First team round. Jake and Troy are paired here by request \u2014 they ride and partner together at Ballyowen (and again at Crystal Springs in R4). The split stays balanced despite the fixed pairing: Jake (13, low) + Troy (23, high) at 36 combined face Blake (18) + Miles (23) at 41 \u2014 a raw gap of just 5 that the 90% four-ball allowance and best-ball scoring tighten further. Carts follow the teams so partners can strategize between shots."
       },
       "courseHandicaps": {
         "john": 13,
@@ -1061,7 +1061,7 @@ const EGT_SEED = {
             "mike"
           ]
         ],
-        "rationale": "Wolf is an individual game \u2014 the Wolf rotates partners hole by hole, so there are no fixed teams. Carts rotate the riding partners: John + Brian and TJ + Mike are the pairing NOT used as R2 carts, so after two rounds every player has ridden with two different people. The Wolf order (TJ, Mike, Brian, John) is unaffected by cart assignment."
+        "rationale": "Wolf is an individual game \u2014 the Wolf rotates partners hole by hole, so there are no fixed teams. Carts rotate the riding partners: Jake + Blake and Troy + Miles are the pairing NOT used as R2 carts, so after two rounds every player has ridden with two different people. The Wolf order (Troy, Miles, Blake, Jake) is unaffected by cart assignment."
       },
       "courseHandicaps": {
         "john": 19,
@@ -1080,7 +1080,7 @@ const EGT_SEED = {
           "stakes": 2
         }
       ],
-      "sideMatchesNote": "TJ v John $2 Nassau played alongside the Wolf game."
+      "sideMatchesNote": "Troy v Jake $2 Nassau played alongside the Wolf game."
     },
     {
       "id": "R4",
@@ -1130,7 +1130,7 @@ const EGT_SEED = {
             "mike"
           ]
         ],
-        "rationale": "Same teams as R2 \u2014 John (17) + TJ (28) vs Brian (22) + Mike (28) \u2014 keeping John and TJ partnered by request. Pairing the lowest with a highest on each side (45 vs 50 combined) stays balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (John + TJ, Brian + Mike); the two pairs that haven't shared a cart yet (John + Mike, Brian + TJ) ride together in R5, completing the rotation by the end of Thursday."
+        "rationale": "Same teams as R2 \u2014 Jake (17) + Troy (28) vs Blake (22) + Miles (28) \u2014 keeping Jake and Troy partnered by request. Pairing the lowest with a highest on each side (45 vs 50 combined) stays balanced for aggregate Stableford, where both partners' points count. Carts follow the teams (Jake + Troy, Blake + Miles); the two pairs that haven't shared a cart yet (Jake + Miles, Blake + Troy) ride together in R5, completing the rotation by the end of Thursday."
       },
       "courseHandicaps": {
         "john": 17,
@@ -1190,7 +1190,7 @@ const EGT_SEED = {
             "tj"
           ]
         ],
-        "rationale": "R5 is an individual round \u2014 full-18 Bingo-Bango-Bongo plus round-robin 1v1 match play, so every player faces every other player head-to-head (all six 1v1 matches). Combined with the R2 and R4 team-round match-ups, this evens out the opponent matrix. Carts (John + Mike, Brian + TJ) keep the rotation flat \u2014 by the end of Thursday every player has still ridden with all three of the others at least once."
+        "rationale": "R5 is an individual round \u2014 full-18 Bingo-Bango-Bongo plus round-robin 1v1 match play, so every player faces every other player head-to-head (all six 1v1 matches). Combined with the R2 and R4 team-round match-ups, this evens out the opponent matrix. Carts (Jake + Miles, Blake + Troy) keep the rotation flat \u2014 by the end of Thursday every player has still ridden with all three of the others at least once."
       },
       "courseHandicaps": {
         "john": 17,
@@ -1289,7 +1289,7 @@ const EGT_SEED = {
             "mike"
           ]
         ],
-        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (John + TJ, Brian + Mike) put John and TJ together one last time to close out the trip \u2014 their fourth ride together (R1, R2, R4, R6) at the request to keep them paired as much as possible. Every player has still shared a cart with each of the other three at least once by the end of R5, so cart coverage is complete regardless of the seeded matches. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
+        "rationale": "Championship singles are seeded off the standings after R5 (1v2 for the Cup, 3v4 for the Bronze), so match opponents are only known on Friday morning. Carts (Jake + Troy, Blake + Miles) put Jake and Troy together one last time to close out the trip \u2014 their fourth ride together (R1, R2, R4, R6) at the request to keep them paired as much as possible. Every player has still shared a cart with each of the other three at least once by the end of R5, so cart coverage is complete regardless of the seeded matches. If the seeded matches differ from these carts, the higher seed's group rides together; the fairness matrix treats R6 opponents as seeded/TBD."
       },
       "courseHandicaps": {
         "john": 16,
@@ -3000,7 +3000,7 @@ const EGT_SEED = {
           "tj": 27,
           "mike": 27
         },
-        "note": "Higher-CH player gets (CH difference) strokes on lowest-SI holes. Diffs \u2014 Brian-John 6 \u00b7 TJ/Mike-John 11 \u00b7 TJ/Mike-Brian 5 \u00b7 TJ-Mike 0."
+        "note": "Higher-CH player gets (CH difference) strokes on lowest-SI holes. Diffs \u2014 Blake-Jake 6 \u00b7 Troy/Miles-Jake 11 \u00b7 Troy/Miles-Blake 5 \u00b7 Troy-Miles 0."
       }
     }
   },
@@ -3209,7 +3209,7 @@ const EGT_SEED = {
           "tj",
           "mike"
         ],
-        "note": "John fronted the banner; each of the other three owes him $30."
+        "note": "Jake fronted the banner; each of the other three owes him $30."
       },
       {
         "id": "gas",
@@ -3222,7 +3222,7 @@ const EGT_SEED = {
           "tj",
           "mike"
         ],
-        "note": "John fronted the gas; each of the other three owes him $20."
+        "note": "Jake fronted the gas; each of the other three owes him $20."
       },
       {
         "id": "jerseys",
@@ -3235,7 +3235,7 @@ const EGT_SEED = {
           "tj",
           "mike"
         ],
-        "note": "Brian had the custom jerseys made \u2014 $30 a jersey, $120 for the four of them, so $30 a man."
+        "note": "Blake had the custom jerseys made \u2014 $30 a jersey, $120 for the four of them, so $30 a man."
       },
       {
         "id": "dinner",
@@ -3248,7 +3248,7 @@ const EGT_SEED = {
           "brian",
           "mike"
         ],
-        "note": "TJ shopped for the steak night \u2014 T-bones, broccoli, baked potatoes, asparagus. $85 split four ways is $21.25 a man."
+        "note": "Troy shopped for the steak night \u2014 T-bones, broccoli, baked potatoes, asparagus. $85 split four ways is $21.25 a man."
       },
       {
         "id": "trays",
@@ -3261,7 +3261,7 @@ const EGT_SEED = {
           "brian",
           "tj"
         ],
-        "note": "Mike made and brought three trays \u2014 sausage, peppers and onions; chicken parm; baked ziti. $40 split four ways is $10 a man."
+        "note": "Miles made and brought three trays \u2014 sausage, peppers and onions; chicken parm; baked ziti. $40 split four ways is $10 a man."
       },
       {
         "id": "poker",
@@ -3281,7 +3281,7 @@ const EGT_SEED = {
         "alreadyInPot": {
           "brian": 40
         },
-        "note": "$120 pot paid 70/30 \u2014 Mike $84, TJ $36. Brian's $40 buy-in is already sitting in the pot, so he owes nothing further and the cash on hand pays out."
+        "note": "$120 pot paid 70/30 \u2014 Miles $84, Troy $36. Blake's $40 buy-in is already sitting in the pot, so he owes nothing further and the cash on hand pays out."
       }
     ]
   }

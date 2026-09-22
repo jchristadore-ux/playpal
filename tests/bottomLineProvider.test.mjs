@@ -118,7 +118,7 @@ test('live EGT round: detected, leaders and thru computed', () => {
   const r = facts.liveRounds[0];
   assert.equal(r.status, 'live');
   assert.equal(r.thru.john, 6);
-  assert.equal(r.lines[0].name, 'John');   // even par leads
+  assert.equal(r.lines[0].name, 'Jake');   // even par leads
   assert.equal(r.lines[0].toPar, 0);
 });
 
@@ -134,8 +134,8 @@ test('stale EGT round is not "live"', () => {
 test('completed EGT round: EGT Cup standings, coherent money, records fill', () => {
   const w = loadWithSeed();
   const now = Date.now();
-  // Full R2 (teams John+TJ vs Brian+Mike): John/TJ +2 a hole, Brian/Mike at par
-  // → the Brian/Mike side wins.
+  // Full R2 (teams Jake+Troy vs Blake+Miles): Jake/Troy +2 a hole, Blake/Miles at par
+  // → the Blake/Miles side wins.
   const egt = egtDoc(w, 'R2', throughFill({ john: 2, tj: 2, brian: 0, mike: 0 }, 18), { now });
   const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
   const r = facts.rounds[0];
@@ -155,7 +155,7 @@ test('completed EGT round: EGT Cup standings, coherent money, records fill', () 
 
   // Record book fills from the EGT round.
   assert.ok(facts.records.bestRound, 'best round recorded');
-  assert.ok(['Brian', 'Mike'].includes(facts.records.bestRound.name));
+  assert.ok(['Blake', 'Miles'].includes(facts.records.bestRound.name));
 });
 
 test('buildFeed rotates categories with EGT data', () => {
@@ -178,13 +178,13 @@ test('diffAlerts: birdie, double, and lead change on an EGT round', () => {
   const now = Date.now();
   const par = i => [4, 4, 3, 5, 4, 4, 3, 5, 4][i % 9]; // ballyowen front pars are close enough for shape
 
-  // Before: TJ leads at -1 thru 5, John even thru 5.
+  // Before: Troy leads at -1 thru 5, Jake even thru 5.
   const beforeFill = (pid, k, i, hole) => {
     if (pid === 'john') return i < 5 ? hole.par : null;
     if (pid === 'tj')   return i < 5 ? (i === 0 ? hole.par - 1 : hole.par) : null;
     return null;
   };
-  // After: John birdies hole 6 → John -1 thru 6 (leads on thru). Mike doubles hole 1.
+  // After: Jake birdies hole 6 → Jake -1 thru 6 (leads on thru). Miles doubles hole 1.
   const afterFill = (pid, k, i, hole) => {
     if (pid === 'john') return i < 6 ? (i === 5 ? hole.par - 1 : hole.par) : null;
     if (pid === 'tj')   return i < 5 ? (i === 0 ? hole.par - 1 : hole.par) : null;
@@ -249,7 +249,7 @@ test('EGT Cup segments appear on the feed; no duplicate money card', () => {
 test('format boards: stableford standings surface for EGT rounds', () => {
   const w = loadWithSeed();
   const now = Date.now();
-  // R6 native format is stableford; make John run away with it.
+  // R6 native format is stableford; make Jake run away with it.
   const egt = egtDoc(w, 'R6', throughFill({ john: -1, brian: 1, tj: 1, mike: 2 }, 18), { now });
   const facts = w.BottomLineProvider.computeFacts({ docs: [egt.doc], trips: [], players: [], now });
   const boards = facts.rounds[0].formatBoards;
@@ -383,10 +383,12 @@ test('playerInfo resolves EGT ids and names to logo + alias + color', () => {
   const w = loadWithSeed();
   const P = w.BottomLineProvider;
   const brian = P.playerInfo('brian');
-  assert.equal(brian.alias, 'Birdman');
+  assert.equal(brian.alias, 'Redbird');
+  assert.equal(brian.name, 'Blake');
   assert.ok(/icons\/players\/brian\.png/.test(brian.logo));
-  assert.equal(P.playerInfo('TJ').alias, 'Straight T');
-  assert.equal(P.playerInfo('Mike').alias, 'H7');
+  assert.equal(P.playerInfo('Troy').alias, 'True T');
+  assert.equal(P.playerInfo('tj').name, 'Troy');
+  assert.equal(P.playerInfo('Miles').alias, 'Seven');
   const unknown = P.playerInfo('Randall');
   assert.equal(unknown.alias, null); // graceful fallback
 });
@@ -417,10 +419,10 @@ test('broadcastModules pre: schedule/format/pairings from the seed', () => {
   assert.equal(hero.round, 'R1');
   assert.ok(hero.courseName && hero.formatLabel);
   assert.equal(hero.teeTime, 'Loop 1 10:00 AM · Loop 2 12:36 PM'); // updated tee times
-  // Cart pairings surface on the pre-round pairings stage (R1: John+TJ, Mike solo).
+  // Cart pairings surface on the pre-round pairings stage (R1: Jake+Troy, Miles solo).
   const pairing = mods.find(m => m.type === 'pairings');
   assert.ok(Array.isArray(pairing.carts) && pairing.carts.length === 2);
-  assert.deepEqual(pairing.carts.map(c => c.map(p => p.name)), [['John', 'TJ'], ['Mike']]);
+  assert.deepEqual(pairing.carts.map(c => c.map(p => p.name)), [['Jake', 'Troy'], ['Miles']]);
 });
 
 test('broadcastModules live: leaderboard/money/format/on-course carry logos', () => {
@@ -431,7 +433,7 @@ test('broadcastModules live: leaderboard/money/format/on-course carry logos', ()
   const mods = P.broadcastModules(facts, 'live');
   const lb = mods.find(m => m.type === 'live-leaderboard');
   assert.ok(lb, 'leaderboard module present');
-  assert.equal(lb.lines[0].name, 'John');
+  assert.equal(lb.lines[0].name, 'Jake');
   assert.ok(/players\/john/.test(lb.lines[0].logo));
   assert.ok(mods.some(m => m.type === 'live-money'));
   assert.ok(mods.some(m => m.type === 'on-course'));
@@ -453,7 +455,7 @@ test('broadcastModules post: SportsCenter recap, player cards, stat pages', () =
   assert.equal(mods.filter(m => m.type === 'player-card').length, 4, 'a card per player');
   assert.ok(types.includes('stat-leaderboard'));
   const recap = mods.find(m => m.type === 'round-recap');
-  assert.ok(['TJ', 'Mike'].includes(recap.winner.name));
+  assert.ok(['Troy', 'Miles'].includes(recap.winner.name));
   assert.ok(/players\//.test(recap.winner.logo));
   // player cards carry the alias + logo identity
   const card = mods.find(m => m.type === 'player-card');
@@ -464,7 +466,7 @@ test('broadcastModules post: Birdie King leader pages surface (no Skins King)', 
   const w = loadWithSeed();
   const P = w.BottomLineProvider;
   const now = Date.now();
-  // Mike birdies every hole (outright low) → he leads both Birdie King races.
+  // Miles birdies every hole (outright low) → he leads both Birdie King races.
   const doc = egtDoc(w, 'R2', throughFill({ john: 2, brian: 2, tj: 1, mike: -1 }, 18), { ts: now - 8 * 3600 * 1000 }).doc;
   const facts = P.computeFacts({ docs: [doc], trips: [], players: [], now });
   const mods = P.broadcastModules(facts, 'post');
@@ -474,7 +476,7 @@ test('broadcastModules post: Birdie King leader pages surface (no Skins King)', 
   const gross = mods.find(m => m.id === 'stat-grossbirdies');
   assert.ok(gross, 'Birdie King (gross) race page present');
   assert.equal(gross.title, 'BIRDIE KING RACE');
-  assert.equal(gross.rows[0].name, 'Mike');
+  assert.equal(gross.rows[0].name, 'Miles');
   assert.equal(gross.rows[0].display, '18');
   const birdies = mods.find(m => m.id === 'stat-netbirdies');
   assert.ok(birdies, 'Birdie King (net) race page present');
@@ -598,7 +600,7 @@ function fullTripFacts(w, now) {
     const holes = nat.course.holes;
     const scores = {}, putts = {};
     nat.players.forEach((p, k) => {
-      // John runs the table (a birdie a hole) so there's a clear champion and a
+      // Jake runs the table (a birdie a hole) so there's a clear champion and a
       // real Birdie King; the rest spread out behind him.
       scores[p.id] = holes.map(h => h.par + ({ john: -1, brian: 1, tj: 1, mike: 2 }[p.id] ?? k));
       putts[p.id] = holes.map((_, i) => (p.id === 'mike' && i < 3 ? 3 : 2));
@@ -725,11 +727,11 @@ test('NEW TRIP LEADER alert shows formatted points, never raw thirds', () => {
         currentHoleIdx: 17, roundId: nat.id, _writtenBy: 'x', _ts: ts } };
   };
   const ts = now - 8 * 3600 * 1000;
-  // Before: John sweeps the bingos → sole BBB champion, leads the Cup.
+  // Before: Jake sweeps the bingos → sole BBB champion, leads the Cup.
   const before = w.BottomLineProvider.computeFacts({
     docs: [docFor(() => 'john', ts)], trips: [], players: [], now });
   // After: bingos rotate brian/tj/mike → 3-way BBB champion tie at 2/3 pt each,
-  // so John drops off the top and the Cup lead changes hands. (R5 also carries
+  // so Jake drops off the top and the Cup lead changes hands. (R5 also carries
   // the seed's round-robin match play, which pays the high handicaps here —
   // everyone is on par gross, so pops decide every match.)
   const after = w.BottomLineProvider.computeFacts({
