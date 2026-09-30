@@ -520,7 +520,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               <div style={{marginTop:16}}>
                 <Label style={{padding:'0 4px'}}>GAME RESULTS</Label>
                 <div style={{marginTop:8, border:'1px solid #E7E3D9', borderRadius:16, overflow:'hidden', background:'#FFFFFF'}}>
-                  {engineGameResults.map((r, i) => <GameStandingsCard key={i} result={r} stake={roundGames[i]?.config?.stake || 0} final={true}/>)}
+                  {engineGameResults.map((r, i) => <GameStandingsCard key={i} result={r} stake={roundGames[i]?.config?.stake || 0} stakeLabel={window.MatchEngine.stakeLabel ? window.MatchEngine.stakeLabel(roundGames[i]) : undefined} final={true}/>)}
                 </div>
               </div>
             )}
@@ -631,7 +631,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
             {engineGameResults.map((r, gi) => {
               const g       = roundGames[gi] || {};
-              const gStake  = Number(g.config?.stake) || 0;
+              const gHasMoney = window.MatchEngine.hasStake ? window.MatchEngine.hasStake(g) : (Number(g.config?.stake) || 0) > 0;
+              const gStakeLabel = window.MatchEngine.stakeLabel ? window.MatchEngine.stakeLabel(g) : (gHasMoney ? window.fmtMoney(Number(g.config?.stake) || 0) : '');
               const gPay    = payoutsByGame[gi] || {};
               const inGame  = players.filter(p => gPay[p.id] !== undefined);
               const roster  = inGame.length ? inGame : players;
@@ -640,8 +641,8 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                   <div style={{display:'flex', alignItems:'center', gap:8, padding:'12px 16px', borderBottom:'1px solid #E7E3D9'}}>
                     <span style={{fontSize:18}}>{r.icon}</span>
                     <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20'}}>{r.name}</span>
-                    <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:gStake > 0 ? '#C8A15A' : '#8A9E8A'}}>
-                      {gStake > 0 ? window.fmtMoney(gStake) : 'no money'}
+                    <span style={{marginLeft:'auto', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:13, color:gHasMoney ? '#C8A15A' : '#8A9E8A'}}>
+                      {gHasMoney ? gStakeLabel : 'no money'}
                     </span>
                   </div>
                   <div style={{padding:'8px 16px 0', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A'}}>
@@ -658,7 +659,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           {entry && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#3F5F4A'}}>{entry.label} · {entry.totalLabel} · {entry.detail}</div>}
                         </div>
                         <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:20, whiteSpace:'nowrap', color:v>0?'#15803D':v<0?'#DC2626':'#6B7280'}}>
-                          {gStake > 0 ? window.fmtMoney(v, { signed:true }) : '—'}
+                          {gHasMoney ? window.fmtMoney(v, { signed:true }) : '—'}
                         </span>
                       </div>
                     );

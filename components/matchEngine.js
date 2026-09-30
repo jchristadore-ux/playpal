@@ -19,10 +19,11 @@
 //
 // compute(ctx) returns a normalized result every UI surface can render:
 //   {
-//     kind: 'leaderboard' | 'match' | 'segments',
+//     kind: 'leaderboard' | 'match' | 'segments' | 'rotation',
 //     entries: [{ id, label, playerIds, color, total, totalLabel, detail, perHole }],
 //     leaderIds, thru, complete, status, winner: { ids, label, text } | null,
 //     segments: [{ key, up, complete }]        // 'segments' kind only
+//     matches:  [{ key, range, sides, up, perHole, pops, stake, … }] // 'rotation' only
 //   }
 //
 // Money: every format also declares how a stake settles —
@@ -30,6 +31,8 @@
 //               'unit'   per skin/point: pairwise difference × stake
 //               'match'  the losing side pays the stake per player
 //               'nassau' each decided segment pays (overall counts double)
+//               'rotation' Sixes Round Robin: each 6-hole match pays its own
+//                          stake (config.matchStakes, blank → config.stake)
 // MatchEngine.payouts(game, raw) turns a game + its config.stake into a
 // zero-sum { playerId: amount } map. A stake of 0 means "no money on it".
 //
@@ -665,6 +668,53 @@ const MatchEngine = (function () {
     return pay;
   }
 
+  // Sixes Round Robin: every finished 6-hole match settles on its own stake.
+  // perPlayer (default): each loser pays the stake, each winner collects it —
+  // the same per-player convention as Four Ball / Nassau segments.
+  // eachOpponent: each winner collects the stake from each opponent.
+  // Halved or abandoned matches push.
+  function _rotationPayouts(result, cfg, pay) {
+    const mode = (cfg && cfg.payout) === 'eachOpponent' ? 'eachOpponent' : 'perPlayer';
+    (result.matches || []).forEach(m => {
+      const s = Number(m.stake) || 0;
+      if (!(s > 0) || !m.complete || m.winnerIdx === null || m.winnerIdx === undefined) return;
+      const W = m.sides[m.winnerIdx].playerIds, L = m.sides[1 - m.winnerIdx].playerIds;
+      if (!W.length || !L.length) return;
+      if (mode === 'eachOpponent') {
+        W.forEach(w => L.forEach(l => { pay[w] = (pay[w] || 0) + s; pay[l] = (pay[l] || 0) - s; }));
+      } else {
+        const pot = s * L.length;
+        L.forEach(l => { pay[l] = (pay[l] || 0) - s; });
+        W.forEach(w => { pay[w] = (pay[w] || 0) + pot / W.length; });
+      }
+    });
+    return pay;
+  }
+
+  // Whether a game carries any money. Most formats: config.stake > 0. Formats
+  // with per-segment stakes (Sixes Round Robin) count any positive match stake.
+  function hasStake(game) {
+    const def = game ? resolve(game.formatId) : null;
+    const cfg = (game && game.config) || {};
+    if (def && def.settlement === 'rotation') return _sixesStakes(cfg).some(v => v > 0);
+    return (Number(cfg.stake) || 0) > 0;
+  }
+
+  // Human stake label: '$5' for most games; Sixes Round Robin shows its three
+  // match stakes ('$5 ×3' when equal, '$5/$10/$5' otherwise). '' = no money.
+  function stakeLabel(game) {
+    const def = game ? resolve(game.formatId) : null;
+    const cfg = (game && game.config) || {};
+    const fmt = (v) => '$' + (Number.isInteger(v) ? v : Number(v).toFixed(2));
+    if (def && def.settlement === 'rotation') {
+      const st = _sixesStakes(cfg);
+      if (!st.some(v => v > 0)) return '';
+      return st.every(v => v === st[0]) ? fmt(st[0]) + ' ×3' : st.map(fmt).join('/');
+    }
+    const v = Number(cfg.stake) || 0;
+    return v > 0 ? fmt(v) : '';
+  }
+
   // payouts(game, raw) → { playerId: amount }. `raw` is the same context object
   // compute() takes. Returns zeros when the game carries no stake.
   function payouts(game, raw, precomputed) {
@@ -674,6 +724,9 @@ const MatchEngine = (function () {
     const result = precomputed || (def ? compute(game, raw) : null);
     const ids = result ? _entryPlayers(result).ids : [];
     const pay = Object.fromEntries(ids.map(id => [id, 0]));
+    if (def && result && def.settlement === 'rotation') {
+      return hasStake(game) ? _rotationPayouts(result, cfg, pay) : pay;
+    }
     if (!def || !result || stake <= 0) return pay;
     const mode = def.settlement || 'pot';
     if (mode === 'unit' && result.skinLedger) return _skinsPayouts(result, stake, pay);
@@ -694,6 +747,11 @@ const MatchEngine = (function () {
     if (def.defaultAllowance !== undefined) cfg.allowancePct = def.defaultAllowance;
     if (def.defaultRelative) cfg.relative = true;
     cfg.stake = 0;                       // no money on a game until a stake is set
+    if (def.settlement === 'rotation') {
+      cfg.playerIds = players.slice(0, 4).map(p => p.id);
+      cfg.pairingOrder = [0, 1, 2];
+      cfg.matchStakes = [null, null, null];   // blank → use the common stake
+    }
     if (def.teams) {
       const count = def.teams.count || 2;
       const sorted = players.slice().sort((a, b) => (a.handicap || 0) - (b.handicap || 0));
@@ -721,6 +779,15 @@ const MatchEngine = (function () {
     if (def.players) {
       if (def.players.min && n < def.players.min) return { ok: false, error: def.label + ' needs at least ' + def.players.min + ' players' };
       if (def.players.max && n > def.players.max) return { ok: false, error: def.label + ' allows at most ' + def.players.max + ' players' };
+    }
+    if (def.settlement === 'rotation') {
+      const ids = cfg.playerIds && cfg.playerIds.length ? cfg.playerIds : players.map(p => p.id);
+      if (ids.length !== 4 || new Set(ids).size !== 4 || ids.some(id => !players.some(p => p.id === id))) {
+        return { ok: false, error: def.label + ' needs 4 different players' };
+      }
+      if (cfg.pairingOrder && JSON.stringify(_normPairingOrder(cfg.pairingOrder)) !== JSON.stringify(cfg.pairingOrder.map(Number))) {
+        return { ok: false, error: 'Each pairing must play exactly one 6-hole match' };
+      }
     }
     if (def.teams) {
       const teams = cfg.teams || [];
@@ -1004,6 +1071,201 @@ const MatchEngine = (function () {
       }));
       const complete = thru === ctx.contestedHoles(4);
       return { kind: 'leaderboard', ...finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'points' }) };
+    },
+  });
+
+  // ── Sixes Round Robin (6-6-6): three separate 6-hole team matches ──────────
+  // A foursome plays three 2v2 matches — holes 1–6, 7–12, 13–18 in play order
+  // — and every player partners each of the other three exactly once. Each
+  // segment is its own hole-by-hole match (team net best ball by default)
+  // with its own stake. Pops come off the low man across the foursome at the
+  // game's allowance, exactly like every other engine match format.
+  //
+  // config:
+  //   playerIds     [A, B, C, D]  who is A/B/C/D (defaults to round order)
+  //   pairingOrder  [i, j, k]     which pairing plays segment 1/2/3, a
+  //                               permutation of 0 (AB v CD), 1 (AC v BD),
+  //                               2 (AD v BC). Default [0, 1, 2].
+  //   matchStakes   [s1, s2, s3]  per-match stake; a blank slot uses `stake`
+  //   payout        'perPlayer'   each loser pays the stake, each winner
+  //                               collects it (app-wide match convention)
+  //                 'eachOpponent' each winner collects the stake from EACH
+  //                               opponent (2× perPlayer in a 2v2)
+  const SIXES_RR_PAIRINGS = [
+    [[0, 1], [2, 3]],
+    [[0, 2], [1, 3]],
+    [[0, 3], [1, 2]],
+  ];
+
+  function _normPairingOrder(order) {
+    const o = Array.isArray(order) ? order.map(Number) : null;
+    if (!o || o.length !== 3 || [0, 1, 2].some(v => !o.includes(v))) return [0, 1, 2];
+    return o;
+  }
+
+  // Pure rotation helper (also used by the setup UI): the three segments'
+  // sides as player-id pairs, in segment order.
+  function sixesRotation(playerIds, pairingOrder) {
+    const ids = (playerIds || []).slice(0, 4);
+    if (ids.length !== 4) return [];
+    return _normPairingOrder(pairingOrder).map(pi =>
+      SIXES_RR_PAIRINGS[pi].map(pair => pair.map(ix => ids[ix])));
+  }
+
+  function _sixesStakes(cfg) {
+    const base = Number(cfg && cfg.stake) || 0;
+    const ms = (cfg && Array.isArray(cfg.matchStakes)) ? cfg.matchStakes : [];
+    return [0, 1, 2].map(k => {
+      const v = ms[k];
+      if (v === undefined || v === null || v === '') return base;
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    });
+  }
+
+  // One 6-hole match between two sides. A side's ball on a hole is the best
+  // basis score among its members still in the round, and only once every one
+  // of those members has posted — so a half-entered hole never decides
+  // anything. A side with nobody left on a hole it still needed concedes the
+  // match (if it wasn't already decided).
+  function _segmentMatch(ctx, holesIdx, sides) {
+    const sideBall = (side, i) => {
+      const live = side.playerIds.filter(pid => ctx.inPlay(pid, i));
+      if (!live.length) return { out: true, v: 0 };
+      const vals = live.map(pid => ctx.score(pid, i));
+      if (vals.some(v => !(v > 0))) return { out: false, v: 0 };
+      return { out: false, v: Math.min(...vals) };
+    };
+    let up = 0, played = 0, closed = null, conceded = null, abandoned = false;
+    const perHole = [];
+    for (let k = 0; k < holesIdx.length; k++) {
+      const i = holesIdx[k];
+      const a = sideBall(sides[0], i), b = sideBall(sides[1], i);
+      if (a.out || b.out) {
+        if (a.out && b.out) abandoned = true;
+        else conceded = a.out ? 1 : 0;       // index of the side that wins
+        break;
+      }
+      if (!a.v || !b.v) break;               // hole not finished yet
+      played++;
+      const w = a.v < b.v ? 0 : b.v < a.v ? 1 : null;
+      if (w === 0) up++; else if (w === 1) up--;
+      perHole.push({ holeIdx: i, num: ctx.holes[i] ? ctx.holes[i].num : i + 1, a: a.v, b: b.v, winner: w });
+      const remaining = holesIdx.length - played;
+      if (Math.abs(up) > remaining) {
+        closed = remaining > 0 ? Math.abs(up) + '&' + remaining : null;
+        if (remaining > 0) break;
+      }
+    }
+    const allPlayed = played === holesIdx.length;
+    const complete = allPlayed || !!closed || conceded !== null || abandoned;
+    let winnerIdx = null;
+    if (conceded !== null) winnerIdx = conceded;
+    else if (complete && !abandoned && up !== 0) winnerIdx = up > 0 ? 0 : 1;
+    const margin = Math.abs(up);
+    let result;
+    if (abandoned) result = 'Abandoned';
+    else if (conceded !== null) result = 'Conceded';
+    else if (closed) result = closed;
+    else if (complete) result = up === 0 ? 'Halved' : margin + ' UP';
+    else if (!played) result = 'Not started';
+    else {
+      const left = holesIdx.length - played;
+      result = (up === 0 ? 'AS' : margin + (up > 0 ? ' UP' : ' DN')) + ' thru ' + played
+        + (margin > 0 && margin === left ? ' · dormie' : '');
+    }
+    return { up, played, perHole, complete, winnerIdx, halved: complete && !abandoned && winnerIdx === null, abandoned, conceded: conceded !== null, result };
+  }
+
+  register({
+    id: 'sixesRoundRobin', label: 'Sixes Round Robin (6-6-6)', icon: '🔄',
+    settlement: 'rotation',
+    stakeHint: 'Three separate 6-hole matches. Each match: every loser pays the stake, every winner collects it. Halved = push.',
+    desc: 'Foursome plays three 6-hole 2v2 matches — everyone partners everyone once. Team net best ball, pops in play, a stake on each match.',
+    category: 'team', basis: 'choice', defaultBasis: 'net', defaultAllowance: 100, defaultRelative: true,
+    players: { min: 4, max: 4 },
+    options: [{
+      key: 'payout', label: 'PAYS', default: 'perPlayer',
+      choices: [
+        { value: 'perPlayer', label: 'STAKE / PLAYER', hint: 'Each loser pays the stake; each winner collects it (like Four Ball / Nassau).' },
+        { value: 'eachOpponent', label: 'EACH OPPONENT', hint: 'Each winner collects the stake from each opponent (double the money in a 2v2).' },
+      ],
+    }],
+    compute(ctx) {
+      const cfg = ctx.config || {};
+      const ids = (cfg.playerIds && cfg.playerIds.length === 4
+        ? cfg.playerIds.filter(id => ctx.playersById[id])
+        : ctx.players.map(p => p.id));
+      if (ids.length !== 4) {
+        return { kind: 'rotation', entries: [], matches: [], leaderIds: [], thru: 0, complete: false, status: 'Sixes Round Robin needs exactly 4 players', winner: null };
+      }
+      const rotation = sixesRotation(ids, cfg.pairingOrder);
+      const stakes = _sixesStakes(cfg);
+      const segLen = Math.floor(ctx.playOrder.length / 3);
+      const segHoles = [0, 1, 2].map(k => ctx.playOrder.slice(k * segLen, k === 2 ? ctx.playOrder.length : (k + 1) * segLen));
+      const name = (pid) => _firstName(ctx.playersById[pid]);
+      const record = Object.fromEntries(ids.map(id => [id, { w: 0, l: 0, h: 0 }]));
+      let thru = 0;
+      const matches = rotation.map((pairs, k) => {
+        const sides = pairs.map((pair, s) => ({
+          id: 'm' + (k + 1) + (s === 0 ? 'a' : 'b'),
+          playerIds: pair,
+          label: pair.map(name).join(' & '),
+          color: TEAM_COLORS[s],
+        }));
+        const m = _segmentMatch(ctx, segHoles[k], sides);
+        thru += m.played;
+        if (m.complete && !m.abandoned) {
+          if (m.winnerIdx === null) pairs.flat().forEach(id => { record[id].h++; });
+          else {
+            sides[m.winnerIdx].playerIds.forEach(id => { record[id].w++; });
+            sides[1 - m.winnerIdx].playerIds.forEach(id => { record[id].l++; });
+          }
+        }
+        const nums = segHoles[k].map(i => (ctx.holes[i] ? ctx.holes[i].num : i + 1));
+        // Pops each player gets on this segment's holes (game allowance, off the low man).
+        const pops = Object.fromEntries(pairs.flat().map(pid => [pid,
+          segHoles[k].map(i => (ctx.basis === 'net' && ctx.handicaps[pid]) ? (ctx.handicaps[pid].strokes[i] || 0) : 0)]));
+        const lead = m.up === 0 ? null : (m.up > 0 ? 0 : 1);
+        let status;
+        if (m.abandoned) status = 'Match ' + (k + 1) + ' abandoned — both sides walked in';
+        else if (m.conceded) status = sides[m.winnerIdx].label + ' win by concession';
+        else if (m.complete && m.winnerIdx === null) status = 'Halved';
+        else if (m.complete) status = sides[m.winnerIdx].label + ' win ' + m.result;
+        else if (!m.played) status = 'Not started';
+        else status = lead === null ? m.result : sides[lead].label + ' ' + m.result;
+        return {
+          index: k, key: 'M' + (k + 1),
+          holes: segHoles[k], holeNums: nums,
+          range: nums.length ? (nums[0] + '–' + nums[nums.length - 1]) : '',
+          sides, up: m.up, played: m.played, perHole: m.perHole, pops,
+          complete: m.complete, winnerIdx: m.winnerIdx, halved: m.halved,
+          abandoned: m.abandoned, conceded: m.conceded,
+          result: m.result, status, stake: stakes[k],
+        };
+      });
+      const entries = ids.map(pid => {
+        const r = record[pid];
+        const p = ctx.playersById[pid];
+        return {
+          id: pid, label: name(pid), playerIds: [pid], color: p.color,
+          total: r.w + r.h * 0.5, played: thru,
+          totalLabel: r.w + '-' + r.l + '-' + r.h,
+          detail: matches.map(m => m.key + ' ' + (m.sides.find(s => s.playerIds.includes(pid)) === m.sides[0]
+            ? (m.up === 0 ? 'AS' : (m.up > 0 ? '+' + m.up : String(m.up)))
+            : (m.up === 0 ? 'AS' : (m.up < 0 ? '+' + (-m.up) : String(-m.up))))).join(' · '),
+          perHole: null,
+        };
+      });
+      const complete = matches.every(m => m.complete);
+      const res = finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'matches' });
+      const live = matches.find(m => !m.complete) || null;
+      const status = matches.map(m => m.key + ' (' + m.range + '): ' + m.status).join(' · ');
+      return {
+        kind: 'rotation', ...res,
+        status: complete ? (res.status + ' — ' + status) : ((live ? 'Now: ' + live.key + ' ' + live.status + ' · ' : '') + status),
+        matches, playerOrder: ids, pairingOrder: _normPairingOrder(cfg.pairingOrder),
+      };
     },
   });
 
@@ -1415,6 +1677,10 @@ const MatchEngine = (function () {
     list,
     compute,
     payouts,
+    hasStake,
+    stakeLabel,
+    sixesRotation,
+    SIXES_RR_PAIRINGS,
     defaultConfig,
     validateGame,
     stablefordPoints,

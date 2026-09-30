@@ -399,7 +399,7 @@ test('every non-input format returns a normalized result on a finished round', (
     if (meta.needsInput) continue;
     const cfg = ME.defaultConfig(meta.id, players);
     const res = ME.compute({ formatId: meta.id, config: cfg }, raw(scores));
-    assert.ok(['leaderboard', 'match', 'segments'].includes(res.kind), meta.id + ' kind');
+    assert.ok(['leaderboard', 'match', 'segments', 'rotation'].includes(res.kind), meta.id + ' kind');
     assert.ok(Array.isArray(res.entries), meta.id + ' entries');
     assert.ok(typeof res.status === 'string' && res.status.length > 0, meta.id + ' status');
     for (const e of res.entries) {
