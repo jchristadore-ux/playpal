@@ -1,5 +1,18 @@
 # PlayPal — Progress
 
+## v1.21.0 — EGT 2026 history → PlayPal Index (30 Sep 2026)
+
+**Branch:** `claude/playpal-index-scorecards` (main @ v1.20.0 merged in)
+**Status:** complete. `npm test` green (378), `dist/` rebuilt.
+
+Files: components/historyImport.js (new), App.jsx (import effect on roster
+change; EGT finalize posts to the index + saves a history snapshot),
+scripts/build.mjs, app.html, sw.js, tests/helpers/load.mjs,
+tests/historyImport.test.mjs (new), scripts/playpal-index.mjs (reports the
+app's index), docs/scorecards/*, version 1.21.0, CHANGELOG, todo.
+
+Next action: none — remaining follow-ups are in todo.md.
+
 ## v1.20.0 — PlayPal Index (29 Sep 2026)
 
 **Branch:** `feat/playpal-index` (from main @ v1.19.6)
