@@ -51,6 +51,7 @@ const PRECACHE = [
   './dist/statsService.js?v=1.19.6',
   './dist/profileService.js?v=1.19.6',
   './dist/roundHistoryService.js?v=1.19.6',
+  './dist/indexService.js?v=1.19.6',
   './dist/groupService.js?v=1.19.6',
   './dist/entitlementHelpers.js?v=1.19.6',
   './dist/authService.js?v=1.19.6',
