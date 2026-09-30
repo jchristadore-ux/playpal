@@ -40,6 +40,7 @@ export function loadPlayPal(opts = {}) {
     'components/profileService.js',
     'components/roundHistoryService.js',
     'components/indexService.js',
+    'components/historyImport.js',
     'components/groupService.js',
     'components/entitlementHelpers.js',
     'components/authService.js',

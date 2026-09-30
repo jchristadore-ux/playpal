@@ -6,12 +6,14 @@ Regenerate: `node scripts/playpal-index.mjs`
 
 ## PlayPal Index
 
-| Player | PlayPal Index | Pre-trip Index | Change | Rounds | Differentials counted |
-|---|---:|---:|---:|---:|---|
-| John | **22.8** | 18.0 | +4.8 | 6 | low 2 (23.7, 23.9) -1.0 |
-| Brian | **30.1** | 23.0 | +7.1 | 5 | low 1 (30.1) |
-| TJ | **30.3** | 28.0 | +2.3 | 6 | low 2 (29.8, 32.8) -1.0 |
-| Mike | **32.3** | 28.0 | +4.3 | 6 | low 2 (29.8, 36.7) -1.0 |
+| Player | PlayPal Index | Uncapped | Pre-trip Index | Change | Rounds | Differentials counted |
+|---|---:|---:|---:|---:|---:|---|
+| John | **22.8** | 22.8 | 18.0 | +4.8 | 6 | low 2 (23.7, 23.9) -1.0 |
+| Brian | **30.1** | 30.1 | 23.0 | +7.1 | 5 | low 1 (30.1) |
+| TJ | **30.3** | 30.3 | 28.0 | +2.3 | 6 | low 2 (29.8, 32.8) -1.0 |
+| Mike | **31.5** | 32.2 | 28.0 | +3.5 | 6 | low 2 (29.8, 36.7) -1.0 |
+
+**PlayPal Index** is exactly what the app shows on each profile (it also drives the handicap, and so the pops, in auto mode). **Uncapped** is the lowest-N average before the soft cap: an index may rise at most 3.0 over the lowest index held in the last 365 days before further increase is halved. Mike's low after R3 was 27.8, so his 32.2 is capped to 31.5.
 
 ## Differentials by round
 
@@ -109,4 +111,4 @@ White tees · 5883 yds · Par 72 · CR 68.6 · Slope 123
 
 - Minerals and Cascades are 9-hole courses played twice; they use the 18-hole White rating/slope.
 - R5 (Cascades) was a scramble/alternate-shot day for the team game; the individual gross cards used here are the ones kept for the round-robin singles.
-- No soft/hard cap or exceptional-score reduction applied — this is a fresh index built only from these six cards.
+- No exceptional-score reduction or playing-conditions adjustment (PCC) — PlayPal has no field-wide data for either.

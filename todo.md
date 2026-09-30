@@ -6,9 +6,14 @@
 - [x] Auto-post on round save; summary block; share report; profile toggle; stats trend/table
 - [x] tests/playpalIndex.test.mjs; docs
 
+## Done — EGT history import (v1.21.0)
+- [x] EGT 2026 scorecards loaded into roster profiles / stats / history
+- [x] EGT Cup rounds post to the PlayPal Index on finalize (was open below)
+
 ## Open — PlayPal Index follow-ups
-- [ ] EGT Cup rounds are NOT posted: `handleSaveRound` returns early into
-      `_finishEgtRound` (not a one-line change). Wire EGT finalize → IndexService.
+- [ ] EGT tournament pops still come from the trip's locked Handicap Index
+      (seed `handicapIndex` / course handicaps) by design; a future trip could
+      seed its players' indexes from their PlayPal Index at trip creation.
 - [ ] Rounds finished on another device post only on the finishing device;
       other devices receive the result via the synced player profile.
 - [ ] Legacy custom courses saved with blank rating/slope (72/113 placeholder)

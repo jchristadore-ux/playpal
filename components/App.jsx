@@ -305,6 +305,24 @@ const App = () => {
     });
   };
 
+  // Stored EGT 2026 scorecards → each matching roster player's PlayPal Index,
+  // stats and round history. Re-checked whenever the roster changes (players
+  // can arrive later from cloud sync); posting is deduped by round id, so this
+  // only ever writes when a round is actually new to a player.
+  React.useEffect(() => {
+    if (!window.HistoryImport || !window.IndexService || !window.StatsService) return;
+    try {
+      const HI = window.HistoryImport;
+      const ls = HI.isDone(localStorage) ? null : localStorage;
+      const res = HI.apply(players, ls);
+      if (ls) {
+        try { setRecentRounds(JSON.parse(localStorage.getItem('pp_recent') || '[]')); } catch (e) { /* keep state */ }
+        if (res.complete) HI.markDone(localStorage);
+      }
+      if (res.changed) handleManagePlayers(res.players);
+    } catch (e) { console.warn('[PlayPal] EGT history import skipped:', e); }
+  }, [players]);
+
   // A course built on the phone must appear in the list immediately — waiting
   // for the cloud subscription to echo it back means it vanishes offline.
   const handleCourseSaved = (newCourse, allCourses) => {
@@ -402,6 +420,33 @@ const App = () => {
   const handleSaveRound = (scores, wolfData, putts, presses = [], chips = {}, popFlags = {}, bbbData = {}, teeBallData = {}, firData = {}, girData = {}, extraStats = {}, dropouts = {}) => {
     // EGT rounds bridge into the tournament engine and skip the native summary.
     if (round && round.egtRoundId) {
+      // Tournament rounds count toward the PlayPal Index and round history
+      // like any other round, posted to the roster profiles they match.
+      try {
+        if (window.HistoryImport && window.IndexService && window.StatsService) {
+          const savedAt = Date.now();
+          const res = window.HistoryImport.postEgtRound(players, round, { scores, putts, firData, girData, extraStats }, savedAt);
+          if (res.snapshot && round.syncCode) {
+            try { localStorage.setItem('pp_round_snap_' + round.syncCode, JSON.stringify(res.snapshot)); } catch (e) { /* storage full */ }
+            const meta = {
+              courseName: round.course.name,
+              date:       new Date(savedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
+              players:    res.snapshot.round.players.length,
+              formats:    'EGT Cup',
+              syncCode:   round.syncCode,
+              tripId:     round.tripId || null,
+              tripName:   null,
+              savedAt,
+            };
+            setRecentRounds(function(prev) {
+              const next = [meta, ...prev.filter(r => r.syncCode !== meta.syncCode)].slice(0, 20);
+              localStorage.setItem('pp_recent', JSON.stringify(next));
+              return next;
+            });
+          }
+          if (res.changed) handleManagePlayers(res.players);
+        }
+      } catch (e) { console.warn('[PlayPal] EGT round index post skipped:', e); }
       _finishEgtRound(round, { scores, putts, firData, girData, extraStats, wolfData, bbbData }, true);
       return;
     }

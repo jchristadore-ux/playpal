@@ -4,6 +4,25 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.21.0] — 2026-09-30 — EGT 2026 history loaded into the PlayPal Index
+
+- New `components/historyImport.js` (`HistoryImport`): the six stored EGT 2026
+  scorecards (every gross score synced on the trip, White-tee rating/slope,
+  par/SI) load into each matching roster profile — PlayPal Index, Stats and
+  round history (`pp_round_snap_*` + `pp_recent`). Roster players match by
+  real first name or tournament name (John/Jake, Brian/Blake, TJ/Troy,
+  Mike/Miles) or an `egtId` link; ambiguous names never guess. Runs on every
+  roster change, deduped by round id / sync code, so it is safe on every
+  device and after cloud sync.
+- EGT Cup rounds now post to the PlayPal Index: finalizing a tournament round
+  posts each matched roster player (auto mode updates the handicap, so the
+  next round's pops follow) and saves a history scorecard under roster ids.
+  Round ids / sync codes match the imported history, so re-finalizing an
+  EGT 2026 round never double-counts.
+- Resulting indexes: John 22.8, Brian 30.1, TJ 30.3, Mike 31.5 (soft-capped
+  from 32.2). `scripts/playpal-index.mjs` now reports the app's own numbers.
+- Tests: `tests/historyImport.test.mjs` (8).
+
 ## [1.20.0] — 2026-09-29 — PlayPal Index
 
 A free, automatic, unofficial handicap computed on-device from the rounds the

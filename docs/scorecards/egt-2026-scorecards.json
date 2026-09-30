@@ -1351,6 +1351,7 @@
     "john": {
       "name": "John",
       "index": 22.8,
+      "uncappedIndex": 22.8,
       "priorIndex": 18,
       "differentialsUsed": 2,
       "adjustment": -1
@@ -1358,6 +1359,7 @@
     "brian": {
       "name": "Brian",
       "index": 30.1,
+      "uncappedIndex": 30.1,
       "priorIndex": 23,
       "differentialsUsed": 1,
       "adjustment": 0
@@ -1365,13 +1367,15 @@
     "tj": {
       "name": "TJ",
       "index": 30.3,
+      "uncappedIndex": 30.3,
       "priorIndex": 28,
       "differentialsUsed": 2,
       "adjustment": -1
     },
     "mike": {
       "name": "Mike",
-      "index": 32.3,
+      "index": 31.5,
+      "uncappedIndex": 32.2,
       "priorIndex": 28,
       "differentialsUsed": 2,
       "adjustment": -1

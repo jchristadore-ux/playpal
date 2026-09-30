@@ -14,12 +14,15 @@
 //   3. Index from the count of differentials (WHS table, < 20 scores):
 //      3→low1 −2.0 · 4→low1 −1.0 · 5→low1 · 6→low2 avg −1.0 · 7-8→low2 ·
 //      9-11→low3 · 12-14→low4 · 15-16→low5 · 17-18→low6 · 19→low7 · 20→low8.
+//   4. The reported PlayPal Index is the app's own (HistoryImport + IndexService:
+//      truncated to 1 dp, soft/hard cap vs the 365-day low); "uncapped" is step 3.
 //
 // Run: node scripts/playpal-index.mjs
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadPlayPal } from '../tests/helpers/load.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const results = JSON.parse(readFileSync(join(ROOT, 'fixtures/egt-2026-results.json'), 'utf8'));
@@ -44,7 +47,7 @@ function whsIndex(diffs) {
   const recent = diffs.slice(-20);
   const low = recent.map(d => d.diff).sort((a, b) => a - b).slice(0, use);
   const avg = low.reduce((a, b) => a + b, 0) / low.length;
-  return { index: Math.round((avg + adj) * 10) / 10, used: use, adjustment: adj, counted: low };
+  return { index: Math.trunc(Number(((avg + adj) * 10).toFixed(6))) / 10, used: use, adjustment: adj, counted: low };
 }
 
 const scorecards = [];
@@ -92,9 +95,15 @@ for (const round of seed.rounds) {
   });
 }
 
+// The index the app itself shows: the same rounds run through HistoryImport +
+// IndexService (lowest-N table, truncation, soft/hard cap vs the trip low).
+const W = loadPlayPal();
+const appRoster = Object.keys(NAMES).map(id => W.ProfileService.normalizePlayer({ id, name: NAMES[id], handicap: priorIndex[id] }));
+const appIndex = Object.fromEntries(W.HistoryImport.apply(appRoster, null).players.map(p => [p.id, p.ppIndex]));
+
 const indexes = Object.entries(byPlayer).map(([pid, diffs]) => {
   const w = whsIndex(diffs);
-  return { pid, name: NAMES[pid] || pid, prior: priorIndex[pid], rounds: diffs, ...w };
+  return { pid, name: NAMES[pid] || pid, prior: priorIndex[pid], rounds: diffs, ...w, raw: w.index, index: appIndex[pid] };
 }).sort((a, b) => (a.index ?? 99) - (b.index ?? 99));
 
 // ── write outputs ────────────────────────────────────────────────────────────
@@ -106,7 +115,7 @@ writeFileSync(join(outDir, 'egt-2026-scorecards.json'), JSON.stringify({
   generatedAt: new Date().toISOString().slice(0, 10),
   scorecards,
   playpalIndex: Object.fromEntries(indexes.map(p => [p.pid, {
-    name: p.name, index: p.index, priorIndex: p.prior, differentialsUsed: p.used, adjustment: p.adjustment,
+    name: p.name, index: p.index, uncappedIndex: p.raw, priorIndex: p.prior, differentialsUsed: p.used, adjustment: p.adjustment,
   }])),
 }, null, 2) + '\n');
 
@@ -118,10 +127,13 @@ md += 'net-double-bogey hole caps (from each round\'s pre-trip course handicap),
 md += 'Score Differential = 113 ÷ Slope × (AGS − Course Rating), and the WHS table for fewer than 20 scores.\n\n';
 md += 'Regenerate: `node scripts/playpal-index.mjs`\n\n';
 
-md += '## PlayPal Index\n\n| Player | PlayPal Index | Pre-trip Index | Change | Rounds | Differentials counted |\n|---|---:|---:|---:|---:|---|\n';
+md += '## PlayPal Index\n\n| Player | PlayPal Index | Uncapped | Pre-trip Index | Change | Rounds | Differentials counted |\n|---|---:|---:|---:|---:|---:|---|\n';
 for (const p of indexes) {
-  md += `| ${p.name} | **${p.index.toFixed(1)}** | ${p.prior.toFixed(1)} | ${fmt(Math.round((p.index - p.prior) * 10) / 10)} | ${p.rounds.length} | low ${p.used} (${p.counted.map(d => d.toFixed(1)).join(', ')})${p.adjustment ? ` ${p.adjustment.toFixed(1)}` : ''} |\n`;
+  md += `| ${p.name} | **${p.index.toFixed(1)}** | ${p.raw.toFixed(1)} | ${p.prior.toFixed(1)} | ${fmt(Math.round((p.index - p.prior) * 10) / 10)} | ${p.rounds.length} | low ${p.used} (${p.counted.map(d => d.toFixed(1)).join(', ')})${p.adjustment ? ` ${p.adjustment.toFixed(1)}` : ''} |\n`;
 }
+md += '\n**PlayPal Index** is exactly what the app shows on each profile (it also drives the handicap, and so the pops, in auto mode). ';
+md += '**Uncapped** is the lowest-N average before the soft cap: an index may rise at most 3.0 over the lowest index held in the last 365 days before further increase is halved. ';
+md += 'Mike\'s low after R3 was 27.8, so his 32.2 is capped to 31.5.\n';
 
 md += '\n## Differentials by round\n\n| Round | Course (White) | CR / Slope | ' + pids.map(p => NAMES[p]).join(' | ') + ' |\n|---|---|---|' + pids.map(() => '---:').join('|') + '|\n';
 for (const sc of scorecards) {
@@ -151,8 +163,8 @@ for (const sc of scorecards) {
 md += '\n## Notes\n\n';
 md += '- Minerals and Cascades are 9-hole courses played twice; they use the 18-hole White rating/slope.\n';
 md += '- R5 (Cascades) was a scramble/alternate-shot day for the team game; the individual gross cards used here are the ones kept for the round-robin singles.\n';
-md += '- No soft/hard cap or exceptional-score reduction applied — this is a fresh index built only from these six cards.\n';
+md += '- No exceptional-score reduction or playing-conditions adjustment (PCC) — PlayPal has no field-wide data for either.\n';
 
 writeFileSync(join(outDir, 'PLAYPAL_INDEX.md'), md);
 
-for (const p of indexes) console.log(`${p.name.padEnd(6)} ${p.index.toFixed(1).padStart(5)}  (pre-trip ${p.prior.toFixed(1)})  diffs: ${p.rounds.map(r => r.diff.toFixed(1)).join(', ')}`);
+for (const p of indexes) console.log(`${p.name.padEnd(6)} ${p.index.toFixed(1).padStart(5)}  (uncapped ${p.raw.toFixed(1)}, pre-trip ${p.prior.toFixed(1)})  diffs: ${p.rounds.map(r => r.diff.toFixed(1)).join(', ')}`);
