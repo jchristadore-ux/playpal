@@ -359,6 +359,19 @@ const IndexService = (function () {
     return out;
   }
 
+  // Index after each posting, oldest → newest (replays the lowest-N table on
+  // each prefix; caps are not replayed — this is a trend view).
+  function indexTrend(differentials) {
+    const list = (differentials || []).slice().sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
+    const out = [];
+    for (let k = 0; k < list.length; k++) {
+      const upto = list.slice(0, k + 1).reverse();
+      const c = computeIndex(upto);
+      if (c.index !== null) out.push({ index: c.index, playedAt: list[k].playedAt, courseName: list[k].courseName });
+    }
+    return out;
+  }
+
   function fmtIndex(v) {
     if (v === null || v === undefined) return '—';
     return v < 0 ? '+' + Math.abs(v).toFixed(1) : v.toFixed(1);
@@ -369,7 +382,7 @@ const IndexService = (function () {
     round1, trunc1, teeRating, adjustedGross, scoreDifferential,
     roundDifferential, computeIndex, applyCaps, normalize,
     postRound, postRoundReport, rebuildFromHistory,
-    reasonText, fmtIndex, summarize,
+    reasonText, fmtIndex, summarize, indexTrend,
   };
 })();
 
