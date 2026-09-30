@@ -1,0 +1,1380 @@
+{
+  "_comment": "Every stored EGT 2026 scorecard, reloaded from fixtures/egt-2026-results.json with course/tee data from fixtures/egt-2026-seed.json. Regenerate with node scripts/playpal-index.mjs.",
+  "generatedAt": "2026-09-30",
+  "scorecards": [
+    {
+      "round": "R1",
+      "date": "TUE · JUL 21",
+      "courseId": "minerals",
+      "course": "Minerals Golf Club",
+      "location": "Vernon, NJ",
+      "tee": {
+        "name": "White",
+        "rating": 60.2,
+        "slope": 99,
+        "par": 62,
+        "yards": 4088
+      },
+      "format": "bingoBangoBongo+nines",
+      "holes": [
+        {
+          "hole": 1,
+          "par": 4,
+          "si": 9
+        },
+        {
+          "hole": 2,
+          "par": 3,
+          "si": 11
+        },
+        {
+          "hole": 3,
+          "par": 4,
+          "si": 7
+        },
+        {
+          "hole": 4,
+          "par": 3,
+          "si": 3
+        },
+        {
+          "hole": 5,
+          "par": 4,
+          "si": 13
+        },
+        {
+          "hole": 6,
+          "par": 3,
+          "si": 5
+        },
+        {
+          "hole": 7,
+          "par": 4,
+          "si": 1
+        },
+        {
+          "hole": 8,
+          "par": 3,
+          "si": 17
+        },
+        {
+          "hole": 9,
+          "par": 3,
+          "si": 15
+        },
+        {
+          "hole": 10,
+          "par": 4,
+          "si": 10
+        },
+        {
+          "hole": 11,
+          "par": 3,
+          "si": 12
+        },
+        {
+          "hole": 12,
+          "par": 4,
+          "si": 8
+        },
+        {
+          "hole": 13,
+          "par": 3,
+          "si": 4
+        },
+        {
+          "hole": 14,
+          "par": 4,
+          "si": 14
+        },
+        {
+          "hole": 15,
+          "par": 3,
+          "si": 6
+        },
+        {
+          "hole": 16,
+          "par": 4,
+          "si": 2
+        },
+        {
+          "hole": 17,
+          "par": 3,
+          "si": 18
+        },
+        {
+          "hole": 18,
+          "par": 3,
+          "si": 16
+        }
+      ],
+      "players": {
+        "mike": {
+          "name": "Mike",
+          "courseHandicap": 23,
+          "gross": [
+            8,
+            5,
+            5,
+            5,
+            6,
+            3,
+            7,
+            5,
+            5,
+            5,
+            8,
+            9,
+            4,
+            8,
+            4,
+            8,
+            5,
+            4
+          ],
+          "out": 49,
+          "in": 55,
+          "grossTotal": 104,
+          "toPar": 42,
+          "adjustedGross": 98,
+          "differential": 43.1
+        },
+        "tj": {
+          "name": "TJ",
+          "courseHandicap": 23,
+          "gross": [
+            8,
+            4,
+            8,
+            4,
+            7,
+            7,
+            8,
+            3,
+            3,
+            6,
+            5,
+            7,
+            8,
+            7,
+            5,
+            7,
+            9,
+            5
+          ],
+          "out": 52,
+          "in": 59,
+          "grossTotal": 111,
+          "toPar": 49,
+          "adjustedGross": 105,
+          "differential": 51.1
+        },
+        "john": {
+          "name": "John",
+          "courseHandicap": 14,
+          "gross": [
+            5,
+            4,
+            5,
+            3,
+            4,
+            4,
+            7,
+            4,
+            5,
+            5,
+            3,
+            7,
+            6,
+            5,
+            5,
+            9,
+            5,
+            4
+          ],
+          "out": 41,
+          "in": 49,
+          "grossTotal": 90,
+          "toPar": 28,
+          "adjustedGross": 88,
+          "differential": 31.7
+        }
+      }
+    },
+    {
+      "round": "R2",
+      "date": "WED · JUL 22 AM",
+      "courseId": "ballyowen",
+      "course": "Ballyowen",
+      "location": "Hamburg, NJ",
+      "tee": {
+        "name": "White",
+        "rating": 66.9,
+        "slope": 114,
+        "par": 72,
+        "yards": 5630
+      },
+      "format": "fourBallMatchPlay",
+      "holes": [
+        {
+          "hole": 1,
+          "par": 4,
+          "si": 13
+        },
+        {
+          "hole": 2,
+          "par": 4,
+          "si": 11
+        },
+        {
+          "hole": 3,
+          "par": 5,
+          "si": 3
+        },
+        {
+          "hole": 4,
+          "par": 3,
+          "si": 17
+        },
+        {
+          "hole": 5,
+          "par": 5,
+          "si": 5
+        },
+        {
+          "hole": 6,
+          "par": 3,
+          "si": 15
+        },
+        {
+          "hole": 7,
+          "par": 4,
+          "si": 1
+        },
+        {
+          "hole": 8,
+          "par": 4,
+          "si": 7
+        },
+        {
+          "hole": 9,
+          "par": 4,
+          "si": 9
+        },
+        {
+          "hole": 10,
+          "par": 5,
+          "si": 12
+        },
+        {
+          "hole": 11,
+          "par": 3,
+          "si": 18
+        },
+        {
+          "hole": 12,
+          "par": 4,
+          "si": 14
+        },
+        {
+          "hole": 13,
+          "par": 4,
+          "si": 8
+        },
+        {
+          "hole": 14,
+          "par": 4,
+          "si": 4
+        },
+        {
+          "hole": 15,
+          "par": 3,
+          "si": 16
+        },
+        {
+          "hole": 16,
+          "par": 4,
+          "si": 2
+        },
+        {
+          "hole": 17,
+          "par": 5,
+          "si": 10
+        },
+        {
+          "hole": 18,
+          "par": 4,
+          "si": 6
+        }
+      ],
+      "players": {
+        "tj": {
+          "name": "TJ",
+          "courseHandicap": 23,
+          "gross": [
+            5,
+            5,
+            7,
+            4,
+            8,
+            5,
+            5,
+            9,
+            4,
+            6,
+            2,
+            6,
+            6,
+            6,
+            7,
+            5,
+            6,
+            4
+          ],
+          "out": 52,
+          "in": 48,
+          "grossTotal": 100,
+          "toPar": 28,
+          "adjustedGross": 97,
+          "differential": 29.8
+        },
+        "john": {
+          "name": "John",
+          "courseHandicap": 13,
+          "gross": [
+            5,
+            4,
+            9,
+            3,
+            6,
+            4,
+            5,
+            4,
+            5,
+            5,
+            3,
+            6,
+            4,
+            5,
+            6,
+            6,
+            6,
+            7
+          ],
+          "out": 45,
+          "in": 48,
+          "grossTotal": 93,
+          "toPar": 21,
+          "adjustedGross": 91,
+          "differential": 23.9
+        },
+        "mike": {
+          "name": "Mike",
+          "courseHandicap": 23,
+          "gross": [
+            5,
+            6,
+            6,
+            4,
+            8,
+            3,
+            8,
+            7,
+            6,
+            7,
+            6,
+            5,
+            7,
+            5,
+            4,
+            6,
+            8,
+            7
+          ],
+          "out": 53,
+          "in": 55,
+          "grossTotal": 108,
+          "toPar": 36,
+          "adjustedGross": 108,
+          "differential": 40.7
+        },
+        "brian": {
+          "name": "Brian",
+          "courseHandicap": 18,
+          "gross": [
+            7,
+            7,
+            6,
+            5,
+            8,
+            4,
+            6,
+            5,
+            7,
+            7,
+            3,
+            7,
+            7,
+            6,
+            5,
+            6,
+            6,
+            5
+          ],
+          "out": 55,
+          "in": 52,
+          "grossTotal": 107,
+          "toPar": 35,
+          "adjustedGross": 107,
+          "differential": 39.7
+        }
+      }
+    },
+    {
+      "round": "R3",
+      "date": "WED · JUL 22 PM",
+      "courseId": "wildturkey",
+      "course": "Wild Turkey",
+      "location": "Hamburg, NJ",
+      "tee": {
+        "name": "White",
+        "rating": 69,
+        "slope": 129,
+        "par": 71,
+        "yards": 5942
+      },
+      "format": "wolf",
+      "holes": [
+        {
+          "hole": 1,
+          "par": 4,
+          "si": 11
+        },
+        {
+          "hole": 2,
+          "par": 3,
+          "si": 17
+        },
+        {
+          "hole": 3,
+          "par": 5,
+          "si": 5
+        },
+        {
+          "hole": 4,
+          "par": 4,
+          "si": 1
+        },
+        {
+          "hole": 5,
+          "par": 4,
+          "si": 3
+        },
+        {
+          "hole": 6,
+          "par": 4,
+          "si": 13
+        },
+        {
+          "hole": 7,
+          "par": 3,
+          "si": 7
+        },
+        {
+          "hole": 8,
+          "par": 5,
+          "si": 15
+        },
+        {
+          "hole": 9,
+          "par": 4,
+          "si": 9
+        },
+        {
+          "hole": 10,
+          "par": 3,
+          "si": 10
+        },
+        {
+          "hole": 11,
+          "par": 5,
+          "si": 2
+        },
+        {
+          "hole": 12,
+          "par": 4,
+          "si": 14
+        },
+        {
+          "hole": 13,
+          "par": 4,
+          "si": 16
+        },
+        {
+          "hole": 14,
+          "par": 3,
+          "si": 12
+        },
+        {
+          "hole": 15,
+          "par": 4,
+          "si": 4
+        },
+        {
+          "hole": 16,
+          "par": 3,
+          "si": 18
+        },
+        {
+          "hole": 17,
+          "par": 5,
+          "si": 8
+        },
+        {
+          "hole": 18,
+          "par": 4,
+          "si": 6
+        }
+      ],
+      "players": {
+        "mike": {
+          "name": "Mike",
+          "courseHandicap": 30,
+          "gross": [
+            7,
+            7,
+            8,
+            5,
+            4,
+            7,
+            3,
+            9,
+            5,
+            3,
+            9,
+            6,
+            7,
+            3,
+            7,
+            4,
+            6,
+            5
+          ],
+          "out": 55,
+          "in": 50,
+          "grossTotal": 105,
+          "toPar": 34,
+          "adjustedGross": 103,
+          "differential": 29.8
+        },
+        "brian": {
+          "name": "Brian",
+          "courseHandicap": 24,
+          "gross": [
+            7,
+            7,
+            7,
+            7,
+            7,
+            6,
+            7,
+            9,
+            7,
+            5,
+            6,
+            6,
+            7,
+            4,
+            7,
+            5,
+            9,
+            5
+          ],
+          "out": 64,
+          "in": 54,
+          "grossTotal": 118,
+          "toPar": 47,
+          "adjustedGross": 114,
+          "differential": 39.4
+        },
+        "john": {
+          "name": "John",
+          "courseHandicap": 19,
+          "gross": [
+            6,
+            4,
+            7,
+            7,
+            7,
+            6,
+            7,
+            5,
+            5,
+            9,
+            7,
+            4,
+            5,
+            5,
+            5,
+            5,
+            9,
+            5
+          ],
+          "out": 54,
+          "in": 54,
+          "grossTotal": 108,
+          "toPar": 37,
+          "adjustedGross": 103,
+          "differential": 29.8
+        },
+        "tj": {
+          "name": "TJ",
+          "courseHandicap": 30,
+          "gross": [
+            5,
+            4,
+            7,
+            7,
+            7,
+            6,
+            5,
+            5,
+            6,
+            5,
+            9,
+            5,
+            4,
+            5,
+            9,
+            6,
+            8,
+            6
+          ],
+          "out": 52,
+          "in": 57,
+          "grossTotal": 109,
+          "toPar": 38,
+          "adjustedGross": 108,
+          "differential": 34.2
+        }
+      }
+    },
+    {
+      "round": "R4",
+      "date": "THU · JUL 23 AM",
+      "courseId": "crystalsprings",
+      "course": "Crystal Springs Golf Club",
+      "location": "Hardyston, NJ",
+      "tee": {
+        "name": "White",
+        "rating": 69.1,
+        "slope": 123,
+        "par": 72,
+        "yards": 5862
+      },
+      "format": "fourBallAggregateStableford",
+      "holes": [
+        {
+          "hole": 1,
+          "par": 5,
+          "si": 7
+        },
+        {
+          "hole": 2,
+          "par": 4,
+          "si": 3
+        },
+        {
+          "hole": 3,
+          "par": 4,
+          "si": 1
+        },
+        {
+          "hole": 4,
+          "par": 5,
+          "si": 11
+        },
+        {
+          "hole": 5,
+          "par": 3,
+          "si": 17
+        },
+        {
+          "hole": 6,
+          "par": 4,
+          "si": 9
+        },
+        {
+          "hole": 7,
+          "par": 4,
+          "si": 13
+        },
+        {
+          "hole": 8,
+          "par": 5,
+          "si": 5
+        },
+        {
+          "hole": 9,
+          "par": 3,
+          "si": 15
+        },
+        {
+          "hole": 10,
+          "par": 4,
+          "si": 10
+        },
+        {
+          "hole": 11,
+          "par": 3,
+          "si": 14
+        },
+        {
+          "hole": 12,
+          "par": 5,
+          "si": 6
+        },
+        {
+          "hole": 13,
+          "par": 3,
+          "si": 16
+        },
+        {
+          "hole": 14,
+          "par": 5,
+          "si": 2
+        },
+        {
+          "hole": 15,
+          "par": 3,
+          "si": 18
+        },
+        {
+          "hole": 16,
+          "par": 4,
+          "si": 4
+        },
+        {
+          "hole": 17,
+          "par": 4,
+          "si": 8
+        },
+        {
+          "hole": 18,
+          "par": 4,
+          "si": 12
+        }
+      ],
+      "players": {
+        "brian": {
+          "name": "Brian",
+          "courseHandicap": 22,
+          "gross": [
+            8,
+            7,
+            5,
+            8,
+            6,
+            8,
+            8,
+            6,
+            7,
+            7,
+            4,
+            7,
+            3,
+            7,
+            3,
+            7,
+            8,
+            7
+          ],
+          "out": 63,
+          "in": 53,
+          "grossTotal": 116,
+          "toPar": 44,
+          "adjustedGross": 112,
+          "differential": 39.4
+        },
+        "mike": {
+          "name": "Mike",
+          "courseHandicap": 28,
+          "gross": [
+            7,
+            6,
+            6,
+            4,
+            6,
+            7,
+            5,
+            6,
+            7,
+            5,
+            4,
+            9,
+            5,
+            6,
+            7,
+            6,
+            8,
+            8
+          ],
+          "out": 54,
+          "in": 58,
+          "grossTotal": 112,
+          "toPar": 40,
+          "adjustedGross": 109,
+          "differential": 36.7
+        },
+        "john": {
+          "name": "John",
+          "courseHandicap": 17,
+          "gross": [
+            8,
+            6,
+            5,
+            8,
+            6,
+            6,
+            6,
+            7,
+            5,
+            6,
+            4,
+            7,
+            4,
+            5,
+            4,
+            5,
+            6,
+            6
+          ],
+          "out": 57,
+          "in": 47,
+          "grossTotal": 104,
+          "toPar": 32,
+          "adjustedGross": 104,
+          "differential": 32.1
+        },
+        "tj": {
+          "name": "TJ",
+          "courseHandicap": 28,
+          "gross": [
+            6,
+            5,
+            8,
+            8,
+            6,
+            9,
+            6,
+            7,
+            4,
+            7,
+            6,
+            8,
+            4,
+            8,
+            4,
+            6,
+            5,
+            7
+          ],
+          "out": 59,
+          "in": 55,
+          "grossTotal": 114,
+          "toPar": 42,
+          "adjustedGross": 113,
+          "differential": 40.3
+        }
+      }
+    },
+    {
+      "round": "R5",
+      "date": "THU · JUL 23 PM",
+      "courseId": "cascades",
+      "course": "Cascades Golf Club",
+      "location": "Hamburg, NJ",
+      "tee": {
+        "name": "White",
+        "rating": 69,
+        "slope": 124,
+        "par": 72,
+        "yards": 6044
+      },
+      "format": "scramble+alternateShot",
+      "holes": [
+        {
+          "hole": 1,
+          "par": 4,
+          "si": 7
+        },
+        {
+          "hole": 2,
+          "par": 4,
+          "si": 5
+        },
+        {
+          "hole": 3,
+          "par": 4,
+          "si": 13
+        },
+        {
+          "hole": 4,
+          "par": 3,
+          "si": 17
+        },
+        {
+          "hole": 5,
+          "par": 4,
+          "si": 9
+        },
+        {
+          "hole": 6,
+          "par": 5,
+          "si": 1
+        },
+        {
+          "hole": 7,
+          "par": 4,
+          "si": 3
+        },
+        {
+          "hole": 8,
+          "par": 3,
+          "si": 15
+        },
+        {
+          "hole": 9,
+          "par": 5,
+          "si": 11
+        },
+        {
+          "hole": 10,
+          "par": 4,
+          "si": 8
+        },
+        {
+          "hole": 11,
+          "par": 4,
+          "si": 6
+        },
+        {
+          "hole": 12,
+          "par": 4,
+          "si": 14
+        },
+        {
+          "hole": 13,
+          "par": 3,
+          "si": 18
+        },
+        {
+          "hole": 14,
+          "par": 4,
+          "si": 10
+        },
+        {
+          "hole": 15,
+          "par": 5,
+          "si": 2
+        },
+        {
+          "hole": 16,
+          "par": 4,
+          "si": 4
+        },
+        {
+          "hole": 17,
+          "par": 3,
+          "si": 16
+        },
+        {
+          "hole": 18,
+          "par": 5,
+          "si": 12
+        }
+      ],
+      "players": {
+        "brian": {
+          "name": "Brian",
+          "courseHandicap": 22,
+          "gross": [
+            7,
+            7,
+            5,
+            6,
+            6,
+            6,
+            6,
+            4,
+            6,
+            4,
+            9,
+            6,
+            2,
+            6,
+            6,
+            6,
+            6,
+            6
+          ],
+          "out": 53,
+          "in": 51,
+          "grossTotal": 104,
+          "toPar": 32,
+          "adjustedGross": 102,
+          "differential": 30.1
+        },
+        "mike": {
+          "name": "Mike",
+          "courseHandicap": 28,
+          "gross": [
+            6,
+            8,
+            5,
+            4,
+            6,
+            7,
+            6,
+            5,
+            8,
+            7,
+            8,
+            5,
+            6,
+            7,
+            7,
+            7,
+            6,
+            6
+          ],
+          "out": 55,
+          "in": 59,
+          "grossTotal": 114,
+          "toPar": 42,
+          "adjustedGross": 114,
+          "differential": 41
+        },
+        "john": {
+          "name": "John",
+          "courseHandicap": 17,
+          "gross": [
+            8,
+            8,
+            6,
+            5,
+            5,
+            8,
+            5,
+            2,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            6,
+            6,
+            4,
+            6
+          ],
+          "out": 52,
+          "in": 45,
+          "grossTotal": 97,
+          "toPar": 25,
+          "adjustedGross": 95,
+          "differential": 23.7
+        },
+        "tj": {
+          "name": "TJ",
+          "courseHandicap": 28,
+          "gross": [
+            7,
+            5,
+            7,
+            5,
+            4,
+            7,
+            5,
+            4,
+            7,
+            5,
+            7,
+            4,
+            7,
+            6,
+            7,
+            7,
+            7,
+            6
+          ],
+          "out": 51,
+          "in": 56,
+          "grossTotal": 107,
+          "toPar": 35,
+          "adjustedGross": 105,
+          "differential": 32.8
+        }
+      }
+    },
+    {
+      "round": "R6",
+      "date": "FRI · JUL 24",
+      "courseId": "blackbear",
+      "course": "Black Bear Golf Club",
+      "location": "Franklin, NJ",
+      "tee": {
+        "name": "White",
+        "rating": 68.6,
+        "slope": 123,
+        "par": 72,
+        "yards": 5883
+      },
+      "format": "championshipSingles+stableford",
+      "holes": [
+        {
+          "hole": 1,
+          "par": 4,
+          "si": 9
+        },
+        {
+          "hole": 2,
+          "par": 5,
+          "si": 11
+        },
+        {
+          "hole": 3,
+          "par": 4,
+          "si": 1
+        },
+        {
+          "hole": 4,
+          "par": 4,
+          "si": 5
+        },
+        {
+          "hole": 5,
+          "par": 3,
+          "si": 17
+        },
+        {
+          "hole": 6,
+          "par": 5,
+          "si": 13
+        },
+        {
+          "hole": 7,
+          "par": 3,
+          "si": 7
+        },
+        {
+          "hole": 8,
+          "par": 4,
+          "si": 15
+        },
+        {
+          "hole": 9,
+          "par": 4,
+          "si": 3
+        },
+        {
+          "hole": 10,
+          "par": 4,
+          "si": 8
+        },
+        {
+          "hole": 11,
+          "par": 3,
+          "si": 18
+        },
+        {
+          "hole": 12,
+          "par": 4,
+          "si": 4
+        },
+        {
+          "hole": 13,
+          "par": 5,
+          "si": 2
+        },
+        {
+          "hole": 14,
+          "par": 3,
+          "si": 16
+        },
+        {
+          "hole": 15,
+          "par": 4,
+          "si": 14
+        },
+        {
+          "hole": 16,
+          "par": 5,
+          "si": 12
+        },
+        {
+          "hole": 17,
+          "par": 4,
+          "si": 6
+        },
+        {
+          "hole": 18,
+          "par": 4,
+          "si": 10
+        }
+      ],
+      "players": {
+        "brian": {
+          "name": "Brian",
+          "courseHandicap": 22,
+          "gross": [
+            5,
+            9,
+            8,
+            7,
+            5,
+            8,
+            5,
+            4,
+            6,
+            6,
+            5,
+            5,
+            7,
+            4,
+            6,
+            5,
+            5,
+            6
+          ],
+          "out": 57,
+          "in": 49,
+          "grossTotal": 106,
+          "toPar": 34,
+          "adjustedGross": 105,
+          "differential": 33.4
+        },
+        "mike": {
+          "name": "Mike",
+          "courseHandicap": 27,
+          "gross": [
+            5,
+            6,
+            9,
+            6,
+            3,
+            6,
+            5,
+            8,
+            5,
+            5,
+            6,
+            7,
+            9,
+            7,
+            6,
+            9,
+            5,
+            6
+          ],
+          "out": 53,
+          "in": 60,
+          "grossTotal": 113,
+          "toPar": 41,
+          "adjustedGross": 109,
+          "differential": 37.1
+        },
+        "john": {
+          "name": "John",
+          "courseHandicap": 16,
+          "gross": [
+            7,
+            7,
+            6,
+            6,
+            4,
+            7,
+            3,
+            6,
+            5,
+            5,
+            5,
+            4,
+            6,
+            5,
+            3,
+            6,
+            7,
+            7
+          ],
+          "out": 51,
+          "in": 48,
+          "grossTotal": 99,
+          "toPar": 27,
+          "adjustedGross": 99,
+          "differential": 27.9
+        },
+        "tj": {
+          "name": "TJ",
+          "courseHandicap": 27,
+          "gross": [
+            7,
+            7,
+            5,
+            6,
+            4,
+            7,
+            6,
+            5,
+            8,
+            7,
+            4,
+            9,
+            9,
+            4,
+            5,
+            5,
+            6,
+            5
+          ],
+          "out": 55,
+          "in": 54,
+          "grossTotal": 109,
+          "toPar": 37,
+          "adjustedGross": 108,
+          "differential": 36.2
+        }
+      }
+    }
+  ],
+  "playpalIndex": {
+    "john": {
+      "name": "John",
+      "index": 22.8,
+      "priorIndex": 18,
+      "differentialsUsed": 2,
+      "adjustment": -1
+    },
+    "brian": {
+      "name": "Brian",
+      "index": 30.1,
+      "priorIndex": 23,
+      "differentialsUsed": 1,
+      "adjustment": 0
+    },
+    "tj": {
+      "name": "TJ",
+      "index": 30.3,
+      "priorIndex": 28,
+      "differentialsUsed": 2,
+      "adjustment": -1
+    },
+    "mike": {
+      "name": "Mike",
+      "index": 32.3,
+      "priorIndex": 28,
+      "differentialsUsed": 2,
+      "adjustment": -1
+    }
+  }
+}
