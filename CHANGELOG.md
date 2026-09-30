@@ -4,6 +4,13 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.20.1] — 2026-09-30 — CI fix
+
+- `npm audit fix` (lockfile only): patched `brace-expansion` and `sharp`
+  (new high-severity advisories that failed the CI audit step on main), plus
+  compatible bumps of `csv-parse`/`stream-json`/`uuid` transitive deps.
+- Version bump to 1.20.1 (package.json, `?v=` strings, sw.js `CACHE_VERSION`).
+
 ## [1.20.0] — 2026-09-29 — PlayPal Index
 
 A free, automatic, unofficial handicap computed on-device from the rounds the
