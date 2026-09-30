@@ -5,7 +5,7 @@
 // (no bundling) and never rename identifiers — whitespace minification only.
 
 import { build } from 'esbuild';
-import { mkdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
 
 const SOURCES = [
   'components/gameData.js',
@@ -102,6 +102,18 @@ await build({
     );
   writeFileSync('dist/app.html', rewritten);
   console.log('Pages app shell → dist/app.html');
+}
+
+// The app shell runs at dist/app.html, so JSX image paths like
+// "playpal-logo.png" and "icons/players/*.png" resolve under dist/.
+// Mirror those assets there so they load on Pages and in the PWA.
+{
+  mkdirSync('dist/icons/players', { recursive: true });
+  copyFileSync('playpal-logo.png', 'dist/playpal-logo.png');
+  for (const f of readdirSync('icons/players')) {
+    if (f.endsWith('.png')) copyFileSync(`icons/players/${f}`, `dist/icons/players/${f}`);
+  }
+  console.log('Assets mirrored → dist/playpal-logo.png, dist/icons/players/');
 }
 
 console.log('Build complete → dist/');
