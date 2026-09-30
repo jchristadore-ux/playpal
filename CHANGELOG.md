@@ -4,6 +4,18 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.21.1] — 2026-09-30 — Signed-in accounts (and Pro) survive app launch
+
+- Fix: signed-in players showed "Free plan" even with Pro/admin claims.
+  `AuthService.start()` was never called, so `onAuthStateChanged` →
+  `ProService.refresh()` never ran and `AuthService.currentUser()` stayed
+  null; and `_fbInit` called `signInAnonymously()` without waiting for the
+  persisted session, replacing a restored account with a new anonymous user.
+  `_fbInit` now starts AuthService and only signs in as a guest when no
+  session exists; app boot restores the Pro cache and brings Firebase up.
+- `PLAYPAL_CONFIG.apiBaseUrl` defaults to `https://playpal-nine.vercel.app`
+  off Vercel (GitHub Pages / Capacitor have no `/api`), so `/api/health` and
+  Checkout reach the Vercel functions.
 - Vercel: deploys had been failing since the `build` script was added — the
   "Other" preset then requires an output dir named `public`. `vercel.json`
   now sets `"outputDirectory": "."`.
