@@ -16,6 +16,10 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 - `PLAYPAL_CONFIG.apiBaseUrl` defaults to `https://playpal-nine.vercel.app`
   off Vercel (GitHub Pages / Capacitor have no `/api`), so `/api/health` and
   Checkout reach the Vercel functions.
+- Vercel functions crashed on import (`ERR_REQUIRE_ESM`: firebase-admin 14 →
+  jwks-rsa 4 → ESM-only jose 6; Vercel's Node loader doesn't support
+  `require(esm)`). `overrides` pins firebase-admin's jwks-rsa to ^3.2.2
+  (CJS jose 4) so checkout / webhook load again.
 - Vercel: deploys had been failing since the `build` script was added — the
   "Other" preset then requires an output dir named `public`. `vercel.json`
   now sets `"outputDirectory": "."`.
