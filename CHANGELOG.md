@@ -4,6 +4,12 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.21.4] — 2026-09-30 — Logo loads in the app
+
+- The app shell runs at `dist/app.html`, so relative image paths in the UI
+  (`playpal-logo.png`, `icons/players/*.png`) 404'd. The build now mirrors
+  those assets into `dist/`; `sw.js` precaches `dist/playpal-logo.png`.
+
 ## [1.21.3] — 2026-09-30 — Your account's group is your default group
 
 - Signed-in (non-anonymous) accounts with `users/{uid}.groupId` now ALWAYS
