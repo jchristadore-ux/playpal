@@ -72,6 +72,36 @@ The **↻ SYNC** button next to the index (player profile) connects to a
 handicap service when one is configured; until then it simply tells you so
 and the number stays editable by hand.
 
+### The PlayPal Index
+
+PlayPal builds a free, automatic handicap for every player from the rounds
+you already score — the **PlayPal Index**. Nobody opts in and nobody does
+math: the moment a round is saved, each player's number is recomputed and the
+post-round summary shows it moving (e.g. `12.4 → 11.9 (−0.5)`).
+
+- **How it's figured:** each hole is capped at net double bogey (par + 2 +
+  strokes you get), the round becomes a differential
+  (113 ÷ Slope × (adjusted score − Course Rating)), and your index is the
+  average of your lowest differentials from your most recent 20 rounds
+  (lowest 1 of 3, lowest 2 of 6–8 … lowest 8 of 20). Your first index shows
+  after **3 rounds**; until then the summary shows your progress.
+- **9 holes count.** A 9-hole round (or 9+ holes before walking in) is
+  doubled to an 18-hole equivalent and marked *estimated*.
+- **What doesn't count:** fewer than 9 holes, walking in before 9, or tees
+  with no course rating/slope (PlayPal never guesses those — add the rating
+  and slope when you create a course).
+- **Big jumps are dampened:** more than 3.0 above your lowest index of the
+  past year only counts half, and it can never rise more than 5.0.
+- **Auto vs manual:** in a player's profile, *Build my index automatically*
+  (on by default) makes the handicap every game uses follow the PlayPal
+  Index. Turn it off to keep a handicap you set by hand — rounds still count
+  and you can still see what your PlayPal Index would be.
+- The **📈 STATS** tab shows the index trend and your last 20 differentials
+  with the counted ones marked.
+
+*An unofficial index built from your PlayPal rounds — WHS-style math, but not
+a USGA Handicap Index and not valid for official competition.*
+
 ## Scoring
 
 Scoring works exactly as before — big +/− steppers, tap the number for the

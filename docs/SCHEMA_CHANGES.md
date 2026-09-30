@@ -150,3 +150,38 @@ No new keys. Existing shapes now filled in / honored:
 * EGT `state.dropouts[roundId]` — same native dropout map, bridged on finalize
   so Cup skins / nines / matches no longer stall on blank holes after a walk-off.
 * Trip leaderboard / awards gain `chipIns` (rolled from putts / holeScores).
+
+# Schema & Storage Changes — v1.20.0 (PlayPal Index)
+
+**Every change is additive and backward compatible.** Old clients ignore the
+new fields; `ProfileService.normalizePlayer` fills defaults; nothing is
+renamed or deleted. `PP_SCHEMA_VERSION` 2 → 3.
+
+## Player object (`pp_players`, RTDB `players`)
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `ppIndex` | number \| null | `null` | PlayPal Index, 1 decimal (null until 3 differentials) |
+| `ppIndexUpdatedAt` | epoch ms \| null | `null` | last recompute |
+| `ppIndexMode` | `'auto'` \| `'manual'` | `'auto'` | auto → drives `handicap` |
+| `ppLowIndex365` | number \| null | `null` | lowest index held in 365 days (soft/hard cap) |
+| `ppLowIndex365At` | epoch ms \| null | `null` | when that low was set (365-day expiry; not in the original spec, added so the window can expire) |
+| `ppDifferentials` | array (≤20, newest first) | `[]` | `{ roundId, syncCode, playedAt, courseName, teeName, holes, gross, ags, rating, slope, differential, estimated }` |
+| `handicapSource` | adds `'playpal'` | — | set when auto mode writes `handicap` |
+
+Posting is keyed on `roundId` (round `id`), falling back to `syncCode`, so
+re-saving / re-opening / re-syncing a round never double-posts.
+
+## Migration v3
+
+`migratePlayersV3(players)` normalizes players and, one time, rebuilds each
+player's differentials from locally saved rounds (`pp_round_snap_*`).
+Idempotent; never deletes existing differentials.
+
+## Other additive fields
+
+* Course tees (`tees[].rated`, boolean) — whether rating/slope were actually
+  entered in the custom-course form (vs the 72.0/113 placeholders).
+  `CourseService.normalizeCourse` preserves it.
+* `StatsService.roundDataFromSnapshot` output gains `roundId`, `teeId`,
+  `startingTee` (read-only view fields).
