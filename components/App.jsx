@@ -310,6 +310,7 @@ const App = () => {
   };
 
   const handleManagePlayers = (updated) => {
+    if (window.__pp_group_switching) return;   // reloading onto the account group
     setPlayers(updated);
     localStorage.setItem('pp_players', JSON.stringify(updated));
     PlayerSyncService.save(updated, function(ok) {

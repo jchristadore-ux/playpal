@@ -4,6 +4,28 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.21.3] — 2026-09-30 — Your account's group is your default group
+
+- Signed-in (non-anonymous) accounts with `users/{uid}.groupId` now ALWAYS
+  land on that group at sign-in and on every launch — whatever the device was
+  on (its own roster, a round in progress, or LEGACY). Replaces the 1.21.2
+  "fresh device only" rule.
+- Nothing is lost on the switch (`GroupService.switchToAccountGroup`): the old
+  group's players, courses and saved rounds plus this device's local-only ones
+  are merged into the account group add-only (players dedupe by id, by the
+  id/name they were imported from, then case-insensitive name; courses by id then
+  name; saved rounds by sync code). Account records are never overwritten; the
+  old group — LEGACY included — is only read. Round docs for carried-over
+  rounds (and the round in progress) are copied into the account group.
+- Local snapshots and the round in progress stay on the device and remain
+  resumable; player ids matched to an existing account profile are remapped
+  (pre-switch copy of the active round in `pp_group_switch_backup`).
+- Sync services freeze while switching so nothing writes the old roster into
+  the new group before the reload. A failed merge (offline) keeps the device
+  where it is and retries next launch.
+- Accounts with no `groupId` still get the device's current group.
+- Signed in on the account group: the Group sheet hides Join / New Group.
+
 ## [1.21.2] — 2026-09-30 — Signed-in devices see the group's players and round history
 
 - Fix: after signing in on a device that had never built a roster (fresh

@@ -23,6 +23,9 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
   const [proState,    setProState]      = React.useState(() => window.ProService ? window.ProService.state() : { pro: false });
   const [proBanner,   setProBanner]     = React.useState('');
   const groupId = window.GroupService ? window.GroupService.current() : 'LEGACY';
+  // Signed in on the account's own group: it is the default — no join prompt.
+  const accountGroupActive = !!(authSnap && !authSnap.isAnonymous && window.GroupService &&
+    window.GroupService.isAccountGroupActive && window.GroupService.isAccountGroupActive());
 
   React.useEffect(() => {
     const offs = [];
@@ -480,7 +483,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           }}
           onKeyDown={e=>{ if (e.key === 'Enter') e.currentTarget.click(); }}
           style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5, cursor:'default', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
-          PlayPal v1.21.2
+          PlayPal v1.21.3
         </div>
         {egtNote && (
           <div role="status" style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D', marginTop:6}}>{egtNote}</div>
@@ -511,6 +514,11 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             )}
           </div>
 
+          {accountGroupActive ? (
+            <div style={{borderTop:'1px solid #E7E3D9', paddingTop:14, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', lineHeight:1.6}}>
+              This is your account's default group. Every device you sign in on uses it automatically — nothing to join.
+            </div>
+          ) : (<>
           <div style={{borderTop:'1px solid #E7E3D9', paddingTop:14}}>
             <Label htmlFor="pp-group-code" style={{display:'block', marginBottom:6}}>JOIN A DIFFERENT GROUP</Label>
             <input id="pp-group-code" value={groupInput}
@@ -533,6 +541,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             </div>
             <Btn onClick={newGroup} variant="ghost" style={{width:'100%', fontSize:13}}>NEW GROUP</Btn>
           </div>
+          </>)}
         </div>
       </Modal>
 

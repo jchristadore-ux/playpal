@@ -51,24 +51,3 @@ test('hydrateFromCloud fills only missing snapshots and never overwrites', () =>
   RH.hydrateFromCloud([{ syncCode: 'HAVE01' }], () => { called = true; }, n => assert.equal(n, 0));
   assert.equal(called, false);
 });
-
-test('a fresh device adopts the account group; a device with a roster keeps its own', () => {
-  const W = loadPlayPal();
-  const A = W.AuthService, GS = W.GroupService;
-  const acct = 'CB4BYS07373NJPF63PBJ7F803M';
-  const dev = GS.current();
-  let reloads = 0;
-  const reload = () => { reloads++; };
-  assert.equal(A.adoptAccountGroup(acct, dev, { reload }), true);
-  assert.equal(GS.current(), acct);
-  assert.equal(reloads, 1);
-  assert.equal(A.adoptAccountGroup(acct, GS.current(), { reload }), false, 'already there');
-
-  const W2 = loadPlayPal();
-  W2.localStorage.setItem('pp_group_id', 'ZZZZZZZZZZZZ');
-  W2.localStorage.setItem('pp_players', JSON.stringify([{ id: 'x', name: 'X' }]));
-  assert.equal(W2.AuthService.adoptAccountGroup(acct, 'ZZZZZZZZZZZZ', { reload }), false);
-  assert.equal(W2.GroupService.current(), 'ZZZZZZZZZZZZ');
-  assert.equal(W2.AuthService.adoptAccountGroup(acct, 'LEGACY', { reload }), false, 'LEGACY never switched');
-  assert.equal(reloads, 1);
-});
