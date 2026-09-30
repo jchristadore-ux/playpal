@@ -144,6 +144,9 @@ const App = () => {
     return () => window.removeEventListener('pp:unlock-egt', onUnlock);
   }, []);
 
+  // Bumped when round snapshots arrive from the cloud so Stats re-reads them.
+  const [historyRev, setHistoryRev] = React.useState(0);
+
   const [recentRounds, setRecentRounds] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('pp_recent') || '[]'); } catch(e) { return []; }
   });
@@ -255,6 +258,15 @@ const App = () => {
 
   React.useEffect(() => {
     SavedRoundsSyncService.subscribe(function(remoteRounds) {
+      // Rounds scored on another device of this group: rebuild their local
+      // snapshots from the group's round docs so Stats / history show them.
+      try {
+        if (window.RoundHistoryService && window.RoundSyncService && window.RoundSyncService.fetchDocs) {
+          window.RoundHistoryService.hydrateFromCloud(remoteRounds, window.RoundSyncService.fetchDocs, function(n) {
+            if (n > 0) setHistoryRev(function(v) { return v + 1; });
+          });
+        }
+      } catch (e) { console.warn('[PlayPal] cloud history hydrate skipped:', e); }
       setRecentRounds(function(prev) {
         const merged = {};
         remoteRounds.forEach(function(r) { if (r.syncCode) merged[r.syncCode] = r; });
@@ -734,7 +746,7 @@ const App = () => {
         }
 
         {screen === 'stats' &&
-          <StatsScreen players={players} initialPlayerId={statsPlayerId} />
+          <StatsScreen key={'stats-' + historyRev} players={players} initialPlayerId={statsPlayerId} />
         }
 
         {screen === 'score' && round &&

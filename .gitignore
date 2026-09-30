@@ -22,3 +22,6 @@ ui-debug.log
 # Local secrets / Vercel link (never commit)
 .secrets/
 .vercel/
+
+# Local data backups from admin import scripts (never commit)
+backups/

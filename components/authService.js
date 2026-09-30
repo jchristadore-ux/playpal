@@ -89,8 +89,15 @@ const AuthService = (function () {
         const patch = { updatedAt: now };
         if (user.email) patch.email = user.email;
         if (user.displayName) patch.displayName = user.displayName;
-        if (groupId && !snap.data().groupId) patch.groupId = groupId;
+        const acctGroup = snap.data().groupId;
+        if (groupId && !acctGroup) patch.groupId = groupId;
         await ref.set(patch, { merge: true });
+        // The account remembers its group. A device that has never built a
+        // roster (fresh install, the home-screen app next to Safari, a new
+        // phone) generated a random empty group on first run — signing in
+        // there used to leave the player looking at an empty app while all of
+        // their players and rounds sat in the account's group. Adopt it.
+        if (adoptAccountGroup(acctGroup, groupId)) return;
       }
       if (groupId && window.GroupService && window.GroupService.setOwnerUid) {
         window.GroupService.setOwnerUid(user.uid);
@@ -98,6 +105,33 @@ const AuthService = (function () {
     } catch (e) {
       console.warn('[AuthService] ensureUserDoc failed:', e && e.message);
     }
+  }
+
+  // True when this device holds no roster and no round in progress, i.e. there
+  // is nothing on it that switching groups could hide.
+  function _deviceIsFresh() {
+    try {
+      if (localStorage.getItem('pp_active_round') === '1') return false;
+      const raw = localStorage.getItem('pp_players');
+      if (!raw) return true;
+      const arr = JSON.parse(raw);
+      return !Array.isArray(arr) || arr.length === 0;
+    } catch (e) { return false; }
+  }
+
+  // Switches a fresh device to the signed-in account's group and reloads so
+  // every sync subscription re-attaches to it. Returns true when it switched.
+  function adoptAccountGroup(acctGroup, deviceGroup, opts) {
+    const GS = window.GroupService;
+    if (!acctGroup || !GS || !GS.isValidCode || !GS.join) return false;
+    if (acctGroup === deviceGroup || deviceGroup === GS.LEGACY_ID) return false;
+    if (!GS.isValidCode(acctGroup) || !_deviceIsFresh()) return false;
+    const id = GS.join(acctGroup);
+    if (!id) return false;
+    ['pp_players', 'pp_custom_courses', 'pp_recent'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+    const reload = (opts && opts.reload) || (() => { try { window.location.reload(); } catch (e) {} });
+    reload();
+    return true;
   }
 
   function start() {
@@ -224,6 +258,7 @@ const AuthService = (function () {
     getIdToken,
     getIdTokenResult,
     ensureUserDoc,
+    adoptAccountGroup,
     friendlyError,
   };
 })();

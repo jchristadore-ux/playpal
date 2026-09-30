@@ -4,6 +4,20 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.21.2] — 2026-09-30 — Signed-in devices see the group's players and round history
+
+- Fix: after signing in on a device that had never built a roster (fresh
+  install, home-screen app next to Safari, new phone), the app stayed on the
+  random empty group it generated on first run, so players, rounds and Stats
+  looked gone. `users/{uid}.groupId` was written but never read. Signing in on
+  a fresh device now adopts the account's group (`AuthService.adoptAccountGroup`,
+  never for a device that has a roster, a round in progress, or the LEGACY group).
+- Fix: Stats and round history only read snapshots written on the device that
+  scored the round. `RoundHistoryService.hydrateFromCloud` now rebuilds missing
+  snapshots from the group's round docs for every synced saved-round, so a second
+  device in the group shows the same scoring history and trends.
+- Home footer shows the real app version (was stuck at v1.19.5).
+
 ## [1.21.1] — 2026-09-30 — Signed-in accounts (and Pro) survive app launch
 
 - Fix: signed-in players showed "Free plan" even with Pro/admin claims.
