@@ -30,7 +30,7 @@ Operator checklist for public users with real accounts and a $9.99 one-time Play
 
 | Key | Purpose |
 |---|---|
-| STRIPE_SECRET_KEY | sk_test_ / sk_live_ |
+| STRIPE_SECRET_KEY | Stripe secret key (test or live) |
 | STRIPE_WEBHOOK_SECRET | whsec_ |
 | STRIPE_PRICE_ID | One-time price id |
 | FIREBASE_SERVICE_ACCOUNT_JSON | Service-account JSON string |
