@@ -4,6 +4,14 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+- Vercel: deploys had been failing since the `build` script was added — the
+  "Other" preset then requires an output dir named `public`. `vercel.json`
+  now sets `"outputDirectory": "."`.
+- `lib/firebaseAdmin.mjs` (and `scripts/migrate-legacy-group.mjs`) moved to
+  the modular firebase-admin API; v14's default export no longer has
+  `credential` / `apps` / `auth()` / `firestore()`, which broke the Stripe
+  webhook + checkout functions at runtime.
+
 ## [1.21.0] — 2026-09-30 — EGT 2026 history loaded into the PlayPal Index
 
 - New `components/historyImport.js` (`HistoryImport`): the six stored EGT 2026

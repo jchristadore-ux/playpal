@@ -428,7 +428,8 @@ function loadServiceAccountJson(credentialsPath) {
 
 async function initFirestore(credentialsPath) {
   const require = createRequire(import.meta.url);
-  const admin = require('firebase-admin');
+  const { initializeApp, getApps, cert } = require('firebase-admin/app');
+  const { getFirestore } = require('firebase-admin/firestore');
   const sa = loadServiceAccountJson(credentialsPath);
   if (!sa) {
     throw new Error(
@@ -436,10 +437,8 @@ async function initFirestore(credentialsPath) {
         'FIREBASE_SERVICE_ACCOUNT_PATH, GOOGLE_APPLICATION_CREDENTIALS, or --credentials <path>.',
     );
   }
-  if (!admin.apps.length) {
-    admin.initializeApp({ credential: admin.credential.cert(sa) });
-  }
-  return admin.firestore();
+  const app = getApps().length ? getApps()[0] : initializeApp({ credential: cert(sa) });
+  return getFirestore(app);
 }
 
 export async function main(argv = process.argv.slice(2), deps = {}) {
