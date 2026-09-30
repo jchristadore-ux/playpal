@@ -475,8 +475,10 @@ const CourseBuilder = ({ onSave, onCancel, prefill }) => {
 
   const handleSave = () => {
     const tees = [
-      { id:'default', name:'Standard', rating:parseFloat(rating)||72.0, slope:parseInt(slope)||113, yds:null },
-      ...extraTees.filter(t => t.name.trim()).map((t,i) => ({ id:'tee_'+(i+1), name:t.name.trim(), rating:parseFloat(t.rating)||parseFloat(rating)||72.0, slope:parseInt(t.slope)||parseInt(slope)||113, yds:null })),
+      { id:'default', name:'Standard', rating:parseFloat(rating)||72.0, slope:parseInt(slope)||113, yds:null,
+        rated: !!(parseFloat(rating) && parseInt(slope)) },
+      ...extraTees.filter(t => t.name.trim()).map((t,i) => ({ id:'tee_'+(i+1), name:t.name.trim(), rating:parseFloat(t.rating)||parseFloat(rating)||72.0, slope:parseInt(t.slope)||parseInt(slope)||113, yds:null,
+        rated: !!((parseFloat(t.rating)||parseFloat(rating)) && (parseInt(t.slope)||parseInt(slope))) })),
     ];
     const course = window.CourseService.normalizeCourse({
       id:'custom_'+Date.now(), name:name.trim(), location:location.trim()||'Custom Course',

@@ -4,19 +4,29 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
-## [1.19.7] — 2026-09-29 — Superuser (admin custom claim)
+## [1.20.0] — 2026-09-29 — PlayPal Index
 
-- New `admin` / `superuser` Auth custom claims (server-set only, via Admin SDK).
-  `firestore.rules` gains `isAdmin()`; admins may read/write every document
-  (catch-all `match /{document=**}` now `allow read, write: if isAdmin()`).
-  Non-admins are unchanged; clients still cannot self-grant anything.
-- `ProService`: `admin`/`superuser` claims imply Pro (all Pro gates pass);
-  new `ProService.isAdmin()`. `EntitlementHelpers.claimsGrantPro/claimsIsAdmin`.
-- `scripts/grant-superuser.mjs --email <email> [--confirm]` — dry run by default;
-  sets claims `{admin, superuser, pro}` and merges `users/{uid}` `{pro:true, admin:true}`.
-  Never creates accounts. Claims apply after sign-out/in or token refresh.
-- `.gitignore`: `.secrets/`, `.vercel/`.
-- Tests: claim helpers, ProService admin refresh, rules emulator (5) admin bypass.
+A free, automatic, unofficial handicap computed on-device from the rounds the
+group already scores. *Not a USGA Handicap Index; not valid for official
+competition.*
+
+- New `components/indexService.js` (`IndexService`): net-double-bogey AGS
+  (100% course handicap), differential `(113/slope)×(AGS−rating)` (no PCC),
+  9-hole rounds doubled + tagged `estimated`, lowest-N-of-20 table, truncation,
+  `clampIndex`, soft cap 3.0 / hard cap 5.0 vs the 365-day low. Posting rules:
+  ≥9 holes, real rating/slope (never invented), not walked in before 9.
+- Auto-updating: `handleSaveRound` posts every roster player, saves via
+  `pp_players` + RTDB sync; deduped by round id / sync code.
+- Auto mode (default) drives `player.handicap` (`handicapSource: 'playpal'`);
+  manual mode records differentials but leaves the handicap alone.
+- UI: PLAYPAL INDEX block in the post-round summary (before → after, delta,
+  differential, progress to first index, plain reasons when a round can't
+  post) and in the shared/emailed round report; profile panel with toggle;
+  Stats index trend + 20-differential table with counted rounds marked.
+- Schema v3 (additive): new player fields, one-time backfill from saved
+  rounds. Custom-course tees record `rated`.
+- Docs: USER_GUIDE, DEVELOPER_GUIDE, SCHEMA_CHANGES. Tests:
+  `tests/playpalIndex.test.mjs` (17).
 
 ## [1.19.6] — 2026-09-21 — WS6: marketing landing page + OG/Twitter cards
 

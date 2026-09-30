@@ -5,8 +5,10 @@
 //
 //   { id, name, initials, color, handicap, ghin, ghinLogin, email, venmo,   // existing
 //     preferredTee, dominantHand, homeCourseId, homeCourseName,             // new
-//     favoriteFormats: [formatId], handicapSource: 'manual'|'provider',
-//     handicapUpdatedAt }
+//     favoriteFormats: [formatId], handicapSource: 'manual'|'provider'|'playpal',
+//     handicapUpdatedAt,
+//     ppIndex, ppIndexUpdatedAt, ppIndexMode: 'auto'|'manual',            // PlayPal Index
+//     ppLowIndex365, ppLowIndex365At, ppDifferentials: [≤20, newest first] }
 //
 // Career numbers are derived on demand from round history via StatsService —
 // nothing is double-stored.
@@ -21,6 +23,13 @@ const ProfileService = (function () {
     favoriteFormats: [],
     handicapSource: 'manual',
     handicapUpdatedAt: null,
+    // PlayPal Index (see indexService.js) — additive; old clients ignore these.
+    ppIndex: null,              // number | null — 1 decimal
+    ppIndexUpdatedAt: null,     // epoch ms
+    ppIndexMode: 'auto',        // 'auto' | 'manual'
+    ppLowIndex365: null,        // number | null — soft/hard cap reference
+    ppLowIndex365At: null,      // epoch ms the low was set (365-day window)
+    ppDifferentials: [],        // most recent 20, newest first
   };
 
   function normalizePlayer(p) {
@@ -28,6 +37,8 @@ const ProfileService = (function () {
     const out = { ...PROFILE_DEFAULTS, ...p };
     if (!Array.isArray(out.favoriteFormats)) out.favoriteFormats = [];
     if (out.dominantHand !== 'L') out.dominantHand = 'R';
+    if (!Array.isArray(out.ppDifferentials)) out.ppDifferentials = [];
+    if (out.ppIndexMode !== 'manual') out.ppIndexMode = 'auto';
     return out;
   }
 

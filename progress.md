@@ -1,5 +1,20 @@
 # PlayPal — Progress
 
+## v1.20.0 — PlayPal Index (29 Sep 2026)
+
+**Branch:** `feat/playpal-index` (from main @ v1.19.6)
+**Status:** complete, draft PR. `npm test` green (353 baseline + 17 new),
+`dist/` rebuilt, headless browser smoke: scored an 18-hole round, finished it,
+PLAYPAL INDEX block rendered with the expected arithmetic, no page errors.
+
+Files: components/indexService.js (new), profileService.js, migrations.js
+(v3), statsService.js (roundId/teeId), courseService.js + Setup.jsx (tee
+`rated`), App.jsx (post on save), Summary.jsx, sharingService.js, Home.jsx,
+StatsScreen.jsx, build.mjs / app.html / sw.js / tests/helpers/load.mjs
+(registration), tests/playpalIndex.test.mjs, docs.
+
+Next action: review + merge the draft PR; nothing pending in code.
+
 ## v1.18.0 — Zero putts + mid-round dropouts (28 Aug 2026)
 
 **Branch:** `claude/zero-putts-mid-round-dropout-poo3hu`
