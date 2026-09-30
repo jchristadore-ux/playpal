@@ -48,6 +48,8 @@ const CourseService = (function () {
           rating: parseFloat(t.rating) || course.rating || 72,
           slope:  parseInt(t.slope)   || course.slope  || 113,
           yds:    Array.isArray(t.yds) && t.yds.length === holes.length ? t.yds.map(y => parseInt(y) || 0) : null,
+          // Whether rating/slope were actually entered (vs 72/113 placeholders).
+          ...(typeof t.rated === 'boolean' ? { rated: t.rated } : {}),
         }))
       : [{
           id:     'default',
