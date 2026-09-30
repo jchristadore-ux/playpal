@@ -4,6 +4,34 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.19.8] — 2026-09-29 — Sixes Round Robin (6-6-6)
+
+New engine format **Sixes Round Robin (6-6-6)** (`sixesRoundRobin`, Team category)
+for a foursome: three separate 6-hole 2v2 matches (holes 1–6, 7–12, 13–18 in
+play order) and every player partners each of the other three exactly once
+(AB v CD, AC v BD, AD v BC).
+
+- Scoring: hole-by-hole match play per segment, team **net best ball** by
+  default (gross selectable). A side's ball counts only once all its in-play
+  members have posted. Closeouts (e.g. 4&2), halves, dormie in status.
+- Pops: existing HandicapService strokes — game allowance (default 100%),
+  "strokes off low ball" (default on), per-player overrides, round tee.
+  Pop dots on the live scorecard are seeded from the Sixes game's settings;
+  the game tracker shows per-match pops (●) and hole winners.
+- Setup: rotation editor — ▲▼ reorders which pairing plays which match, a
+  stake per match (blank = common stake). `PAYS` option:
+  *Stake / player* (default, same as Four Ball / Nassau: each loser pays the
+  stake, each winner collects it) or *Each opponent* (winner collects from each
+  opponent). Halved/abandoned matches push. Walk-ins concede only undecided
+  matches.
+- Money flows through `calcAllPayouts` / `calcRoundPayouts` (trip + season
+  rollups), Summary, share text, and live Bottom Line (which now also counts
+  engine games live). New `MatchEngine.hasStake`, `stakeLabel`,
+  `sixesRotation`, settlement mode `rotation`, result kind `rotation`.
+- The older points-based `sixes` format is unchanged.
+- Tests: `tests/sixesRoundRobin.test.mjs` (rotation, closeouts, per-match
+  stakes, payouts, pops/allowance, halves, in-progress, walk-ins, round money).
+
 ## [1.19.6] — 2026-09-21 — WS6: marketing landing page + OG/Twitter cards
 
 Public face of GitHub Pages is now a static marketing landing page; the PWA

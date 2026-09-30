@@ -107,6 +107,7 @@ const BottomLineProvider = (function () {
       lastTouch: Math.max(doc.savedAt || 0, (live && live._ts) || 0),
       round, course: round.course, players: round.players,
       formats: round.formats || [],
+      games: round.games || [],
       isEgt: !!round.egtRoundId,
       egtRoundId: round.egtRoundId || null,
       tripId: round.tripId || null,
@@ -202,14 +203,16 @@ const BottomLineProvider = (function () {
     try {
       const computePTMState = g('computePTMState'), calcAllPayouts = g('calcAllPayouts');
       if (r.payouts && r.complete) r.money = r.payouts;
-      else if (calcAllPayouts && r.hasScores && r.formats.length) {
+      else if (calcAllPayouts && r.hasScores && (r.formats.length || (r.games || []).length)) {
         const ptm = computePTMState
           ? computePTMState(r.scores, r.putts || {}, r.players, r.course, r.players[0].id, r.dropouts)
           : { holderId: null };
         r.ptmState = ptm;
         r.money = calcAllPayouts(r.scores, r.wolfData || {}, r.players, r.course, r.formats,
           [], ptm.holderId, r.popFlags || {}, null, r.bbbData || {}, r.teeBallData || {},
-          { dropouts: r.dropouts });
+          // Engine games (Sixes Round Robin, Four Ball, …) count in live money too.
+          { dropouts: r.dropouts, games: r.games || [], startingTee: r.round.startingTee, teeId: r.round.teeId,
+            stats: { putts: r.putts || {}, fir: r.firData || {}, gir: r.girData || {} } });
       }
     } catch (e) {}
 

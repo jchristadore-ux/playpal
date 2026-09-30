@@ -940,8 +940,10 @@ function calcAllPayouts(scores, wolfData, players, course, formats, _ignoredPres
   const settleOne = (g, stakeOverride) => {
     if (!ME || !g) return {};
     const stake = stakeOverride != null ? stakeOverride : Number(g.config && g.config.stake);
-    if (!(stake > 0)) return {};
-    const cfg = { ...(g.config || {}), stake };
+    // Per-match stakes (Sixes Round Robin) can carry money with a zero base stake.
+    const perMatch = stakeOverride == null && ME.hasStake && ME.hasStake(g);
+    if (!(stake > 0) && !perMatch) return {};
+    const cfg = { ...(g.config || {}), stake: stake > 0 ? stake : 0 };
     try {
       return ME.payouts({ ...g, config: cfg }, rawCtx);
     } catch (e) { return {}; }

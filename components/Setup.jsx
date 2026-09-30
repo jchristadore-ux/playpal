@@ -72,6 +72,74 @@ const GameTeamAssigner = ({ def, config, players, onChange }) => {
   );
 };
 
+// Sixes Round Robin: pick who is A/B/C/D, which pairing plays which 6-hole
+// match (▲▼ reorders), and an optional stake per match (blank = common stake).
+const SixesRotationEditor = ({ config, players, onChange }) => {
+  const ME = window.MatchEngine;
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  const roundIds = players.map(p => p.id);
+  const stale = !(config.playerIds && config.playerIds.length === 4 && config.playerIds.every(id => roundIds.includes(id)));
+  const ids = stale ? roundIds.slice(0, 4) : config.playerIds;
+  // Players changed after the game was added — re-seat the foursome.
+  React.useEffect(() => {
+    if (stale && ids.length === 4) onChange({ ...config, playerIds: ids });
+  }, [roundIds.join(',')]);
+  const order = Array.isArray(config.pairingOrder) && config.pairingOrder.length === 3 ? config.pairingOrder : [0, 1, 2];
+  const rotation = ME.sixesRotation(ids, order);
+  const byId = Object.fromEntries(players.map(p => [p.id, p]));
+  const first = (id) => (byId[id] && byId[id].name ? byId[id].name.split(' ')[0] : '?');
+  const stakes = Array.isArray(config.matchStakes) ? config.matchStakes : [null, null, null];
+  const base = Number(config.stake) || 0;
+  const ranges = ['1–6', '7–12', '13–18'];   // in play order (a 10th-tee start plays 10–15 first)
+
+  const move = (k, dir) => {
+    const j = k + dir;
+    if (j < 0 || j > 2) return;
+    const next = order.slice();
+    [next[k], next[j]] = [next[j], next[k]];
+    onChange({ ...config, pairingOrder: next, playerIds: ids });
+  };
+  const setStake = (k, v) => {
+    const next = [0, 1, 2].map(i => (stakes[i] === undefined ? null : stakes[i]));
+    next[k] = v === '' ? null : Math.max(0, parseFloat(v) || 0);
+    onChange({ ...config, matchStakes: next, playerIds: ids, pairingOrder: order });
+  };
+
+  if (rotation.length !== 3) {
+    return <div style={{fontFamily:F, fontSize:11, color:'#DC2626'}}>Pick exactly 4 players for Sixes Round Robin.</div>;
+  }
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:6}}>
+      <div style={{fontFamily:F, fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>ROTATION · 3 MATCHES</div>
+      {rotation.map((pairs, k) => (
+        <div key={k} style={{display:'flex', alignItems:'center', gap:8, borderRadius:10, padding:'7px 10px', background:'#F6F4EE', border:'1px solid #E7E3D9'}}>
+          <div style={{width:54, flexShrink:0}}>
+            <div style={{fontFamily:F, fontWeight:800, fontSize:11, color:'#0E2B20'}}>MATCH {k + 1}</div>
+            <div style={{fontFamily:F, fontSize:9, color:'#8A9E8A'}}>HOLES {ranges[k]}</div>
+          </div>
+          <div style={{flex:1, minWidth:0, fontFamily:F, fontWeight:700, fontSize:12, color:'#0E2B20'}}>
+            {pairs[0].map(first).join(' & ')} <span style={{color:'#8A9E8A', fontWeight:500}}>v</span> {pairs[1].map(first).join(' & ')}
+          </div>
+          <input type="number" min="0" step="1" inputMode="decimal"
+            aria-label={`Match ${k + 1} stake`} placeholder={base ? '$' + base : '$0'}
+            value={stakes[k] === null || stakes[k] === undefined ? '' : stakes[k]}
+            onChange={e => setStake(k, e.target.value)}
+            style={{width:54, background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:8, padding:'5px 6px', fontFamily:F, fontSize:12, color:'#0E2B20', outline:'none', textAlign:'center'}}/>
+          <div style={{display:'flex', flexDirection:'column', gap:2}}>
+            <button onClick={() => move(k, -1)} disabled={k === 0} aria-label={`Move match ${k + 1} pairing earlier`}
+              style={{border:'1px solid #E7E3D9', background:'#FFFFFF', borderRadius:5, fontSize:9, padding:'1px 6px', cursor:k === 0 ? 'default' : 'pointer', opacity:k === 0 ? 0.35 : 1}}>▲</button>
+            <button onClick={() => move(k, 1)} disabled={k === 2} aria-label={`Move match ${k + 1} pairing later`}
+              style={{border:'1px solid #E7E3D9', background:'#FFFFFF', borderRadius:5, fontSize:9, padding:'1px 6px', cursor:k === 2 ? 'default' : 'pointer', opacity:k === 2 ? 0.35 : 1}}>▼</button>
+          </div>
+        </div>
+      ))}
+      <div style={{fontFamily:F, fontSize:10, color:'#8A9E8A', lineHeight:1.5}}>
+        Everyone partners everyone once. Blank stake = the STAKE above. Team net best ball, match play within each 6 holes; halved matches push.
+      </div>
+    </div>
+  );
+};
+
 const GameConfigCard = ({ game, players, statsConfig, onChange, onRemove }) => {
   const ME = window.MatchEngine;
   const def = ME.get(game.formatId);
@@ -106,7 +174,7 @@ const GameConfigCard = ({ game, players, statsConfig, onChange, onRemove }) => {
         {/* Money on this game. Zero means it's played for pride only. */}
         <div style={{borderTop:'1px solid #F0EDE4', paddingTop:12}}>
           <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
-            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>STAKE</div>
+            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:600, fontSize:10, letterSpacing:2, color:'#3F5F4A'}}>{def.settlement === 'rotation' ? 'STAKE PER MATCH' : 'STAKE'}</div>
             <button onClick={() => setCfg({ stake: 0 })}
               style={{marginLeft:'auto', background: (config.stake || 0) === 0 ? '#0E2B20' : '#F0EDE4', color:(config.stake || 0) === 0 ? '#F6F4EE' : '#3F5F4A',
                 border:(config.stake || 0) === 0 ? 'none' : '1px solid #E7E3D9', borderRadius:8, padding:'6px 12px', cursor:'pointer',
@@ -146,6 +214,8 @@ const GameConfigCard = ({ game, players, statsConfig, onChange, onRemove }) => {
             </div>
           );
         })}
+
+        {def.settlement === 'rotation' && <SixesRotationEditor config={config} players={players} onChange={cfg => onChange({ ...game, config: cfg })}/>}
 
         {basisChoice && (
           <div style={{display:'flex', gap:8, alignItems:'center'}}>
@@ -1179,11 +1249,28 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
       tripMode === 'new'      ? { mode: 'new',      newTrip: { name: newTripName.trim(), location: newTripLocation.trim() } } :
       tripMode === 'existing' ? { mode: 'existing', tripId: selectedTripId } :
       { mode: 'none' };
-    const namedGames = games.map(g => ({ ...g, name: window.MatchEngine.get(g.formatId)?.label || g.formatId }));
+    const namedGames = games.map(g => {
+      const def = window.MatchEngine.get(g.formatId);
+      const named = { ...g, name: def?.label || g.formatId };
+      // Sixes Round Robin pops should use the round's tee (slope/rating).
+      if (def && def.settlement === 'rotation' && teeId && !(g.config && g.config.teeId)) {
+        named.config = { ...(g.config || {}), teeId };
+      }
+      return named;
+    });
+    const sixesGame = namedGames.find(g => window.MatchEngine.get(g.formatId)?.settlement === 'rotation');
     // Strokes for the whole-field games (skins, stableford, pass-the-money,
     // bingo-bango-bongo) come off the low course handicap, so nobody has to
     // remember to tap "POP" on the right holes. Every hole stays editable.
-    const autoPops = window.autoPopStrokes(players, course, teeId, { allowancePct: 100, relative: true });
+    // With Sixes Round Robin on the card, the pop dots follow that game's own
+    // allowance / low-man / override settings so the card matches the money.
+    const sixesCfg = sixesGame ? (sixesGame.config || {}) : null;
+    const sixesNet = sixesCfg && (sixesCfg.scoringBasis || 'net') === 'net';
+    const autoPops = window.autoPopStrokes(players, course, teeId, sixesNet
+      ? { allowancePct: sixesCfg.allowancePct !== undefined ? sixesCfg.allowancePct : 100,
+          relative: sixesCfg.relative !== undefined ? !!sixesCfg.relative : true,
+          overrides: sixesCfg.handicapOverrides || {} }
+      : { allowancePct: 100, relative: true });
     // `trackStats` is derived for legacy readers/labels: any detailed stat beyond putts.
     const trackStats = ['fir','gir','pen','sand','ud'].some(k => statsConfig[k]);
     onStart({ players, course, formats: activeFormats, games: namedGames, teeId, statsConfig, trackStats, autoPops, cardOnly, syncCode: generateSyncCode(), tripSelection, startingTee });

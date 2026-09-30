@@ -231,9 +231,11 @@ const SharingService = (function () {
       gameLines.push({
         name: res.name,
         detail: res.status + (res.basis ? ' (' + res.basis + ')' : ''),
-        entries: (res.entries || []).map(e => e.label + ' ' + e.totalLabel + (e.detail ? ' — ' + e.detail : '')),
+        entries: (res.kind === 'rotation' && res.matches)
+          ? res.matches.map(m => m.key + ' holes ' + m.range + ': ' + m.sides[0].label + ' v ' + m.sides[1].label + ' — ' + m.status + (m.stake > 0 ? ' ($' + m.stake + ')' : ''))
+          : (res.entries || []).map(e => e.label + ' ' + e.totalLabel + (e.detail ? ' — ' + e.detail : '')),
         rows: players.filter(p => pay[p.id] !== undefined).map(p => ({ name: p.name, amount: pay[p.id] || 0 })),
-        hasMoney: Number(g.config && g.config.stake) > 0,
+        hasMoney: W.MatchEngine.hasStake ? W.MatchEngine.hasStake(g) : Number(g.config && g.config.stake) > 0,
       });
     });
 
