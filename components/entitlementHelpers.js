@@ -66,6 +66,20 @@ const EntitlementHelpers = (function () {
     export: 'CSV export & printable recap book',
   };
 
+
+  /**
+   * Auth custom claims that unlock Pro: pro:true (Stripe webhook) or
+   * admin:true / superuser:true (scripts/grant-superuser.mjs).
+   */
+  function claimsGrantPro(claims) {
+    if (!claims || typeof claims !== 'object') return false;
+    return claims.pro === true || claims.admin === true || claims.superuser === true;
+  }
+
+  function claimsIsAdmin(claims) {
+    return !!(claims && typeof claims === 'object' && (claims.admin === true || claims.superuser === true));
+  }
+
   function featureRequiresPro(featureKey) {
     return Object.prototype.hasOwnProperty.call(PRO_FEATURES, featureKey);
   }
@@ -78,6 +92,8 @@ const EntitlementHelpers = (function () {
     entitlementIdempotencyKey,
     resolveEntitlement,
     featureRequiresPro,
+    claimsGrantPro,
+    claimsIsAdmin,
   };
 })();
 

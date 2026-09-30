@@ -14,6 +14,7 @@
  *  (3) group collections are isolated by group id path; unauthenticated denied;
  *      a signed-in client does not get group-B data by reading group-A paths
  *  (4) knowing group id + signed-in allows access to that group's collections
+ *  (5) admin custom claim reads/writes everything; non-admins still denied
  *
  * Honesty: rules do NOT bind Auth UID to a single group. The group id embedded
  * in the collection name is the capability token (see firebase/README.md).
@@ -223,6 +224,33 @@ run('firestore rules (emulator)', async () => {
     await assertSucceeds(
       setDoc(doc(alice.firestore(), tripsB, 'trip_7'), { name: 'Away' }),
     );
+  });
+
+  // ── (5) admin superuser claim ─────────────────────────────────────────────
+
+  it('(5) admin claim can read/write any users doc and unmatched paths', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', 'userB'), { email: 'b@example.com', pro: false });
+    });
+    const root = testEnv.authenticatedContext('jd', { admin: true });
+    await assertSucceeds(getDoc(doc(root.firestore(), 'users', 'userB')));
+    await assertSucceeds(updateDoc(doc(root.firestore(), 'users', 'userB'), { pro: true }));
+    await assertSucceeds(setDoc(doc(root.firestore(), 'playpal_secrets', 'x'), { a: 1 }));
+    await assertSucceeds(getDoc(doc(root.firestore(), 'g_SHORT_rounds', 'ABCD')));
+  });
+
+  it('(5) non-admin (or admin:false / pro-only claim) gets no bypass', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', 'userB'), { email: 'b@example.com', pro: false });
+    });
+    for (const claims of [{}, { admin: false }, { pro: true }, { admin: 'true' }]) {
+      const u = testEnv.authenticatedContext('userA', claims);
+      await assertFails(getDoc(doc(u.firestore(), 'users', 'userB')));
+      await assertFails(setDoc(doc(u.firestore(), 'playpal_secrets', 'x'), { a: 1 }));
+    }
+    // Admin self-grant still impossible for clients: claims come only from Admin SDK.
+    const alice = testEnv.authenticatedContext('userA');
+    await assertFails(setDoc(doc(alice.firestore(), 'users', 'userA'), { pro: true }));
   });
 });
 

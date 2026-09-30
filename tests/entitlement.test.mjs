@@ -6,6 +6,8 @@ import {
   entitlementIdempotencyKey,
   resolveEntitlement,
   featureRequiresPro,
+  claimsGrantPro,
+  claimsIsAdmin,
   PRO_PRODUCT,
 } from '../lib/entitlement.mjs';
 import { loadPlayPal } from './helpers/load.mjs';
@@ -171,4 +173,45 @@ test('startCheckout refuses when paymentsConfigured is false', async () => {
     () => w.ProService.startCheckout(),
     (err) => err && err.code === 'payments_unconfigured'
   );
+});
+
+// ── Superuser / admin claim ───────────────────────────────────────────────
+test('claimsGrantPro: pro, admin, or superuser claim unlocks Pro', () => {
+  assert.equal(claimsGrantPro(null), false);
+  assert.equal(claimsGrantPro({}), false);
+  assert.equal(claimsGrantPro({ pro: true }), true);
+  assert.equal(claimsGrantPro({ admin: true }), true);
+  assert.equal(claimsGrantPro({ superuser: true }), true);
+  assert.equal(claimsGrantPro({ admin: 'true' }), false);
+  assert.equal(claimsIsAdmin({ pro: true }), false);
+  assert.equal(claimsIsAdmin({ admin: true }), true);
+});
+
+test('browser EntitlementHelpers mirrors claimsGrantPro/claimsIsAdmin', () => {
+  const w = loadPlayPal();
+  assert.equal(w.EntitlementHelpers.claimsGrantPro({ admin: true }), true);
+  assert.equal(w.EntitlementHelpers.claimsGrantPro({}), false);
+  assert.equal(w.EntitlementHelpers.claimsIsAdmin({ superuser: true }), true);
+});
+
+test('ProService.refresh: admin claim → isPro + isAdmin, passes enforced gates', async () => {
+  const w = loadPlayPal();
+  w.PLAYPAL_CONFIG = { enforceProGates: true };
+  w.AuthService = {
+    currentUser: () => ({ uid: 'jd', isAnonymous: false }),
+    getIdTokenResult: async () => ({ claims: { admin: true, superuser: true } }),
+  };
+  assert.equal(w.ProService.canUse('trips'), false);
+  await w.ProService.refresh();
+  assert.equal(w.ProService.isAdmin(), true);
+  assert.equal(w.ProService.isPro(), true);
+  assert.equal(w.ProService.canUse('trips'), true);
+  assert.equal(w.ProService.canUse('export'), true);
+});
+
+test('firestore rules: admin claim bypass is present and server-only', async () => {
+  const { readFileSync } = await import('node:fs');
+  const rules = readFileSync(new URL('../firebase/firestore.rules', import.meta.url), 'utf8');
+  assert.match(rules, /function isAdmin\(\)[^\n]*request\.auth\.token\.get\('admin', false\) == true/);
+  assert.match(rules, /match \/\{document=\*\*\} \{\s*allow read, write: if isAdmin\(\);/);
 });

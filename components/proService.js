@@ -18,6 +18,7 @@ const ProService = (function () {
     firebaseAdmin: null,
   };
   let _listeners = [];
+  let _admin = false;
 
   function _cfg() {
     return (typeof window !== 'undefined' && window.PLAYPAL_CONFIG) || {};
@@ -66,7 +67,9 @@ const ProService = (function () {
     return { pro: false, source: 'default', doc: null };
   }
 
-  function isPro() { return !!_state.pro; }
+  function isPro() { return !!_state.pro || _admin; }
+  /** Superuser (admin custom claim). Implies Pro; rules let admins read/write all docs. */
+  function isAdmin() { return _admin; }
   function state() { return { ..._state, payments: { ..._payments } }; }
   function priceDisplay() { return PRICE_DISPLAY; }
 
@@ -139,6 +142,7 @@ const ProService = (function () {
     const auth = window.AuthService;
     const user = auth && auth.currentUser && auth.currentUser();
     if (!user || user.isAnonymous) {
+      _admin = false;
       _set(_resolve(null, cached, false));
       return _state;
     }
@@ -149,8 +153,11 @@ const ProService = (function () {
       if (auth.getIdTokenResult) {
         const result = await auth.getIdTokenResult(true);
         const claims = (result && result.claims) || {};
-        if (claims.pro === true) {
-          const remote = { pro: true, source: 'claims', proGrantedAt: claims.proGrantedAt || null };
+        const H = window.EntitlementHelpers;
+        _admin = H && H.claimsIsAdmin ? H.claimsIsAdmin(claims) : claims.admin === true;
+        const grants = H && H.claimsGrantPro ? H.claimsGrantPro(claims) : (claims.pro === true || claims.admin === true);
+        if (grants) {
+          const remote = { pro: true, source: _admin ? 'admin_claims' : 'claims', admin: _admin, proGrantedAt: claims.proGrantedAt || null };
           _set(_resolve(remote, cached, false));
           return _state;
         }
@@ -273,6 +280,7 @@ const ProService = (function () {
     refreshUntilPro,
     checkPaymentsHealth,
     isPro,
+    isAdmin,
     state,
     onChange,
     startCheckout,

@@ -4,6 +4,20 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.19.7] — 2026-09-29 — Superuser (admin custom claim)
+
+- New `admin` / `superuser` Auth custom claims (server-set only, via Admin SDK).
+  `firestore.rules` gains `isAdmin()`; admins may read/write every document
+  (catch-all `match /{document=**}` now `allow read, write: if isAdmin()`).
+  Non-admins are unchanged; clients still cannot self-grant anything.
+- `ProService`: `admin`/`superuser` claims imply Pro (all Pro gates pass);
+  new `ProService.isAdmin()`. `EntitlementHelpers.claimsGrantPro/claimsIsAdmin`.
+- `scripts/grant-superuser.mjs --email <email> [--confirm]` — dry run by default;
+  sets claims `{admin, superuser, pro}` and merges `users/{uid}` `{pro:true, admin:true}`.
+  Never creates accounts. Claims apply after sign-out/in or token refresh.
+- `.gitignore`: `.secrets/`, `.vercel/`.
+- Tests: claim helpers, ProService admin refresh, rules emulator (5) admin bypass.
+
 ## [1.19.6] — 2026-09-21 — WS6: marketing landing page + OG/Twitter cards
 
 Public face of GitHub Pages is now a static marketing landing page; the PWA

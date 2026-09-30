@@ -7,6 +7,8 @@ rules_version = '2';
 //     Pro entitlement (pro:true) is written by the Stripe webhook via Admin
 //     SDK (bypasses rules). Clients may update profile fields but cannot
 //     self-grant pro:true (see validates below).
+//   - Admin: Auth custom claim admin:true (set only via Admin SDK, see
+//     scripts/grant-superuser.mjs) may read/write every document.
 //   - Group-scoped rounds/trips: still code-scoped so foursome sync works
 //     for guests and signed-in users alike. Knowing the group id grants access.
 //
@@ -18,6 +20,8 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    // Superuser: custom claims can only be set server-side (Admin SDK).
+    function isAdmin() { return signedIn() && request.auth.token.get('admin', false) == true; }
 
     // ── Per-user profile + Pro entitlement ─────────────────────────────────
     match /users/{uid} {
@@ -93,9 +97,10 @@ service cloud.firestore {
       allow delete: if signedIn();
     }
 
-    // Everything else: denied.
+    // Everything else: denied — except admins, who may read/write anything.
+    // (Rules OR together, so this also grants admins access to every path above.)
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isAdmin();
     }
   }
 }
