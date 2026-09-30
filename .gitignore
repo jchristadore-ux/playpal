@@ -18,3 +18,7 @@ firestore-debug.log
 firebase-debug.log
 ui-debug.log
 *.log
+
+# Local secrets / Vercel link (never commit)
+.secrets/
+.vercel/

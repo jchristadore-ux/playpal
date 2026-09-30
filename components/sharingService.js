@@ -244,6 +244,9 @@ const SharingService = (function () {
     // full card goes on the clipboard instead of being silently cut in half.
     const netLines  = _netLines(W, round, scores, players, course);
     const statLines = _statLines(players, holes, d);
+    // PlayPal Index lines — only when the finishing device posted this round.
+    const indexLines = (d.indexUpdates ? players.filter(p => d.indexUpdates[p.id]) : [])
+      .map(p => { const u = d.indexUpdates[p.id]; return p.name + ': ' + u.headline + (u.detail ? ' — ' + u.detail : ''); });
 
     function body(opts) {
       const o = opts || {};
@@ -276,6 +279,13 @@ const SharingService = (function () {
       }
 
       if (o.stats !== false && statLines.length) { s.push(''); s.push('STATS'); statLines.forEach(l => s.push('  ' + l)); }
+
+      if (indexLines.length) {
+        s.push('');
+        s.push('PLAYPAL INDEX');
+        indexLines.forEach(l => s.push('  ' + l));
+        s.push('  (Unofficial — built from PlayPal rounds; not a USGA Handicap Index.)');
+      }
 
       s.push('');
       s.push('MONEY');

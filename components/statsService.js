@@ -42,6 +42,9 @@ const StatsService = (function () {
     }
     return {
       syncCode:   round.syncCode || snap.syncCode || null,
+      roundId:    round.id !== undefined ? round.id : null,
+      teeId:      round.teeId || null,
+      startingTee: round.startingTee || null,
       course:     round.course,
       players:    round.players,
       scores:     scores || {},

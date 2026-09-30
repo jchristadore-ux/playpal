@@ -17,6 +17,7 @@ const SOURCES = [
   'components/statsService.js',
   'components/profileService.js',
   'components/roundHistoryService.js',
+  'components/indexService.js',
   'components/groupService.js',
   'components/entitlementHelpers.js',
   'components/authService.js',

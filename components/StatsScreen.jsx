@@ -34,6 +34,87 @@ const TrendChart = ({ trend }) => {
   );
 };
 
+// PlayPal Index trend — same bar pattern as TrendChart; lower is better, so
+// the lowest index is the tallest (gold) bar.
+const IndexTrendChart = ({ points }) => {
+  const recent = (points || []).slice(-12);
+  if (recent.length < 2) {
+    return <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize: 12, color: '#8A9E8A', padding: '12px 0' }}>Your trend appears once you've held an index for two rounds.</div>;
+  }
+  const min = Math.min(...recent.map(t => t.index));
+  const max = Math.max(...recent.map(t => t.index));
+  const span = Math.max(0.1, max - min);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 110, paddingTop: 8 }}>
+      {recent.map((t, i) => {
+        const h = 24 + Math.round(70 * (1 - (t.index - min) / span));
+        const best = t.index === min;
+        return (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
+            <span style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 700, fontSize: 10, color: best ? '#C8A15A' : '#3F5F4A' }}>{window.IndexService.fmtIndex(t.index)}</span>
+            <div title={t.courseName} style={{ width: '100%', maxWidth: 26, height: h, borderRadius: 6, background: best ? '#C8A15A' : '#1F3D2E', opacity: best ? 1 : 0.75 }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const PlayPalIndexPanel = ({ player }) => {
+  const IS = window.IndexService;
+  if (!IS || !player) return null;
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  const diffs = Array.isArray(player.ppDifferentials) ? player.ppDifferentials : [];
+  const calc = IS.computeIndex(diffs);
+  const used = new Set(calc.usedKeys || []);
+  const keyOf = (d) => (d.roundId != null && d.roundId !== '' ? 'r:' + d.roundId : 'c:' + d.syncCode);
+  const trend = IS.indexTrend(diffs);
+  const cell = { fontFamily: F, fontSize: 11, color: '#3F5F4A', padding: '7px 4px', borderBottom: '1px solid #F0EDE4' };
+  return (
+    <div style={stS.panel}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <Label>PLAYPAL INDEX</Label>
+        <span style={{ marginLeft: 'auto', fontFamily: F, fontWeight: 900, fontSize: 22, color: '#0E2B20' }}>{IS.fmtIndex(player.ppIndex)}</span>
+      </div>
+      <div style={{ fontFamily: F, fontSize: 11, color: '#3F5F4A', marginTop: 2 }}>
+        {player.ppIndex === null || player.ppIndex === undefined
+          ? `${diffs.length} of 3 rounds to your first index`
+          : `Average of the lowest ${calc.used} of ${calc.count} differentials${calc.adjustment ? ` ${calc.adjustment > 0 ? '+' : '−'}${Math.abs(calc.adjustment).toFixed(1)}` : ''}`}
+        {player.ppIndexMode === 'manual' ? ' · manual handicap kept' : ''}
+      </div>
+      <IndexTrendChart points={trend} />
+      {diffs.length > 0 && (
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', marginTop: 10 }}>
+          <thead>
+            <tr>
+              <th style={{ ...cell, width: 22, fontWeight: 700, color: '#8A9E8A', textAlign: 'center' }} aria-label="Counted">✓</th>
+              <th style={{ ...cell, width: 64, fontWeight: 700, color: '#8A9E8A', textAlign: 'left' }}>DATE</th>
+              <th style={{ ...cell, fontWeight: 700, color: '#8A9E8A', textAlign: 'left' }}>COURSE</th>
+              <th style={{ ...cell, width: 44, fontWeight: 700, color: '#8A9E8A', textAlign: 'right' }}>DIFF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {diffs.slice(0, 20).map((d, i) => {
+              const counted = used.has(keyOf(d));
+              return (
+                <tr key={keyOf(d) + i} style={{ background: counted ? 'rgba(200,161,90,0.08)' : undefined }}>
+                  <td style={{ ...cell, textAlign: 'center', color: '#C8A15A', fontWeight: 900 }}>{counted ? '●' : ''}</td>
+                  <td style={cell}>{d.playedAt ? new Date(d.playedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+                  <td style={{ ...cell, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.courseName || '—'}{d.estimated ? ' · 9' : ''}</td>
+                  <td style={{ ...cell, textAlign: 'right', fontWeight: counted ? 800 : 600, color: '#0E2B20' }}>{Number(d.differential).toFixed(1)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      <div style={{ fontFamily: F, fontSize: 10, color: '#8A9E8A', lineHeight: 1.5, marginTop: 8 }}>
+        ● counted toward the index · 9 = 9-hole round, doubled (estimated). {IS.DISCLAIMER}
+      </div>
+    </div>
+  );
+};
+
 const DistributionBars = ({ totals }) => {
   const rows = [
     ['Eagles+', totals.eagles + totals.aces, '#B45309'],
@@ -178,6 +259,9 @@ const StatsScreen = ({ players, initialPlayerId }) => {
             <StatCard label="GREENS" value={pct(career.girPct)} sub="GIR" />
             <StatCard label="PUTTS / RD" value={career.puttsPerRound !== null ? fmt1(career.puttsPerRound) : '—'} sub="full rounds" />
           </div>
+
+          {/* PlayPal Index */}
+          <PlayPalIndexPanel player={player} />
 
           {/* Trend */}
           <div style={stS.panel}>

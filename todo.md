@@ -1,5 +1,19 @@
 # TODO — PlayPal
 
+## Done — PlayPal Index (v1.20.0, branch feat/playpal-index)
+- [x] IndexService (AGS, differential, 9-hole, lowest-N table, caps, posting rules)
+- [x] Player fields + schema v3 backfill (idempotent)
+- [x] Auto-post on round save; summary block; share report; profile toggle; stats trend/table
+- [x] tests/playpalIndex.test.mjs; docs
+
+## Open — PlayPal Index follow-ups
+- [ ] EGT Cup rounds are NOT posted: `handleSaveRound` returns early into
+      `_finishEgtRound` (not a one-line change). Wire EGT finalize → IndexService.
+- [ ] Rounds finished on another device post only on the finishing device;
+      other devices receive the result via the synced player profile.
+- [ ] Legacy custom courses saved with blank rating/slope (72/113 placeholder)
+      don't post — edit the course to enter the real rating/slope.
+
 ## Done — Live auth + Stripe Pro (v1.19.0, branch feat/live-auth-stripe)
 - [x] AuthService (email/password, Google, optional anonymous guest)
 - [x] AuthScreen + Home Account / Pro upgrade UI

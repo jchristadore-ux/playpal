@@ -4,6 +4,30 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.20.0] — 2026-09-29 — PlayPal Index
+
+A free, automatic, unofficial handicap computed on-device from the rounds the
+group already scores. *Not a USGA Handicap Index; not valid for official
+competition.*
+
+- New `components/indexService.js` (`IndexService`): net-double-bogey AGS
+  (100% course handicap), differential `(113/slope)×(AGS−rating)` (no PCC),
+  9-hole rounds doubled + tagged `estimated`, lowest-N-of-20 table, truncation,
+  `clampIndex`, soft cap 3.0 / hard cap 5.0 vs the 365-day low. Posting rules:
+  ≥9 holes, real rating/slope (never invented), not walked in before 9.
+- Auto-updating: `handleSaveRound` posts every roster player, saves via
+  `pp_players` + RTDB sync; deduped by round id / sync code.
+- Auto mode (default) drives `player.handicap` (`handicapSource: 'playpal'`);
+  manual mode records differentials but leaves the handicap alone.
+- UI: PLAYPAL INDEX block in the post-round summary (before → after, delta,
+  differential, progress to first index, plain reasons when a round can't
+  post) and in the shared/emailed round report; profile panel with toggle;
+  Stats index trend + 20-differential table with counted rounds marked.
+- Schema v3 (additive): new player fields, one-time backfill from saved
+  rounds. Custom-course tees record `rated`.
+- Docs: USER_GUIDE, DEVELOPER_GUIDE, SCHEMA_CHANGES. Tests:
+  `tests/playpalIndex.test.mjs` (17).
+
 ## [1.19.6] — 2026-09-21 — WS6: marketing landing page + OG/Twitter cards
 
 Public face of GitHub Pages is now a static marketing landing page; the PWA

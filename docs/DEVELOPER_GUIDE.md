@@ -198,6 +198,42 @@ to keep credentials), `fetchIndex` calls back with
 editable. The Home profile editor's **↻ SYNC** button is already wired to
 this path.
 
+## IndexService (PlayPal Index)
+
+`components/indexService.js` — pure, no storage or network. Reuses
+HandicapService for course handicap + stroke allocation.
+
+```js
+IndexService.roundDifferential(roundData, pid)
+  // → { postable, reason, differential, ags, gross, holes, estimated, rating, slope, … }
+  // reasons: 'no-course-rating' | 'fewer-than-9-holes' | 'walked-in-before-9' | 'no-course'
+IndexService.computeIndex(diffs)   // newest first → { index, used, count, adjustment, usedKeys }
+IndexService.applyCaps(index, lowIndex365)        // soft 3.0 / hard 5.0 (CAPS_ENABLED)
+IndexService.postRound(player, roundData)         // NEW player; deduped by roundId → syncCode
+IndexService.postRoundReport(player, roundData)   // { player, before, after, result, posted }
+IndexService.summarize(report)                    // headline/detail text for summary + share
+IndexService.rebuildFromHistory(player, dataList) // migration backfill (idempotent)
+IndexService.indexTrend(diffs)                    // index after each posting (stats chart)
+```
+
+- AGS uses the player's index *as played* (`roundData.players[].handicap`) at
+  100% allowance, not relative.
+- Differential = round1((113/slope) × (AGS − rating)). No PCC.
+- 9-hole: 9-hole layout uses its own rating/slope; an 18-hole layout with 9–17
+  holes uses the front/back nine (or first nine played) at rating/2. The
+  differential is doubled and tagged `estimated` (simplification of the WHS
+  9-hole rule).
+- Index: lowest-N table, truncated to 1 decimal, `HandicapService.clampIndex`.
+- Rating/slope are read from the **raw** course (CourseService fills 72/113
+  placeholders). Tees carry `rated: boolean` from the course form; a legacy
+  custom course with exactly 72/113 and no flag is treated as unrated.
+- Wiring: `App.jsx handleSaveRound` posts every roster player in the round,
+  persists via `handleManagePlayers` (pp_players + RTDB), and passes
+  `indexUpdates` to `SummaryScreen`, which forwards them to
+  `SharingService.roundReport` (`data.indexUpdates`). EGT rounds return early
+  from `handleSaveRound` and are not posted (see todo.md).
+- `ppIndexMode: 'auto'` → `player.handicap = ppIndex`, `handicapSource: 'playpal'`.
+
 ## CourseService
 
 Normalized model: `{ holeCount: 9|18, tees: [{id, name, rating, slope, yds[]|null}], holes, … }`.
@@ -253,11 +289,13 @@ A round stat line adds `putts.zeroPutts` (chip-ins) and `walkedInAfter`
 ## Migrations
 
 `components/migrations.js` runs at script load in the browser (and is
-exported for tests). To add **v3**:
+exported for tests). **v3** (PlayPal Index) is `migratePlayersV3`: fills the
+new player fields and backfills differentials from
+`RoundHistoryService.listRoundData()`. To add **v4**:
 
-1. Bump `PP_SCHEMA_VERSION` to `3`.
-2. Add a pure `migrateXxxV3(data)` function.
-3. Append an `if (from < 3) { … }` block in `runMigrations()`.
+1. Bump `PP_SCHEMA_VERSION` to `4`.
+2. Add a pure `migrateXxxV4(data)` function.
+3. Append an `if (from < 4) { … }` block in `runMigrations()`.
 4. Cover it in `tests/services.test.mjs` (run twice → second run is a no-op).
 
 Rules: additive only, never delete user data, always idempotent.

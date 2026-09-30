@@ -112,6 +112,7 @@ const App = () => {
   const [finalGirData,     setFinalGirData]     = React.useState(null);
   const [finalExtraStats,  setFinalExtraStats]  = React.useState(null);
   const [finalDropouts,    setFinalDropouts]    = React.useState(null);
+  const [finalIndexUpdates, setFinalIndexUpdates] = React.useState(null);   // PlayPal Index before/after
   const [statsPlayerId,    setStatsPlayerId]    = React.useState(null);
 
   const [viewedRoundData, setViewedRoundData] = React.useState(null);
@@ -456,6 +457,7 @@ const App = () => {
 
     RoundSyncService.saveRound(completedRound, function() {});
 
+    const snapSavedAt = Date.now();
     if (round.syncCode) {
       const snapshot = {
         round:         completedRound,
@@ -470,7 +472,7 @@ const App = () => {
         girData,
         extraStats,
         dropouts,
-        savedAt:       Date.now(),
+        savedAt:       snapSavedAt,
       };
       try {
         localStorage.setItem('pp_round_snap_' + round.syncCode, JSON.stringify(snapshot));
@@ -478,6 +480,29 @@ const App = () => {
         console.warn('[PlayPal] Could not save round snapshot locally:', e);
       }
     }
+
+    // PlayPal Index: post this round for every roster player in it, then save
+    // through the normal players path (pp_players + RTDB sync). Deduped by
+    // round id / sync code, so re-saving a round never double-posts.
+    let indexUpdates = null;
+    try {
+      if (window.IndexService && window.StatsService) {
+        const data = window.StatsService.roundDataFromSnapshot({
+          round: completedRound, scores, putts, firData, girData, extraStats, dropouts, savedAt: snapSavedAt,
+        });
+        indexUpdates = {};
+        let changed = false;
+        const nextPlayers = players.map(p => {
+          if (!round.players.some(rp => rp.id === p.id)) return p;
+          const rep = window.IndexService.postRoundReport(p, data);
+          indexUpdates[p.id] = window.IndexService.summarize(rep);
+          if (rep.posted) { changed = true; return rep.player; }
+          return p;
+        });
+        if (changed) handleManagePlayers(nextPlayers);
+      }
+    } catch (e) { console.warn('[PlayPal] PlayPal Index update skipped:', e); }
+    setFinalIndexUpdates(indexUpdates);
 
     const roundMeta = {
       courseName: round.course.name,
@@ -759,6 +784,7 @@ const App = () => {
             girData={finalGirData || {}}
             extraStats={finalExtraStats || {}}
             dropouts={finalDropouts || {}}
+            indexUpdates={finalIndexUpdates}
             onNewRound={handleNewRound}
             readOnly={false}
           />
