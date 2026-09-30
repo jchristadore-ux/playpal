@@ -67,15 +67,61 @@ const AuthService = (function () {
     return () => { _listeners = _listeners.filter(f => f !== fn); };
   }
 
-  async function ensureUserDoc(user) {
+  // Firebase-backed io for GroupService.switchToAccountGroup.
+  function _groupIo() {
+    const fb = window.firebase;
+    if (!fb || !fb.database || !fb.firestore) return null;
+    const db = fb.database(), fs = fb.firestore();
+    return {
+      readRt: (path) => db.ref(path).once('value').then(s => s.val()).catch(() => null),
+      updateRt: (patch) => db.ref().update(patch),
+      readDoc: (col, id) => fs.collection(col).doc(id).get().then(s => (s.exists ? s.data() : null)),
+      createDoc: (col, id, data) => fs.collection(col).doc(id).set(data),
+    };
+  }
+
+  let _switching = null;
+
+  // The signed-in account's group is the device's default group. Returns true
+  // when the device switched (the caller reloads). A failed merge leaves the
+  // device where it was and retries on the next launch — nothing is dropped.
+  async function useAccountGroup(acctGroup, opts) {
+    const GS = window.GroupService;
+    if (!acctGroup || !GS || !GS.switchToAccountGroup) return false;
+    GS.setAccountGroup(acctGroup);
+    if (GS.current() === acctGroup) return false;
+    // A round-invite deep link is mid-join on this page; switch on next launch.
+    if (window.__pp_pending_join_code) return false;
+    if (_switching) return _switching;
+    _switching = (async () => {
+      window.__pp_group_switching = true;
+      try {
+        const io = (opts && opts.io) || _groupIo();
+        const res = await GS.switchToAccountGroup(acctGroup, io, opts);
+        if (!res || !res.switched) { window.__pp_group_switching = false; return false; }
+        const reload = (opts && opts.reload) || (() => { try { window.location.reload(); } catch (e) {} });
+        reload();
+        return true;
+      } catch (e) {
+        console.warn('[AuthService] account group switch deferred:', e && e.message);
+        window.__pp_group_switching = false;
+        return false;
+      } finally { _switching = null; }
+    })();
+    return _switching;
+  }
+
+  async function ensureUserDoc(user, opts) {
     if (!user || user.isAnonymous) return;
-    const fs = _fs();
+    const fs = (opts && opts.fs) || _fs();
     if (!fs) return;
     const ref = fs.collection('users').doc(user.uid);
-    const groupId = (window.GroupService && window.GroupService.current) ? window.GroupService.current() : null;
+    const GS = window.GroupService;
+    const groupId = (GS && GS.current) ? GS.current() : null;
     try {
       const snap = await ref.get();
       const now = new Date().toISOString();
+      let acctGroup = snap.exists ? (snap.data() || {}).groupId : null;
       if (!snap.exists) {
         await ref.set({
           email: user.email || null,
@@ -85,53 +131,21 @@ const AuthService = (function () {
           createdAt: now,
           updatedAt: now,
         }, { merge: true });
+        acctGroup = groupId || null;
       } else {
         const patch = { updatedAt: now };
         if (user.email) patch.email = user.email;
         if (user.displayName) patch.displayName = user.displayName;
-        const acctGroup = snap.data().groupId;
-        if (groupId && !acctGroup) patch.groupId = groupId;
+        if (groupId && !acctGroup) { patch.groupId = groupId; acctGroup = groupId; }
         await ref.set(patch, { merge: true });
-        // The account remembers its group. A device that has never built a
-        // roster (fresh install, the home-screen app next to Safari, a new
-        // phone) generated a random empty group on first run — signing in
-        // there used to leave the player looking at an empty app while all of
-        // their players and rounds sat in the account's group. Adopt it.
-        if (adoptAccountGroup(acctGroup, groupId)) return;
       }
-      if (groupId && window.GroupService && window.GroupService.setOwnerUid) {
-        window.GroupService.setOwnerUid(user.uid);
-      }
+      if (GS && GS.setOwnerUid && acctGroup) GS.setOwnerUid(user.uid);
+      // Always land on the account's group — roster, round in progress and
+      // LEGACY devices included; local-only data is merged over first.
+      if (acctGroup) await useAccountGroup(acctGroup, opts);
     } catch (e) {
       console.warn('[AuthService] ensureUserDoc failed:', e && e.message);
     }
-  }
-
-  // True when this device holds no roster and no round in progress, i.e. there
-  // is nothing on it that switching groups could hide.
-  function _deviceIsFresh() {
-    try {
-      if (localStorage.getItem('pp_active_round') === '1') return false;
-      const raw = localStorage.getItem('pp_players');
-      if (!raw) return true;
-      const arr = JSON.parse(raw);
-      return !Array.isArray(arr) || arr.length === 0;
-    } catch (e) { return false; }
-  }
-
-  // Switches a fresh device to the signed-in account's group and reloads so
-  // every sync subscription re-attaches to it. Returns true when it switched.
-  function adoptAccountGroup(acctGroup, deviceGroup, opts) {
-    const GS = window.GroupService;
-    if (!acctGroup || !GS || !GS.isValidCode || !GS.join) return false;
-    if (acctGroup === deviceGroup || deviceGroup === GS.LEGACY_ID) return false;
-    if (!GS.isValidCode(acctGroup) || !_deviceIsFresh()) return false;
-    const id = GS.join(acctGroup);
-    if (!id) return false;
-    ['pp_players', 'pp_custom_courses', 'pp_recent'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
-    const reload = (opts && opts.reload) || (() => { try { window.location.reload(); } catch (e) {} });
-    reload();
-    return true;
   }
 
   function start() {
@@ -210,7 +224,10 @@ const AuthService = (function () {
   function signOut() {
     const auth = _auth();
     if (!auth) return Promise.resolve();
-    return auth.signOut().then(() => { _cache(null); });
+    return auth.signOut().then(() => {
+      try { window.GroupService && window.GroupService.setAccountGroup && window.GroupService.setAccountGroup(null); } catch (e) {}
+      _cache(null);
+    });
   }
 
   async function getIdToken(forceRefresh) {
@@ -258,7 +275,7 @@ const AuthService = (function () {
     getIdToken,
     getIdTokenResult,
     ensureUserDoc,
-    adoptAccountGroup,
+    useAccountGroup,
     friendlyError,
   };
 })();
