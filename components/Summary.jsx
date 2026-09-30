@@ -1,6 +1,6 @@
 // Summary.jsx — updated design system
 
-const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, extraStats, dropouts, onNewRound, readOnly }) => {
+const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualChips, popFlags, bbbData, teeBallData, firData, girData, extraStats, dropouts, indexUpdates, onNewRound, readOnly }) => {
   const { calcAllPayouts, calcWolfStandings, computePTMState, calcStablefordPoints, totalScore, totalVsPar, getAdjustedHoleScore, calcSkins, nassauSegmentStatus, calcBBBStandings, calcTeeBallStandings } = window;
   const { players, course, formats, syncCode } = round;
 
@@ -188,7 +188,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
   // One report drives the screen, the email and the share sheet.
   const report = React.useMemo(() => {
-    try { return window.SharingService.roundReport({ ...round, tripName: round.tripName || null }, roundData); }
+    try { return window.SharingService.roundReport({ ...round, tripName: round.tripName || null }, { ...roundData, indexUpdates: indexUpdates || null }); }
     catch(e) { console.warn('[Summary] roundReport failed:', e); return null; }
   }, []);
 
@@ -515,6 +515,34 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 </div>
               );
             })()}
+            {/* PlayPal Index — the number moving right after the round */}
+            {indexUpdates && Object.keys(indexUpdates).length > 0 && (
+              <div style={{marginTop:16}}>
+                <Label style={{padding:'0 4px'}}>PLAYPAL INDEX</Label>
+                <div style={{marginTop:8, border:'1px solid #E7E3D9', borderRadius:16, overflow:'hidden', background:'#FFFFFF'}}>
+                  {players.filter(p => indexUpdates[p.id]).map(p => {
+                    const u = indexUpdates[p.id];
+                    const down = u.posted && u.before !== null && u.after !== null && u.after < u.before;
+                    const up   = u.posted && u.before !== null && u.after !== null && u.after > u.before;
+                    return (
+                      <div key={p.id} style={{display:'flex', alignItems:'center', gap:10, padding:'12px 14px', minHeight:44, borderBottom:'1px solid #F0EDE4'}}>
+                        <Avatar player={p} size={28}/>
+                        <div style={{flex:1, minWidth:0}}>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{p.name}</div>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color: u.posted ? '#3F5F4A' : '#8A9E8A', lineHeight:1.4, overflowWrap:'anywhere'}}>{u.detail}</div>
+                        </div>
+                        <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:14, textAlign:'right', maxWidth:'50%',
+                          color: down ? '#15803D' : up ? '#DC2626' : '#0E2B20'}}>{u.headline}</div>
+                      </div>
+                    );
+                  })}
+                  <div style={{padding:'10px 14px', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', lineHeight:1.5, background:'#F6F4EE'}}>
+                    {window.IndexService ? window.IndexService.DISCLAIMER : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Engine game results */}
             {engineGameResults.length > 0 && (
               <div style={{marginTop:16}}>

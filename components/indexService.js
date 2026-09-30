@@ -317,6 +317,48 @@ const IndexService = (function () {
   };
   function reasonText(reason) { return REASON_TEXT[reason] || 'round did not post — index unchanged'; }
 
+  function _signedDelta(d) {
+    const v = round1(d);
+    if (v === 0) return '±0.0';
+    return (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+  }
+
+  // Plain summary of one player's post-round index update, shared by the
+  // summary screen and the emailed/shared round report so they never disagree.
+  //   rep = postRoundReport(...) output. Returns
+  //   { posted, headline, detail, differential, before, after, count, reason }
+  function summarize(rep) {
+    const r = rep || {};
+    const res = r.result || {};
+    const before = r.before ? r.before.index : null;
+    const after = r.after ? r.after.index : null;
+    const count = r.after ? r.after.count : 0;
+    const mode = r.player && r.player.ppIndexMode === 'manual' ? 'manual' : 'auto';
+    const out = { posted: !!r.posted, differential: res.differential, before, after, count, reason: res.reason || null,
+      duplicate: !!res.duplicate, estimated: !!res.estimated, holes: res.holes || null, mode };
+    if (res.duplicate) {
+      out.headline = fmtIndex(before);
+      out.detail = 'already counted — index unchanged';
+      return out;
+    }
+    if (!r.posted) {
+      out.headline = fmtIndex(before);
+      out.detail = reasonText(res.reason);
+      return out;
+    }
+    const diffTxt = 'differential ' + res.differential.toFixed(1) + (res.estimated ? ' (9-hole, estimated)' : '');
+    if (after === null) {
+      out.headline = count + ' of 3 rounds to your first index';
+      out.detail = diffTxt;
+      return out;
+    }
+    out.headline = before === null
+      ? 'First index: ' + fmtIndex(after)
+      : fmtIndex(before) + ' → ' + fmtIndex(after) + ' (' + _signedDelta(after - before) + ')';
+    out.detail = diffTxt + (mode === 'manual' ? ' · manual handicap kept' : '');
+    return out;
+  }
+
   function fmtIndex(v) {
     if (v === null || v === undefined) return '—';
     return v < 0 ? '+' + Math.abs(v).toFixed(1) : v.toFixed(1);
@@ -327,7 +369,7 @@ const IndexService = (function () {
     round1, trunc1, teeRating, adjustedGross, scoreDifferential,
     roundDifferential, computeIndex, applyCaps, normalize,
     postRound, postRoundReport, rebuildFromHistory,
-    reasonText, fmtIndex,
+    reasonText, fmtIndex, summarize,
   };
 })();
 
