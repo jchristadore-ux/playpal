@@ -9,6 +9,9 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 - `npm audit fix` (lockfile only): patched `brace-expansion` and `sharp`
   (new high-severity advisories that failed the CI audit step on main), plus
   compatible bumps of `csv-parse`/`stream-json`/`uuid` transitive deps.
+- Reworded the Stripe key-prefix row in `docs/LIVE_LAUNCH.md` so the CI
+  secret scan (previously skipped because the audit step failed first) no
+  longer false-positives on the literal `sk_live_` prefix.
 - Version bump to 1.20.1 (package.json, `?v=` strings, sw.js `CACHE_VERSION`).
 
 ## [1.20.0] — 2026-09-29 — PlayPal Index
