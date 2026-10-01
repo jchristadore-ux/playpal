@@ -4,6 +4,17 @@ All changes are **additive and backward compatible**. Old clients ignore the
 new fields; new clients normalize old data on the fly (and once, via the
 versioned migration below). No server-side migration is required.
 
+## 1.22.0 — The Brovisional
+
+All additive. Round object (`round`, in the Firestore round doc):
+`postToHandicap: boolean` (written at setup; absent on older rounds) and
+`handicapPost: { [playerId]: false }` (per-player opt-out). Round doc
+top-level `brovisional: {status, reason, attempts, lastAttemptAt, postedAt,
+lastError, retryable, httpStatus, pendingDelete, players{…}}` is written by
+the server only. localStorage: `pp_brov_status_<CODE>` (cached result),
+`pp_brov_queue` (retry queue), and `pp_brov_disabled` (time of the last
+`disabled` answer). See `docs/BROVISIONAL_SYNC.md`.
+
 ## localStorage
 
 | Key | Status | Shape |

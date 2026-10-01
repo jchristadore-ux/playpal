@@ -543,6 +543,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               </div>
             )}
 
+            {/* The Brovisional — separate from the PlayPal Index (tracking only) */}
+            {syncCode && window.BrovisionalService && <BrovisionalBlock round={round} players={players}/>}
+
             {/* Engine game results */}
             {engineGameResults.length > 0 && (
               <div style={{marginTop:16}}>
@@ -825,6 +828,115 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
       {toast && <Toast message={toast.msg} type={toast.type}/>}
       <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  );
+};
+
+// The Brovisional status + toggles. The result lives on the round doc
+// (`brovisional`, written by /api/handicap/post) and in a local cache that
+// BrovisionalService updates; this block only reads it and re-posts on edits.
+const BrovisionalBlock = ({ round, players }) => {
+  const BS = window.BrovisionalService;
+  const code = round.syncCode;
+  const gid = (() => { try { return window.GroupService.current(); } catch (e) { return 'LEGACY'; } })();
+  const [brov, setBrov] = React.useState(() => BS.getCached(code));
+  const [roundOn, setRoundOn] = React.useState(() => BS.roundPostEnabled(round));
+  const [playerOn, setPlayerOn] = React.useState(() => Object.fromEntries(players.map(p => [p.id, BS.playerPostEnabled(round, p.id)])));
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    const off = BS.subscribe(d => { if (d && d.roundId === code) setBrov(d.brovisional); });
+    // Latest server-side result (also picks up the daily cron's retries).
+    try {
+      window.RoundSyncService && window.RoundSyncService.fetchRound(code, (r, err, d) => {
+        if (d && d.brovisional && d.brovisional.status) { BS.setCached(code, d.brovisional); }
+      });
+    } catch (e) {}
+    return off;
+  }, [code]);
+
+  // Older rounds (before this feature) with no result stay quiet.
+  const explicit = typeof round.postToHandicap === 'boolean';
+  if (BS.isDisabled() || (brov && brov.status === 'disabled')) return null;
+  if (!explicit && !(brov && brov.status)) return null;
+
+  const persist = (patch) => {
+    // Round doc (server reads toggles from here) + local snapshot (so the
+    // toggle survives reopening this round on this device), then re-post.
+    try {
+      const k = 'pp_round_snap_' + code; const raw = localStorage.getItem(k);
+      if (raw) { const snap = JSON.parse(raw); snap.round = { ...snap.round, ...patch.round, handicapPost: { ...(snap.round.handicapPost || {}), ...(patch.round.handicapPost || {}) } }; localStorage.setItem(k, JSON.stringify(snap)); }
+    } catch (e) {}
+    setBusy(true);
+    const go = () => BS.post(gid, code, { retry: true }).finally(() => setBusy(false));
+    if (window.RoundSyncService && window.RoundSyncService.writeMeta) window.RoundSyncService.writeMeta(code, patch, () => go());
+    else go();
+  };
+  const toggleRound = () => { const v = !roundOn; setRoundOn(v); persist({ round: { postToHandicap: v } }); };
+  const togglePlayer = (pid) => { const v = !playerOn[pid]; setPlayerOn(prev => ({ ...prev, [pid]: v })); persist({ round: { handicapPost: { [pid]: v } } }); };
+  const retry = () => { setBusy(true); BS.post(gid, code, { retry: true }).finally(() => setBusy(false)); };
+
+  const v = BS.view(roundOn ? brov : (brov && brov.status === 'pending' ? brov : { status: 'skipped', reason: 'opted_out', players: {} }), players);
+  const rowByPid = Object.fromEntries((v.rows || []).map(r => [r.pid, r]));
+  const font = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  const tone = v.kind === 'posted' || v.kind === 'partial' ? '#15803D' : v.kind === 'failed' ? '#DC2626' : '#8A9E8A';
+  const Check = ({ on }) => (
+    <div style={{width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+      background:on?'#0E2B20':'transparent', border:`2px solid ${on?'#0E2B20':'#E7E3D9'}`}}>
+      {on && <span style={{color:'#F6F4EE', fontSize:14, fontWeight:900}}>✓</span>}
+    </div>
+  );
+
+  return (
+    <div style={{marginTop:16}}>
+      <Label style={{padding:'0 4px'}}>THE BROVISIONAL</Label>
+      <div style={{marginTop:8, border:'1px solid #E7E3D9', borderRadius:16, overflow:'hidden', background:'#FFFFFF'}}>
+        <div role="switch" aria-checked={roundOn} tabIndex={0} onClick={busy ? undefined : toggleRound}
+          onKeyDown={e => { if (!busy && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); toggleRound(); } }}
+          style={{display:'flex', alignItems:'center', gap:10, padding:'12px 14px', minHeight:44, borderBottom:'1px solid #F0EDE4', cursor:busy?'wait':'pointer'}}>
+          <div style={{flex:1, minWidth:0}}>
+            <div style={{fontFamily:font, fontWeight:700, fontSize:14, color:'#0E2B20'}}>Post to handicap</div>
+            <div style={{fontFamily:font, fontSize:11, color:tone, lineHeight:1.4}} aria-live="polite">{v.kind === 'hidden' ? '' : v.headline}</div>
+          </div>
+          <Check on={roundOn}/>
+        </div>
+        {roundOn && players.map(p => {
+          const r = rowByPid[p.id];
+          const on = playerOn[p.id] !== false;
+          return (
+            <div key={p.id} role="switch" aria-checked={on} aria-label={'Post ' + p.name} tabIndex={0}
+              onClick={busy ? undefined : () => togglePlayer(p.id)}
+              onKeyDown={e => { if (!busy && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); togglePlayer(p.id); } }}
+              style={{display:'flex', alignItems:'center', gap:10, padding:'12px 14px', minHeight:44, borderBottom:'1px solid #F0EDE4', cursor:busy?'wait':'pointer'}}>
+              <Avatar player={p} size={28}/>
+              <div style={{flex:1, minWidth:0}}>
+                <div style={{fontFamily:font, fontWeight:700, fontSize:14, color:'#0E2B20'}}>{p.name}</div>
+                <div style={{fontFamily:font, fontSize:11, color: r && r.counted ? '#3F5F4A' : '#8A9E8A', lineHeight:1.4, overflowWrap:'anywhere'}}>
+                  {!on ? 'opted out' : r ? (r.counted ? 'Posted' + (r.note ? ' · ' + r.note : '') : 'Skipped — ' + r.text) : ''}
+                </div>
+              </div>
+              {r && r.counted && on && (
+                <div style={{fontFamily:font, fontWeight:800, fontSize:13, color:'#0E2B20', textAlign:'right'}}>
+                  <div>Diff {r.differential || '—'}</div>
+                  <div style={{fontSize:11, fontWeight:700, color:'#3F5F4A'}}>Index {r.index || '—'}</div>
+                </div>
+              )}
+              <Check on={on}/>
+            </div>
+          );
+        })}
+        {v.kind === 'failed' && (
+          <div style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#FEF2F2'}}>
+            <div style={{flex:1, fontFamily:font, fontSize:11, color:'#991B1B', lineHeight:1.4, overflowWrap:'anywhere'}}>
+              Couldn't reach The Brovisional{v.error ? ' (' + String(v.error).slice(0, 120) + ')' : ''}. It retries automatically.
+            </div>
+            <Btn onClick={retry} variant="surface" disabled={busy} style={{fontSize:13, padding:'8px 14px'}}>{busy ? '…' : 'RETRY'}</Btn>
+          </div>
+        )}
+        <div style={{padding:'10px 14px', fontFamily:font, fontSize:10, color:'#8A9E8A', lineHeight:1.5, background:'#F6F4EE'}}>
+          The Brovisional is an unofficial handicap app, separate from the PlayPal Index (tracking only) and from GHIN.
+        </div>
+      </div>
     </div>
   );
 };

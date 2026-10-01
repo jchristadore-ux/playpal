@@ -236,6 +236,28 @@ IndexService.indexTrend(diffs)                    // index after each posting (s
   `handicapUpdatedAt`. Course handicap, pops and all game math read `player.handicap` only.
   `ppIndexMode` is a deprecated field from 1.20–1.21.4 and is ignored.
 
+## BrovisionalService (The Brovisional sync)
+
+The full design is in `docs/BROVISIONAL_SYNC.md`. This section is the short
+version.
+
+- **Client:** `components/brovisionalService.js`. It handles toggle defaults
+  (`defaultPostToHandicap`, `roundPostEnabled`, `playerPostEnabled`),
+  `post(groupId, roundId)`, `onRoundSaved` (called from
+  `RoundSyncService.saveRound` in `app.html`), `retryDue()` (App mount and
+  `online`), the backoff queue (`pp_brov_queue`), and `view()`/`reasonText()`
+  for the summary's `BrovisionalBlock`. It holds no secrets and no player
+  mapping.
+- **Server:** `lib/brovisional.mjs` is pure plus injectable I/O: `buildCard`,
+  `signPayload`, `mapIngestResponse`, `syncRound`, `deleteRound`, `runCron`.
+  `lib/brovisionalPlayers.mjs` holds the id map. `lib/brovisionalApi.mjs`
+  builds the handlers used by `api/handicap/post.js`,
+  `api/handicap/delete.js` and `api/cron/brovisional.js`.
+- **Shared formats:** `SHARED_SCORE_FORMATS` exists in both the client and
+  the server, and a test keeps the two lists equal.
+- **Separate from IndexService:** The Brovisional result never touches
+  `player.handicap` or the PlayPal Index.
+
 ## CourseService
 
 Normalized model: `{ holeCount: 9|18, tees: [{id, name, rating, slope, yds[]|null}], holes, … }`.
@@ -318,3 +340,8 @@ Browser loads committed `dist/` — after editing `components/`, run
 `npm run build` and commit `dist/` (CI fails otherwise). New source files must
 be added to `scripts/build.mjs` `SOURCES`, `index.html` (both script blocks),
 `sw.js` PRECACHE, and `tests/helpers/load.mjs` if services.
+
+Vercel functions live in `api/**` and share code from `lib/`. Files under
+`api/` become functions, so helpers go in `lib/`. The Hobby plan allows 12
+functions; there are 6 today. `vercel.json` `crons` holds the daily
+Brovisional backstop.

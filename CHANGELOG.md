@@ -4,6 +4,41 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.0] — 2026-10-01 — The Brovisional handicap auto-sync
+
+- Saving a finished round posts every player's hole-by-hole gross to **The
+  Brovisional** (brovisional.vercel.app), an unofficial handicap app. It is
+  separate from the PlayPal Index, which stays tracking only. New
+  `POST /api/handicap/post`: Firebase ID token (anonymous OK), the round must
+  exist in the caller's group, and the server re-reads the round with Admin.
+  The card is HMAC-SHA256 signed (`X-PlayPal-Timestamp` /
+  `X-PlayPal-Signature`) and the result is stored on the round doc as
+  `brovisional`.
+- Re-saving a finished round re-posts it (idempotent per round + player).
+  Turning the round off on the summary removes it from The Brovisional; a
+  player's toggle off sends `post:false`. New `POST /api/handicap/delete` for
+  deleted rounds.
+- Round setup has a **Post to handicap** toggle: on by default, off for
+  scramble / alternate shot / Chapman, where partners share a ball. The
+  summary has a **THE BROVISIONAL** block with the round and per-player
+  toggles, each player's differential and Brovisional index, plain-English
+  skip reasons, and Retry on failure. The block is hidden while the feature
+  is disabled.
+- Failed posts retry on app launch and when the device is back online, with
+  backoff (1 min doubling, 6 h cap, 6 tries). A daily Vercel Cron
+  (`/api/cron/brovisional`, `CRON_SECRET`) retries failed, never-sent and
+  unlinked rounds from the last 14 days, 25 per run. It never back-fills
+  history.
+- Player ids: JD's crew maps to the stable ids already used by The
+  Brovisional's history import (john, tj, mike, brian, james, rob). Everyone
+  else gets an opaque per-group id (`lib/brovisionalPlayers.mjs`).
+- Without `PLAYPAL_INGEST_SECRET` everything is a no-op returning `disabled`.
+  `/api/health` reports `brovisionalIngest` / `cronSecret` (presence only).
+- EGT Cup rounds are not posted; they were imported separately.
+- CI: `overrides` pins `basic-ftp` to ^6.2.1 (GHSA-c475-qrg2-pj4r, high, via the
+  dev-only `firebase-tools` proxy path) so `npm audit --audit-level=high` passes;
+  main fails it as of today.
+
 ## [1.21.5] — 2026-09-30 — PlayPal Index is tracking only
 
 - The PlayPal Index no longer overwrites a player's handicap. Since 1.20.0,

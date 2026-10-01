@@ -1,5 +1,42 @@
 # PlayPal — Progress
 
+## v1.22.0 — The Brovisional handicap auto-sync (1 Oct 2026)
+
+**Branch:** `feat/brovisional-sync`. **Status:** complete, DRAFT PR, do not
+merge until OUHS/JD say go. `npm test` green (416 = 389 baseline + 27 new),
+`dist/` rebuilt, and the `--public` www build still stubs the EGT seed and
+drops player photos.
+
+Built:
+- `lib/brovisional.mjs`: card, HMAC, response mapping, syncRound, deleteRound, runCron.
+- `lib/brovisionalPlayers.mjs`: the id map.
+- `lib/brovisionalApi.mjs`: the handlers.
+- `api/handicap/post.js`, `api/handicap/delete.js`, `api/cron/brovisional.js`.
+- `vercel.json` cron entry; `/api/health` flags.
+- `components/brovisionalService.js`: client.
+- Wiring: the `app.html` saveRound hook, retry on App mount/online, the Setup
+  toggle, and the Summary `BrovisionalBlock`.
+- Tests: `tests/brovisional.test.mjs` plus the mock receiver
+  `tests/helpers/mockBrovisional.mjs` and `scripts/brovisional-mock.mjs`.
+- Docs: `docs/BROVISIONAL_SYNC.md`.
+
+Built to the final spec (`BROVISIONAL_INGEST.md`, landed 18:59 ET):
+- one response entry per group;
+- free-text reasons (duplicate…/rejected:…);
+- field limits;
+- `sourcePlayerIds` matching, so unknown players send `[]`;
+- empty-body DELETE signature.
+
+Verified locally:
+- The 11 non-EGT cards rebuilt from the Firestore dump match the export.
+- All 11 pass the mock's final-spec validation.
+- Cron eligibility over all 222 existing round docs is 0.
+- Headless browser smoke covered the summary block (posted/partial/failed/
+  Retry/disabled) and the Setup toggle, with zero page errors.
+
+Next action: JD/OUHS review the draft PR, check the Vercel env (see
+OPERATOR_ACTIONS §7), then merge.
+
 ## v1.21.5 — PlayPal Index is tracking only (30 Sep 2026)
 
 **Branch:** `fix/index-tracking-only`. IndexService.postRoundReport no longer

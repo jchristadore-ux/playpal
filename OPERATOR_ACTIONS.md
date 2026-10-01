@@ -120,6 +120,7 @@ See `.env.example` for env var **names** only.
 | `GITHUB_PRODUCTION_SETUP.md` | Broader GitHub Actions / Pages / release setup |
 | `.env.example` | Names of server env vars (no values) |
 | `scripts/migrate-legacy-group.mjs` | WS3 legacy → group-scoped Firestore copy |
+| `docs/BROVISIONAL_SYNC.md` | The Brovisional handicap sync: flow, contract, player-id mapping, cron |
 
 ---
 
@@ -213,6 +214,28 @@ After merging changes to those files on `main`, confirm Pages has rebuilt
 
 In-app footer links remain relative (`privacy.html` etc.) so they work on
 Vercel, Pages, and the Capacitor bundle alike.
+
+---
+
+## 7. The Brovisional handicap sync (1.22.0)
+
+Design and contract: **`docs/BROVISIONAL_SYNC.md`**. The receiver spec is
+OUHS's `BROVISIONAL_INGEST.md`. The feature does nothing until the secret is
+set.
+
+| Where | What |
+|---|---|
+| Vercel → playpal → Env | `PLAYPAL_INGEST_SECRET`: the shared HMAC secret. It must equal The Brovisional's value. Per OUHS it is **already set** on both projects. **Check which environments it covers:** if it is set for *Preview*, a PR preview deployment posts real rounds to The Brovisional for anyone who plays a round on the preview URL. |
+| Vercel → playpal → Env | `CRON_SECRET`: any long random string. Vercel Cron sends it as `Authorization: Bearer …`. Without it `/api/cron/brovisional` refuses to run (503), so there is no daily backstop. |
+| Vercel → playpal → Env (optional) | `BROVISIONAL_INGEST_URL` (default `https://brovisional.vercel.app/api/ingest/playpal`); `PLAYPAL_BROV_GROUPS`: extra group codes whose players map to the crew ids (see the mapping table in the doc). |
+| Vercel → playpal → Cron Jobs | After deploy, `/api/cron/brovisional` shows **daily 10:00 UTC**. Use "Run" to trigger it once by hand. Logs print `eligible`/`attempted` counts only. |
+| The Brovisional (OUHS) | Link players in Group settings → PlayPal auto-sync: `john`, `tj`, `brian` are pre-linked; `mike`, `james`, `rob` are canonical ids; guests appear as `pp-<hash>-<rosterId>`. **Never link a bare `p1`/`p2`.** Those are generic roster ids that every PlayPal group has. |
+
+Check after deploy: `GET /api/health` shows `brovisionalIngest: true` and
+`cronSecret: true` (presence only, never values).
+
+Switch off: remove `PLAYPAL_INGEST_SECRET` and redeploy. Every endpoint then
+returns `disabled` and the app hides the block.
 
 ---
 

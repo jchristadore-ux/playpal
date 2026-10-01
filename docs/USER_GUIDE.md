@@ -102,6 +102,26 @@ post-round summary shows it moving (e.g. `12.4 → 11.9 (−0.5)`).
 *An unofficial index built from your PlayPal rounds — WHS-style math, but not
 a USGA Handicap Index and not valid for official competition.*
 
+### The Brovisional
+
+**The Brovisional** is a separate, unofficial handicap app. It is not the
+PlayPal Index and not GHIN.
+
+- **Posting:** with **Post to handicap** on, saving a round sends everyone's
+  scores to The Brovisional. The toggle is the last step of round setup. It
+  starts on, except for scramble-style formats where partners share a ball.
+- **The summary block:** **THE BROVISIONAL** on the summary shows each
+  player's differential and Brovisional index once it's posted. It also says
+  why a player was skipped:
+  - not linked in The Brovisional yet
+  - incomplete round
+  - no course rating
+  - opted out
+- **Changing your mind:** untick a player to leave them out, or untick the
+  round to take it back out of The Brovisional.
+- **Failed posts:** if a post fails, tap **RETRY**. The app also retries on
+  its own.
+
 ## Scoring
 
 Scoring works exactly as before — big +/− steppers, tap the number for the

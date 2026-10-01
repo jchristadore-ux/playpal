@@ -45,6 +45,7 @@ export function loadPlayPal(opts = {}) {
     'components/entitlementHelpers.js',
     'components/authService.js',
     'components/proService.js',
+    'components/brovisionalService.js',
     'components/sharingService.js',
     'components/scorecardImport.js',
     'components/migrations.js',
@@ -80,6 +81,7 @@ export function loadPlayPal(opts = {}) {
 + 'window.EntitlementHelpers = EntitlementHelpers; '
 + 'window.AuthService = AuthService; '
 + 'window.ProService = ProService; '
++ 'window.BrovisionalService = BrovisionalService; '
     + 'window.PP_SCHEMA_VERSION = PP_SCHEMA_VERSION; ' +
     'window.migratePlayersV2 = migratePlayersV2; window.migrateCoursesV2 = migrateCoursesV2; ' +
     'window.runMigrations = runMigrations;',
