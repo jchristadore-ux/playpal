@@ -163,11 +163,11 @@ renamed or deleted. `PP_SCHEMA_VERSION` 2 → 3.
 |---|---|---|---|
 | `ppIndex` | number \| null | `null` | PlayPal Index, 1 decimal (null until 3 differentials) |
 | `ppIndexUpdatedAt` | epoch ms \| null | `null` | last recompute |
-| `ppIndexMode` | `'auto'` \| `'manual'` | `'auto'` | auto → drives `handicap` |
+| `ppIndexMode` | `'auto'` \| `'manual'` | — | **deprecated (1.21.5), ignored.** 1.20–1.21.4 used `'auto'` to copy the index into `handicap`; the index is now tracking only |
 | `ppLowIndex365` | number \| null | `null` | lowest index held in 365 days (soft/hard cap) |
 | `ppLowIndex365At` | epoch ms \| null | `null` | when that low was set (365-day expiry; not in the original spec, added so the window can expire) |
 | `ppDifferentials` | array (≤20, newest first) | `[]` | `{ roundId, syncCode, playedAt, courseName, teeName, holes, gross, ags, rating, slope, differential, estimated }` |
-| `handicapSource` | adds `'playpal'` | — | set when auto mode writes `handicap` |
+| `handicapSource` | `'playpal'` (legacy) | — | written by 1.20–1.21.4 auto mode; no longer written. Restored to `'manual'` for JD's group on 2026-09-30 |
 
 Posting is keyed on `roundId` (round `id`), falling back to `syncCode`, so
 re-saving / re-opening / re-syncing a round never double-posts.

@@ -232,7 +232,9 @@ IndexService.indexTrend(diffs)                    // index after each posting (s
   `indexUpdates` to `SummaryScreen`, which forwards them to
   `SharingService.roundReport` (`data.indexUpdates`). EGT rounds return early
   from `handleSaveRound` and are not posted (see todo.md).
-- `ppIndexMode: 'auto'` → `player.handicap = ppIndex`, `handicapSource: 'playpal'`.
+- Tracking only (1.21.5): IndexService never writes `player.handicap`, `handicapSource` or
+  `handicapUpdatedAt`. Course handicap, pops and all game math read `player.handicap` only.
+  `ppIndexMode` is a deprecated field from 1.20–1.21.4 and is ignored.
 
 ## CourseService
 

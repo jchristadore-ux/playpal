@@ -27,7 +27,6 @@ const IndexService = (function () {
   const INDEX_DEFAULTS = {
     ppIndex: null,
     ppIndexUpdatedAt: null,
-    ppIndexMode: 'auto',
     ppLowIndex365: null,
     ppLowIndex365At: null,
     ppDifferentials: [],
@@ -208,7 +207,6 @@ const IndexService = (function () {
     if (!player) return player;
     const out = { ...INDEX_DEFAULTS, ...player };
     if (!Array.isArray(out.ppDifferentials)) out.ppDifferentials = [];
-    if (out.ppIndexMode !== 'manual') out.ppIndexMode = 'auto';
     return out;
   }
 
@@ -277,12 +275,9 @@ const IndexService = (function () {
       ppLowIndex365: nextLow,
       ppLowIndex365At: nextLowAt,
     };
-    // Auto mode: the PlayPal Index drives the handicap every game reads.
-    if (next.ppIndexMode === 'auto' && index !== null) {
-      next.handicap = index;
-      next.handicapSource = 'playpal';
-      next.handicapUpdatedAt = now;
-    }
+    // Tracking only: the PlayPal Index never writes player.handicap /
+    // handicapSource — the handicap every game reads is the one the player set
+    // (or synced from GHIN).
     return { player: next, before, after: { index, count: diffs.length, calc }, result, posted: true };
   }
 
@@ -333,9 +328,8 @@ const IndexService = (function () {
     const before = r.before ? r.before.index : null;
     const after = r.after ? r.after.index : null;
     const count = r.after ? r.after.count : 0;
-    const mode = r.player && r.player.ppIndexMode === 'manual' ? 'manual' : 'auto';
     const out = { posted: !!r.posted, differential: res.differential, before, after, count, reason: res.reason || null,
-      duplicate: !!res.duplicate, estimated: !!res.estimated, holes: res.holes || null, mode };
+      duplicate: !!res.duplicate, estimated: !!res.estimated, holes: res.holes || null };
     if (res.duplicate) {
       out.headline = fmtIndex(before);
       out.detail = 'already counted — index unchanged';
@@ -355,7 +349,7 @@ const IndexService = (function () {
     out.headline = before === null
       ? 'First index: ' + fmtIndex(after)
       : fmtIndex(before) + ' → ' + fmtIndex(after) + ' (' + _signedDelta(after - before) + ')';
-    out.detail = diffTxt + (mode === 'manual' ? ' · manual handicap kept' : '');
+    out.detail = diffTxt;
     return out;
   }
 

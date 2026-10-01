@@ -189,12 +189,19 @@ test('soft cap and hard cap', () => {
   assert.equal(p.ppLowIndex365, 5.0);
 });
 
-test('auto mode drives player.handicap; manual mode never touches it', () => {
-  let a = player({ handicap: 18 });
-  for (let i = 0; i < 3; i++) a = IS.postRound(a, rd({ scores: fill(18, 5), handicap: 18 }));
+test('posting rounds never touches player.handicap or handicapSource (tracking only)', () => {
+  let a = player({ handicap: 29.4, handicapSource: 'provider' });
+  for (let i = 0; i < 3; i++) a = IS.postRound(a, rd({ scores: fill(18, 5), handicap: 29.4 }));
   assert.equal(typeof a.ppIndex, 'number');
-  assert.equal(a.handicap, a.ppIndex);
-  assert.equal(a.handicapSource, 'playpal');
+  assert.notEqual(a.ppIndex, 29.4);
+  assert.equal(a.handicap, 29.4);
+  assert.equal(a.handicapSource, 'provider');
+  assert.equal(a.ppDifferentials.length, 3);
+  // A legacy 'auto' flag from older builds is ignored.
+  let legacy = player({ handicap: 18, handicapSource: 'manual', ppIndexMode: 'auto' });
+  for (let i = 0; i < 3; i++) legacy = IS.postRound(legacy, rd({ scores: fill(18, 5), handicap: 18 }));
+  assert.equal(legacy.handicap, 18);
+  assert.equal(legacy.handicapSource, 'manual');
   let m = player({ handicap: 18, ppIndexMode: 'manual' });
   for (let i = 0; i < 3; i++) m = IS.postRound(m, rd({ scores: fill(18, 5), handicap: 18 }));
   assert.equal(typeof m.ppIndex, 'number');
@@ -215,6 +222,9 @@ test('migration backfill (schema v3) is idempotent and additive', () => {
   const players = [{ id: 'p', name: 'Pat', handicap: 10 }, { id: 'q', name: 'Quinn', handicap: 5 }];
   const once = W2.migratePlayersV3(players);
   assert.equal(once[0].ppDifferentials.length, 4);
+  assert.equal(once[0].handicap, 10, 'backfill never touches handicap');
+  assert.notEqual(once[0].handicapSource, 'playpal');
+  assert.equal(once[1].handicap, 5);
   assert.equal(typeof once[0].ppIndex, 'number');
   assert.deepEqual(plain(once[1].ppDifferentials), [], 'no rounds → nothing invented');
   assert.equal(once[1].ppIndex, null);
@@ -227,6 +237,7 @@ test('migration backfill (schema v3) is idempotent and additive', () => {
   assert.equal(res.to, 3);
   const stored = JSON.parse(ls.getItem('pp_players'));
   assert.equal(stored[0].ppDifferentials.length, 4);
+  assert.equal(stored[0].handicap, 10, 'runMigrations leaves handicap as set');
   assert.equal(W2.runMigrations().ran, false, 'second run is a no-op');
 });
 
