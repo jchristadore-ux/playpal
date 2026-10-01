@@ -80,7 +80,7 @@ const PlayPalIndexPanel = ({ player }) => {
         {player.ppIndex === null || player.ppIndex === undefined
           ? `${diffs.length} of 3 rounds to your first index`
           : `Average of the lowest ${calc.used} of ${calc.count} differentials${calc.adjustment ? ` ${calc.adjustment > 0 ? '+' : '−'}${Math.abs(calc.adjustment).toFixed(1)}` : ''}`}
-        {player.ppIndexMode === 'manual' ? ' · manual handicap kept' : ''}
+        {' · tracking only — games use the handicap (' + (player.handicap ?? '—') + ')'}
       </div>
       <IndexTrendChart points={trend} />
       {diffs.length > 0 && (

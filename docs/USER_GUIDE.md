@@ -92,10 +92,10 @@ post-round summary shows it moving (e.g. `12.4 → 11.9 (−0.5)`).
   and slope when you create a course).
 - **Big jumps are dampened:** more than 3.0 above your lowest index of the
   past year only counts half, and it can never rise more than 5.0.
-- **Auto vs manual:** in a player's profile, *Build my index automatically*
-  (on by default) makes the handicap every game uses follow the PlayPal
-  Index. Turn it off to keep a handicap you set by hand — rounds still count
-  and you can still see what your PlayPal Index would be.
+- **Tracking only:** the PlayPal Index is for tracking your form. It never
+  changes a player's handicap — the handicap on the profile (typed in or
+  synced from GHIN) is what every game, pop and payout uses. The index shows
+  next to it on the profile, on the round summary and on the Stats tab.
 - The **📈 STATS** tab shows the index trend and your last 20 differentials
   with the counted ones marked.
 

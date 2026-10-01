@@ -5,9 +5,9 @@
 //
 //   { id, name, initials, color, handicap, ghin, ghinLogin, email, venmo,   // existing
 //     preferredTee, dominantHand, homeCourseId, homeCourseName,             // new
-//     favoriteFormats: [formatId], handicapSource: 'manual'|'provider'|'playpal',
+//     favoriteFormats: [formatId], handicapSource: 'manual'|'provider',
 //     handicapUpdatedAt,
-//     ppIndex, ppIndexUpdatedAt, ppIndexMode: 'auto'|'manual',            // PlayPal Index
+//     ppIndex, ppIndexUpdatedAt,                       // PlayPal Index (tracking only — never writes handicap)
 //     ppLowIndex365, ppLowIndex365At, ppDifferentials: [≤20, newest first] }
 //
 // Career numbers are derived on demand from round history via StatsService —
@@ -26,7 +26,6 @@ const ProfileService = (function () {
     // PlayPal Index (see indexService.js) — additive; old clients ignore these.
     ppIndex: null,              // number | null — 1 decimal
     ppIndexUpdatedAt: null,     // epoch ms
-    ppIndexMode: 'auto',        // 'auto' | 'manual'
     ppLowIndex365: null,        // number | null — soft/hard cap reference
     ppLowIndex365At: null,      // epoch ms the low was set (365-day window)
     ppDifferentials: [],        // most recent 20, newest first
@@ -38,7 +37,6 @@ const ProfileService = (function () {
     if (!Array.isArray(out.favoriteFormats)) out.favoriteFormats = [];
     if (out.dominantHand !== 'L') out.dominantHand = 'R';
     if (!Array.isArray(out.ppDifferentials)) out.ppDifferentials = [];
-    if (out.ppIndexMode !== 'manual') out.ppIndexMode = 'auto';
     return out;
   }
 

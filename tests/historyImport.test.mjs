@@ -54,7 +54,7 @@ test('matchRoster: real names, tournament names, egtId links; ambiguity never gu
   assert.equal(HI.matchRoster(linked).mike, 'm2');
 });
 
-test('apply posts every round to each profile and drives the handicap', () => {
+test('apply posts every round to each profile and leaves the handicap alone', () => {
   const W = loadPlayPal();
   const res = W.HistoryImport.apply(roster(W, [['e5', 'Dave', 10]]), W.localStorage);
   assert.equal(res.complete, true);
@@ -69,9 +69,10 @@ test('apply posts every round to each profile and drives the handicap', () => {
   // Mike's index is soft-capped against his low after R3 (27.8): 32.2 → 31.5.
   assert.equal(by.d4.ppIndex, 31.5);
   ['a1', 'b2', 'c3', 'd4'].forEach(id => {
-    assert.equal(by[id].handicap, by[id].ppIndex, 'auto mode → handicap follows index');
-    assert.equal(by[id].handicapSource, 'playpal');
+    assert.notEqual(by[id].handicap, by[id].ppIndex, 'index is tracking only');
+    assert.notEqual(by[id].handicapSource, 'playpal');
   });
+  assert.deepEqual([by.a1.handicap, by.b2.handicap, by.c3.handicap, by.d4.handicap], [15, 20, 25, 26], 'handicaps unchanged');
   assert.equal(by.e5.ppIndex, null);
   assert.equal(by.e5.handicap, 10, 'unmatched players untouched');
   assert.equal(by.a1.egtId, 'john');
@@ -92,7 +93,7 @@ test('apply is idempotent and writes history + recent rounds once', () => {
   assert.equal(recent.filter(r => r.tripId === 'egt-2026').length, 6);
 });
 
-test('manual-mode players record differentials but keep their handicap', () => {
+test('players record differentials but always keep their handicap', () => {
   const W = loadPlayPal();
   const ps = roster(W).map(p => p.id === 'a1' ? { ...p, ppIndexMode: 'manual' } : p);
   const res = W.HistoryImport.apply(ps, null);

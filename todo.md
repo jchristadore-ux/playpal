@@ -3,7 +3,8 @@
 ## Done — PlayPal Index (v1.20.0, branch feat/playpal-index)
 - [x] IndexService (AGS, differential, 9-hole, lowest-N table, caps, posting rules)
 - [x] Player fields + schema v3 backfill (idempotent)
-- [x] Auto-post on round save; summary block; share report; profile toggle; stats trend/table
+- [x] Auto-post on round save; summary block; share report; stats trend/table
+- [x] 1.21.5: index is tracking only — never writes `handicap`; profile toggle removed
 - [x] tests/playpalIndex.test.mjs; docs
 
 ## Done — EGT history import (v1.21.0)

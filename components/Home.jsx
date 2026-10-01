@@ -483,7 +483,7 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
           }}
           onKeyDown={e=>{ if (e.key === 'Enter') e.currentTarget.click(); }}
           style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:10, color:'#8A9E8A', marginTop:6, letterSpacing:0.5, cursor:'default', userSelect:'none', WebkitTapHighlightColor:'transparent'}}>
-          PlayPal v1.21.4
+          PlayPal v1.21.5
         </div>
         {egtNote && (
           <div role="status" style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#15803D', marginTop:6}}>{egtNote}</div>
@@ -600,19 +600,13 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
             </div>
             {hcpSyncMsg && <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:hcpSyncMsg.includes('✓')?'#15803D':'#8A9E8A', marginTop:4}}>{hcpSyncMsg}</div>}
           </div>
-          {/* PlayPal Index — built automatically from this player's PlayPal rounds */}
+          {/* PlayPal Index — tracked from this player's PlayPal rounds. Display
+              only: it never changes the handicap above, which every game uses. */}
           {window.IndexService && (() => {
             const IS = window.IndexService;
-            const auto = (form.ppIndexMode || 'auto') !== 'manual';
             const diffs = Array.isArray(form.ppDifferentials) ? form.ppDifferentials : [];
             const calc = IS.computeIndex(diffs);
             const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
-            const toggle = () => {
-              const next = auto ? 'manual' : 'auto';
-              setForm(f => (next === 'auto' && f.ppIndex !== null && f.ppIndex !== undefined)
-                ? { ...f, ppIndexMode: next, handicap: String(f.ppIndex), handicapSource: 'playpal' }
-                : { ...f, ppIndexMode: next });
-            };
             return (
               <div style={{background:'#F6F4EE', border:'1px solid #E7E3D9', borderRadius:12, padding:'12px 14px'}}>
                 <div style={{display:'flex', alignItems:'baseline', gap:8}}>
@@ -625,17 +619,8 @@ const HomeScreen = ({ onStartRound, players, onManagePlayers, recentRounds, onJo
                     : `${calc.used} of ${diffs.length} rounds counted`}
                   {form.ppIndexUpdatedAt ? ' · updated ' + new Date(form.ppIndexUpdatedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : ''}
                 </div>
-                <button onClick={toggle} role="switch" aria-checked={auto}
-                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', minHeight:44, marginTop:8, background:'none', border:'none', padding:0, cursor:'pointer', textAlign:'left', WebkitTapHighlightColor:'transparent'}}>
-                  <span style={{width:40, height:24, borderRadius:12, background:auto ? '#15803D' : '#E7E3D9', position:'relative', flexShrink:0, transition:'background 0.15s'}}>
-                    <span style={{position:'absolute', top:3, left:auto ? 19 : 3, width:18, height:18, borderRadius:9, background:'#FFFFFF', transition:'left 0.15s'}}/>
-                  </span>
-                  <span style={{fontFamily:F, fontWeight:700, fontSize:13, color:'#0E2B20'}}>Build my index automatically</span>
-                </button>
                 <div style={{fontFamily:F, fontSize:11, color:'#8A9E8A', lineHeight:1.5, marginTop:4}}>
-                  {auto
-                    ? 'On: your handicap above follows the PlayPal Index after every round.'
-                    : 'Off: rounds still count toward the PlayPal Index, but your handicap above stays as you set it.'}
+                  Tracking only — every round updates it, but it never changes the handicap above. Games, pops and payouts use the handicap.
                 </div>
                 <div style={{fontFamily:F, fontSize:10, color:'#8A9E8A', lineHeight:1.5, marginTop:6}}>{IS.DISCLAIMER}</div>
               </div>

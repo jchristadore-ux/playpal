@@ -1,5 +1,16 @@
 # PlayPal — Progress
 
+## v1.21.5 — PlayPal Index is tracking only (30 Sep 2026)
+
+**Branch:** `fix/index-tracking-only`. IndexService.postRoundReport no longer
+copies the index into `handicap`/`handicapSource`; `ppIndexMode` defaults
+removed (legacy values ignored); Home profile toggle replaced by a read-only
+index card; Stats/summary copy updated; tests cover posting, EGT import and
+the v3 migration leaving `handicap` untouched. Data: JD's group (CB4B) handicaps
+restored via Admin SDK (backups in the local backups/ folder, not committed).
+
+Next action: none.
+
 ## v1.21.0 — EGT 2026 history → PlayPal Index (30 Sep 2026)
 
 **Branch:** `claude/playpal-index-scorecards` (main @ v1.20.0 merged in)
