@@ -18,6 +18,8 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 - Course handicap, pops and every game keep reading `player.handicap` only.
 - Older clients (1.20.0–1.21.4) still copy the index into the handicap after
   their next round until they load 1.21.5 (service worker update).
+- CI: `overrides` pins `@grpc/grpc-js` to ^1.14.5 (new high-severity advisories
+  in <=1.13.5 via the dev-only `firebase` SDK's Firestore) so `npm audit` passes.
 
 ## [1.21.4] — 2026-09-30 — Logo loads in the app
 
