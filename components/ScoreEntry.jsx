@@ -1317,6 +1317,7 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
 
       <TrackersSheet open={trackersOpen} onClose={() => setTrackersOpen(false)} formats={formats}>
         <RoundTracker players={players} scores={scores} course={course} holeIdx={holeIdx}/>
+        {window.SiMissingBanner && <window.SiMissingBanner course={course} style={{margin:'8px 0'}}/>}
         {hasGames   && <EngineGamesTracker games={games} players={players} course={course} scores={scores} startingTee={startingTee}
                           stats={{ putts, fir: firData, gir: girData }} dropouts={dropouts} gameState={{ wolf: wolfData, bbb: bbbData }}/>}
         {hasWolf    && <WolfTracker      players={players} scores={scores} wolfData={wolfData}     course={course} holeIdx={holeIdx} onSetPartner={handleWolfPick} onLoneWolf={handleLoneWolf} onResetWolf={handleResetWolf} format={wolfFmt}/>}
