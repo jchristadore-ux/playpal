@@ -1,5 +1,18 @@
 # TODO — PlayPal
 
+## Done — The Brovisional auto-sync (v1.22.0, branch feat/brovisional-sync, DRAFT PR)
+- [x] /api/handicap/post + /api/handicap/delete + daily cron backstop (CRON_SECRET)
+- [x] Client: post on save / re-save, launch retry with backoff, setup + summary toggles, status block
+- [x] Tests incl. HMAC-verifying mock receiver; docs/BROVISIONAL_SYNC.md
+
+## Open — The Brovisional
+- [ ] JD/OUHS: review + merge the draft PR (do not merge before go-ahead)
+- [ ] Vercel: confirm PLAYPAL_INGEST_SECRET scope (Production only?) and set CRON_SECRET
+- [ ] OUHS: link mike / james / rob (and any guests' `pp-…` ids) in The Brovisional
+- [ ] No in-app "delete round" exists yet; /api/handicap/delete + BrovisionalService.deleteRound
+      are ready for when one is added (round toggle off already removes a posted round)
+- [ ] EGT Cup rounds are never posted (imported separately); revisit for a future trip
+
 ## Done — PlayPal Index (v1.20.0, branch feat/playpal-index)
 - [x] IndexService (AGS, differential, 9-hole, lowest-N table, caps, posting rules)
 - [x] Player fields + schema v3 backfill (idempotent)

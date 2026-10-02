@@ -8,6 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 
 const PAYMENT_ENV_KEYS = [
+  'PLAYPAL_INGEST_SECRET',
+  'CRON_SECRET',
   'STRIPE_SECRET_KEY',
   'STRIPE_PRICE_ID',
   'STRIPE_WEBHOOK_SECRET',
@@ -112,5 +114,23 @@ test('GET /api/health treats invalid firebase JSON as unset', async () => {
     await handler({ method: 'GET' }, res);
     assert.equal(res.body.firebaseAdmin, false);
     assert.equal(res.body.paymentsConfigured, false);
+  });
+});
+
+test('GET /api/health reports Brovisional sync flags as presence-only booleans', async () => {
+  await withEnv({}, async () => {
+    const res = mockRes();
+    await (await loadHandler())({ method: 'GET' }, res);
+    assert.equal(res.body.brovisionalIngest, false);
+    assert.equal(res.body.cronSecret, false);
+  });
+  await withEnv({ PLAYPAL_INGEST_SECRET: 'ingest-test-value', CRON_SECRET: 'cron-test-value' }, async () => {
+    const res = mockRes();
+    await (await loadHandler())({ method: 'GET' }, res);
+    assert.equal(res.body.brovisionalIngest, true);
+    assert.equal(res.body.cronSecret, true);
+    const dumped = JSON.stringify(res.body);
+    assert.equal(dumped.includes('ingest-test-value'), false);
+    assert.equal(dumped.includes('cron-test-value'), false);
   });
 });

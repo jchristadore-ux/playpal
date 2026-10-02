@@ -23,6 +23,7 @@ const SOURCES = [
   'components/entitlementHelpers.js',
   'components/authService.js',
   'components/proService.js',
+  'components/brovisionalService.js',
   'components/sharingService.js',
   'components/scorecardImport.js',
   'components/migrations.js',

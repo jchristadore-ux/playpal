@@ -3,6 +3,9 @@
   "cleanUrls": false,
   "trailingSlash": false,
   "outputDirectory": ".",
+  "crons": [
+    { "path": "/api/cron/brovisional", "schedule": "0 10 * * *" }
+  ],
   "functions": {
     "api/**/*.js": {
       "includeFiles": "lib/**"

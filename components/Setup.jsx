@@ -1025,6 +1025,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
     return next;
   });
   const [cardOnly, setCardOnly]               = React.useState(false);       // scorecard only, no game
+  const [postHcp, setPostHcp]                 = React.useState(null);        // The Brovisional: null = format default
   const [favVersion, setFavVersion]           = React.useState(0);           // bump to re-read favorites
   const [startingTee,     setStartingTee]     = React.useState(1); // 1 = front first, 10 = back first
   const [tripMode,        setTripMode]        = React.useState('none'); // 'none' | 'existing' | 'new'
@@ -1163,6 +1164,13 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
     ...(k==='markeymatch' ? { markeyMatchConfig: { ...markeyMatchConfig, stake: markeyMatchConfig.stake, startingTee } } : {}),
   }));
 
+  // The Brovisional: on by default, off when partners share one score
+  // (scramble / alternate shot / Chapman). User choice wins.
+  const postHcpDefault = window.BrovisionalService
+    ? window.BrovisionalService.defaultPostToHandicap({ formats: activeFormats, games })
+    : true;
+  const postToHandicap = postHcp === null ? postHcpDefault : postHcp;
+
   const tripValid = tripMode === 'none' ||
     (tripMode === 'existing' && !!selectedTripId) ||
     (tripMode === 'new' && !!newTripName.trim());
@@ -1188,7 +1196,7 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
     const autoPops = window.autoPopStrokes(players, course, teeId, { allowancePct: 100, relative: true });
     // `trackStats` is derived for legacy readers/labels: any detailed stat beyond putts.
     const trackStats = ['fir','gir','pen','sand','ud'].some(k => statsConfig[k]);
-    onStart({ players, course, formats: activeFormats, games: namedGames, teeId, statsConfig, trackStats, autoPops, cardOnly, syncCode: generateSyncCode(), tripSelection, startingTee });
+    onStart({ players, course, formats: activeFormats, games: namedGames, teeId, statsConfig, trackStats, autoPops, cardOnly, syncCode: generateSyncCode(), tripSelection, startingTee, postToHandicap });
   };
 
   const buildStateGroups = (list) => {
@@ -1570,6 +1578,25 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
                 </div>
               </div>
             )}
+
+            {/* The Brovisional — post this round to the unofficial handicap app */}
+            <div role="switch" aria-checked={postToHandicap} tabIndex={0}
+              onClick={()=>setPostHcp(!postToHandicap)}
+              onKeyDown={e=>{ if (e.key===' '||e.key==='Enter') { e.preventDefault(); setPostHcp(!postToHandicap); } }}
+              style={{...setupS.formatCard, marginTop:16, display:'flex', alignItems:'center', gap:12, cursor:'pointer',
+                border:postToHandicap?'1px solid #0E2B20':'1px solid #E7E3D9', background:postToHandicap?'rgba(14,43,32,0.04)':'#FFFFFF'}}>
+              <span style={{fontSize:22, flexShrink:0}}>📈</span>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:17, color:'#0E2B20'}}>Post to handicap</div>
+                <div style={{fontSize:12, color:'#3F5F4A', marginTop:2, lineHeight:1.4, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
+                  Send everyone's score to The Brovisional when the round is saved.
+                  {!postHcpDefault && postHcp === null ? ' Off by default: partners share one score in this format.' : ''}
+                </div>
+              </div>
+              <div style={{...setupS.check, flexShrink:0, background:postToHandicap?'#0E2B20':'transparent', border:`2px solid ${postToHandicap?'#0E2B20':'#E7E3D9'}`}}>
+                {postToHandicap && <span style={{color:'#F6F4EE', fontSize:14, fontWeight:900}}>✓</span>}
+              </div>
+            </div>
 
             <div style={{display:'flex', gap:10, marginTop:16}}>
               <Btn onClick={()=>setStep(2)} variant="ghost" style={{padding:'14px 20px'}}>← BACK</Btn>

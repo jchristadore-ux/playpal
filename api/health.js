@@ -44,6 +44,9 @@ export default async function handler(req, res) {
     stripePriceId,
     stripeWebhookSecret,
     firebaseAdmin,
+    // The Brovisional handicap sync (presence only, never values).
+    brovisionalIngest: present(process.env.PLAYPAL_INGEST_SECRET),
+    cronSecret: present(process.env.CRON_SECRET),
     // Client feature flag mirror is not env-driven server-side; clients read
     // window.PLAYPAL_CONFIG.enforceProGates themselves.
     checkedAt: new Date().toISOString(),

@@ -165,6 +165,16 @@ const App = () => {
     };
   }, []);
 
+  // The Brovisional: retry handicap posts that failed earlier (backoff lives
+  // in BrovisionalService; the daily server cron is the backstop after that).
+  React.useEffect(() => {
+    if (!window.BrovisionalService) return;
+    const run = () => { try { window.BrovisionalService.retryDue(); } catch (e) {} };
+    const t = setTimeout(run, 4000);
+    window.addEventListener('online', run);
+    return () => { clearTimeout(t); window.removeEventListener('online', run); };
+  }, []);
+
   const [trips,           setTrips]           = React.useState([]);
   const [viewedTrip,      setViewedTrip]      = React.useState(null);
   const [tripRounds,      setTripRounds]      = React.useState(null); // null = loading
