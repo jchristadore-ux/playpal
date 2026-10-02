@@ -149,20 +149,68 @@ const SharingService = (function () {
     return out;
   }
 
-  // A Venmo charge link for one debt. Returns both the app deep link and the
-  // web fallback; the caller decides which to open. `null` when the payer has
-  // no handle on file — there is nothing honest to link to.
+  // ── Venmo links ──────────────────────────────────────────────────────────
+  // Venmo's documented payment link (venmo.com/paymentlinks):
+  //   https://venmo.com/?txn=charge|pay&recipients=<user>&amount=<n.nn>&note=<..>
+  // It is an iOS/Android universal link: with Venmo installed the tap opens
+  // the app with the request pre-filled; without it, Safari shows venmo.com.
+  // Never the `venmo://` custom scheme — on a phone without Venmo (and in an
+  // iOS home-screen web app) Safari answers that with "Safari cannot open the
+  // page".
+  function venmoHandle(raw) {
+    return String(raw || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
+  }
+
+  function venmoLink(opts) {
+    const o = opts || {};
+    const handle = venmoHandle(o.handle);
+    const txn = o.txn === 'pay' ? 'pay' : 'charge';
+    const n = Math.abs(Math.round((Number(o.amount) || 0) * 100) / 100);
+    const parts = ['txn=' + txn];
+    if (handle) parts.push('recipients=' + encodeURIComponent(handle));
+    if (n > 0) parts.push('amount=' + n.toFixed(2));
+    parts.push('note=' + encodeURIComponent(o.note || 'PlayPal golf'));
+    return 'https://venmo.com/?' + parts.join('&');
+  }
+
+  // A Venmo charge (request) for one debt, sent by the winner to the player
+  // who owes. `null` when the payer has no handle on file — there is nothing
+  // honest to link to; the UI asks for one instead.
   function venmoRequest(debt, note) {
-    const handle = String((debt.from && debt.from.venmo) || '').trim().replace(/^@/, '');
+    const handle = venmoHandle(debt && debt.from && debt.from.venmo);
     if (!handle) return null;
-    const amount = Math.abs(Math.round((debt.amount || 0) * 100) / 100).toFixed(2);
-    const q = 'txn=charge&amount=' + amount + '&note=' + encodeURIComponent(note || 'PlayPal golf');
-    return {
-      handle,
-      amount,
-      deepLink: 'venmo://paycharge?recipients=' + encodeURIComponent(handle) + '&' + q,
-      webLink:  'https://venmo.com/' + encodeURIComponent(handle) + '?' + q,
-    };
+    const amount = Math.abs(Math.round(((debt && debt.amount) || 0) * 100) / 100).toFixed(2);
+    const url = venmoLink({ handle, amount, note, txn: 'charge' });
+    return { handle, amount, txn: 'charge', url, webLink: url };
+  }
+
+  // The payer's side: pay the winner (txn=pay).
+  function venmoPay(debt, note) {
+    const handle = venmoHandle(debt && debt.to && debt.to.venmo);
+    if (!handle) return null;
+    const amount = Math.abs(Math.round(((debt && debt.amount) || 0) * 100) / 100).toFixed(2);
+    const url = venmoLink({ handle, amount, note, txn: 'pay' });
+    return { handle, amount, txn: 'pay', url, webLink: url };
+  }
+
+  // Opens an https link the way each shell needs: Capacitor (native iOS)
+  // hands it to the system so the universal link reaches the Venmo app; a
+  // browser or home-screen web app navigates top-level (not window.open,
+  // which standalone PWAs swallow).
+  function openExternal(url) {
+    if (!/^https:\/\//.test(String(url || ''))) return false;
+    const W = typeof window !== 'undefined' ? window : null;
+    if (!W) return false;
+    const cap = W.Capacitor;
+    const plugins = cap && cap.Plugins;
+    try {
+      if (cap && cap.isNativePlatform && cap.isNativePlatform()) {
+        if (plugins && plugins.Browser && plugins.Browser.open) { plugins.Browser.open({ url }); return true; }
+        if (plugins && plugins.App && plugins.App.openUrl) { plugins.App.openUrl({ url }); return true; }
+      }
+    } catch (e) { /* fall through to plain navigation */ }
+    W.location.assign(url);   // Capacitor's webview also hands off-site URLs to iOS
+    return true;
   }
 
   // ── Round report ───────────────────────────────────────────────────────────
@@ -481,6 +529,10 @@ const SharingService = (function () {
     scorecardCSV,
     settleDebts,
     venmoRequest,
+    venmoPay,
+    venmoLink,
+    venmoHandle,
+    openExternal,
     roundReport,
     share,
     downloadCSV,

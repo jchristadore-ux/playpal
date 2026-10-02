@@ -280,9 +280,9 @@ test('the Venmo request asks for exactly what the screen shows', () => {
   assert.equal(req.handle, 'player-1', 'a leading @ is stripped');
   assert.equal(req.amount, '12.50');
   assert.equal(W.fmtMoney(12.5), '$12.50');
-  assert.ok(req.deepLink.includes('amount=12.50'));
-  assert.ok(req.webLink.startsWith('https://venmo.com/player-1?'));
-  assert.ok(req.deepLink.includes('txn=charge'));
+  assert.ok(req.url.includes('amount=12.50'));
+  assert.ok(req.url.startsWith('https://venmo.com/?txn=charge&recipients=player-1&'));
+  assert.ok(!('deepLink' in req), 'no venmo:// custom-scheme link');
 });
 
 test('a player with no Venmo handle gets no link rather than a broken one', () => {

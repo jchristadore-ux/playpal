@@ -4,6 +4,23 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.5] — 2026-10-02 — Venmo requests open without a Safari error
+
+- **Root cause:** tapping 💸 REQUEST (and PREP ALL) on the summary set
+  `window.location.href = 'venmo://paycharge?…'`. That custom scheme only
+  works with the Venmo app installed and isn't honoured from an iOS
+  home-screen web app, so Safari showed "Safari cannot open the page".
+- **Fix:** every Venmo link is now Venmo's documented https payment link,
+  `https://venmo.com/?txn=charge&recipients=<user>&amount=<n.nn>&note=<…>`
+  (`txn=pay` for paying, `SharingService.venmoPay`). The REQUEST control is a
+  real `<a href>` and opens via `SharingService.openExternal`: Capacitor's
+  Browser/App plugin when native, otherwise top-level navigation (never
+  `window.open`). No `venmo://` links remain.
+- Handles: leading `@`s and spaces stripped; a player with no username gets
+  an "ADD VENMO" prompt pointing to their profile instead of a dead button.
+  Amounts always 2 decimals, rounded to the cent; notes fully URL-encoded.
+- No round, match or profile data changes. Tests: `tests/venmo.test.mjs`.
+
 ## [1.22.4] — 2026-10-02 — Sixes is three 6-hole matches
 
 - **What was wrong:** the `sixes` engine format scored a running points tally

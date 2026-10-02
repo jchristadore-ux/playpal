@@ -196,22 +196,21 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     report ? report.debts : window.SharingService.settleDebts(players, payouts), [report]);
 
   const missingEmail = players.filter(p => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(p.email || '').trim()));
-  const missingVenmo = debts.filter(d => !String(d.from.venmo || '').trim()).map(d => d.from);
+  const missingVenmo = debts.filter(d => !window.SharingService.venmoHandle(d.from.venmo)).map(d => d.from);
 
   // Charges the player who owes. The amount is the exact figure on screen —
   // to the cent — so nobody is asked for a different number than they read.
   const openVenmo = (debt, debtKey) => {
     const req = window.SharingService.venmoRequest(debt, `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`);
-    if (!req) { showToast(`${debt.from.name.split(' ')[0]} has no Venmo handle on their profile`, 'error'); return; }
-    // Open the app if it is installed; the web link stays visible on the row as
-    // a fallback rather than being force-opened in a second tab.
-    window.location.href = req.deepLink;
+    if (!req) { showToast(`Add ${debt.from.name.split(' ')[0]}'s Venmo username on their player profile (Home → Players) to request it`, 'error'); return; }
+    // https universal link: opens Venmo if installed, venmo.com otherwise.
     setVenmoSent(prev => ({ ...prev, [debtKey]: req }));
+    window.SharingService.openExternal(req.url);
   };
 
   const requestAllVenmo = () => {
-    const payable = debts.filter(d => String(d.from.venmo || '').trim());
-    if (!payable.length) { showToast('No players have a Venmo handle on file', 'error'); return; }
+    const payable = debts.filter(d => window.SharingService.venmoHandle(d.from.venmo));
+    if (!payable.length) { showToast('No Venmo usernames on file — add them on each player\'s profile (Home → Players)', 'error'); return; }
     // One deep link at a time is all iOS will honour, so mark them all as
     // prepared and let the golfer tap through the rows.
     const next = {};
@@ -220,9 +219,9 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
       if (req) next[i] = req;
     });
     setVenmoSent(next);
-    const first = debts.findIndex(d => String(d.from.venmo || '').trim());
-    if (first >= 0) window.location.href = next[first].deepLink;
-    showToast(`${payable.length} request${payable.length === 1 ? '' : 's'} ready — tap each row to send`);
+    const first = Object.keys(next)[0];
+    showToast(`${Object.keys(next).length} request${Object.keys(next).length === 1 ? '' : 's'} ready — tap each row to send`);
+    if (first !== undefined) window.SharingService.openExternal(next[first].url);
   };
 
   // PlayPal has no GHIN integration — there is no public API a client app may
@@ -787,7 +786,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                 <div style={{display:'flex', flexDirection:'column', gap:8}}>
                   {debts.map((d,i)=>{
                     const req = venmoSent[i];
-                    const handle = String(d.from.venmo || '').trim().replace('@','');
+                    const handle = window.SharingService.venmoHandle(d.from.venmo);
                     return (
                       <div key={i} style={{display:'flex', alignItems:'center', gap:10, background:'#F6F4EE', borderRadius:12, padding:'12px 14px', flexWrap:'wrap'}}>
                         <Avatar player={d.from} size={32}/>
@@ -796,17 +795,25 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                           <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
                             owes <span style={{color:'#C8A15A', fontWeight:700, whiteSpace:'nowrap'}}>{window.fmtMoney(d.amount)}</span> to {d.to.name.split(' ')[0]}{handle ? ` · @${handle}` : ''}
                           </div>
-                          {req && (
-                            <a href={req.webLink} target="_blank" rel="noopener noreferrer"
-                              style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#2563EB', textDecoration:'underline'}}>
-                              Open in a browser instead
-                            </a>
+                          {!handle && (
+                            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#B45309', marginTop:2}}>
+                              No Venmo username — add one on {d.from.name.split(' ')[0]}'s profile (Home → Players).
+                            </div>
                           )}
                         </div>
-                        <Btn onClick={()=>openVenmo(d,i)} disabled={!handle}
-                          variant={req?'ghost':'gold'} style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>
-                          {!handle ? 'NO HANDLE' : req ? '✓ OPENED' : '💸 REQUEST'}
-                        </Btn>
+                        {handle ? (
+                          // A real link so iOS treats the tap as a navigation to
+                          // venmo.com — the universal link that opens the app.
+                          <a href={window.SharingService.venmoRequest(d, `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`).url}
+                            onClick={e => { e.preventDefault(); openVenmo(d, i); }}
+                            data-venmo-request={i}
+                            style={{padding:'9px 14px', fontSize:12, flexShrink:0, borderRadius:10, textDecoration:'none', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, letterSpacing:0.5,
+                              background: req ? 'transparent' : '#C8A15A', color: req ? '#3F5F4A' : '#0E2B20', border: req ? '1px solid #E7E3D9' : '1px solid #C8A15A'}}>
+                            {req ? '✓ OPENED' : '💸 REQUEST'}
+                          </a>
+                        ) : (
+                          <Btn onClick={()=>openVenmo(d,i)} variant="ghost" style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>ADD VENMO</Btn>
+                        )}
                       </div>
                     );
                   })}
