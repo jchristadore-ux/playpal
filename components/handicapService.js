@@ -38,22 +38,53 @@ const HandicapService = (function () {
   // WHS rounds to the nearest whole number, .5 upward.
   function roundHandicap(x) { return Math.round(x); }
 
-  // Hole positions ordered easiest-to-get-strokes first (stroke index 1 = hardest).
+  // ── THE pop allocator ─────────────────────────────────────────────────────
+  // Every format (skins, Nassau, Markey, Sixes, net stroke play, match play,
+  // stats/index, scorecard pop dots, summaries) gets its per-hole strokes from
+  // allocateStrokes below, so pops can never disagree between screens.
+  //
+  // A hole's stroke index: numeric `hdcp` (or `si`), strings like "7" coerced.
+  // Missing / non-numeric / < 1 → null (ranked after every real SI, in hole
+  // order — the hole number is only ever a last-resort tie-breaker).
+  function strokeIndexOf(h) {
+    if (!h) return null;
+    const raw = (h.hdcp !== undefined && h.hdcp !== null && h.hdcp !== '') ? h.hdcp : h.si;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1 ? n : null;
+  }
+
+  // Hole positions ordered hardest first: SI ascending among the holes being
+  // played (so a back-nine round with SI 2,4,…,18 ranks them 1..9), ties and
+  // missing SI broken by play position.
   function _rankByStrokeIndex(holes) {
     return holes
-      .map((h, i) => ({ i, hdcp: h.hdcp || (i + 1) }))
-      .sort((a, b) => a.hdcp - b.hdcp || a.i - b.i)
+      .map((h, i) => ({ i, si: strokeIndexOf(h) }))
+      .sort((a, b) => {
+        if (a.si === null && b.si === null) return a.i - b.i;
+        if (a.si === null) return 1;
+        if (b.si === null) return -1;
+        return a.si - b.si || a.i - b.i;
+      })
       .map(x => x.i);
   }
 
-  // Distributes a rounded playing handicap across holes by stroke index.
-  // Positive: strokes received on the hardest holes first; > holes.length wraps
-  // (a second stroke on the hardest holes). Negative (plus players): strokes
+  // True when a card's stroke index is just the hole number 1..n (the blank
+  // custom-course placeholder) — i.e. the real SI was never entered.
+  function isPlaceholderStrokeIndex(holes) {
+    if (!Array.isArray(holes) || holes.length < 9) return false;
+    return holes.every((h, i) => strokeIndexOf(h) === null || strokeIndexOf(h) === i + 1);
+  }
+
+  // Distributes N pops (a whole number; fractional values are Math.round-ed,
+  // the same rounding as roundHandicap) across holes by stroke index.
+  // N ≤ holes: one stroke on each of the N lowest-SI holes. Over the hole
+  // count it wraps: every hole gets one and the rest land on SI 1..(N−n)
+  // again (two there), and so on past 2n. Negative (plus players): strokes
   // given back starting from the easiest hole.
   function allocateStrokes(playing, holes) {
-    const n = holes.length;
+    const n = (holes || []).length;
     if (!n) return [];
-    const h = Math.round(playing || 0);
+    const h = Math.round(Number(playing) || 0);
     const arr = holes.map(() => 0);
     if (h === 0) return arr;
     const magnitude = Math.abs(h);
@@ -158,6 +189,8 @@ const HandicapService = (function () {
     playingHandicap,
     roundHandicap,
     allocateStrokes,
+    strokeIndexOf,
+    isPlaceholderStrokeIndex,
     netScore,
     playingHandicaps,
     teamPlayingHandicap,

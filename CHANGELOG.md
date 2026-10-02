@@ -4,6 +4,32 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.1] — 2026-10-02 — Pops land on the hardest holes
+
+- **Root cause:** the Harkers Hollow custom course was saved straight from the
+  blank course form, whose stroke-index column pre-fills 1–18 (= the hole
+  number) and par 4 everywhere. Every pop allocation correctly followed that
+  SI, so a player getting 4 pops got them on holes 1–4 instead of SI 1–4
+  (holes 4, 10, 8, 13).
+- `HandicapService.allocateStrokes` is the single pop allocator for every
+  format (skins, Nassau, Markey, Sixes, match play, net stroke play, stats,
+  scorecard pop dots, summaries): N pops → one on each of SI 1..N among the
+  holes played; past the hole count every hole gets one and the rest wrap
+  onto SI 1.. again. Stroke index is coerced to a number ("10" sorts after
+  "9"), missing SI ranks after real SI, ties break by hole order, fractional
+  values use Math.round. 9-hole rounds rank the nine played holes by the
+  course's 18-hole SI (a back nine's SI 2,4,6… become its 1,2,3…).
+- The no-HandicapService fallbacks (`autoPopStrokes`, `calcMarkeyMatchPops`)
+  rank holes the same way (`strokeIndexRanks`) instead of using raw SI, which
+  was wrong on a nine.
+- New `CourseService.repairStrokeIndex`: a course whose SI is still the
+  1..18 placeholder gets the published card when we know it (Harkers Hollow:
+  men's SI and par 70). Rounds loaded/started/joined on such a course are
+  repaired on load; auto-seeded pops (round, Nassau match, Markey) recompute
+  from the corrected SI, while scores and any hand-edited pops are kept. A
+  live payload from a phone still on the old pops is mapped forward too.
+- Tests: `tests/pops.test.mjs`.
+
 ## [1.22.0] — 2026-10-01 — The Brovisional handicap auto-sync
 
 - Saving a finished round posts every player's hole-by-hole gross to **The

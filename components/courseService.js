@@ -38,7 +38,7 @@ const CourseService = (function () {
       num:  h.num || (i + 1),
       par:  h.par || 4,
       yds:  h.yds || 0,
-      hdcp: h.hdcp || (i + 1),
+      hdcp: Number(h.hdcp != null && h.hdcp !== '' ? h.hdcp : h.si) || (i + 1),
     }));
     const holeCount = course.holeCount === 9 || holes.length === 9 ? 9 : 18;
     let tees = Array.isArray(course.tees) && course.tees.length
@@ -66,6 +66,41 @@ const CourseService = (function () {
       rating: tees[0].rating,
       slope:  tees[0].slope,
     };
+  }
+
+  // ── Stroke-index repair ───────────────────────────────────────────────────
+  // A custom course saved straight from the blank form carries the placeholder
+  // SI 1..18 (= hole number) and par 4 everywhere, so pops land on holes 1..N
+  // instead of the hardest holes. For courses whose real card we know, swap in
+  // the published SI (and par, when it is the all-4s placeholder). Any card
+  // with a real SI entered is left exactly as it is.
+  const KNOWN_CARDS = {
+    // Harkers Hollow GC, Phillipsburg NJ — men's handicap row (all tees).
+    harkershollow: {
+      si:  [7, 5, 11, 1, 15, 13, 9, 3, 17, 2, 16, 8, 4, 14, 12, 18, 10, 6],
+      par: [4, 4, 4, 5, 3, 4, 4, 4, 3, 5, 3, 4, 4, 4, 4, 3, 4, 4],
+    },
+  };
+  const _cardKey = name => String(name || '').toLowerCase()
+    .replace(/\b(golf|country|club|course|gc|cc)\b/g, '').replace(/[^a-z0-9]/g, '');
+
+  // Returns the same object when nothing needs fixing, else a repaired copy.
+  function repairStrokeIndex(course) {
+    if (!course || !Array.isArray(course.holes)) return course;
+    const HS = (typeof window !== 'undefined' && window.HandicapService) || null;
+    if (!HS || !HS.isPlaceholderStrokeIndex(course.holes)) return course;
+    const card = KNOWN_CARDS[_cardKey(course.name)];
+    if (!card) return course;
+    const parPlaceholder = course.holes.every(h => !h.par || Number(h.par) === 4);
+    const holes = course.holes.map((h, i) => {
+      const num = Number(h.num) || (i + 1);
+      const k = num - 1;
+      if (k < 0 || k >= card.si.length) return h;
+      return { ...h, hdcp: card.si[k], ...(parPlaceholder ? { par: card.par[k] } : {}) };
+    });
+    // A nine from an 18-hole card keeps the 18-hole SI; allocateStrokes ranks
+    // the played holes among themselves.
+    return { ...course, holes, siRepaired: true };
   }
 
   function getTee(course, teeId) {
@@ -159,6 +194,7 @@ const CourseService = (function () {
 
   return {
     normalizeCourse,
+    repairStrokeIndex,
     getTee,
     holesForTee,
     coursePar,
