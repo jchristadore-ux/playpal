@@ -660,6 +660,7 @@ const NassauPopConfig = ({ nassauPlayers, popHoles, course, onChange }) => {
         {anyAuto && <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, fontSize:9, color:'#15803D', background:'rgba(21,128,61,0.1)', border:'1px solid rgba(21,128,61,0.2)', borderRadius:4, padding:'1px 5px', letterSpacing:0.5}}>AUTO</span>}
         <button onClick={resetAuto} style={{marginLeft:'auto', background:'none', border:'none', cursor:'pointer', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:10, letterSpacing:1, color:'#C8A15A', WebkitTapHighlightColor:'transparent', padding:'2px 6px'}}>RESET TO AUTO</button>
       </div>
+      <SiMissingBanner course={course}/>
       <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#8A9E8A', lineHeight:1.5}}>
         {anyAuto
           ? 'Strokes come off the low course handicap in this match, hardest holes first. Tap a hole to add or remove one.'
@@ -978,6 +979,7 @@ const MarkeyMatchConfig = ({ roundPlayers, markeyMatchConfig, onChange, course }
         const lowestHdcp = Math.min(...allFour.map(id => roundPlayers.find(p => p.id === id)?.handicap || 0));
         return (
           <div style={{ background: 'rgba(200,161,90,0.04)', border: '1px solid rgba(200,161,90,0.15)', borderRadius: 8, padding: '8px 10px' }}>
+            <SiMissingBanner course={course} style={{marginBottom:8}}/>
             <div style={{ fontFamily: 'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight: 600, fontSize: 9, letterSpacing: 2, color: '#C8A15A', marginBottom: 6 }}>AUTO POPS (vs lowest hdcp {lowestHdcp})</div>
             {allFour.map(id => {
               const pl = roundPlayers.find(p => p.id === id);
@@ -1122,7 +1124,10 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
   const removeGame = (id) => setGames(prev => prev.filter(g => g.id !== id));
 
   const selectCourse = (c) => {
-    const normalized = window.CourseService.normalizeCourse(c);
+    // Placeholder SI (1..18 = hole numbers) is swapped for the real card when
+    // known, so the pop panels below seed from the hardest holes.
+    const CS = window.CourseService;
+    const normalized = CS.repairStrokeIndex ? CS.repairStrokeIndex(CS.normalizeCourse(c)) : CS.normalizeCourse(c);
     setCourse(normalized);
     setTeeId(normalized.tees[0]?.id || null);
     if (normalized.holeCount === 9) setStartingTee(1);
@@ -1334,6 +1339,8 @@ const SetupScreen = ({ allPlayers, onStart, customCourses, onCourseSaved }) => {
                   </div>
                 </div>
               )}
+
+              <SiMissingBanner course={course} style={{marginTop:16}}/>
 
               {/* ── Select stats to track ── */}
               {course && (

@@ -177,3 +177,21 @@ test('in-progress round: pops follow the repaired SI, scores and hand edits unto
   // Idempotent.
   assert.equal(W.repairRoundStrokeIndex(next), next);
 });
+
+test('Setup pop panels seed from the repaired course; unknown placeholder SI is flagged', () => {
+  const setup = readFileSync(new URL('../components/Setup.jsx', import.meta.url), 'utf8');
+  const sel = setup.slice(setup.indexOf('const selectCourse'), setup.indexOf('const selectCourse') + 600);
+  assert.match(sel, /repairStrokeIndex/, 'selectCourse repairs placeholder SI before any pop panel seeds');
+  assert.match(setup, /<SiMissingBanner course=\{course\}/, 'pop panel flags missing SI');
+  const shared = readFileSync(new URL('../components/Shared.jsx', import.meta.url), 'utf8');
+  assert.match(shared, /Course handicap holes missing, enter from card/);
+  // The John v TJ panel on Harkers: 11 pops go to SI 1-11, not holes 1-11.
+  const fixed = W.CourseService.repairStrokeIndex(W.CourseService.normalizeCourse(placeholderCourse));
+  const pops = W.autoPopStrokes([{ id: 'john', handicap: 19.9 }, { id: 'tj', handicap: 29.4 }], fixed, 'default', { allowancePct: 100, relative: true });
+  assert.equal(pops.tj.reduce((a, b) => a + b, 0), 11);
+  jeq(siGetting(pops.tj, fixed.holes, 1), range(1, 11));
+  jeq(pops.tj.map((n, i) => n ? i + 1 : 0).filter(Boolean), [1, 2, 3, 4, 7, 8, 10, 12, 13, 17, 18]);
+  // An unknown course with placeholder SI stays flagged (not repaired).
+  const unknown = W.CourseService.repairStrokeIndex(W.CourseService.normalizeCourse({ ...placeholderCourse, name: 'Mystery Muni' }));
+  assert.equal(HS.isPlaceholderStrokeIndex(unknown.holes) && !unknown.siRepaired, true);
+});

@@ -4,6 +4,19 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.3] — 2026-10-02 — Setup pop panels use the real stroke index
+
+- **Root cause (1.22.1 miss):** the repair ran when a round started, but the
+  match-setup STROKE POPS panel (Setup.jsx `NassauPopConfig`, seeded by
+  `calcAutoPopHoles` from the course chosen in `selectCourse`) read the raw
+  course, so on Harkers Hollow it still showed TJ's 11 pops on holes 1–11.
+  `selectCourse` now runs `CourseService.repairStrokeIndex`, so every setup
+  panel (Nassau, Markey, auto pops) seeds from SI 1..N.
+- New `SiMissingBanner`: when a course's SI is still the 1..N placeholder and
+  no published card is known, the setup pop panels, course step and the live
+  scorecard's trackers sheet say "Course handicap holes missing, enter from
+  card" instead of silently popping holes 1..N.
+
 ## [1.22.2] — 2026-10-02 — Footer version
 
 - Home footer shows the real version again (it was stuck on v1.21.5 since

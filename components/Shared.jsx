@@ -356,4 +356,18 @@ const ScorePill = ({ diff }) => {
 // Silently a no-op elsewhere (iOS Safari has no vibration API).
 const ppHaptic = (ms = 8) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
 
-Object.assign(window, { NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal, ppHaptic, PLAYPAL_THEME: T });
+// Shown wherever pops are seeded or used when a course's stroke index is still
+// the 1..N placeholder (hole number) and no known card could repair it — pops
+// would otherwise land silently on holes 1..N.
+const SiMissingBanner = ({ course, style = {} }) => {
+  const HS = window.HandicapService;
+  if (!course || course.siRepaired || !HS || !HS.isPlaceholderStrokeIndex || !HS.isPlaceholderStrokeIndex(course.holes)) return null;
+  return (
+    <div role="alert" style={{background:'#FDECEA', border:'1px solid #E5534B', borderRadius:10, padding:'10px 12px', color:'#8B1A12',
+      fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, lineHeight:1.45, ...style}}>
+      <b>Course handicap holes missing, enter from card.</b> {course.name || 'This course'} has no stroke index saved (it reads 1–{(course.holes || []).length}, the hole numbers), so pops fall on holes 1, 2, 3… instead of the hardest holes. Edit the course and type the HCP row from the scorecard.
+    </div>
+  );
+};
+
+Object.assign(window, { SiMissingBanner, NavBar, Btn, Avatar, Modal, Toast, Label, Divider, ScorePill, PPLogo, QRModal, ppHaptic, PLAYPAL_THEME: T });
