@@ -80,3 +80,13 @@ test('no component links to the venmo:// scheme', async () => {
     assert.ok(!/['"`]venmo:\/\//.test(src), f + ' builds a venmo:// link');
   }
 });
+
+test('round-ended summary: Venmo requests on PAYOUTS (top), SEND, and a SCORES banner', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../components/Summary.jsx', import.meta.url), 'utf8');
+  const payouts = src.indexOf("{tab==='payouts' && (");
+  assert.ok(payouts > 0 && src.indexOf('{venmoCard}', payouts) - payouts < 200, 'Venmo card leads the PAYOUTS tab');
+  assert.ok(src.indexOf('{venmoCard}', src.indexOf("{tab==='actions'")) > 0, 'still on the SEND tab');
+  assert.match(src, /data-venmo-banner/);
+  assert.match(src, /\[\['scorecard','📊 SCORES'\],\['payouts','💰 PAYOUTS'\]\]/, 'read-only viewers get PAYOUTS too');
+});

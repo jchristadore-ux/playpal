@@ -297,6 +297,61 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
     ? [['scorecard','📊 SCORES'],['payouts','💰 PAYOUTS']]
     : [['scorecard','📊 SCORES'],['payouts','💰 PAYOUTS'],['actions','📤 SEND']];
 
+  // 💸 VENMO REQUESTS — one card, shown on the round-ended screen's PAYOUTS
+  // tab (top), the SEND tab, and linked from the SCORES tab banner, so match
+  // money can be requested the moment the round ends. https venmo.com links.
+  const venmoCard = debts.length > 0 ? (
+<div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'16px'}}>
+                <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20'}}>💸 VENMO REQUESTS</div>
+                  <Btn onClick={requestAllVenmo} variant="gold" style={{marginLeft:'auto', padding:'7px 12px', fontSize:11}}>PREP ALL</Btn>
+                </div>
+                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', marginBottom:12, lineHeight:1.5}}>
+                  Each request opens Venmo pre-filled with the exact amount. PlayPal never moves money — you confirm every request inside Venmo.
+                </div>
+                {missingVenmo.length > 0 && (
+                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#B45309', background:'rgba(180,83,9,0.06)', border:'1px solid rgba(180,83,9,0.2)', borderRadius:8, padding:'8px 10px', marginBottom:10, lineHeight:1.5}}>
+                    No Venmo handle on file for {missingVenmo.map(p=>p.name.split(' ')[0]).join(', ')} — add one on their profile, or settle up in person.
+                  </div>
+                )}
+                <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                  {debts.map((d,i)=>{
+                    const req = venmoSent[i];
+                    const handle = window.SharingService.venmoHandle(d.from.venmo);
+                    return (
+                      <div key={i} style={{display:'flex', alignItems:'center', gap:10, background:'#F6F4EE', borderRadius:12, padding:'12px 14px', flexWrap:'wrap'}}>
+                        <Avatar player={d.from} size={32}/>
+                        <div style={{flex:1, minWidth:140}}>
+                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{d.from.name}</div>
+                          <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
+                            owes <span style={{color:'#C8A15A', fontWeight:700, whiteSpace:'nowrap'}}>{window.fmtMoney(d.amount)}</span> to {d.to.name.split(' ')[0]}{handle ? ` · @${handle}` : ''}
+                          </div>
+                          {!handle && (
+                            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#B45309', marginTop:2}}>
+                              No Venmo username — add one on {d.from.name.split(' ')[0]}'s profile (Home → Players).
+                            </div>
+                          )}
+                        </div>
+                        {handle ? (
+                          // A real link so iOS treats the tap as a navigation to
+                          // venmo.com — the universal link that opens the app.
+                          <a href={window.SharingService.venmoRequest(d, `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`).url}
+                            onClick={e => { e.preventDefault(); openVenmo(d, i); }}
+                            data-venmo-request={i}
+                            style={{padding:'9px 14px', fontSize:12, flexShrink:0, borderRadius:10, textDecoration:'none', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, letterSpacing:0.5,
+                              background: req ? 'transparent' : '#C8A15A', color: req ? '#3F5F4A' : '#0E2B20', border: req ? '1px solid #E7E3D9' : '1px solid #C8A15A'}}>
+                            {req ? '✓ OPENED' : '💸 REQUEST'}
+                          </a>
+                        ) : (
+                          <Btn onClick={()=>openVenmo(d,i)} variant="ghost" style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>ADD VENMO</Btn>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+  ) : null;
+
   return (
     <div style={sumS.root}>
       {/* Hero */}
@@ -351,6 +406,16 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
       <div style={sumS.content}>
 
         {/* SCORECARD */}
+        {tab==='scorecard' && debts.length > 0 && (
+          <button onClick={()=>setTab('payouts')} data-venmo-banner="1"
+            style={{width:'100%', display:'flex', alignItems:'center', gap:10, background:'rgba(200,161,90,0.10)', border:'1px solid rgba(200,161,90,0.45)', borderRadius:12, padding:'10px 14px', marginBottom:12, cursor:'pointer', textAlign:'left', WebkitTapHighlightColor:'transparent'}}>
+            <span style={{fontSize:18}} aria-hidden="true">💸</span>
+            <span style={{flex:1, fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:13, fontWeight:700, color:'#0E2B20'}}>
+              {debts.length} payment{debts.length===1?'':'s'} to settle — request on Venmo
+            </span>
+            <span style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, fontWeight:800, letterSpacing:1, color:'#C8A15A'}}>PAYOUTS →</span>
+          </button>
+        )}
         {tab==='scorecard' && (
           <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
             <table style={sumS.table}>
@@ -586,6 +651,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
         {/* PAYOUTS */}
         {tab==='payouts' && (
           <div style={{display:'flex', flexDirection:'column', gap:12}}>
+            {venmoCard}
             {formats.map((f,fi)=>{
               const info = FORMAT_INFO[f.type];
               const fmtStake = f.nassauMatches?.[0]?.stakes ?? f.stakes;
@@ -769,57 +835,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
               <Btn onClick={exportCSV} variant="surface" style={{width:'100%', fontSize:13, marginTop:10}}>⬇️ EXPORT CSV</Btn>
             </div>
 
-            {debts.length>0 && (
-              <div style={{background:'#FFFFFF', border:'1px solid #E7E3D9', borderRadius:16, padding:'16px'}}>
-                <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
-                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:16, color:'#0E2B20'}}>💸 VENMO REQUESTS</div>
-                  <Btn onClick={requestAllVenmo} variant="gold" style={{marginLeft:'auto', padding:'7px 12px', fontSize:11}}>PREP ALL</Btn>
-                </div>
-                <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', marginBottom:12, lineHeight:1.5}}>
-                  Each request opens Venmo pre-filled with the exact amount. PlayPal never moves money — you confirm every request inside Venmo.
-                </div>
-                {missingVenmo.length > 0 && (
-                  <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#B45309', background:'rgba(180,83,9,0.06)', border:'1px solid rgba(180,83,9,0.2)', borderRadius:8, padding:'8px 10px', marginBottom:10, lineHeight:1.5}}>
-                    No Venmo handle on file for {missingVenmo.map(p=>p.name.split(' ')[0]).join(', ')} — add one on their profile, or settle up in person.
-                  </div>
-                )}
-                <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                  {debts.map((d,i)=>{
-                    const req = venmoSent[i];
-                    const handle = window.SharingService.venmoHandle(d.from.venmo);
-                    return (
-                      <div key={i} style={{display:'flex', alignItems:'center', gap:10, background:'#F6F4EE', borderRadius:12, padding:'12px 14px', flexWrap:'wrap'}}>
-                        <Avatar player={d.from} size={32}/>
-                        <div style={{flex:1, minWidth:140}}>
-                          <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:700, fontSize:14, color:'#0E2B20'}}>{d.from.name}</div>
-                          <div style={{fontSize:12, color:'#3F5F4A', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif'}}>
-                            owes <span style={{color:'#C8A15A', fontWeight:700, whiteSpace:'nowrap'}}>{window.fmtMoney(d.amount)}</span> to {d.to.name.split(' ')[0]}{handle ? ` · @${handle}` : ''}
-                          </div>
-                          {!handle && (
-                            <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#B45309', marginTop:2}}>
-                              No Venmo username — add one on {d.from.name.split(' ')[0]}'s profile (Home → Players).
-                            </div>
-                          )}
-                        </div>
-                        {handle ? (
-                          // A real link so iOS treats the tap as a navigation to
-                          // venmo.com — the universal link that opens the app.
-                          <a href={window.SharingService.venmoRequest(d, `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`).url}
-                            onClick={e => { e.preventDefault(); openVenmo(d, i); }}
-                            data-venmo-request={i}
-                            style={{padding:'9px 14px', fontSize:12, flexShrink:0, borderRadius:10, textDecoration:'none', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, letterSpacing:0.5,
-                              background: req ? 'transparent' : '#C8A15A', color: req ? '#3F5F4A' : '#0E2B20', border: req ? '1px solid #E7E3D9' : '1px solid #C8A15A'}}>
-                            {req ? '✓ OPENED' : '💸 REQUEST'}
-                          </a>
-                        ) : (
-                          <Btn onClick={()=>openVenmo(d,i)} variant="ghost" style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>ADD VENMO</Btn>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {venmoCard}
             {debts.length===0 && (
               <div style={{background:'rgba(21,128,61,0.04)', border:'1px solid rgba(21,128,61,0.15)', borderRadius:16, padding:'16px', textAlign:'center'}}>
                 <div style={{fontSize:28, marginBottom:8}} aria-hidden="true">🎉</div>

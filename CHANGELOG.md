@@ -4,6 +4,17 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.6] — 2026-10-02 — Venmo requests front and centre when the round ends
+
+- The 💸 VENMO REQUESTS card was only on the round summary's third tab
+  (📤 SEND), and hidden entirely for players viewing someone else's round.
+  It now leads the **💰 PAYOUTS** tab, stays on 📤 SEND, and the summary's
+  opening 📊 SCORES tab shows a "N payments to settle — request on Venmo ·
+  PAYOUTS →" banner that jumps there. Read-only viewers (joined players,
+  round history) see it on PAYOUTS too.
+- Same https venmo.com payment links as 1.22.5 — no `venmo://`. No round
+  data touched.
+
 ## [1.22.5] — 2026-10-02 — Venmo requests open without a Safari error
 
 - **Root cause:** tapping 💸 REQUEST (and PREP ALL) on the summary set
