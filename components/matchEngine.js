@@ -642,6 +642,19 @@ const MatchEngine = (function () {
     return _potPayouts(result, stake, pay);
   }
 
+  // Sixes: every decided 6-hole match pays each winner +stake and charges each
+  // loser −stake (zero-sum: two v two). Halved / unfinished matches are $0.
+  function _sixesPayouts(result, stake, pay) {
+    (result.matches || []).forEach(m => {
+      if (!m.complete || m.winnerIdx === null) return;
+      m.sides.forEach((sd, si) => sd.playerIds.forEach(id => {
+        if (pay[id] === undefined) pay[id] = 0;
+        pay[id] += si === m.winnerIdx ? stake : -stake;
+      }));
+    });
+    return pay;
+  }
+
   // Nassau: front nine, back nine and overall settle independently. The overall
   // bet is worth double. Only segments that are actually finished pay out.
   function _nassauPayouts(result, stake, pay) {
@@ -680,6 +693,7 @@ const MatchEngine = (function () {
     if (mode === 'unit')   return _unitPayouts(result, stake, pay);
     if (mode === 'match')  return _matchPayouts(result, stake, pay);
     if (mode === 'nassau') return _nassauPayouts(result, stake, pay);
+    if (mode === 'sixes')  return _sixesPayouts(result, stake, pay);
     return _potPayouts(result, stake, pay);
   }
 
@@ -963,47 +977,126 @@ const MatchEngine = (function () {
     },
   });
 
+  // Sixes: three separate 2v2 matches with rotating partners (seats A–D in
+  // player order). Holes 1–6 A+B v C+D, 7–12 A+C v B+D, 13–18 A+D v B+C (in
+  // play order; a 9-hole round plays three 3-hole matches). Each hole: best
+  // NET ball per side (shared pop allocator, off the low by default), lower
+  // wins, tie halves. Each segment is match play and can close out early
+  // (4&2). Money: a decided match pays each winner +stake and charges each
+  // loser −stake; a halved match is $0. Computed purely from stored scores.
+  const SIXES_PAIRINGS = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
+
+  function sixesMatches(ctx) {
+    const ps = ctx.players;
+    const order = ctx.playOrder;
+    const segLen = Math.floor(order.length / 3);
+    const name = ix => _firstName(ps[ix]);
+    return SIXES_PAIRINGS.map(([pa, pb], s) => {
+      const holes = order.slice(s * segLen, s === 2 ? order.length : (s + 1) * segLen);
+      const side = pair => {
+        const ids = pair.map(ix => ps[ix].id);
+        return { playerIds: ids, label: pair.map(name).join(' & ') };
+      };
+      const sides = [side(pa), side(pb)];
+      const ball = (sd, i) => {
+        const live = sd.playerIds.filter(id => ctx.inPlay(id, i));
+        if (!live.length) return 0;
+        const vals = live.map(id => ctx.score(id, i));
+        if (vals.some(v => !(v > 0))) return 0;          // wait for the whole side
+        return Math.min(...vals);
+      };
+      let up = 0, played = 0, won = [0, 0], halved = 0, closedAt = null;
+      const perHole = holes.map(() => null);
+      for (let k = 0; k < holes.length; k++) {
+        if (closedAt !== null) break;
+        const i = holes[k];
+        const a = ball(sides[0], i), b = ball(sides[1], i);
+        if (!a || !b) continue;
+        played++;
+        const w = a < b ? 0 : (b < a ? 1 : null);
+        perHole[k] = { hole: ctx.holes[i] ? ctx.holes[i].num : i + 1, a, b, winner: w };
+        if (w === 0) { up++; won[0]++; } else if (w === 1) { up--; won[1]++; } else halved++;
+        const remaining = holes.length - (k + 1);
+        if (Math.abs(up) > remaining) closedAt = k;
+      }
+      const remaining = holes.length - played;
+      const complete = closedAt !== null || played === holes.length;
+      const winnerIdx = complete && up !== 0 ? (up > 0 ? 0 : 1) : null;
+      const lead = up > 0 ? sides[0].label : sides[1].label;
+      const first = holes.length ? (ctx.holes[holes[0]] ? ctx.holes[holes[0]].num : holes[0] + 1) : 0;
+      const last  = holes.length ? (ctx.holes[holes[holes.length - 1]] ? ctx.holes[holes[holes.length - 1]].num : holes[holes.length - 1] + 1) : 0;
+      let status, result;
+      if (!played) { status = 'Not started'; result = null; }
+      else if (complete) {
+        if (winnerIdx === null) { status = 'Halved'; result = 'halved'; }
+        else {
+          const margin = Math.abs(up);
+          result = remaining > 0 ? margin + '&' + remaining : margin + ' UP';
+          status = lead + ' won ' + result;
+        }
+      } else {
+        status = up === 0 ? 'All square thru ' + played : lead + ' ' + Math.abs(up) + ' UP thru ' + played;
+        if (up !== 0 && Math.abs(up) === remaining) status += ' (dormie)';
+      }
+      return {
+        key: 'M' + (s + 1), index: s, range: first + '–' + last, holes, sides,
+        up, played, holeCount: holes.length, won, halved, perHole,
+        complete, started: played > 0, winnerIdx, result, status,
+      };
+    });
+  }
+
   register({
     id: 'sixes', label: 'Sixes', icon: '🔁',
-    settlement: 'unit', stakeHint: 'Per point: settled against every other player.',
-    desc: 'Foursome round robin — partners rotate every six holes; win holes with your side\'s better ball.',
+    settlement: 'sixes', stakeHint: 'Per match: each winner collects the stake, each loser pays it. Halved = $0.',
+    desc: 'Three 6-hole 2v2 matches — partners rotate (AB v CD, AC v BD, AD v BC); best net ball wins the hole.',
     category: 'match', basis: 'choice', defaultAllowance: 100, defaultRelative: true,
     players: { min: 4, max: 4 },
     compute(ctx) {
       const ps = ctx.players;
       if (ps.length !== 4) return { kind: 'leaderboard', entries: [], leaderIds: [], thru: 0, complete: false, status: 'Sixes needs exactly 4 players', winner: null };
-      const segLen = Math.floor(ctx.holeCount / 3);
-      const pairings = [
-        [[0, 1], [2, 3]],
-        [[0, 2], [1, 3]],
-        [[0, 3], [1, 2]],
-      ];
-      const pts = Object.fromEntries(ps.map(p => [p.id, 0]));
-      let thru = 0;
-      for (let k = 0; k < ctx.playOrder.length; k++) {
-        const i = ctx.playOrder[k];
-        const seg = Math.min(2, Math.floor(k / segLen));
-        const [pairA, pairB] = pairings[seg];
-        const best = pair => {
-          const vals = pair.map(ix => ctx.score(ps[ix].id, i)).filter(v => v > 0);
-          return vals.length === 2 ? Math.min(...vals) : 0;
-        };
-        const a = best(pairA), b = best(pairB);
-        if (!a || !b) continue;
-        thru++;
-        if (a < b)      pairA.forEach(ix => { pts[ps[ix].id] += 2; });
-        else if (b < a) pairB.forEach(ix => { pts[ps[ix].id] += 2; });
-        else            pairA.concat(pairB).forEach(ix => { pts[ps[ix].id] += 1; });
-      }
+      const stake = Number(ctx.config && ctx.config.stake) || 0;
+      const matches = sixesMatches(ctx);
+      const units = Object.fromEntries(ps.map(p => [p.id, 0]));
+      const rec = Object.fromEntries(ps.map(p => [p.id, { w: 0, l: 0, h: 0 }]));
+      matches.forEach(m => {
+        if (!m.complete) return;
+        m.sides.forEach((sd, si) => sd.playerIds.forEach(id => {
+          if (m.winnerIdx === null) rec[id].h++;
+          else if (m.winnerIdx === si) { rec[id].w++; units[id]++; }
+          else { rec[id].l++; units[id]--; }
+        }));
+      });
+      const thru = matches.reduce((a, m) => a + m.played, 0);
+      const money = u => {
+        if (!stake) return (u > 0 ? '+' : '') + u;
+        const v = u * stake;
+        return v > 0 ? '+$' + v : v < 0 ? '−$' + Math.abs(v) : '$0';
+      };
       const entries = ps.map(p => ({
         id: p.id, label: _firstName(p), playerIds: [p.id], color: p.color,
-        total: pts[p.id], played: thru,
-        totalLabel: String(pts[p.id]),
-        detail: thru ? 'thru ' + thru : 'No scores',
+        total: units[p.id], played: thru,
+        totalLabel: money(units[p.id]),
+        detail: rec[p.id].w + '-' + rec[p.id].l + '-' + rec[p.id].h + ' (W-L-H)',
+        record: rec[p.id],
         perHole: null,
       }));
-      const complete = thru === ctx.contestedHoles(4);
-      return { kind: 'leaderboard', ...finishLeaderboard(entries, { lowerIsBetter: false, complete, thru, unit: 'points' }) };
+      const complete = matches.every(m => m.complete);
+      const current = matches.find(m => m.started && !m.complete) || matches.find(m => !m.started);
+      const done = matches.filter(m => m.complete);
+      const parts = [];
+      if (current && current.started) parts.push(current.key + ' (holes ' + current.range + '): ' + current.status);
+      else if (current && done.length) parts.push(current.key + ' (holes ' + current.range + ') next: ' + current.sides[0].label + ' v ' + current.sides[1].label);
+      done.slice().reverse().forEach(m => parts.push(m.key + ': ' + m.status));
+      const max = Math.max(...entries.map(e => e.total));
+      const leaderIds = thru && done.length ? entries.filter(e => e.total === max && max > 0).map(e => e.id) : [];
+      let winner = null;
+      if (complete && leaderIds.length) {
+        const label = entries.filter(e => leaderIds.includes(e.id)).map(e => e.label).join(' & ');
+        winner = { ids: leaderIds, label, text: label + (leaderIds.length > 1 ? ' tie' : ' wins') + ' Sixes ' + money(max) };
+      }
+      const status = winner ? winner.text : (parts.join(' · ') || 'No scores yet');
+      return { kind: 'leaderboard', entries, leaderIds, thru, complete, status, winner, matches };
     },
   });
 

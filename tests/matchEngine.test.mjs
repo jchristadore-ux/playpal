@@ -199,17 +199,16 @@ test('nassau: front, back, and overall are scored independently', () => {
   assert.match(aE.detail, /F9 \+9/);
 });
 
-test('sixes: partners rotate every six holes', () => {
+test('sixes: partners rotate every six holes, one match per segment', () => {
   // A & whoever partners A always win the hole (A shoots 3, everyone else 5).
-  const res = ME.compute({ formatId: 'sixes', config: { scoringBasis: 'gross' } }, raw({
+  const res = ME.compute({ formatId: 'sixes', config: { scoringBasis: 'gross', stake: 5 } }, raw({
     a: fill(3), b: fill(5), c: fill(5), d: fill(5),
   }));
+  assert.equal(res.matches.length, 3);
+  res.matches.forEach(m => assert.equal(m.result, '4&2'));
   const totals = Object.fromEntries(res.entries.map(e => [e.id, e.total]));
-  // A wins all 18 holes (36 pts); each partner shares 6 holes (12 pts).
-  assert.equal(totals.a, 36);
-  assert.equal(totals.b, 12);
-  assert.equal(totals.c, 12);
-  assert.equal(totals.d, 12);
+  // A wins all three matches; each partner wins one and loses two.
+  assert.deepEqual(totals, { a: 3, b: -1, c: -1, d: -1 });
   assert.equal(res.winner.ids[0], 'a');
 });
 
