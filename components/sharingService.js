@@ -150,27 +150,66 @@ const SharingService = (function () {
   }
 
   // ── Venmo links ──────────────────────────────────────────────────────────
-  // Venmo's documented payment link (venmo.com/paymentlinks):
-  //   https://venmo.com/?txn=charge|pay&recipients=<user>&amount=<n.nn>&note=<..>
-  // It is an iOS/Android universal link: with Venmo installed the tap opens
-  // the app with the request pre-filled; without it, Safari shows venmo.com.
-  // Never the `venmo://` custom scheme — on a phone without Venmo (and in an
-  // iOS home-screen web app) Safari answers that with "Safari cannot open the
-  // page".
+  // Verified 2 Oct 2026 against venmo.com's live redirects (WebKit iPhone +
+  // desktop, see docs/VENMO_LINKS.md):
+  //   https://venmo.com/<user>?txn=charge&amount=<n.nn>&note=<..>
+  //     → 302 account.venmo.com/<user>?…
+  //     → iPhone/Android: 307 venmo://paycharge?amount&note&recipients=<user>&txn
+  //       (Venmo app opens with the request pre-filled)
+  //     → desktop: 307 account.venmo.com/payment-link?… (web form, pre-filled)
+  // The root form https://venmo.com/?txn=…&recipients=<user> (1.22.5–1.22.6)
+  // is answered with a bot challenge and then mangles the recipient into
+  // ",<user>" — that was the "still not working" bug.
+  // https://venmo.com/u/<user> is in Venmo's apple-app-site-association, so
+  // a tap on it opens the app on the payer's profile (no pre-fill) — a
+  // fallback when the payment link can't hand off.
   function venmoHandle(raw) {
     return String(raw || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
+  }
+
+  function _venmoAmount(a) {
+    return Math.abs(Math.round((Number(a) || 0) * 100) / 100);
   }
 
   function venmoLink(opts) {
     const o = opts || {};
     const handle = venmoHandle(o.handle);
     const txn = o.txn === 'pay' ? 'pay' : 'charge';
-    const n = Math.abs(Math.round((Number(o.amount) || 0) * 100) / 100);
+    const n = _venmoAmount(o.amount);
+    const parts = ['txn=' + txn];
+    if (n > 0) parts.push('amount=' + n.toFixed(2));
+    parts.push('note=' + encodeURIComponent(o.note || 'PlayPal golf'));
+    return 'https://venmo.com/' + (handle ? encodeURIComponent(handle) : '') + '?' + parts.join('&');
+  }
+
+  // The app's own scheme — exactly what venmo.com redirects phones to. Only
+  // ever behind an explicit "Venmo app" tap (it errors when Venmo isn't
+  // installed), never auto-navigated.
+  function venmoAppLink(opts) {
+    const o = opts || {};
+    const handle = venmoHandle(o.handle);
+    const txn = o.txn === 'pay' ? 'pay' : 'charge';
+    const n = _venmoAmount(o.amount);
     const parts = ['txn=' + txn];
     if (handle) parts.push('recipients=' + encodeURIComponent(handle));
     if (n > 0) parts.push('amount=' + n.toFixed(2));
     parts.push('note=' + encodeURIComponent(o.note || 'PlayPal golf'));
-    return 'https://venmo.com/?' + parts.join('&');
+    return 'venmo' + '://paycharge?' + parts.join('&');
+  }
+
+  function venmoProfileLink(handle) {
+    const h = venmoHandle(handle);
+    return h ? 'https://venmo.com/u/' + encodeURIComponent(h) : null;
+  }
+
+  function _venmoBundle(handle, amount, note, txn) {
+    const url = venmoLink({ handle, amount, note, txn });
+    return {
+      handle, amount, txn, url, webLink: url,
+      appLink: venmoAppLink({ handle, amount, note, txn }),
+      profileLink: venmoProfileLink(handle),
+      copyText: '@' + handle + ' · $' + amount + ' · ' + (note || 'PlayPal golf'),
+    };
   }
 
   // A Venmo charge (request) for one debt, sent by the winner to the player
@@ -180,8 +219,7 @@ const SharingService = (function () {
     const handle = venmoHandle(debt && debt.from && debt.from.venmo);
     if (!handle) return null;
     const amount = Math.abs(Math.round(((debt && debt.amount) || 0) * 100) / 100).toFixed(2);
-    const url = venmoLink({ handle, amount, note, txn: 'charge' });
-    return { handle, amount, txn: 'charge', url, webLink: url };
+    return _venmoBundle(handle, amount, note, 'charge');
   }
 
   // The payer's side: pay the winner (txn=pay).
@@ -189,8 +227,7 @@ const SharingService = (function () {
     const handle = venmoHandle(debt && debt.to && debt.to.venmo);
     if (!handle) return null;
     const amount = Math.abs(Math.round(((debt && debt.amount) || 0) * 100) / 100).toFixed(2);
-    const url = venmoLink({ handle, amount, note, txn: 'pay' });
-    return { handle, amount, txn: 'pay', url, webLink: url };
+    return _venmoBundle(handle, amount, note, 'pay');
   }
 
   // Opens an https link the way each shell needs: Capacitor (native iOS)
@@ -531,6 +568,8 @@ const SharingService = (function () {
     venmoRequest,
     venmoPay,
     venmoLink,
+    venmoAppLink,
+    venmoProfileLink,
     venmoHandle,
     openExternal,
     roundReport,
