@@ -71,6 +71,36 @@ const GameStandingsCard = ({ result, stake, final: isFinal }) => {
           </div>
         )}
       </div>
+      {Array.isArray(result.matches) && result.matches.length > 0 && <SixesMatchesPanel matches={result.matches} />}
+    </div>
+  );
+};
+
+// Sixes: one line per 6-hole match — holes, who's partnered, and the match
+// status (2 UP thru 4, won 3&2, halved) with W / L / ½ per hole.
+const SixesMatchesPanel = ({ matches }) => {
+  const F = 'Plus Jakarta Sans, Inter, system-ui, sans-serif';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 14px 12px' }}>
+      {matches.map(m => {
+        const live = m.started && !m.complete;
+        return (
+          <div key={m.key} style={{ border: live ? '1px solid rgba(200,161,90,0.6)' : '1px solid #E7E3D9', borderRadius: 10, padding: '7px 10px', background: m.complete ? '#FFFFFF' : '#F6F4EE' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: F, fontWeight: 800, fontSize: 10, letterSpacing: 1, color: '#0E2B20' }}>{m.key} · HOLES {m.range}{live ? ' · LIVE' : ''}</span>
+              <span style={{ fontFamily: F, fontSize: 11, color: '#3F5F4A' }}>{m.sides[0].label} v {m.sides[1].label}</span>
+            </div>
+            <div style={{ fontFamily: F, fontSize: 12, fontWeight: 700, color: m.complete ? '#C8A15A' : '#3F5F4A', marginTop: 2 }}>
+              {m.complete && m.winnerIdx !== null ? '🏆 ' : ''}{m.status}
+            </div>
+            {m.started && (
+              <div style={{ fontFamily: F, fontSize: 10, color: '#8A9E8A', marginTop: 2, letterSpacing: 0.5 }}>
+                {m.perHole.map((h, k) => h ? (h.hole + ':' + (h.winner === null ? '½' : h.winner === 0 ? 'W' : 'L')) : null).filter(Boolean).join('  ')}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -113,4 +143,4 @@ const gtS = {
   card: { borderRadius: 12, padding: '10px 12px', minWidth: 104, flexShrink: 0 },
 };
 
-Object.assign(window, { GameStandingsCard, EngineGamesTracker });
+Object.assign(window, { GameStandingsCard, EngineGamesTracker, SixesMatchesPanel });

@@ -4,6 +4,27 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.4] — 2026-10-02 — Sixes is three 6-hole matches
+
+- **What was wrong:** the `sixes` engine format scored a running points tally
+  (2 per hole won, 1 per halve, cumulative over 18) and settled it per point
+  against every other player, so the card read "John & TJ leads by 4 thru 6"
+  with John 8 / TJ 8 / Brian 4 / Mike 4.
+- **Now:** three separate 2v2 matches with rotating partners, seats A–D in
+  player order (holes 1–6 AB v CD, 7–12 AC v BD, 13–18 AD v BC, in play
+  order; a 9-hole round plays three 3-hole matches). Each hole: best net
+  ball per side (shared pop allocator, off the low), ties halve; a side's
+  ball counts once both partners have posted. Each match is match play and
+  closes out early (4&2); dormie shown. Money (new settlement `sixes`): a
+  decided match pays each winner +$stake and charges each loser −$stake;
+  halved/unfinished = $0.
+- Live card + Summary: status shows the current match (holes, teams, "2 UP
+  thru 4") and completed results ("won 2&1"); each player shows running $
+  and W-L-H; a match panel lists M1–M3 with per-hole W/L/½. Settlement,
+  round money, share text and season rollups go through `MatchEngine.payouts`.
+- Same format id and config, recomputed from stored scores — in-progress
+  rounds need no migration. Tests: `tests/sixes.test.mjs`.
+
 ## [1.22.3] — 2026-10-02 — Setup pop panels use the real stroke index
 
 - **Root cause (1.22.1 miss):** the repair ran when a round started, but the
