@@ -4,6 +4,11 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.2] — 2026-10-02 — Footer version
+
+- Home footer shows the real version again (it was stuck on v1.21.5 since
+  1.22.0). Fresh cache so phones on 1.22.1 refresh cleanly.
+
 ## [1.22.1] — 2026-10-02 — Pops land on the hardest holes
 
 - **Root cause:** the Harkers Hollow custom course was saved straight from the
