@@ -350,19 +350,35 @@ function generateSyncCode() {
 }
 
 // Strokes a player gets on one hole for a whole-number handicap.
-// Positive handicaps take strokes on the hardest holes first and wrap past 18
-// (a 20 gets a second stroke on stroke indexes 1–2). Plus handicaps give
-// strokes back, starting from the easiest hole (stroke index 18).
-function getHoleStrokes(handicap, holeHdcp, holeCount) {
+// `holeRank` is the hole's difficulty rank AMONG THE HOLES BEING PLAYED
+// (1 = hardest). For a full 18 that is the card SI; for a nine use
+// strokeIndexRanks(holes) so a back nine with SI 2,4,…,18 ranks 1..9.
+// Positive handicaps take strokes on the hardest holes first and wrap past
+// the hole count (a 20 gets a second stroke on SI 1–2). Plus handicaps give
+// strokes back, starting from the easiest hole. Prefer
+// HandicapService.allocateStrokes — this is the same rule, one hole at a time.
+function getHoleStrokes(handicap, holeRank, holeCount) {
   const n = holeCount || 18;
-  const h = Math.round(handicap || 0);
-  if (!h) return 0;
+  const h = Math.round(Number(handicap) || 0);
+  const r = Number(holeRank);
+  if (!h || !Number.isFinite(r)) return 0;
   const magnitude = Math.abs(h);
   const base = Math.floor(magnitude / n);
   const rem  = magnitude % n;
   // Plus players hand strokes back from the easiest hole down.
-  const rank = h > 0 ? holeHdcp : (n + 1 - holeHdcp);
+  const rank = h > 0 ? r : (n + 1 - r);
   const magnitudeHere = base + (rank <= rem ? 1 : 0);
   if (!magnitudeHere) return 0;            // never hand back a signed zero
   return (h > 0 ? 1 : -1) * magnitudeHere;
+}
+
+// Difficulty rank (1..n) of each played hole by stroke index, ties and
+// missing SI broken by hole order — the same ordering HandicapService uses.
+function strokeIndexRanks(holes) {
+  const si = h => { const v = Number(h && (h.hdcp != null && h.hdcp !== '' ? h.hdcp : h.si)); return Number.isFinite(v) && v >= 1 ? v : Infinity; };
+  const order = (holes || []).map((h, i) => ({ i, s: si(h) }))
+    .sort((a, b) => (a.s - b.s) || (a.i - b.i)).map(x => x.i);
+  const ranks = new Array(order.length);
+  order.forEach((holeIdx, r) => { ranks[holeIdx] = r + 1; });
+  return ranks;
 }

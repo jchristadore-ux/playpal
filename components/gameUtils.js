@@ -40,8 +40,9 @@ function autoPopStrokes(players, course, teeId, opts) {
   const HS = (typeof window !== 'undefined' && window.HandicapService) || null;
   if (!HS) {
     const low = Math.min(...players.map(p => p.handicap || 0));
+    const ranks = strokeIndexRanks(holes);
     return Object.fromEntries(players.map(p =>
-      [p.id, holes.map(h => getHoleStrokes(Math.max(0, (p.handicap || 0) - low), h.hdcp, holes.length))]));
+      [p.id, holes.map((h, i) => getHoleStrokes(Math.max(0, (p.handicap || 0) - low), ranks[i], holes.length))]));
   }
   const tee = (typeof window !== 'undefined' && window.CourseService)
     ? window.CourseService.getTee(course, teeId)
@@ -53,6 +54,73 @@ function autoPopStrokes(players, course, teeId, opts) {
   });
   return Object.fromEntries(players.map(p =>
     [p.id, (hcp[p.id] && hcp[p.id].strokes) || holes.map(() => 0)]));
+}
+
+// ── Stroke-index repair for a round (in-progress or saved) ──────────────────
+// When CourseService.repairStrokeIndex swaps a placeholder SI (hole number)
+// for the real card, every pop map that was auto-seeded from the placeholder
+// is recomputed from the corrected SI. A map the scorer edited by hand (it no
+// longer matches the old auto allocation) is left alone. Scores are never
+// touched. Returns the same round object when nothing changed.
+function _popsKey(map, pids) {
+  const out = {};
+  (pids || Object.keys(map || {})).forEach(pid => {
+    const arr = (map && map[pid]) || [];
+    const nums = arr.map(v => (v === true ? 1 : Number(v) || 0));
+    if (nums.some(n => n !== 0)) out[pid] = nums;
+  });
+  return JSON.stringify(Object.keys(out).sort().map(k => [k, out[k]]));
+}
+
+// popFlags followed the old auto allocation → return the corrected one, else
+// the input unchanged. Used for local storage and incoming live payloads.
+function popsFollowingRepair(popFlags, oldAuto, newAuto) {
+  if (!popFlags || !oldAuto || !newAuto) return popFlags;
+  const pids = Object.keys(newAuto);
+  if (_popsKey(popFlags, pids) !== _popsKey(oldAuto, pids)) return popFlags;
+  const out = { ...popFlags };
+  pids.forEach(pid => {
+    const len = Array.isArray(popFlags[pid]) ? popFlags[pid].length : newAuto[pid].length;
+    const next = newAuto[pid].slice(0, len);
+    while (next.length < len) next.push(0);
+    out[pid] = next;
+  });
+  return out;
+}
+
+function repairRoundStrokeIndex(round) {
+  const CS = (typeof window !== 'undefined' && window.CourseService) || null;
+  if (!round || !round.course || !CS || !CS.repairStrokeIndex) return round;
+  const fixed = CS.repairStrokeIndex(round.course);
+  if (fixed === round.course) return round;
+  const oldCourse = round.course;
+  const players = round.players || [];
+  const opts = { allowancePct: 100, relative: true };
+  const sub = ids => players.filter(p => (ids || []).includes(p.id));
+  const remap = (map, ids) => {
+    if (!map) return map;
+    const ps = sub(ids && ids.length ? ids : Object.keys(map));
+    if (ps.length < 2) return map;
+    const oldA = autoPopStrokes(ps, oldCourse, round.teeId, opts);
+    const newA = autoPopStrokes(ps, fixed, round.teeId, opts);
+    if (_popsKey(map) !== _popsKey(oldA)) return map;          // hand-edited
+    const out = {};
+    Object.entries(newA).forEach(([pid, arr]) => { if (arr.some(n => n !== 0) || map[pid]) out[pid] = arr; });
+    return out;
+  };
+  const formats = (round.formats || []).map(f => {
+    let g = f;
+    if (f.nassauMatches) g = { ...g, nassauMatches: f.nassauMatches.map(m => ({ ...m, popHoles: remap(m.popHoles, m.playersInMatch) })) };
+    if (f.nassauConfig && f.nassauConfig.popHoles) g = { ...g, nassauConfig: { ...f.nassauConfig, popHoles: remap(f.nassauConfig.popHoles, f.nassauConfig.playersInMatch) } };
+    if (f.markeyMatchConfig && f.markeyMatchConfig.markeyPopStrokes) {
+      const c = f.markeyMatchConfig;
+      g = { ...g, markeyMatchConfig: { ...c, markeyPopStrokes: remap(c.markeyPopStrokes, [...(c.team1 || []), ...(c.team2 || [])]) } };
+    }
+    return g;
+  });
+  const oldAuto = round.autoPops || autoPopStrokes(players, oldCourse, round.teeId, opts);
+  const newAuto = autoPopStrokes(players, fixed, round.teeId, opts);
+  return { ...round, course: fixed, formats, autoPops: newAuto, autoPopsBeforeSiRepair: oldAuto };
 }
 
 function calcStablefordPoints(gross, par) {
@@ -730,9 +798,10 @@ function calcMarkeyMatchPops(players, course, teeId) {
   }
   const lowestHdcp = Math.min(...players.map(p => p.handicap || 0));
   const result = {};
+  const ranks = strokeIndexRanks(holes);
   players.forEach(p => {
     const effectiveHdcp = Math.max(0, (p.handicap || 0) - lowestHdcp);
-    result[p.id] = holes.map(h => getHoleStrokes(effectiveHdcp, h.hdcp, holes.length));
+    result[p.id] = holes.map((h, i) => getHoleStrokes(effectiveHdcp, ranks[i], holes.length));
   });
   return result;
 }
@@ -1124,7 +1193,7 @@ if (typeof window !== 'undefined') {
     calcNassauUnits, nassauSegmentStatus, calcNassauPayouts, calcMultiNassauPayouts,
     getAdjustedHoleScore, calcSkins, totalScore, totalVsPar, calcAllPayouts,
     nassauSegments, calcRoundPayouts, roundMoneyMap, fmtMoney,
-    popStrokesAt, autoPopStrokes,
+    popStrokesAt, autoPopStrokes, popsFollowingRepair, repairRoundStrokeIndex,
     ZERO_PUTTS, isZeroPutt, puttsTracked, puttCount, sumPutts, countZeroPutts,
     countPuttHoles, hasAnyPutts, puttCellText,
     dropoutThru, isDropped, activeAtSeq, activePlayers, setDropout, dropoutLabel,

@@ -865,7 +865,11 @@ const ScoreEntry = ({ round, onSaveRound, onExitRound, deviceId }) => {
       applyingRemoteRef.current = true;
       if (livePayload.scores)      { setScores(livePayload.scores);           localStorage.setItem('pp_scores_'+round.id,   JSON.stringify(livePayload.scores)); }
       if (livePayload.putts)       { setPutts(livePayload.putts);             localStorage.setItem('pp_putts_'+round.id,    JSON.stringify(livePayload.putts)); }
-      if (livePayload.popFlags)    { setPopFlags(livePayload.popFlags);       localStorage.setItem('pp_pop_'+round.id,      JSON.stringify(livePayload.popFlags)); }
+      if (livePayload.popFlags)    {
+        // A phone still on the old placeholder-SI pops must not undo the fix.
+        const pf = window.popsFollowingRepair ? window.popsFollowingRepair(livePayload.popFlags, round.autoPopsBeforeSiRepair, round.autoPops) : livePayload.popFlags;
+        setPopFlags(pf); localStorage.setItem('pp_pop_'+round.id, JSON.stringify(pf));
+      }
       if (livePayload.wolfData)    { setWolfData(livePayload.wolfData);       localStorage.setItem('pp_wolf_'+round.id,     JSON.stringify(livePayload.wolfData)); }
       if (livePayload.bbbData)     { setBBBData(livePayload.bbbData);         localStorage.setItem('pp_bbb_'+round.id,      JSON.stringify(livePayload.bbbData)); }
       if (livePayload.teeBallData) { setTeeBallData(livePayload.teeBallData); localStorage.setItem('pp_teeball_'+round.id, JSON.stringify(livePayload.teeBallData)); }

@@ -49,6 +49,33 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Course-SI repair on load: a round on a course saved with placeholder SI
+// (hole number) gets the real card, and pops the scorer never hand-edited
+// follow it. Scores and every other per-round key are left untouched; any
+// failure returns the round exactly as it was so a live round is never lost.
+function _repairRoundSi(r) {
+  try {
+    if (!r || typeof window.repairRoundStrokeIndex !== 'function') return r;
+    const next = window.repairRoundStrokeIndex(r);
+    if (next === r) return r;
+    const key = 'pp_pop_' + r.id;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const migrated = window.popsFollowingRepair(JSON.parse(stored), next.autoPopsBeforeSiRepair, next.autoPops);
+      localStorage.setItem(key, JSON.stringify(migrated));
+    }
+    const cur = localStorage.getItem('pp_round');
+    if (cur) {
+      const parsed = JSON.parse(cur);
+      if (parsed && parsed.id === r.id) localStorage.setItem('pp_round', JSON.stringify(next));
+    }
+    return next;
+  } catch (e) {
+    console.warn('[PlayPal] stroke-index repair skipped', e);
+    return r;
+  }
+}
+
 const App = () => {
   const deviceId = React.useMemo(() => window.__PP_DEVICE_ID, []);
 
@@ -91,7 +118,7 @@ const App = () => {
     if (isActiveRound) {
       try {
         const saved = localStorage.getItem('pp_round');
-        return saved ? JSON.parse(saved) : null;
+        return saved ? _repairRoundSi(JSON.parse(saved)) : null;
       } catch(e) {
         localStorage.removeItem('pp_active_round');
         return null;
@@ -233,6 +260,7 @@ const App = () => {
     });
 
     function _completeJoin(r) {
+      r = _repairRoundSi(r);
       localStorage.setItem('pp_round', JSON.stringify(r));
       sessionStorage.setItem('pp_screen', 'score');
       localStorage.setItem('pp_active_round', '1');
@@ -362,7 +390,7 @@ const App = () => {
     const { tripSelection, ...rest } = config;
 
     const _finishStart = function(tripId) {
-      const r = { ...rest, id: Date.now(), tripId: tripId || null };
+      const r = _repairRoundSi({ ...rest, id: Date.now(), tripId: tripId || null });
       if (window.CourseService && r.course) {
         try { window.CourseService.recordRecent(r.course); } catch(e) {}
       }
@@ -678,7 +706,7 @@ const App = () => {
   };
 
   const handleJoinRound = (savedRound) => {
-    setRound(savedRound);
+    setRound(_repairRoundSi(savedRound));
     sessionStorage.setItem('pp_screen', 'score');
     localStorage.setItem('pp_active_round', '1');
     setScreen('score');
