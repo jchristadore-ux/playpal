@@ -4,6 +4,25 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.7] — 2026-10-02 — Venmo REQUEST actually opens Venmo pre-filled
+
+- **Root cause:** 1.22.5–1.22.6 used `https://venmo.com/?txn=charge&recipients=<user>…`
+  opened from JavaScript. Three things went wrong: (1) venmo.com's root `/` isn't
+  in Venmo's apple-app-site-association, so it's never a universal link; (2) Venmo's
+  redirect for that form rewrites the recipient to `,<user>` (a leading comma), so the
+  request had no valid recipient; (3) the tap called `preventDefault()` and then
+  navigated in JS, and iOS won't hand a JS navigation off to another app.
+- REQUEST now links to `https://venmo.com/<user>?txn=charge&amount=…&note=…`. We
+  checked this against venmo.com's live redirects: on a phone it goes to
+  `account.venmo.com/<user>` and then to `venmo://paycharge?…&recipients=<user>&txn=charge`,
+  which opens the Venmo app with the request filled in. On desktop it goes to Venmo's
+  filled-in web payment-link form.
+- REQUEST is a real `<a target="_blank">` with no JS redirect. Each row also has
+  three fallbacks you have to tap yourself: **Venmo app** (`venmo://paycharge`
+  directly, if Venmo is installed), **Profile** (`venmo.com/u/<user>`, a real
+  universal link that opens their Venmo profile), and **Copy** (`@user · $amount · note`).
+- PREP ALL now only gets every row ready. iOS opens one app link per tap.
+
 ## [1.22.6] — 2026-10-02 — Venmo requests front and centre when the round ends
 
 - The 💸 VENMO REQUESTS card was only on the round summary's third tab

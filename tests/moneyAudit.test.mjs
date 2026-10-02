@@ -281,8 +281,8 @@ test('the Venmo request asks for exactly what the screen shows', () => {
   assert.equal(req.amount, '12.50');
   assert.equal(W.fmtMoney(12.5), '$12.50');
   assert.ok(req.url.includes('amount=12.50'));
-  assert.ok(req.url.startsWith('https://venmo.com/?txn=charge&recipients=player-1&'));
-  assert.ok(!('deepLink' in req), 'no venmo:// custom-scheme link');
+  assert.ok(req.url.startsWith('https://venmo.com/player-1?txn=charge&amount='));
+  assert.ok(req.appLink.startsWith('venmo://paycharge?txn=charge&recipients=player-1&'), 'app link only as an explicit secondary tap');
 });
 
 test('a player with no Venmo handle gets no link rather than a broken one', () => {

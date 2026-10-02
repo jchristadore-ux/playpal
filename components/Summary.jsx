@@ -200,28 +200,35 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
 
   // Charges the player who owes. The amount is the exact figure on screen —
   // to the cent — so nobody is asked for a different number than they read.
+  const venmoNote = `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`;
+  // The REQUEST control is a real <a href target=_blank> — iOS only hands a
+  // link to the Venmo app on a genuine tap, never on a JS redirect — so this
+  // just records the tap (or explains a missing username).
   const openVenmo = (debt, debtKey) => {
-    const req = window.SharingService.venmoRequest(debt, `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`);
+    const req = window.SharingService.venmoRequest(debt, venmoNote);
     if (!req) { showToast(`Add ${debt.from.name.split(' ')[0]}'s Venmo username on their player profile (Home → Players) to request it`, 'error'); return; }
-    // https universal link: opens Venmo if installed, venmo.com otherwise.
     setVenmoSent(prev => ({ ...prev, [debtKey]: req }));
-    window.SharingService.openExternal(req.url);
+  };
+
+  const copyVenmo = (req) => {
+    const done = () => showToast('Copied: ' + req.copyText);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(req.copyText).then(done, () => showToast(req.copyText)); return; }
+    } catch (e) {}
+    showToast(req.copyText);
   };
 
   const requestAllVenmo = () => {
     const payable = debts.filter(d => window.SharingService.venmoHandle(d.from.venmo));
     if (!payable.length) { showToast('No Venmo usernames on file — add them on each player\'s profile (Home → Players)', 'error'); return; }
-    // One deep link at a time is all iOS will honour, so mark them all as
-    // prepared and let the golfer tap through the rows.
+    // iOS opens one app link per tap, so PREP ALL only readies the rows.
     const next = {};
     debts.forEach((d, i) => {
-      const req = window.SharingService.venmoRequest(d, `PlayPal · ${course.name}`);
+      const req = window.SharingService.venmoRequest(d, venmoNote);
       if (req) next[i] = req;
     });
     setVenmoSent(next);
-    const first = Object.keys(next)[0];
-    showToast(`${Object.keys(next).length} request${Object.keys(next).length === 1 ? '' : 's'} ready — tap each row to send`);
-    if (first !== undefined) window.SharingService.openExternal(next[first].url);
+    showToast(`${Object.keys(next).length} request${Object.keys(next).length === 1 ? '' : 's'} ready — tap REQUEST on each row`);
   };
 
   // PlayPal has no GHIN integration — there is no public API a client app may
@@ -307,7 +314,7 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                   <Btn onClick={requestAllVenmo} variant="gold" style={{marginLeft:'auto', padding:'7px 12px', fontSize:11}}>PREP ALL</Btn>
                 </div>
                 <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:12, color:'#3F5F4A', marginBottom:12, lineHeight:1.5}}>
-                  Each request opens Venmo pre-filled with the exact amount. PlayPal never moves money — you confirm every request inside Venmo.
+                  REQUEST opens Venmo with the amount and note filled in. If it doesn't, tap "Venmo app" (needs Venmo installed), "Profile" to open their Venmo page, or "Copy" and paste. PlayPal never moves money; you confirm every request inside Venmo.
                 </div>
                 {missingVenmo.length > 0 && (
                   <div style={{fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, color:'#B45309', background:'rgba(180,83,9,0.06)', border:'1px solid rgba(180,83,9,0.2)', borderRadius:8, padding:'8px 10px', marginBottom:10, lineHeight:1.5}}>
@@ -332,17 +339,27 @@ const SummaryScreen = ({ round, scores, wolfData, putts, nassauPresses, manualCh
                             </div>
                           )}
                         </div>
-                        {handle ? (
-                          // A real link so iOS treats the tap as a navigation to
-                          // venmo.com — the universal link that opens the app.
-                          <a href={window.SharingService.venmoRequest(d, `PlayPal · ${course.name}${round.date ? ' · ' + round.date : ''}`).url}
-                            onClick={e => { e.preventDefault(); openVenmo(d, i); }}
-                            data-venmo-request={i}
-                            style={{padding:'9px 14px', fontSize:12, flexShrink:0, borderRadius:10, textDecoration:'none', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, letterSpacing:0.5,
-                              background: req ? 'transparent' : '#C8A15A', color: req ? '#3F5F4A' : '#0E2B20', border: req ? '1px solid #E7E3D9' : '1px solid #C8A15A'}}>
-                            {req ? '✓ OPENED' : '💸 REQUEST'}
-                          </a>
-                        ) : (
+                        {handle ? (() => {
+                          const link = window.SharingService.venmoRequest(d, venmoNote);
+                          const small = {fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontSize:11, fontWeight:700, color:'#2563EB', textDecoration:'underline', background:'none', border:'none', padding:0, cursor:'pointer'};
+                          return (
+                            <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6, flexShrink:0}}>
+                              {/* Real anchor + new tab: venmo.com hands phones to the Venmo app pre-filled. */}
+                              <a href={link.url} target="_blank" rel="noopener noreferrer"
+                                onClick={() => openVenmo(d, i)}
+                                data-venmo-request={i}
+                                style={{padding:'9px 14px', fontSize:12, borderRadius:10, textDecoration:'none', fontFamily:'Plus Jakarta Sans, Inter, system-ui, sans-serif', fontWeight:800, letterSpacing:0.5,
+                                  background: req ? 'transparent' : '#C8A15A', color: req ? '#3F5F4A' : '#0E2B20', border: req ? '1px solid #E7E3D9' : '1px solid #C8A15A'}}>
+                                {req ? '✓ REQUEST AGAIN' : '💸 REQUEST'}
+                              </a>
+                              <div style={{display:'flex', gap:10}}>
+                                <a href={link.appLink} data-venmo-app={i} onClick={() => openVenmo(d, i)} style={small}>Venmo app</a>
+                                <a href={link.profileLink} target="_blank" rel="noopener noreferrer" data-venmo-profile={i} style={small}>Profile</a>
+                                <button onClick={() => copyVenmo(link)} data-venmo-copy={i} style={small}>Copy</button>
+                              </div>
+                            </div>
+                          );
+                        })() : (
                           <Btn onClick={()=>openVenmo(d,i)} variant="ghost" style={{padding:'9px 14px', fontSize:12, flexShrink:0}}>ADD VENMO</Btn>
                         )}
                       </div>
