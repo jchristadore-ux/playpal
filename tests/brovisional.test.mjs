@@ -283,8 +283,8 @@ test('backoff doubles from 1 min and caps at 6 h; queue drops after MAX_ATTEMPTS
   assert.equal(BS.dueEntries(t0 + 60e3).length, 1);
   const e2 = BS.enqueue('G1', 'R1', 'HTTP 503', t0 + 60e3);
   assert.equal(e2.attempts, 2); assert.equal(e2.nextAt, t0 + 60e3 + 120e3);
-  for (let i = 3; i <= BS.MAX_ATTEMPTS; i++) BS.enqueue('G1', 'R1', 'x', t0);
-  assert.equal(BS.enqueue('G1', 'R1', 'x', t0), null);      // gave up; the server cron owns it now
+  for (let i = 3; i < BS.MAX_ATTEMPTS; i++) assert.ok(BS.enqueue('G1', 'R1', 'x', t0));
+  assert.equal(BS.enqueue('G1', 'R1', 'x', t0), null);      // 6th failed try      // gave up; the server cron owns it now
   assert.equal(Object.keys(BS.queue()).length, 0);
 });
 
@@ -551,4 +551,37 @@ test('final spec details: scores outside 1–20 are null, field limits, per-grou
   assert.equal(BS.reasonText('rejected: check constraint'), 'rejected by The Brovisional');
   const v = BS.view({ status: 'posted', players: { p1: { status: 'posted', reason: '9-hole score held until 54 holes', differential: 9.1, index: null } } }, [{ id: 'p1', name: 'TJ' }]);
   assert.equal(v.rows[0].note, '9-hole score held until 54 holes'); assert.equal(v.rows[0].text, 'Diff 9.1 · Index —');
+});
+
+test('1.22.8: 404/5xx/network are retryable; 400 and bad-signature 401 are not; stale-timestamp 401 is', async () => {
+  const { isRetryableHttp } = await import('../lib/brovisional.mjs');
+  for (const s of [0, 404, 408, 429, 500, 502, 503]) assert.equal(isRetryableHttp(s), true, String(s));
+  for (const s of [400, 401, 403, 409, 422]) assert.equal(isRetryableHttp(s), false, String(s));
+  const now = Date.now();
+  const doc = (b) => ({ savedAt: now - 86400e3, round: { course: { holes: [] }, players: [{ id: 'p1' }], holeScores: { p1: [4] } }, brovisional: b });
+  // The stranded 6PWZPP shape: a 404 stored as retryable:false.
+  assert.equal(cronEligible(doc({ status: 'failed', attempts: 3, retryable: false, httpStatus: 404 }), now), true);
+  assert.equal(cronEligible(doc({ status: 'failed', attempts: 3, retryable: false, httpStatus: 0 }), now), true);
+  assert.equal(cronEligible(doc({ status: 'failed', attempts: 3, retryable: false, httpStatus: 400 }), now), false);
+  assert.equal(cronEligible(doc({ status: 'failed', attempts: CRON_MAX_ATTEMPTS, retryable: false, httpStatus: 404 }), now), false);
+  assert.equal(cronEligible({ ...doc({ status: 'failed', attempts: 1, httpStatus: 404, retryable: false }), savedAt: now - 15 * 86400e3 }, now), false);
+  const BS = loadPlayPal().BrovisionalService;
+  assert.equal(BS.interpret(404, { error: 'Round not found in this group' }).retry, true);
+  assert.equal(BS.interpret(400, {}).retry, false);
+  assert.equal(BS.interpret(403, {}).retry, false);
+  assert.equal(BS.interpret(502, { status: 'failed', brovisional: { status: 'failed', retryable: true } }).retry, true);
+});
+
+test('1.22.8: syncRound records an upstream 404 as retryable; stale 401 retryable, bad-signature 401 not', async () => {
+  const { postCard } = await import('../lib/brovisional.mjs');
+  const mk = (status, body) => async () => ({ status, text: async () => body });
+  const card = { roundId: 'X' };
+  let r = await postCard(card, { secret: 's', url: 'https://x.test', fetchImpl: mk(404, '<html>404</html>') });
+  assert.equal(r.retryable, true); assert.equal(r.httpStatus, 404);
+  r = await postCard(card, { secret: 's', url: 'https://x.test', fetchImpl: mk(401, '{"error":"stale timestamp"}') });
+  assert.equal(r.retryable, true);
+  r = await postCard(card, { secret: 's', url: 'https://x.test', fetchImpl: mk(401, '{"error":"bad signature"}') });
+  assert.equal(r.retryable, false); assert.match(r.error, /signature/);
+  r = await postCard(card, { secret: 's', url: 'https://x.test', fetchImpl: async () => { throw new Error('ECONNRESET'); } });
+  assert.equal(r.retryable, true);
 });

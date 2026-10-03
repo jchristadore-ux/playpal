@@ -23,7 +23,7 @@ const BrovisionalService = (function () {
   const DISABLED_TTL_MS = 24 * 3600 * 1000;
   const BACKOFF_BASE_MS = 60 * 1000;          // 1 min, 2, 4, 8 … 
   const BACKOFF_CAP_MS  = 6 * 3600 * 1000;    // … capped at 6 h
-  const MAX_ATTEMPTS    = 6;                  // then the daily server cron owns it
+  const MAX_ATTEMPTS    = 6;                  // tries in total (first + 5 retries), then the daily server cron owns it
 
   const REASONS = {
     unlinked:         'not linked in The Brovisional yet',
@@ -82,7 +82,8 @@ const BrovisionalService = (function () {
     const q = queue(); const k = _qkey(groupId, roundId);
     const attempts = ((q[k] && q[k].attempts) || 0) + 1;
     const t = now == null ? Date.now() : now;
-    if (attempts > MAX_ATTEMPTS) { delete q[k]; _write(QUEUE_KEY, q); return null; }
+    // attempts = failed tries so far; the 6th failure ends client retries.
+    if (attempts >= MAX_ATTEMPTS) { delete q[k]; _write(QUEUE_KEY, q); return null; }
     q[k] = { groupId, roundId, attempts, lastError: error || null, lastAttemptAt: t, nextAt: t + backoffMs(attempts) };
     _write(QUEUE_KEY, q);
     return q[k];
@@ -114,8 +115,10 @@ const BrovisionalService = (function () {
     }
     if (httpStatus === 200 && b.status) return { status: b.status, brovisional: { status: b.status }, retry: false };
     if (httpStatus === 409) return { status: 'not_completed', brovisional: null, retry: false };
-    if (httpStatus === 401 || httpStatus === 403 || httpStatus === 404 || httpStatus === 400) {
-      return { status: 'failed', brovisional: { status: 'failed', lastError: b.error || ('HTTP ' + httpStatus) }, retry: httpStatus === 401 };
+    // 400/403 won't change on retry. 401 (expired sign-in) and 404 (round not
+    // synced to the server yet, or the API mid-deploy) can.
+    if (httpStatus === 403 || httpStatus === 400) {
+      return { status: 'failed', brovisional: { status: 'failed', lastError: b.error || ('HTTP ' + httpStatus) }, retry: false };
     }
     return { status: 'failed', brovisional: { status: 'failed', lastError: b.error || ('HTTP ' + httpStatus) }, retry: true };
   }
