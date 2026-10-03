@@ -4,6 +4,22 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.8] — 2026-10-03 — Brovisional: retry 404s instead of giving up
+
+- **Root cause:** The Brovisional's ingest endpoint returned 404 until it went live
+  (7:17 PM ET Oct 3). The server sync recorded any 4xx other than 401 as
+  `retryable: false`, and the daily cron only retries failed rounds marked retryable.
+  That left round 6PWZPP stuck as permanently failed. The client also gave up
+  for good on a 404 from PlayPal's own API.
+- 404, 408, 425, 429, 5xx and network errors are now retryable (`isRetryableHttp`).
+  400 (validation) and 401 with a bad signature are not. A 401 for a **stale
+  timestamp** is retryable because re-signing fixes it.
+- Cron eligibility also re-checks the stored `httpStatus`, so failures recorded
+  before this fix (a 404 saved as non-retryable) are picked up again. The rest is
+  unchanged: failed, saved in the last 14 days, fewer than 8 attempts, 25 rounds per run.
+- Client retry queue: a 404 is retried, and it stops after exactly 6 tries (the
+  first plus 5 retries). After that the server cron takes over. It used to stop after 7.
+
 ## [1.22.7] — 2026-10-02 — Venmo REQUEST actually opens Venmo pre-filled
 
 - **Root cause:** 1.22.5–1.22.6 used `https://venmo.com/?txn=charge&recipients=<user>…`
