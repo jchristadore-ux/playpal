@@ -9,7 +9,7 @@ PAR PRINCE, BIRDIE BRO) with WHS handicap support, plus the classic money games
 Match) with automatic payout math, stats dashboards, and golf-trip
 leaderboards — synced across every phone in the group.
 
-**No ads · no tracking · no accounts · free infrastructure (Firebase Spark + GitHub Pages).**
+**No ads · no tracking · free to score.** Scoring, live sync and money games need no sign-up. Optional Firebase sign-in syncs your profile across devices, and **PlayPal Pro** (one-time $9.99 via Stripe Checkout) unlocks trips, stats history and export.
 
 ## Using it
 
