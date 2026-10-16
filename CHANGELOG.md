@@ -4,6 +4,16 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.9] — 2026-10-16 — PlayPal Pro paywall on
+
+- `PLAYPAL_CONFIG.enforceProGates` is now `true` in app.html and the built dist/app.html.
+  Trips, stats history (career stats/trends) and export (CSV and the recap book) now need
+  **PlayPal Pro**, a one-time $9.99 purchase through Stripe Checkout. Scoring, live sync,
+  every match format and the money games stay free with no sign-in. Pro comes from the
+  Auth `pro`/`admin` custom claim (set by the Stripe webhook) or the `users/{uid}` entitlement.
+- README: replaced "no accounts" with an accurate description: optional Firebase sign-in,
+  and Pro through Stripe.
+
 ## [1.22.8] — 2026-10-03 — Brovisional: retry 404s instead of giving up
 
 - **Root cause:** The Brovisional's ingest endpoint returned 404 until it went live
