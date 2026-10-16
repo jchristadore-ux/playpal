@@ -67,10 +67,28 @@ const ProService = (function () {
     return { pro: false, source: 'default', doc: null };
   }
 
-  function isPro() { return !!_state.pro || _admin; }
+  // Group-level Pro: the device's current group is on the crew list
+  // (EntitlementHelpers.PRO_GROUP_HASHES). Re-checked on every call, so
+  // joining or leaving a group takes effect immediately; cached per id.
+  let _groupCache = { id: null, pro: false };
+  function groupPro() {
+    try {
+      const GS = window.GroupService; const H = window.EntitlementHelpers;
+      if (!GS || !GS.current || !H || !H.groupGrantsPro) return false;
+      const id = GS.current();
+      if (id !== _groupCache.id) _groupCache = { id, pro: H.groupGrantsPro(id) };
+      return _groupCache.pro;
+    } catch (e) { return false; }
+  }
+
+  function isPro() { return !!_state.pro || _admin || groupPro(); }
   /** Superuser (admin custom claim). Implies Pro; rules let admins read/write all docs. */
   function isAdmin() { return _admin; }
-  function state() { return { ..._state, payments: { ..._payments } }; }
+  function state() {
+    const st = { ..._state, payments: { ..._payments } };
+    if (!st.pro && groupPro()) { st.pro = true; st.source = 'group'; st.groupPro = true; }
+    return st;
+  }
   function priceDisplay() { return PRICE_DISPLAY; }
 
   function gatesEnforced() {
@@ -281,6 +299,7 @@ const ProService = (function () {
     checkPaymentsHealth,
     isPro,
     isAdmin,
+    groupPro,
     state,
     onChange,
     startCheckout,

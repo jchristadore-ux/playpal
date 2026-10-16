@@ -4,6 +4,27 @@ All notable changes to PlayPal. Format follows [Keep a Changelog](https://keepac
 
 ## [Unreleased]
 
+## [1.22.10] — 2026-10-16 — Free Pro for JD's crew
+
+- **Group-level Pro:** anyone whose current group is JD's crew group or LEGACY passes the
+  Pro gates (Trips, stats history, export, season), with or without signing in. That
+  covers guests, future sign-ups and anyone who joins with the crew's code. Every other
+  group still gets the $9.99 paywall.
+- The list (`EntitlementHelpers.PRO_GROUP_HASHES`) stores **SHA-256 digests**, never group
+  ids, because a group id is also its join code. (The crew id is already in this public repo,
+  in the Brovisional sync config `lib/brovisionalPlayers.mjs` `KNOWN_GROUPS`; the tests take it
+  from there rather than adding another copy.) Adding a group takes a code change through review. No user or group owner can
+  add one at runtime: a `group_meta` flag was ruled out because owners can write that doc.
+- `ProService.isPro()`, `state()` and `canUse()` honor group Pro (`state().source === 'group'`)
+  and re-check on every call, so joining or leaving a group takes effect immediately.
+  No server API or Firestore rule depends on Pro, so nothing server-side changes.
+- `scripts/grant-pro.mjs`: comps Pro to one account (claim `pro:true` +
+  `users/{uid}.pro`, never admin/superuser). Dry-run by default; `--confirm` applies.
+  Used for TJ.
+- Tests: tests/groupPro.test.mjs (SHA-256 checked against node:crypto, no plain id in the
+  shipped source, crew/LEGACY pass, other groups and fresh devices are gated, join/leave
+  flips the gate).
+
 ## [1.22.9] — 2026-10-16 — PlayPal Pro paywall on
 
 - `PLAYPAL_CONFIG.enforceProGates` is now `true` in app.html and the built dist/app.html.
