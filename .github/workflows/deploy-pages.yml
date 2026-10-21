@@ -43,7 +43,7 @@ jobs:
                 settlement.html packlist.html \
                 manifest.webmanifest sw.js playpal-logo.png dist icons vendor recap _site/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
