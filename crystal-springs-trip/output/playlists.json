@@ -1,9 +1,9 @@
 {
   "project": "Crystal Springs Golf Trip Playlist Generator",
-  "generated": "2026-07-14",
-  "total_playlists": 9,
-  "total_songs": 553,
-  "total_runtime": "36h 01m",
+  "generated": "2026-07-20",
+  "total_playlists": 10,
+  "total_songs": 620,
+  "total_runtime": "40h 42m",
   "playlists": [
     {
       "name": "Minerals",
@@ -3963,6 +3963,485 @@
           "title": "Closing Time",
           "length": "4:34",
           "genre": "Rock"
+        }
+      ]
+    },
+    {
+      "name": "The Ride Up",
+      "theme": "Pedal Down",
+      "description": "The drive up. Wall-to-wall amped-up sing-along rap — every chorus is a group shout and every verse somebody in the car knows word-for-word. Eminem-heavy on purpose: ten Shady-family cuts plus five more tracks he guests on. Opens full-send, detours through the old-school belt-it-out block, and pulls into the resort on Not Afraid.",
+      "target_runtime": "4h 40m",
+      "actual_runtime": "4h 41m",
+      "song_count": 67,
+      "songs": [
+        {
+          "position": 1,
+          "artist": "Meek Mill",
+          "title": "Dreams and Nightmares",
+          "length": "3:56",
+          "genre": "Rap"
+        },
+        {
+          "position": 2,
+          "artist": "Eminem feat. Juice WRLD",
+          "title": "Godzilla",
+          "length": "3:31",
+          "genre": "Rap"
+        },
+        {
+          "position": 3,
+          "artist": "Jay-Z & Kanye West",
+          "title": "Ni**as in Paris",
+          "length": "3:39",
+          "genre": "Rap"
+        },
+        {
+          "position": 4,
+          "artist": "Eminem",
+          "title": "Business",
+          "length": "4:11",
+          "genre": "Rap"
+        },
+        {
+          "position": 5,
+          "artist": "Wiz Khalifa",
+          "title": "Black and Yellow",
+          "length": "3:37",
+          "genre": "Rap"
+        },
+        {
+          "position": 6,
+          "artist": "Kanye West",
+          "title": "Stronger",
+          "length": "5:12",
+          "genre": "Rap"
+        },
+        {
+          "position": 7,
+          "artist": "50 Cent feat. Eminem & Tony Yayo",
+          "title": "Patiently Waiting",
+          "length": "4:48",
+          "genre": "Rap"
+        },
+        {
+          "position": 8,
+          "artist": "M.O.P.",
+          "title": "Ante Up",
+          "length": "3:56",
+          "genre": "Rap"
+        },
+        {
+          "position": 9,
+          "artist": "Lil Wayne feat. Cory Gunz",
+          "title": "6 Foot 7 Foot",
+          "length": "4:09",
+          "genre": "Rap"
+        },
+        {
+          "position": 10,
+          "artist": "Bad Meets Evil",
+          "title": "Fast Lane",
+          "length": "4:10",
+          "genre": "Rap"
+        },
+        {
+          "position": 11,
+          "artist": "Macklemore & Ryan Lewis feat. Ray Dalton",
+          "title": "Can't Hold Us",
+          "length": "4:18",
+          "genre": "Rap"
+        },
+        {
+          "position": 12,
+          "artist": "Eminem feat. Rihanna",
+          "title": "The Monster",
+          "length": "4:10",
+          "genre": "Rap"
+        },
+        {
+          "position": 13,
+          "artist": "Flo Rida feat. T-Pain",
+          "title": "Low",
+          "length": "3:50",
+          "genre": "Rap"
+        },
+        {
+          "position": 14,
+          "artist": "J-Kwon",
+          "title": "Tipsy",
+          "length": "4:04",
+          "genre": "Rap"
+        },
+        {
+          "position": 15,
+          "artist": "D12",
+          "title": "Purple Pills",
+          "length": "5:00",
+          "genre": "Rap"
+        },
+        {
+          "position": 16,
+          "artist": "The Game feat. 50 Cent",
+          "title": "Hate It or Love It",
+          "length": "3:26",
+          "genre": "Rap"
+        },
+        {
+          "position": 17,
+          "artist": "Nelly feat. P. Diddy & Murphy Lee",
+          "title": "Shake Ya Tailfeather",
+          "length": "4:53",
+          "genre": "Rap"
+        },
+        {
+          "position": 18,
+          "artist": "Eminem",
+          "title": "Just Lose It",
+          "length": "4:08",
+          "genre": "Rap"
+        },
+        {
+          "position": 19,
+          "artist": "Ludacris",
+          "title": "Get Back",
+          "length": "4:30",
+          "genre": "Rap"
+        },
+        {
+          "position": 20,
+          "artist": "Clipse",
+          "title": "Grindin'",
+          "length": "4:30",
+          "genre": "Rap"
+        },
+        {
+          "position": 21,
+          "artist": "P. Diddy feat. Black Rob & Mark Curry",
+          "title": "Bad Boy for Life",
+          "length": "3:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 22,
+          "artist": "Eminem feat. Dr. Dre",
+          "title": "Guilty Conscience",
+          "length": "3:19",
+          "genre": "Rap"
+        },
+        {
+          "position": 23,
+          "artist": "Cam'ron feat. Juelz Santana",
+          "title": "Oh Boy",
+          "length": "3:34",
+          "genre": "Rap"
+        },
+        {
+          "position": 24,
+          "artist": "50 Cent feat. Justin Timberlake & Timbaland",
+          "title": "Ayo Technology",
+          "length": "4:07",
+          "genre": "Rap"
+        },
+        {
+          "position": 25,
+          "artist": "Akon feat. Eminem",
+          "title": "Smack That",
+          "length": "3:33",
+          "genre": "Rap"
+        },
+        {
+          "position": 26,
+          "artist": "Jim Jones",
+          "title": "We Fly High",
+          "length": "4:01",
+          "genre": "Rap"
+        },
+        {
+          "position": 27,
+          "artist": "G-Unit",
+          "title": "Stunt 101",
+          "length": "4:04",
+          "genre": "Rap"
+        },
+        {
+          "position": 28,
+          "artist": "Sir Mix-a-Lot",
+          "title": "Baby Got Back",
+          "length": "4:22",
+          "genre": "Rap"
+        },
+        {
+          "position": 29,
+          "artist": "Vanilla Ice",
+          "title": "Ice Ice Baby",
+          "length": "4:31",
+          "genre": "Rap"
+        },
+        {
+          "position": 30,
+          "artist": "MC Hammer",
+          "title": "U Can't Touch This",
+          "length": "4:17",
+          "genre": "Rap"
+        },
+        {
+          "position": 31,
+          "artist": "Kris Kross",
+          "title": "Jump",
+          "length": "3:16",
+          "genre": "Rap"
+        },
+        {
+          "position": 32,
+          "artist": "Naughty by Nature",
+          "title": "Hip Hop Hooray",
+          "length": "4:26",
+          "genre": "Rap"
+        },
+        {
+          "position": 33,
+          "artist": "Run-DMC",
+          "title": "It's Tricky",
+          "length": "3:03",
+          "genre": "Rap"
+        },
+        {
+          "position": 34,
+          "artist": "Beastie Boys",
+          "title": "Brass Monkey",
+          "length": "2:37",
+          "genre": "Rap"
+        },
+        {
+          "position": 35,
+          "artist": "Rob Base & DJ E-Z Rock",
+          "title": "It Takes Two",
+          "length": "4:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 36,
+          "artist": "Luniz feat. Michael Marshall",
+          "title": "I Got 5 on It",
+          "length": "4:14",
+          "genre": "Rap"
+        },
+        {
+          "position": 37,
+          "artist": "Eminem feat. Dido",
+          "title": "Stan",
+          "length": "6:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 38,
+          "artist": "Xzibit",
+          "title": "X",
+          "length": "3:47",
+          "genre": "Rap"
+        },
+        {
+          "position": 39,
+          "artist": "Fat Joe & Remy Ma feat. French Montana & Infared",
+          "title": "All the Way Up",
+          "length": "3:36",
+          "genre": "Rap"
+        },
+        {
+          "position": 40,
+          "artist": "Rick Ross feat. Styles P",
+          "title": "B.M.F. (Blowin' Money Fast)",
+          "length": "4:15",
+          "genre": "Rap"
+        },
+        {
+          "position": 41,
+          "artist": "Eminem",
+          "title": "Like Toy Soldiers",
+          "length": "4:56",
+          "genre": "Rap"
+        },
+        {
+          "position": 42,
+          "artist": "Asher Roth",
+          "title": "I Love College",
+          "length": "4:01",
+          "genre": "Rap"
+        },
+        {
+          "position": 43,
+          "artist": "Soulja Boy",
+          "title": "Crank That (Soulja Boy)",
+          "length": "3:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 44,
+          "artist": "Macklemore & Ryan Lewis feat. Wanz",
+          "title": "Thrift Shop",
+          "length": "3:55",
+          "genre": "Rap"
+        },
+        {
+          "position": 45,
+          "artist": "Jay-Z feat. Eminem",
+          "title": "Renegade",
+          "length": "5:38",
+          "genre": "Rap"
+        },
+        {
+          "position": 46,
+          "artist": "Travis Scott",
+          "title": "SICKO MODE",
+          "length": "5:12",
+          "genre": "Rap"
+        },
+        {
+          "position": 47,
+          "artist": "Post Malone feat. Quavo",
+          "title": "Congratulations",
+          "length": "3:40",
+          "genre": "Rap"
+        },
+        {
+          "position": 48,
+          "artist": "Drake feat. Lil Wayne",
+          "title": "The Motto",
+          "length": "3:01",
+          "genre": "Rap"
+        },
+        {
+          "position": 49,
+          "artist": "Kanye West feat. Rihanna & Kid Cudi",
+          "title": "All of the Lights",
+          "length": "4:59",
+          "genre": "Rap"
+        },
+        {
+          "position": 50,
+          "artist": "Big Sean feat. E-40",
+          "title": "I Don't Fuck with You",
+          "length": "4:44",
+          "genre": "Rap"
+        },
+        {
+          "position": 51,
+          "artist": "Kanye West",
+          "title": "Heartless",
+          "length": "3:31",
+          "genre": "Rap"
+        },
+        {
+          "position": 52,
+          "artist": "Eminem feat. Lil Wayne",
+          "title": "No Love",
+          "length": "5:00",
+          "genre": "Rap"
+        },
+        {
+          "position": 53,
+          "artist": "Kid Cudi",
+          "title": "Day 'N' Nite",
+          "length": "3:42",
+          "genre": "Rap"
+        },
+        {
+          "position": 54,
+          "artist": "Drake",
+          "title": "Started From the Bottom",
+          "length": "2:53",
+          "genre": "Rap"
+        },
+        {
+          "position": 55,
+          "artist": "DJ Khaled feat. Drake, Rick Ross & Lil Wayne",
+          "title": "I'm On One",
+          "length": "4:56",
+          "genre": "Rap"
+        },
+        {
+          "position": 56,
+          "artist": "B.o.B feat. Hayley Williams & Eminem",
+          "title": "Airplanes, Pt. II",
+          "length": "4:20",
+          "genre": "Rap"
+        },
+        {
+          "position": 57,
+          "artist": "Jay-Z feat. Rihanna & Kanye West",
+          "title": "Run This Town",
+          "length": "4:27",
+          "genre": "Rap"
+        },
+        {
+          "position": 58,
+          "artist": "Nelly",
+          "title": "E.I.",
+          "length": "4:47",
+          "genre": "Rap"
+        },
+        {
+          "position": 59,
+          "artist": "Juvenile feat. Soulja Slim",
+          "title": "Slow Motion",
+          "length": "4:10",
+          "genre": "Rap"
+        },
+        {
+          "position": 60,
+          "artist": "Outkast",
+          "title": "Roses",
+          "length": "6:09",
+          "genre": "Rap"
+        },
+        {
+          "position": 61,
+          "artist": "Linkin Park & Jay-Z",
+          "title": "Numb / Encore",
+          "length": "3:25",
+          "genre": "Rap"
+        },
+        {
+          "position": 62,
+          "artist": "Papa Roach",
+          "title": "Last Resort",
+          "length": "3:20",
+          "genre": "Rock"
+        },
+        {
+          "position": 63,
+          "artist": "Too $hort",
+          "title": "Blow the Whistle",
+          "length": "2:46",
+          "genre": "Rap"
+        },
+        {
+          "position": 64,
+          "artist": "Bad Meets Evil feat. Bruno Mars",
+          "title": "Lighters",
+          "length": "5:04",
+          "genre": "Rap"
+        },
+        {
+          "position": 65,
+          "artist": "Drake feat. Kanye West, Lil Wayne & Eminem",
+          "title": "Forever",
+          "length": "5:57",
+          "genre": "Rap"
+        },
+        {
+          "position": 66,
+          "artist": "Eminem feat. Rihanna",
+          "title": "Love the Way You Lie",
+          "length": "4:23",
+          "genre": "Rap"
+        },
+        {
+          "position": 67,
+          "artist": "Eminem",
+          "title": "Not Afraid",
+          "length": "4:08",
+          "genre": "Rap"
         }
       ]
     }

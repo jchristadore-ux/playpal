@@ -1,11 +1,11 @@
 # Validation Report
 
-Generated: 2026-07-14
+Generated: 2026-07-20
 
 ## Hard rules
 
-- Duplicate songs across all 9 playlists: **NONE — PASS**
-- Artist appears more than 3x in a single playlist: **NONE — PASS**
+- Duplicate songs across all 10 playlists: **NONE — PASS**
+- Artist over its playlist's cap (3x unless the playlist sets "max_artist" — The Ride Up allows 10x for its Eminem block): **NONE — PASS**
 
 ### Notes
 
@@ -25,17 +25,18 @@ Generated: 2026-07-14
 | Airbnb Morning | 48 | 2h 56m | 3h 00m | -4 min |
 | Airbnb Evening | 77 | 4h 58m | 5h 00m | -1 min |
 | Trip Anthem | 29 | 1h 57m | 1h 55m | +3 min |
+| The Ride Up | 67 | 4h 41m | 4h 40m | +1 min |
 
-**Total: 553 songs · 36h 01m**
+**Total: 620 songs · 40h 42m**
 
 ## Genre mix (overall)
 
 | Genre | Songs | Share | Requested |
 |-------|-------|-------|-----------|
-| Rap | 165 | 29% | 40% |
-| Country | 174 | 31% | 30% |
-| Rock | 136 | 24% | 20% |
-| Classic Rock | 78 | 14% | 10% |
+| Rap | 231 | 37% | 40% |
+| Country | 174 | 28% | 30% |
+| Rock | 137 | 22% | 20% |
+| Classic Rock | 78 | 12% | 10% |
 
 Note: the mellow playlists the brief asked for (Airbnb Morning, Cascades) carry little or no rap by design, which pulls the overall rap share below the 40% target. Wild Turkey (~75% rap), Crystal Springs, and the evening/party playlists carry the rap weight where it actually fits the room.
 
@@ -52,3 +53,4 @@ Note: the mellow playlists the brief asked for (Airbnb Morning, Cascades) carry 
 | Airbnb Morning | 0 (0%) | 20 (41%) | 24 (50%) | 4 (8%) |
 | Airbnb Evening | 22 (28%) | 26 (33%) | 15 (19%) | 14 (18%) |
 | Trip Anthem | 7 (24%) | 8 (27%) | 9 (31%) | 5 (17%) |
+| The Ride Up | 66 (98%) | 0 (0%) | 1 (1%) | 0 (0%) |

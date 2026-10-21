@@ -1,8 +1,8 @@
 # Crystal Springs Golf Trip — The Soundtrack
 
-Nine playlists. Four days. Zero repeated songs.
+Ten playlists. Four days. Zero repeated songs.
 
-**553 unique tracks · total runtime 36h 01m**
+**620 unique tracks · total runtime 40h 42m**
 
 | # | Playlist | Theme | Songs | Runtime | Target |
 |---|----------|-------|-------|---------|--------|
@@ -15,8 +15,9 @@ Nine playlists. Four days. Zero repeated songs.
 | 7 | Airbnb Morning | Coffee & Breakfast | 48 | 2h 56m | 3h 00m |
 | 8 | Airbnb Evening | Fire Pit & Cards | 77 | 4h 58m | 5h 00m |
 | 9 | Trip Anthem | The Crystal Springs Golf Trip Soundtrack | 29 | 1h 57m | 1h 55m |
+| 10 | The Ride Up | Pedal Down | 67 | 4h 41m | 4h 40m |
 
-**Overall genre mix:** Country: 174 songs (31%) · Rap: 165 songs (29%) · Rock: 136 songs (24%) · Classic Rock: 78 songs (14%)
+**Overall genre mix:** Rap: 231 songs (37%) · Country: 174 songs (28%) · Rock: 137 songs (22%) · Classic Rock: 78 songs (12%)
 
 Song lengths are approximate (album versions); actual streaming runtimes may differ by a few seconds per track.
 
@@ -671,3 +672,81 @@ The highlight reel. Opens like pulling out of the driveway, peaks like the trip 
 | 27 | Eagles | Take It Easy | 3:31 | Classic Rock |
 | 28 | Journey | Don't Stop Believin' | 4:10 | Classic Rock |
 | 29 | Semisonic | Closing Time | 4:34 | Rock |
+
+---
+
+## 10. The Ride Up — *Pedal Down*
+
+The drive up. Wall-to-wall amped-up sing-along rap — every chorus is a group shout and every verse somebody in the car knows word-for-word. Eminem-heavy on purpose: ten Shady-family cuts plus five more tracks he guests on. Opens full-send, detours through the old-school belt-it-out block, and pulls into the resort on Not Afraid.
+
+**67 songs · 4h 41m** (target 4h 40m)
+
+| # | Artist | Song | Length | Genre |
+|---|--------|------|--------|-------|
+| 1 | Meek Mill | Dreams and Nightmares | 3:56 | Rap |
+| 2 | Eminem feat. Juice WRLD | Godzilla | 3:31 | Rap |
+| 3 | Jay-Z & Kanye West | Ni**as in Paris | 3:39 | Rap |
+| 4 | Eminem | Business | 4:11 | Rap |
+| 5 | Wiz Khalifa | Black and Yellow | 3:37 | Rap |
+| 6 | Kanye West | Stronger | 5:12 | Rap |
+| 7 | 50 Cent feat. Eminem & Tony Yayo | Patiently Waiting | 4:48 | Rap |
+| 8 | M.O.P. | Ante Up | 3:56 | Rap |
+| 9 | Lil Wayne feat. Cory Gunz | 6 Foot 7 Foot | 4:09 | Rap |
+| 10 | Bad Meets Evil | Fast Lane | 4:10 | Rap |
+| 11 | Macklemore & Ryan Lewis feat. Ray Dalton | Can't Hold Us | 4:18 | Rap |
+| 12 | Eminem feat. Rihanna | The Monster | 4:10 | Rap |
+| 13 | Flo Rida feat. T-Pain | Low | 3:50 | Rap |
+| 14 | J-Kwon | Tipsy | 4:04 | Rap |
+| 15 | D12 | Purple Pills | 5:00 | Rap |
+| 16 | The Game feat. 50 Cent | Hate It or Love It | 3:26 | Rap |
+| 17 | Nelly feat. P. Diddy & Murphy Lee | Shake Ya Tailfeather | 4:53 | Rap |
+| 18 | Eminem | Just Lose It | 4:08 | Rap |
+| 19 | Ludacris | Get Back | 4:30 | Rap |
+| 20 | Clipse | Grindin' | 4:30 | Rap |
+| 21 | P. Diddy feat. Black Rob & Mark Curry | Bad Boy for Life | 3:42 | Rap |
+| 22 | Eminem feat. Dr. Dre | Guilty Conscience | 3:19 | Rap |
+| 23 | Cam'ron feat. Juelz Santana | Oh Boy | 3:34 | Rap |
+| 24 | 50 Cent feat. Justin Timberlake & Timbaland | Ayo Technology | 4:07 | Rap |
+| 25 | Akon feat. Eminem | Smack That | 3:33 | Rap |
+| 26 | Jim Jones | We Fly High | 4:01 | Rap |
+| 27 | G-Unit | Stunt 101 | 4:04 | Rap |
+| 28 | Sir Mix-a-Lot | Baby Got Back | 4:22 | Rap |
+| 29 | Vanilla Ice | Ice Ice Baby | 4:31 | Rap |
+| 30 | MC Hammer | U Can't Touch This | 4:17 | Rap |
+| 31 | Kris Kross | Jump | 3:16 | Rap |
+| 32 | Naughty by Nature | Hip Hop Hooray | 4:26 | Rap |
+| 33 | Run-DMC | It's Tricky | 3:03 | Rap |
+| 34 | Beastie Boys | Brass Monkey | 2:37 | Rap |
+| 35 | Rob Base & DJ E-Z Rock | It Takes Two | 4:57 | Rap |
+| 36 | Luniz feat. Michael Marshall | I Got 5 on It | 4:14 | Rap |
+| 37 | Eminem feat. Dido | Stan | 6:44 | Rap |
+| 38 | Xzibit | X | 3:47 | Rap |
+| 39 | Fat Joe & Remy Ma feat. French Montana & Infared | All the Way Up | 3:36 | Rap |
+| 40 | Rick Ross feat. Styles P | B.M.F. (Blowin' Money Fast) | 4:15 | Rap |
+| 41 | Eminem | Like Toy Soldiers | 4:56 | Rap |
+| 42 | Asher Roth | I Love College | 4:01 | Rap |
+| 43 | Soulja Boy | Crank That (Soulja Boy) | 3:42 | Rap |
+| 44 | Macklemore & Ryan Lewis feat. Wanz | Thrift Shop | 3:55 | Rap |
+| 45 | Jay-Z feat. Eminem | Renegade | 5:38 | Rap |
+| 46 | Travis Scott | SICKO MODE | 5:12 | Rap |
+| 47 | Post Malone feat. Quavo | Congratulations | 3:40 | Rap |
+| 48 | Drake feat. Lil Wayne | The Motto | 3:01 | Rap |
+| 49 | Kanye West feat. Rihanna & Kid Cudi | All of the Lights | 4:59 | Rap |
+| 50 | Big Sean feat. E-40 | I Don't Fuck with You | 4:44 | Rap |
+| 51 | Kanye West | Heartless | 3:31 | Rap |
+| 52 | Eminem feat. Lil Wayne | No Love | 5:00 | Rap |
+| 53 | Kid Cudi | Day 'N' Nite | 3:42 | Rap |
+| 54 | Drake | Started From the Bottom | 2:53 | Rap |
+| 55 | DJ Khaled feat. Drake, Rick Ross & Lil Wayne | I'm On One | 4:56 | Rap |
+| 56 | B.o.B feat. Hayley Williams & Eminem | Airplanes, Pt. II | 4:20 | Rap |
+| 57 | Jay-Z feat. Rihanna & Kanye West | Run This Town | 4:27 | Rap |
+| 58 | Nelly | E.I. | 4:47 | Rap |
+| 59 | Juvenile feat. Soulja Slim | Slow Motion | 4:10 | Rap |
+| 60 | Outkast | Roses | 6:09 | Rap |
+| 61 | Linkin Park & Jay-Z | Numb / Encore | 3:25 | Rap |
+| 62 | Papa Roach | Last Resort | 3:20 | Rock |
+| 63 | Too $hort | Blow the Whistle | 2:46 | Rap |
+| 64 | Bad Meets Evil feat. Bruno Mars | Lighters | 5:04 | Rap |
+| 65 | Drake feat. Kanye West, Lil Wayne & Eminem | Forever | 5:57 | Rap |
+| 66 | Eminem feat. Rihanna | Love the Way You Lie | 4:23 | Rap |
+| 67 | Eminem | Not Afraid | 4:08 | Rap |

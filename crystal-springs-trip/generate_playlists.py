@@ -13,7 +13,8 @@ Reads playlist_data.py, enforces the hard rules, and writes:
 
 Exits non-zero if any hard rule fails:
   - a song (normalized artist+title) appears in more than one playlist
-  - a primary artist appears more than 3x within one playlist
+  - a primary artist appears more than 3x within one playlist (or more
+    than that playlist's own "max_artist" override, where one is set)
 """
 
 import csv
@@ -93,14 +94,15 @@ def validate():
                 + "; ".join(f"{a} [{p}]" for a, p in entries)
             )
 
-    # Artist cap within each playlist.
+    # Artist cap within each playlist (playlists may override via "max_artist").
     for pl in PLAYLISTS:
+        cap = pl.get("max_artist", MAX_ARTIST_PER_PLAYLIST)
         counts = Counter(primary_artist(a) for a, _t, _l, _g in pl["songs"])
         for artist, n in counts.items():
-            if n > MAX_ARTIST_PER_PLAYLIST:
+            if n > cap:
                 errors.append(
                     f"ARTIST CAP: {artist} appears {n}x in '{pl['name']}' "
-                    f"(max {MAX_ARTIST_PER_PLAYLIST})"
+                    f"(max {cap})"
                 )
 
     return errors, warnings
@@ -182,10 +184,13 @@ def write_json():
 
 
 def write_markdown(all_stats, genre_totals, total_secs, total_songs):
+    numword = {9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve"}.get(
+        len(PLAYLISTS), str(len(PLAYLISTS))
+    )
     lines = [
         "# Crystal Springs Golf Trip — The Soundtrack",
         "",
-        "Nine playlists. Four days. Zero repeated songs.",
+        f"{numword} playlists. Four days. Zero repeated songs.",
         "",
         f"**{total_songs} unique tracks · total runtime {fmt_hm(total_secs)}**",
         "",
@@ -239,10 +244,11 @@ def write_validation_md(errors, warnings, all_stats, genre_totals, total_secs, t
         "",
         "## Hard rules",
         "",
-        f"- Duplicate songs across all 9 playlists: "
+        f"- Duplicate songs across all {len(PLAYLISTS)} playlists: "
         f"**{'NONE — PASS' if not errors else 'FAIL'}**",
-        f"- Artist appears more than {MAX_ARTIST_PER_PLAYLIST}x in a single "
-        f"playlist: **{'NONE — PASS' if not errors else 'FAIL'}**",
+        f"- Artist over its playlist's cap ({MAX_ARTIST_PER_PLAYLIST}x unless "
+        f"the playlist sets \"max_artist\" — The Ride Up allows 10x for its "
+        f"Eminem block): **{'NONE — PASS' if not errors else 'FAIL'}**",
         "",
     ]
     if errors:
